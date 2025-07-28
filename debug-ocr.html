@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Debug Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .processing {
+            color: #007bff;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        pre {
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 OCR Debug Tool</h1>
+    <p>Test OCR functionality with your images. Upload your <code>names.png</code> or any other image with text.</p>
+    
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <h3>📸 Click to Upload Image</h3>
+        <p>Select an image file to process with OCR</p>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+    </div>
+
+    <div id="results" class="results" style="display: none;">
+        <h3>Results:</h3>
+        <div id="status"></div>
+        <div id="output"></div>
+    </div>
+
+    <script src="https://unpkg.com/tesseract.js@v4.1.1/dist/tesseract.min.js"></script>
+    <script>
+        // OCR text processing function (same as in the app)
+        function extractPlayerNames(text) {
+            const lines = text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .filter(line => {
+                    const lowerLine = line.toLowerCase()
+                    return !lowerLine.includes('list') && 
+                           !lowerLine.includes('players') &&
+                           !lowerLine.includes('badminton') &&
+                           !lowerLine.includes('court') &&
+                           line.length < 50 && 
+                           line.length > 1
+                })
+            return lines
+        }
+
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0]
+            if (!file) return
+
+            const resultsDiv = document.getElementById('results')
+            const statusDiv = document.getElementById('status')
+            const outputDiv = document.getElementById('output')
+
+            resultsDiv.style.display = 'block'
+            statusDiv.innerHTML = '<div class="processing">🔄 Processing image with OCR...</div>'
+            outputDiv.innerHTML = ''
+
+            try {
+                console.log('Starting OCR processing...')
+                
+                const worker = await Tesseract.createWorker({
+                    logger: m => {
+                        console.log(m)
+                        if (m.status === 'recognizing text') {
+                            statusDiv.innerHTML = `<div class="processing">🔄 ${m.status}: ${Math.round(m.progress * 100)}%</div>`
+                        }
+                    }
+                })
+
+                await worker.loadLanguage('eng')
+                await worker.initialize('eng')
+                
+                const { data: { text, confidence } } = await worker.recognize(file)
+                await worker.terminate()
+
+                console.log('OCR completed. Raw text:', text)
+                console.log('Confidence:', confidence)
+
+                // Process the text
+                const extractedNames = extractPlayerNames(text)
+                
+                statusDiv.innerHTML = `<div class="success">✅ OCR completed! Confidence: ${Math.round(confidence)}%</div>`
+                
+                outputDiv.innerHTML = `
+                    <h4>Raw OCR Text:</h4>
+                    <pre>${text}</pre>
+                    
+                    <h4>Extracted Player Names (${extractedNames.length}):</h4>
+                    <pre>${JSON.stringify(extractedNames, null, 2)}</pre>
+                    
+                    <h4>Expected from your names.png:</h4>
+                    <pre>["Tinley", "Ella", "Avrella", "Yvette", "Gabriela", "Noella"]</pre>
+                `
+
+                // Test with your specific names
+                if (extractedNames.includes('Tinley') || extractedNames.includes('Ella')) {
+                    statusDiv.innerHTML += '<div class="success">🎉 Successfully detected names from your image!</div>'
+                } else {
+                    statusDiv.innerHTML += '<div style="color: orange;">⚠️ Names might need adjustment. Check the raw text above.</div>'
+                }
+
+            } catch (error) {
+                console.error('OCR Error:', error)
+                statusDiv.innerHTML = `<div class="error">❌ OCR failed: ${error.message}</div>`
+                outputDiv.innerHTML = `
+                    <h4>Error Details:</h4>
+                    <pre>${error.stack}</pre>
+                    
+                    <h4>Troubleshooting:</h4>
+                    <ul>
+                        <li>Make sure your image has clear, readable text</li>
+                        <li>Try a higher resolution image</li>
+                        <li>Ensure good contrast between text and background</li>
+                        <li>Check browser console for more details</li>
+                    </ul>
+                `
+            }
+        })
+    </script>
+</body>
+</html> 
