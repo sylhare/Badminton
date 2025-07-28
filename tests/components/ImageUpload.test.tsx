@@ -1,6 +1,8 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import ImageUpload from '../ImageUpload'
+import '@testing-library/jest-dom'
+import ImageUpload from '../../src/components/ImageUpload'
 import { createWorker } from 'tesseract.js'
 
 // Mock tesseract.js

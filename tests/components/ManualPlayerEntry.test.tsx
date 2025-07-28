@@ -1,7 +1,9 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import '@testing-library/jest-dom'
 import userEvent from '@testing-library/user-event'
-import ManualPlayerEntry from '../ManualPlayerEntry'
+import ManualPlayerEntry from '../../src/components/ManualPlayerEntry'
 
 describe('ManualPlayerEntry Component', () => {
   const mockOnPlayersAdded = vi.fn()

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractPlayerNames, debugOCR } from '../ocrTextProcessor'
+import { extractPlayerNames, debugOCR } from '../../src/utils/ocrTextProcessor'
 
 describe('OCR Text Processor', () => {
   it('should extract player names from your sample image text', () => {

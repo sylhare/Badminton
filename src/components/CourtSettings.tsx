@@ -29,7 +29,6 @@ const CourtSettings: React.FC<CourtSettingsProps> = ({
           type="number"
           min="1"
           max="20"
-          defaultValue="4"
           value={numberOfCourts}
           onChange={handleCourtsChange}
           className="court-input"
