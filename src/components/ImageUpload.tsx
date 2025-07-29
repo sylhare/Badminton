@@ -25,7 +25,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
 
       console.log('OCR Raw text:', text)
       
-      // Extract names using the utility function
       const playerNames = extractPlayerNames(text)
       console.log('Extracted player names:', playerNames)
 

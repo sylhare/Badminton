@@ -133,17 +133,13 @@ describe('CourtAssignments Component', () => {
     const user = userEvent.setup()
     render(<CourtAssignments {...defaultProps} />)
     
-    // Verify initial state - players are visible
     expect(screen.getByText('Alice')).toBeInTheDocument()
     expect(screen.getByText('Eve')).toBeInTheDocument()
     
     const button = screen.getByRole('button', { name: /generate new assignments/i })
     await user.click(button)
     
-    // Verify callback was called (this would trigger a re-render with new assignments)
     expect(mockOnGenerateNewAssignments).toHaveBeenCalledTimes(1)
     
-    // The actual preservation of player data is tested at the App level,
-    // but this confirms the UI triggers the correct action
   })
 }) 

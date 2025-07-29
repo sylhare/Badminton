@@ -3,7 +3,6 @@ import { extractPlayerNames, debugOCR } from '../../src/utils/ocrTextProcessor'
 
 describe('OCR Text Processor', () => {
   it('should extract player names from your sample image text', () => {
-    // This is what OCR might extract from your names.png image
     const sampleText = `Tinley
 Ella
 Avrella

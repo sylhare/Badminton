@@ -5,7 +5,6 @@ import '@testing-library/jest-dom'
 import ImageUpload from '../../src/components/ImageUpload'
 import { createWorker } from 'tesseract.js'
 
-// Mock tesseract.js
 vi.mock('tesseract.js', () => ({
   createWorker: vi.fn()
 }))
@@ -33,11 +32,9 @@ describe('ImageUpload Component', () => {
     const uploadArea = document.querySelector('.upload-area') as HTMLElement
     expect(uploadArea).toBeInTheDocument()
     
-    // Test drag over
     fireEvent.dragOver(uploadArea)
     expect(uploadArea).toHaveClass('dragover')
     
-    // Test drag leave
     fireEvent.dragLeave(uploadArea)
     expect(uploadArea).not.toHaveClass('dragover')
   })
@@ -58,11 +55,9 @@ describe('ImageUpload Component', () => {
     
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />)
     
-    // Create a test file
     const file = new File(['fake image content'], 'names.png', { type: 'image/png' })
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     
-    // Simulate file selection
     Object.defineProperty(input, 'files', {
       value: [file],
       writable: false,
@@ -70,7 +65,6 @@ describe('ImageUpload Component', () => {
     
     fireEvent.change(input)
     
-    // Wait for OCR processing - check for new API call
     await waitFor(() => {
       expect(mockCreateWorker).toHaveBeenCalledWith({ logger: expect.any(Function) })
     }, { timeout: 5000 })
@@ -91,7 +85,6 @@ describe('ImageUpload Component', () => {
       expect(mockWorker.terminate).toHaveBeenCalled()
     })
     
-    // Verify the names were extracted and filtered correctly
     await waitFor(() => {
       expect(mockOnPlayersExtracted).toHaveBeenCalledWith([
         'Tinley',
@@ -141,7 +134,6 @@ describe('ImageUpload Component', () => {
   })
 
   it('shows processing message during OCR', async () => {
-    // Mock a slow OCR process
     const mockWorker = {
       loadLanguage: vi.fn().mockResolvedValue(undefined),
       initialize: vi.fn().mockResolvedValue(undefined),
@@ -167,7 +159,6 @@ describe('ImageUpload Component', () => {
     
     fireEvent.change(input)
     
-    // Should show processing message
     await waitFor(() => {
       expect(screen.getByText(/Processing image and extracting player names/)).toBeInTheDocument()
     })
@@ -183,7 +174,6 @@ describe('ImageUpload Component', () => {
     
     mockCreateWorker.mockResolvedValue(mockWorker as any)
     
-    // Mock window.alert
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
     
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />)
@@ -202,7 +192,6 @@ describe('ImageUpload Component', () => {
       expect(alertSpy).toHaveBeenCalledWith('Failed to process image. Please try again or add players manually.')
     })
     
-    // Should not call onPlayersExtracted on error
     expect(mockOnPlayersExtracted).not.toHaveBeenCalled()
     
     alertSpy.mockRestore()
@@ -225,7 +214,6 @@ describe('ImageUpload Component', () => {
     const uploadArea = document.querySelector('.upload-area') as HTMLElement
     const file = new File(['fake image content'], 'test.png', { type: 'image/png' })
     
-    // Create a mock drag event
     const dropEvent = new Event('drop', { bubbles: true }) as any
     dropEvent.dataTransfer = {
       files: [file]

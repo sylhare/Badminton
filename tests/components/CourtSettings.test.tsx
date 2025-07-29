@@ -60,12 +60,10 @@ describe('CourtSettings Component', () => {
     
     const input = screen.getByLabelText('Number of Courts:')
     
-    // Test value too high
     fireEvent.change(input, { target: { value: '25' } })
     
     expect(mockOnNumberOfCourtsChange).not.toHaveBeenCalledWith(25)
     
-    // Test value too low
     fireEvent.change(input, { target: { value: '0' } })
     
     expect(mockOnNumberOfCourtsChange).not.toHaveBeenCalledWith(0)
@@ -109,11 +107,9 @@ describe('CourtSettings Component', () => {
     
     const input = screen.getByLabelText('Number of Courts:')
     
-    // Test minimum valid value
     fireEvent.change(input, { target: { value: '1' } })
     expect(mockOnNumberOfCourtsChange).toHaveBeenCalledWith(1)
     
-    // Test maximum valid value
     vi.clearAllMocks()
     fireEvent.change(input, { target: { value: '20' } })
     expect(mockOnNumberOfCourtsChange).toHaveBeenCalledWith(20)
@@ -125,15 +121,12 @@ describe('CourtSettings Component', () => {
     
     const button = screen.getByRole('button', { name: /generate random assignments/i })
     
-    // Generate assignments multiple times
     await user.click(button)
     await user.click(button)
     await user.click(button)
     
-    // Verify callback was called multiple times
     expect(mockOnGenerateAssignments).toHaveBeenCalledTimes(3)
     
-    // Button should still be enabled for further generations
     expect(button).toBeEnabled()
   })
 }) 

@@ -21,9 +21,9 @@ export interface Court {
   }
 }
 
-function App() {
+function App(): React.ReactElement {
   const [players, setPlayers] = useState<Player[]>([])
-  const [numberOfCourts, setNumberOfCourts] = useState<number>(1)
+  const [numberOfCourts, setNumberOfCourts] = useState<number>(4)
   const [assignments, setAssignments] = useState<Court[]>([])
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
@@ -54,8 +54,6 @@ function App() {
     )
   }
 
-
-
   const handleRemovePlayer = (playerId: string) => {
     setPlayers(prev => prev.filter(player => player.id !== playerId))
   }
@@ -68,19 +66,16 @@ function App() {
       return
     }
 
-    // Shuffle players randomly
     const shuffledPlayers = [...presentPlayers].sort(() => Math.random() - 0.5)
     
     const courts: Court[] = []
-    const playersPerCourt = 4 // For doubles
-    const totalCourtSpots = numberOfCourts * playersPerCourt
+    const playersPerCourt = 4
     
     let playerIndex = 0
 
     for (let courtNum = 1; courtNum <= numberOfCourts; courtNum++) {
       const courtPlayers: Player[] = []
       
-      // Try to fill with 4 players for doubles
       for (let i = 0; i < playersPerCourt && playerIndex < shuffledPlayers.length; i++) {
         courtPlayers.push(shuffledPlayers[playerIndex])
         playerIndex++
@@ -92,7 +87,6 @@ function App() {
           players: courtPlayers
         }
 
-        // Create teams for doubles (4 players) or singles (2 players)
         if (courtPlayers.length >= 4) {
           court.teams = {
             team1: [courtPlayers[0], courtPlayers[1]],
@@ -104,7 +98,6 @@ function App() {
             team2: [courtPlayers[1]]
           }
         } else if (courtPlayers.length === 3) {
-          // For 3 players, 2 play and 1 sits out
           court.teams = {
             team1: [courtPlayers[0]],
             team2: [courtPlayers[1]]

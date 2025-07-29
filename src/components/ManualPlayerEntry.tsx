@@ -11,7 +11,6 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
   const handleBulkAdd = (e: React.FormEvent) => {
     e.preventDefault()
     if (playerText.trim()) {
-      // Split by newlines or commas and filter out empty entries
       const players = playerText
         .split(/[\n,]+/)
         .map(name => name.trim())

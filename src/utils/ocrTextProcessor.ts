@@ -8,7 +8,6 @@ export function extractPlayerNames(text: string): string[] {
     .map(line => line.trim())
     .filter(line => line.length > 0)
     .filter(line => {
-      // Filter out common OCR noise and non-name lines
       const lowerLine = line.toLowerCase()
       return !lowerLine.includes('list') && 
              !lowerLine.includes('players') &&
@@ -17,16 +16,13 @@ export function extractPlayerNames(text: string): string[] {
              !lowerLine.includes('noise') &&
              !lowerLine.includes('text') &&
              !lowerLine.includes('some') &&
-             line.length < 50 && // Names shouldn't be too long
-             line.length > 1 // Should have at least 2 characters
+             line.length < 50 &&
+             line.length > 1
     })
 
   return lines
 }
 
-/**
- * Debug function to test OCR processing with known text
- */
 export function debugOCR(testText: string): { input: string; output: string[]; filtered: string[] } {
   const input = testText
   const allLines = testText.split('\n').map(line => line.trim()).filter(line => line.length > 0)

@@ -31,7 +31,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
       )
     }
 
-    // Check if it's singles or doubles
     const isDoubles = teams.team1.length === 2 && teams.team2.length === 2
     const isSingles = teams.team1.length === 1 && teams.team2.length === 1
 
@@ -90,7 +89,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
       )
     }
 
-    // Fallback for other configurations
     return (
       <div key={court.courtNumber} className="court-card">
         <div className="court-header">Court {court.courtNumber}</div>
