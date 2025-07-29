@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
-import './App.css'
-import ImageUpload from './components/ImageUpload'
-import ManualPlayerEntry from './components/ManualPlayerEntry'
-import PlayerList from './components/PlayerList'
-import CourtSettings from './components/CourtSettings'
-import CourtAssignments from './components/CourtAssignments'
+import React, { useState } from 'react';
+
+import './App.css';
+import ImageUpload from './components/ImageUpload';
+import ManualPlayerEntry from './components/ManualPlayerEntry';
+import PlayerList from './components/PlayerList';
+import CourtSettings from './components/CourtSettings';
+import CourtAssignments from './components/CourtAssignments';
 
 export interface Player {
   id: string
@@ -22,109 +23,109 @@ export interface Court {
 }
 
 function App(): React.ReactElement {
-  const [players, setPlayers] = useState<Player[]>([])
-  const [numberOfCourts, setNumberOfCourts] = useState<number>(4)
-  const [assignments, setAssignments] = useState<Court[]>([])
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
+  const [assignments, setAssignments] = useState<Court[]>([]);
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
     const newPlayers: Player[] = extractedNames.map((name, index) => ({
       id: `player-${index}`,
       name: name.trim(),
-      isPresent: true
-    }))
-    setPlayers(newPlayers)
-  }
+      isPresent: true,
+    }));
+    setPlayers(newPlayers);
+  };
 
   const handleManualPlayersAdded = (newNames: string[]) => {
     const newPlayers: Player[] = newNames.map((name, index) => ({
       id: `player-${Date.now()}-${index}`,
       name: name.trim(),
-      isPresent: true
-    }))
-    setPlayers(prev => [...prev, ...newPlayers])
-  }
+      isPresent: true,
+    }));
+    setPlayers(prev => [...prev, ...newPlayers]);
+  };
 
   const handlePlayerToggle = (playerId: string) => {
-    setPlayers(prev => 
-      prev.map(player => 
-        player.id === playerId 
+    setPlayers(prev =>
+      prev.map(player =>
+        player.id === playerId
           ? { ...player, isPresent: !player.isPresent }
-          : player
-      )
-    )
-  }
+          : player,
+      ),
+    );
+  };
 
   const handleRemovePlayer = (playerId: string) => {
-    setPlayers(prev => prev.filter(player => player.id !== playerId))
-  }
+    setPlayers(prev => prev.filter(player => player.id !== playerId));
+  };
 
   const generateAssignments = () => {
-    const presentPlayers = players.filter(player => player.isPresent)
-    
+    const presentPlayers = players.filter(player => player.isPresent);
+
     if (presentPlayers.length === 0) {
-      setAssignments([])
-      return
+      setAssignments([]);
+      return;
     }
 
-    const shuffledPlayers = [...presentPlayers].sort(() => Math.random() - 0.5)
-    
-    const courts: Court[] = []
-    const playersPerCourt = 4
-    
-    let playerIndex = 0
+    const shuffledPlayers = [...presentPlayers].sort(() => Math.random() - 0.5);
+
+    const courts: Court[] = [];
+    const playersPerCourt = 4;
+
+    let playerIndex = 0;
 
     for (let courtNum = 1; courtNum <= numberOfCourts; courtNum++) {
-      const courtPlayers: Player[] = []
-      
+      const courtPlayers: Player[] = [];
+
       for (let i = 0; i < playersPerCourt && playerIndex < shuffledPlayers.length; i++) {
-        courtPlayers.push(shuffledPlayers[playerIndex])
-        playerIndex++
+        courtPlayers.push(shuffledPlayers[playerIndex]);
+        playerIndex++;
       }
 
       if (courtPlayers.length > 0) {
         const court: Court = {
           courtNumber: courtNum,
-          players: courtPlayers
-        }
+          players: courtPlayers,
+        };
 
         if (courtPlayers.length >= 4) {
           court.teams = {
             team1: [courtPlayers[0], courtPlayers[1]],
-            team2: [courtPlayers[2], courtPlayers[3]]
-          }
+            team2: [courtPlayers[2], courtPlayers[3]],
+          };
         } else if (courtPlayers.length === 2) {
           court.teams = {
             team1: [courtPlayers[0]],
-            team2: [courtPlayers[1]]
-          }
+            team2: [courtPlayers[1]],
+          };
         } else if (courtPlayers.length === 3) {
           court.teams = {
             team1: [courtPlayers[0]],
-            team2: [courtPlayers[1]]
-          }
+            team2: [courtPlayers[1]],
+          };
         }
 
-        courts.push(court)
+        courts.push(court);
       }
     }
 
-    setAssignments(courts)
-  }
+    setAssignments(courts);
+  };
 
   const getBenchedPlayers = (): Player[] => {
     const assignedPlayerIds = new Set(
-      assignments.flatMap(court => court.players.map(p => p.id))
-    )
-    return players.filter(player => 
-      player.isPresent && !assignedPlayerIds.has(player.id)
-    )
-  }
+      assignments.flatMap(court => court.players.map(p => p.id)),
+    );
+    return players.filter(player =>
+      player.isPresent && !assignedPlayerIds.has(player.id),
+    );
+  };
 
   return (
     <div className="app">
       <div className="container">
         <h1>🏸 Badminton Court Manager</h1>
-        
+
         <div className="step">
           <h2>Step 1: Add Players</h2>
           <div className="add-players-options">
@@ -173,7 +174,7 @@ function App(): React.ReactElement {
         )}
       </div>
     </div>
-  )
+  );
 }
 
-export default App 
+export default App;

@@ -1,35 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 
 interface ManualPlayerEntryProps {
   onPlayersAdded: (players: string[]) => void
 }
 
 const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded }) => {
-  const [playerText, setPlayerText] = useState('')
-  const [singlePlayerName, setSinglePlayerName] = useState('')
+  const [playerText, setPlayerText] = useState('');
+  const [singlePlayerName, setSinglePlayerName] = useState('');
 
   const handleBulkAdd = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (playerText.trim()) {
       const players = playerText
         .split(/[\n,]+/)
         .map(name => name.trim())
-        .filter(name => name.length > 0)
-      
+        .filter(name => name.length > 0);
+
       if (players.length > 0) {
-        onPlayersAdded(players)
-        setPlayerText('')
+        onPlayersAdded(players);
+        setPlayerText('');
       }
     }
-  }
+  };
 
   const handleSingleAdd = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (singlePlayerName.trim()) {
-      onPlayersAdded([singlePlayerName.trim()])
-      setSinglePlayerName('')
+      onPlayersAdded([singlePlayerName.trim()]);
+      setSinglePlayerName('');
     }
-  }
+  };
 
   return (
     <div className="manual-entry-container">
@@ -68,7 +68,7 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
         </form>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ManualPlayerEntry 
+export default ManualPlayerEntry;

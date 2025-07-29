@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'react';
 
 interface CourtSettingsProps {
   numberOfCourts: number
@@ -11,14 +11,14 @@ const CourtSettings: React.FC<CourtSettingsProps> = ({
   numberOfCourts,
   onNumberOfCourtsChange,
   onGenerateAssignments,
-  hasPlayers
+  hasPlayers,
 }) => {
   const handleCourtsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value)
+    const value = parseInt(e.target.value);
     if (value > 0 && value <= 20) {
-      onNumberOfCourtsChange(value)
+      onNumberOfCourtsChange(value);
     }
-  }
+  };
 
   return (
     <div className="court-settings">
@@ -34,7 +34,7 @@ const CourtSettings: React.FC<CourtSettingsProps> = ({
           className="court-input"
         />
       </div>
-      
+
       <button
         onClick={onGenerateAssignments}
         disabled={!hasPlayers}
@@ -42,16 +42,16 @@ const CourtSettings: React.FC<CourtSettingsProps> = ({
       >
         🎲 Generate Random Assignments
       </button>
-      
+
       <div style={{ fontSize: '0.9rem', color: '#718096', maxWidth: '400px' }}>
         <p>
-          <strong>How it works:</strong> Players will be randomly assigned to courts. 
-          Doubles (4 players) is preferred, but singles (2 players) will be used for odd numbers. 
+          <strong>How it works:</strong> Players will be randomly assigned to courts.
+          Doubles (4 players) is preferred, but singles (2 players) will be used for odd numbers.
           Extra players will be benched.
         </p>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CourtSettings 
+export default CourtSettings;

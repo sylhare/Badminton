@@ -1,5 +1,6 @@
-import React from 'react'
-import { Court, Player } from '../App'
+import React from 'react';
+
+import { Court, Player } from '../App';
 
 interface CourtAssignmentsProps {
   assignments: Court[]
@@ -10,10 +11,10 @@ interface CourtAssignmentsProps {
 const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   assignments,
   benchedPlayers,
-  onGenerateNewAssignments
+  onGenerateNewAssignments,
 }) => {
   const renderCourt = (court: Court) => {
-    const { teams } = court
+    const { teams } = court;
 
     if (!teams) {
       return (
@@ -28,11 +29,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             ))}
           </div>
         </div>
-      )
+      );
     }
 
-    const isDoubles = teams.team1.length === 2 && teams.team2.length === 2
-    const isSingles = teams.team1.length === 1 && teams.team2.length === 1
+    const isDoubles = teams.team1.length === 2 && teams.team2.length === 2;
+    const isSingles = teams.team1.length === 1 && teams.team2.length === 1;
 
     if (isSingles) {
       return (
@@ -55,7 +56,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             )}
           </div>
         </div>
-      )
+      );
     }
 
     if (isDoubles) {
@@ -86,7 +87,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             </div>
           </div>
         </div>
-      )
+      );
     }
 
     return (
@@ -120,8 +121,8 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           )}
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div>
@@ -153,7 +154,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CourtAssignments 
+export default CourtAssignments;

@@ -1,5 +1,6 @@
-import React from 'react'
-import { Player } from '../App'
+import React from 'react';
+
+import { Player } from '../App';
 
 interface PlayerListProps {
   players: Player[]
@@ -10,11 +11,11 @@ interface PlayerListProps {
 const PlayerList: React.FC<PlayerListProps> = ({
   players,
   onPlayerToggle,
-  onRemovePlayer
+  onRemovePlayer,
 }) => {
 
-  const presentCount = players.filter(p => p.isPresent).length
-  const totalCount = players.length
+  const presentCount = players.filter(p => p.isPresent).length;
+  const totalCount = players.length;
 
   return (
     <div>
@@ -35,8 +36,8 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
       <div className="player-list">
         {players.map(player => (
-          <div 
-            key={player.id} 
+          <div
+            key={player.id}
             className={`player-item ${!player.isPresent ? 'absent' : ''}`}
           >
             <input
@@ -57,7 +58,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default PlayerList 
+export default PlayerList;

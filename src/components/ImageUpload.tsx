@@ -1,72 +1,73 @@
-import React, { useState, useRef } from 'react'
-import { createWorker } from 'tesseract.js'
-import { extractPlayerNames } from '../utils/ocrTextProcessor'
+import React, { useState, useRef } from 'react';
+import { createWorker } from 'tesseract.js';
+
+import { extractPlayerNames } from '../utils/ocrTextProcessor';
 
 interface ImageUploadProps {
   onPlayersExtracted: (players: string[]) => void
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [isDragOver, setIsDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processImage = async (file: File) => {
-    setIsProcessing(true)
+    setIsProcessing(true);
     try {
-      const worker = await createWorker({ 
-        logger: m => console.log(m) 
-      })
-      await worker.loadLanguage('eng')
-      await worker.initialize('eng')
-      
-      const { data: { text } } = await worker.recognize(file)
-      await worker.terminate()
+      const worker = await createWorker({
+        logger: m => console.log(m),
+      });
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
 
-      console.log('OCR Raw text:', text)
-      
-      const playerNames = extractPlayerNames(text)
-      console.log('Extracted player names:', playerNames)
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
 
-      onPlayersExtracted(playerNames)
+      console.log('OCR Raw text:', text);
+
+      const playerNames = extractPlayerNames(text);
+      console.log('Extracted player names:', playerNames);
+
+      onPlayersExtracted(playerNames);
     } catch (error) {
-      console.error('OCR processing failed:', error)
-      alert('Failed to process image. Please try again or add players manually.')
+      console.error('OCR processing failed:', error);
+      alert('Failed to process image. Please try again or add players manually.');
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      processImage(file)
+      processImage(file);
     }
-  }
+  };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    setIsDragOver(false)
-    
-    const file = event.dataTransfer.files?.[0]
+    event.preventDefault();
+    setIsDragOver(false);
+
+    const file = event.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      processImage(file)
+      processImage(file);
     }
-  }
+  };
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    setIsDragOver(true)
-  }
+    event.preventDefault();
+    setIsDragOver(true);
+  };
 
   const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    setIsDragOver(false)
-  }
+    event.preventDefault();
+    setIsDragOver(false);
+  };
 
   const handleClick = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
   return (
     <div>
@@ -96,7 +97,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
           className="file-input"
         />
       </div>
-      
+
       {isProcessing && (
         <div className="processing">
           <p>🔍 Processing image and extracting player names...</p>
@@ -104,7 +105,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default ImageUpload 
+export default ImageUpload;
