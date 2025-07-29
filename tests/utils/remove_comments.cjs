@@ -1,3 +1,10 @@
+// How to run this script:
+// From project root: node tests/utils/remove_comments.cjs
+// Or from tests/utils directory: node remove_comments.cjs
+//
+// This script removes all comments from TypeScript/JavaScript files in src/ and tests/ directories
+// as well as config files in the project root.
+
 const fs = require('fs');
 const path = require('path');
 

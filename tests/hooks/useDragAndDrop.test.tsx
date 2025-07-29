@@ -124,7 +124,6 @@ describe('useDragAndDrop Hook', () => {
     const { result } = renderHook(() => useDragAndDrop({ onFileDropped: mockOnFileDropped }));
     const mockEvent = createMockDragEvent();
 
-    // First drag operation
     act(() => {
       result.current.handleDragOver(mockEvent);
     });
@@ -135,7 +134,6 @@ describe('useDragAndDrop Hook', () => {
     });
     expect(result.current.isDragOver).toBe(false);
 
-    // Second drag operation
     act(() => {
       result.current.handleDragOver(mockEvent);
     });

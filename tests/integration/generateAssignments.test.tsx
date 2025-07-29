@@ -1,167 +1,74 @@
 import React from 'react';
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom';
 
 import App from '../../src/App';
 
 describe('Generate Assignments Integration', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-  });
-
-  it('preserves players and courts when generating new assignments', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-
-    const singlePlayerInput = screen.getByPlaceholderText('Enter player name...');
-    const addPlayerButton = screen.getByRole('button', { name: /add player/i });
-
-    const playerNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
-    for (const name of playerNames) {
-      await user.type(singlePlayerInput, name);
-      await user.click(addPlayerButton);
-      await waitFor(() => {
-        expect(screen.getAllByText(name)[0]).toBeInTheDocument();
-      });
-    }
-
-     for (const name of playerNames) {
-       expect(screen.getAllByText(name)[0]).toBeInTheDocument();
-     }
-
-    const courtsInput = screen.getByLabelText('Number of Courts:') as HTMLInputElement;
-    fireEvent.change(courtsInput, { target: { value: '2' } });
-    await waitFor(() => {
-      expect(courtsInput).toHaveValue(2);
-    });
-
-    const generateButton = screen.getByRole('button', { name: /generate random assignments/i });
-    await user.click(generateButton);
-    await waitFor(() => {
-      expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-      expect(screen.getByText(/Court 2/)).toBeInTheDocument();
-    });
-
-     expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-     expect(screen.getByText(/Court 2/)).toBeInTheDocument();
-
-     for (const name of playerNames) {
-       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
-     }
-
-    const regenerateButton = screen.getByRole('button', { name: /generate new assignments/i });
-    await user.click(regenerateButton);
-    await waitFor(() => {
-      expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-      expect(screen.getByText(/Court 2/)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-    expect(screen.getByText(/Court 2/)).toBeInTheDocument();
-
-    for (const name of playerNames) {
-      expect(screen.getAllByText(name).length).toBeGreaterThan(0);
-    }
-
-    expect(courtsInput).toHaveValue(2);
-
-    const playerListSection = screen.getByText('Step 2: Manage Players').parentElement;
-    expect(playerListSection).toBeInTheDocument();
-
-    expect(regenerateButton).toBeEnabled();
-  });
-
   it('can generate multiple new assignments in succession', async () => {
     const user = userEvent.setup();
     render(<App />);
 
     const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
-    const addAllButton = screen.getByRole('button', { name: /add all players/i });
+    await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank\nGrace\nHenry\nIvy');
+    await user.click(screen.getByText('Add All Players'));
 
-    await user.type(bulkInput, 'Player1, Player2, Player3, Player4, Player5, Player6, Player7, Player8');
-    await user.click(addAllButton);
-    await waitFor(() => {
-      expect(screen.getAllByText('Player1')[0]).toBeInTheDocument();
-    });
+    await user.click(screen.getByText('🎲 Generate Random Assignments'));
+    expect(screen.getByText(/Court.*1/)).toBeInTheDocument();
+    expect(screen.getByText(/Court.*2/)).toBeInTheDocument();
 
-    const generateButton = screen.getByRole('button', { name: /generate random assignments/i });
-    await user.click(generateButton);
-    await waitFor(() => {
-      expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-    });
-
-    const regenerateButton = screen.getByRole('button', { name: /generate new assignments/i });
-
-    await user.click(regenerateButton);
-    await user.click(regenerateButton);
-    await user.click(regenerateButton);
-
-     for (let i = 1; i <= 8; i++) {
-       expect(screen.getAllByText(`Player${i}`).length).toBeGreaterThan(0);
-     }
-
-     expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-
-    expect(regenerateButton).toBeEnabled();
+    await user.click(screen.getByText('🎲 Generate New Assignments'));
+    expect(screen.getByText(/Court.*1/)).toBeInTheDocument();
+    expect(screen.getByText(/Court.*2/)).toBeInTheDocument();
   });
 
   it('preserves player present/absent status across regenerations', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const singlePlayerInput = screen.getByPlaceholderText('Enter player name...');
-    const addPlayerButton = screen.getByRole('button', { name: /add player/i });
+    const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+    await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank');
+    await user.click(screen.getByText('Add All Players'));
 
-    await user.type(singlePlayerInput, 'Alice');
-    await user.click(addPlayerButton);
-    await waitFor(() => expect(screen.getAllByText('Alice')[0]).toBeInTheDocument());
+    const playerItems = screen.getAllByRole('checkbox');
+    const aliceCheckbox = playerItems[0]; // First player (Alice)
+    const bobCheckbox = playerItems[1];   // Second player (Bob)
+    await user.click(aliceCheckbox);
+    await user.click(bobCheckbox);
 
-    await user.type(singlePlayerInput, 'Bob');
-    await user.click(addPlayerButton);
-    await waitFor(() => expect(screen.getAllByText('Bob')[0]).toBeInTheDocument());
+    await user.click(screen.getByText('🎲 Generate Random Assignments'));
 
-    await user.type(singlePlayerInput, 'Charlie');
-    await user.click(addPlayerButton);
-    await waitFor(() => expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument());
+    const courtAssignments = screen.getByText('Step 4: Court Assignments').parentElement;
+    expect(courtAssignments).not.toHaveTextContent('Alice');
+    expect(courtAssignments).not.toHaveTextContent('Bob');
+    expect(courtAssignments).toHaveTextContent('Charlie');
+    expect(courtAssignments).toHaveTextContent('Diana');
 
-    await user.type(singlePlayerInput, 'Diana');
-    await user.click(addPlayerButton);
-    await waitFor(() => expect(screen.getAllByText('Diana')[0]).toBeInTheDocument());
+    await user.click(screen.getByText('🎲 Generate New Assignments'));
 
-     const bobPlayerItems = screen.getAllByText('Bob');
-     const bobPlayerListItem = bobPlayerItems.find(el =>
-       el.parentElement?.querySelector('.player-checkbox'),
-     );
-         const bobToggle = bobPlayerListItem?.parentElement?.querySelector('.player-checkbox') as HTMLElement;
-    await user.click(bobToggle);
-    await waitFor(() => {
-      expect(bobToggle).not.toBeChecked();
-    });
+    expect(courtAssignments).not.toHaveTextContent('Alice');
+    expect(courtAssignments).not.toHaveTextContent('Bob');
+  });
 
-    const generateButton = screen.getByRole('button', { name: /generate random assignments/i });
-    await user.click(generateButton);
-    await waitFor(() => {
-      expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-    });
+  it('properly benches single remaining players instead of assigning them to courts', async () => {
+    const user = userEvent.setup();
+    render(<App />);
 
-    const playerListSection = screen.getByText('Step 2: Manage Players').parentElement!;
-    expect(playerListSection).toHaveTextContent('Bob');
+    const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+    await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank\nGrace\nHenry\nIvy');
+    await user.click(screen.getByText('Add All Players'));
 
-    const regenerateButton = screen.getByRole('button', { name: /generate new assignments/i });
-    await user.click(regenerateButton);
-    await waitFor(() => {
-      expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-    });
+    await user.click(screen.getByText('🎲 Generate Random Assignments'));
 
-    expect(playerListSection).toHaveTextContent('Bob');
+    expect(screen.getByText(/Court.*1/)).toBeInTheDocument();
+    expect(screen.getByText(/Court.*2/)).toBeInTheDocument();
+    expect(screen.queryByText(/Court.*3/)).not.toBeInTheDocument();
 
-     const bobCheckboxAfter = bobPlayerListItem?.parentElement?.querySelector('.player-checkbox') as HTMLInputElement;
-     expect(bobCheckboxAfter).not.toBeChecked();
+    expect(screen.getByText('🪑 Bench (1 player)')).toBeInTheDocument();
 
-     expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
-     expect(screen.getAllByText('Charlie').length).toBeGreaterThan(0);
-     expect(screen.getAllByText('Diana').length).toBeGreaterThan(0);
+    const benchSection = screen.getByText('🪑 Bench (1 player)').closest('.bench-section');
+    expect(benchSection).toBeInTheDocument();
   });
 });

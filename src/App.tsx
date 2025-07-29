@@ -95,7 +95,7 @@ function App(): React.ReactElement {
         playerIndex++;
       }
 
-      if (courtPlayers.length > 0) {
+      if (courtPlayers.length >= 2) {
         const court: Court = {
           courtNumber: courtNum,
           players: courtPlayers,
