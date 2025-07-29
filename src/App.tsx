@@ -174,6 +174,7 @@ function App() {
             <CourtAssignments
               assignments={assignments}
               benchedPlayers={getBenchedPlayers()}
+              onGenerateNewAssignments={generateAssignments}
             />
           </div>
         )}

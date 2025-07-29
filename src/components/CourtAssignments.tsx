@@ -4,11 +4,13 @@ import { Court, Player } from '../App'
 interface CourtAssignmentsProps {
   assignments: Court[]
   benchedPlayers: Player[]
+  onGenerateNewAssignments: () => void
 }
 
 const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   assignments,
-  benchedPlayers
+  benchedPlayers,
+  onGenerateNewAssignments
 }) => {
   const renderCourt = (court: Court) => {
     const { teams } = court
@@ -146,7 +148,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
       <div style={{ marginTop: '20px', textAlign: 'center' }}>
         <button
-          onClick={() => window.location.reload()}
+          onClick={onGenerateNewAssignments}
           className="generate-button"
         >
           🎲 Generate New Assignments

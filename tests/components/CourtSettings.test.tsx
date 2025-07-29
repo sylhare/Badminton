@@ -118,4 +118,22 @@ describe('CourtSettings Component', () => {
     fireEvent.change(input, { target: { value: '20' } })
     expect(mockOnNumberOfCourtsChange).toHaveBeenCalledWith(20)
   })
+
+  it('can generate multiple assignments without losing functionality', async () => {
+    const user = userEvent.setup()
+    render(<CourtSettings {...defaultProps} />)
+    
+    const button = screen.getByRole('button', { name: /generate random assignments/i })
+    
+    // Generate assignments multiple times
+    await user.click(button)
+    await user.click(button)
+    await user.click(button)
+    
+    // Verify callback was called multiple times
+    expect(mockOnGenerateAssignments).toHaveBeenCalledTimes(3)
+    
+    // Button should still be enabled for further generations
+    expect(button).toBeEnabled()
+  })
 }) 
