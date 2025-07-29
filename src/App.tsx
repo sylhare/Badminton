@@ -6,6 +6,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import CourtSettings from './components/CourtSettings';
 import CourtAssignments from './components/CourtAssignments';
+import { createPlayersFromNames } from './utils/playerUtils';
 
 export interface Player {
   id: string
@@ -28,20 +29,12 @@ function App(): React.ReactElement {
   const [assignments, setAssignments] = useState<Court[]>([]);
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
-    const newPlayers: Player[] = extractedNames.map((name, index) => ({
-      id: `player-${index}`,
-      name: name.trim(),
-      isPresent: true,
-    }));
+    const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
     setPlayers(newPlayers);
   };
 
   const handleManualPlayersAdded = (newNames: string[]) => {
-    const newPlayers: Player[] = newNames.map((name, index) => ({
-      id: `player-${Date.now()}-${index}`,
-      name: name.trim(),
-      isPresent: true,
-    }));
+    const newPlayers = createPlayersFromNames(newNames, 'manual');
     setPlayers(prev => [...prev, ...newPlayers]);
   };
 
@@ -57,6 +50,26 @@ function App(): React.ReactElement {
 
   const handleRemovePlayer = (playerId: string) => {
     setPlayers(prev => prev.filter(player => player.id !== playerId));
+  };
+
+  const createTeamsForCourt = (courtPlayers: Player[]) => {
+    if (courtPlayers.length >= 4) {
+      return {
+        team1: [courtPlayers[0], courtPlayers[1]],
+        team2: [courtPlayers[2], courtPlayers[3]],
+      };
+    } else if (courtPlayers.length === 2) {
+      return {
+        team1: [courtPlayers[0]],
+        team2: [courtPlayers[1]],
+      };
+    } else if (courtPlayers.length === 3) {
+      return {
+        team1: [courtPlayers[0]],
+        team2: [courtPlayers[1]],
+      };
+    }
+    return undefined;
   };
 
   const generateAssignments = () => {
@@ -86,24 +99,8 @@ function App(): React.ReactElement {
         const court: Court = {
           courtNumber: courtNum,
           players: courtPlayers,
+          teams: createTeamsForCourt(courtPlayers),
         };
-
-        if (courtPlayers.length >= 4) {
-          court.teams = {
-            team1: [courtPlayers[0], courtPlayers[1]],
-            team2: [courtPlayers[2], courtPlayers[3]],
-          };
-        } else if (courtPlayers.length === 2) {
-          court.teams = {
-            team1: [courtPlayers[0]],
-            team2: [courtPlayers[1]],
-          };
-        } else if (courtPlayers.length === 3) {
-          court.teams = {
-            team1: [courtPlayers[0]],
-            team2: [courtPlayers[1]],
-          };
-        }
 
         courts.push(court);
       }

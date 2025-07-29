@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { createWorker } from 'tesseract.js';
 
 import { extractPlayerNames } from '../utils/ocrTextProcessor';
+import { isImageFile, getFirstFile } from '../utils/fileUtils';
+import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 interface ImageUploadProps {
   onPlayersExtracted: (players: string[]) => void
@@ -9,7 +11,6 @@ interface ImageUploadProps {
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processImage = async (file: File) => {
@@ -38,31 +39,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
     }
   };
 
+  const { isDragOver, handleDrop, handleDragOver, handleDragLeave } = useDragAndDrop({
+    onFileDropped: processImage,
+  });
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    const file = getFirstFile(event.target.files);
+    if (isImageFile(file)) {
       processImage(file);
     }
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragOver(false);
-
-    const file = event.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      processImage(file);
-    }
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragOver(false);
   };
 
   const handleClick = () => {

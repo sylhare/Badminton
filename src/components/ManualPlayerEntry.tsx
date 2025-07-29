@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+import { validatePlayerNames } from '../utils/playerUtils';
+
 interface ManualPlayerEntryProps {
   onPlayersAdded: (players: string[]) => void
 }
@@ -8,26 +10,26 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
   const [playerText, setPlayerText] = useState('');
   const [singlePlayerName, setSinglePlayerName] = useState('');
 
+  const handleSubmit = (playerNames: string[], resetState: () => void) => {
+    const validNames = validatePlayerNames(playerNames);
+    if (validNames.length > 0) {
+      onPlayersAdded(validNames);
+      resetState();
+    }
+  };
+
   const handleBulkAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (playerText.trim()) {
-      const players = playerText
-        .split(/[\n,]+/)
-        .map(name => name.trim())
-        .filter(name => name.length > 0);
-
-      if (players.length > 0) {
-        onPlayersAdded(players);
-        setPlayerText('');
-      }
+      const players = playerText.split(/[\n,]+/);
+      handleSubmit(players, () => setPlayerText(''));
     }
   };
 
   const handleSingleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (singlePlayerName.trim()) {
-      onPlayersAdded([singlePlayerName.trim()]);
-      setSinglePlayerName('');
+      handleSubmit([singlePlayerName], () => setSinglePlayerName(''));
     }
   };
 
