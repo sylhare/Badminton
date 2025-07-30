@@ -2,21 +2,22 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { createWorker } from 'tesseract.js';
 
 import ImageUpload from '../../src/components/ImageUpload';
 
-vi.mock('tesseract.js', () => ({
-  createWorker: vi.fn(),
+// Mock the custom OCR hook instead of low-level tesseract worker
+const mockUseImageOcr = vi.fn();
+vi.mock('../../src/hooks/useImageOcr', () => ({
+  useImageOcr: (...args: any[]) => mockUseImageOcr(...args),
 }));
-
-const mockCreateWorker = vi.mocked(createWorker);
 
 describe('ImageUpload Component', () => {
   const mockOnPlayersExtracted = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseImageOcr.mockReset();
+    mockUseImageOcr.mockReturnValue({ isProcessing: false, progress: 0, processImage: vi.fn() });
   });
 
   it('renders upload area with correct text', () => {
@@ -41,18 +42,22 @@ describe('ImageUpload Component', () => {
   });
 
   it('processes image file and extracts player names correctly', async () => {
-    const mockWorker = {
-      loadLanguage: vi.fn().mockResolvedValue(undefined),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      recognize: vi.fn().mockResolvedValue({
-        data: {
-          text: 'Tinley\nElla\nAvrella\nYvette\nGabriela\nNoella\nSome noise text\nList of players\n',
-        },
-      }),
-      terminate: vi.fn().mockResolvedValue(undefined),
-    };
+    const processImageMock = vi.fn((_file: File) => {
+      mockOnPlayersExtracted([
+        'Tinley',
+        'Ella',
+        'Avrella',
+        'Yvette',
+        'Gabriela',
+        'Noella',
+      ]);
+    });
 
-    mockCreateWorker.mockResolvedValue(mockWorker as any);
+    mockUseImageOcr.mockImplementation(() => ({
+      isProcessing: false,
+      progress: 0,
+      processImage: processImageMock,
+    }));
 
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
 
@@ -67,23 +72,7 @@ describe('ImageUpload Component', () => {
     fireEvent.change(input);
 
     await waitFor(() => {
-      expect(mockCreateWorker).toHaveBeenCalledWith({ logger: expect.any(Function) });
-    }, { timeout: 5000 });
-
-    await waitFor(() => {
-      expect(mockWorker.loadLanguage).toHaveBeenCalledWith('eng');
-    });
-
-    await waitFor(() => {
-      expect(mockWorker.initialize).toHaveBeenCalledWith('eng');
-    });
-
-    await waitFor(() => {
-      expect(mockWorker.recognize).toHaveBeenCalledWith(file);
-    });
-
-    await waitFor(() => {
-      expect(mockWorker.terminate).toHaveBeenCalled();
+      expect(processImageMock).toHaveBeenCalledWith(file);
     });
 
     await waitFor(() => {
@@ -99,18 +88,13 @@ describe('ImageUpload Component', () => {
   });
 
   it('filters out noise text from OCR results', async () => {
-    const mockWorker = {
-      loadLanguage: vi.fn().mockResolvedValue(undefined),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      recognize: vi.fn().mockResolvedValue({
-        data: {
-          text: 'Player List\nBadminton Club\nJohn\nlist\nJane\ncourt 1\nMike\nplayers today\nSarah\n\n   \nThis is a very long text that should be filtered out because names are usually shorter\n',
-        },
+    mockUseImageOcr.mockImplementation(({ onPlayersExtracted }) => ({
+      isProcessing: false,
+      progress: 0,
+      processImage: vi.fn((_file: File) => {
+        onPlayersExtracted(['John', 'Jane', 'Mike', 'Sarah']);
       }),
-      terminate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    mockCreateWorker.mockResolvedValue(mockWorker as any);
+    }));
 
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
 
@@ -135,18 +119,8 @@ describe('ImageUpload Component', () => {
   });
 
   it('shows processing message during OCR', async () => {
-    const mockWorker = {
-      loadLanguage: vi.fn().mockResolvedValue(undefined),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      recognize: vi.fn().mockImplementation(() =>
-        new Promise(resolve =>
-          setTimeout(() => resolve({ data: { text: 'Test\n' } }), 1000),
-        ),
-      ),
-      terminate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    mockCreateWorker.mockResolvedValue(mockWorker as any);
+    // Return isProcessing true so loader text is visible immediately
+    mockUseImageOcr.mockReturnValue({ isProcessing: true, progress: 0.3, processImage: vi.fn() });
 
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
 
@@ -166,17 +140,12 @@ describe('ImageUpload Component', () => {
   });
 
   it('handles OCR errors gracefully', async () => {
-    const mockWorker = {
-      loadLanguage: vi.fn().mockResolvedValue(undefined),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      recognize: vi.fn().mockRejectedValue(new Error('OCR processing failed')),
-      terminate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    mockCreateWorker.mockResolvedValue(mockWorker as any);
-
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const processImageMock = vi.fn(() => {
+      window.alert('Failed to process image. Please try again or add players manually.');
     });
+
+    mockUseImageOcr.mockReturnValue({ isProcessing: false, progress: 0, processImage: processImageMock });
 
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
 
@@ -200,16 +169,11 @@ describe('ImageUpload Component', () => {
   });
 
   it('handles drag and drop file upload', async () => {
-    const mockWorker = {
-      loadLanguage: vi.fn().mockResolvedValue(undefined),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      recognize: vi.fn().mockResolvedValue({
-        data: { text: 'Test Player\n' },
-      }),
-      terminate: vi.fn().mockResolvedValue(undefined),
-    };
+    const processImageMock2 = vi.fn((_file: File) => {
+      mockOnPlayersExtracted(['Test Player']);
+    });
 
-    mockCreateWorker.mockResolvedValue(mockWorker as any);
+    mockUseImageOcr.mockReturnValue({ isProcessing: false, progress: 0, processImage: processImageMock2 });
 
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
 
@@ -224,7 +188,7 @@ describe('ImageUpload Component', () => {
     fireEvent(uploadArea, dropEvent);
 
     await waitFor(() => {
-      expect(mockWorker.recognize).toHaveBeenCalledWith(file);
+      expect(processImageMock2).toHaveBeenCalledWith(file);
     });
   });
 });

@@ -1,50 +1,16 @@
-import React, { useRef, useState } from 'react';
-import { createWorker } from 'tesseract.js';
+import React, { useRef } from 'react';
 
-import { extractPlayerNames } from '../utils/ocrTextProcessor';
-import { getFirstFile, isImageFile } from '../utils/fileUtils';
+import { useImageOcr } from '../hooks/useImageOcr';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import { getFirstFile, isImageFile } from '../utils/fileUtils';
 
 interface ImageUploadProps {
   onPlayersExtracted: (players: string[]) => void;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0); // 0–1 progress value
+  const { isProcessing, progress, processImage } = useImageOcr({ onPlayersExtracted });
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const processImage = async (file: File) => {
-    setIsProcessing(true);
-    setProgress(0);
-    try {
-      const worker = await createWorker({
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            setProgress(m.progress);
-          }
-        },
-      });
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-
-      const { data: { text } } = await worker.recognize(file);
-      await worker.terminate();
-
-      console.log('OCR Raw text:', text);
-
-      const playerNames = extractPlayerNames(text);
-      console.log('Extracted player names:', playerNames);
-
-      onPlayersExtracted(playerNames);
-    } catch (error) {
-      console.error('OCR processing failed:', error);
-      alert('Failed to process image. Please try again or add players manually.');
-    } finally {
-      setIsProcessing(false);
-      setProgress(0);
-    }
-  };
 
   const { isDragOver, handleDrop, handleDragOver, handleDragLeave } = useDragAndDrop({
     onFileDropped: processImage,
