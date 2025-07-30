@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { createWorker } from 'tesseract.js';
 
@@ -175,7 +175,8 @@ describe('ImageUpload Component', () => {
 
     mockCreateWorker.mockResolvedValue(mockWorker as any);
 
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {
+    });
 
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
 

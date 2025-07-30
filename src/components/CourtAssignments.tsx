@@ -6,9 +6,9 @@ import TeamPlayerList from './TeamPlayerList';
 import TeamDisplay from './TeamDisplay';
 
 interface CourtAssignmentsProps {
-  assignments: Court[]
-  benchedPlayers: Player[]
-  onGenerateNewAssignments: () => void
+  assignments: Court[];
+  benchedPlayers: Player[];
+  onGenerateNewAssignments: () => void;
 }
 
 const CourtAssignments: React.FC<CourtAssignmentsProps> = ({

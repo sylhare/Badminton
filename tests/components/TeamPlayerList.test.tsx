@@ -5,11 +5,7 @@ import '@testing-library/jest-dom';
 
 import TeamPlayerList from '../../src/components/TeamPlayerList';
 import { MOCK_PLAYERS } from '../utils/testFactories';
-import {
-  expectPlayersToBeRendered,
-  expectPlayersInOrder,
-  expectEmptyRender,
-} from '../utils/testHelpers';
+import { expectEmptyRender, expectPlayersInOrder, expectPlayersToBeRendered } from '../utils/testHelpers';
 
 describe('TeamPlayerList Component', () => {
   it('should render all players', () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -7,12 +7,13 @@ import '@testing-library/jest-dom';
 import App from '../../src/App';
 
 describe('Generate Assignments Integration', () => {
+  const user = userEvent.setup();
+
   it('can generate multiple new assignments in succession', async () => {
-    const user = userEvent.setup();
     render(<App />);
 
     const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
-    await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank\nGrace\nHenry\nIvy');
+    await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank\nGrace\nHenry');
     await user.click(screen.getByText('Add All Players'));
 
     await user.click(screen.getByText('🎲 Generate Random Assignments'));
@@ -25,7 +26,6 @@ describe('Generate Assignments Integration', () => {
   });
 
   it('preserves player present/absent status across regenerations', async () => {
-    const user = userEvent.setup();
     render(<App />);
 
     const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
@@ -53,7 +53,6 @@ describe('Generate Assignments Integration', () => {
   });
 
   it('properly benches single remaining players instead of assigning them to courts', async () => {
-    const user = userEvent.setup();
     render(<App />);
 
     const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);

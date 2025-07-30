@@ -1,10 +1,10 @@
 import React from 'react';
 
 interface CourtSettingsProps {
-  numberOfCourts: number
-  onNumberOfCourtsChange: (courts: number) => void
-  onGenerateAssignments: () => void
-  hasPlayers: boolean
+  numberOfCourts: number;
+  onNumberOfCourtsChange: (courts: number) => void;
+  onGenerateAssignments: () => void;
+  hasPlayers: boolean;
 }
 
 const CourtSettings: React.FC<CourtSettingsProps> = ({

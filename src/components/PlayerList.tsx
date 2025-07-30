@@ -3,9 +3,9 @@ import React from 'react';
 import { Player } from '../App';
 
 interface PlayerListProps {
-  players: Player[]
-  onPlayerToggle: (playerId: string) => void
-  onRemovePlayer: (playerId: string) => void
+  players: Player[];
+  onPlayerToggle: (playerId: string) => void;
+  onRemovePlayer: (playerId: string) => void;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({

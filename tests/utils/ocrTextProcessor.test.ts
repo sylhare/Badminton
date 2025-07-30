@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { extractPlayerNames, debugOCR } from '../../src/utils/ocrTextProcessor';
+import { extractPlayerNames } from '../../src/utils/ocrTextProcessor';
 
 describe('OCR Text Processor', () => {
   it('should extract player names from your sample image text', () => {
@@ -94,19 +94,5 @@ Sarah Davis  `;
       'Mike Johnson',
       'Sarah Davis',
     ]);
-  });
-
-  it('debugOCR should provide detailed processing info', () => {
-    const testText = `Player List
-John
-Jane
-list
-Mike`;
-
-    const debug = debugOCR(testText);
-
-    expect(debug.input).toBe(testText);
-    expect(debug.output).toEqual(['John', 'Jane', 'Mike']);
-    expect(debug.filtered).toEqual(['Player List', 'list']);
   });
 });

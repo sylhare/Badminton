@@ -21,7 +21,5 @@ export function createPlayersFromNames(names: string[], idPrefix = 'player'): Pl
  * @returns Array of valid, trimmed names
  */
 export function validatePlayerNames(names: string[]): string[] {
-  return names
-    .map(name => name.trim())
-    .filter(name => name.length > 0);
+  return names.map(name => name.trim()).filter(name => name.length > 0);
 }

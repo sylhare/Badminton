@@ -1,3 +1,4 @@
+import React from 'react';
 import { vi } from 'vitest';
 
 import { Player } from '../../src/App';
@@ -104,7 +105,6 @@ export function createMockFileList(files: File[]): FileList {
     item: (index: number) => files[index] || null,
   };
 
-  // Add indexed access
   files.forEach((file, index) => {
     (fileList as any)[index] = file;
   });

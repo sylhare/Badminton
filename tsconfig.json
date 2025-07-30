@@ -8,6 +8,7 @@
 
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "removeComments": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,

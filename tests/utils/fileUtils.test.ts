@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { isImageFile, getFirstFile } from '../../src/utils/fileUtils';
-import { MOCK_FILES, createMockFileList } from '../utils/testFactories';
+import { getFirstFile, isImageFile } from '../../src/utils/fileUtils';
+
+import { createMockFileList, MOCK_FILES } from './testFactories';
 
 describe('File Utils', () => {
   describe('isImageFile', () => {

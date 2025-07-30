@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 
-import { isImageFile, getFirstFile } from '../utils/fileUtils';
+import { getFirstFile, isImageFile } from '../utils/fileUtils';
 
 interface UseDragAndDropProps {
   onFileDropped: (file: File) => void;

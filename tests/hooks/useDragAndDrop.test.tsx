@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
 
 import { useDragAndDrop } from '../../src/hooks/useDragAndDrop';
-import { MOCK_FILES, createMockDragEvent } from '../utils/testFactories';
+import { createMockDragEvent, MOCK_FILES } from '../utils/testFactories';
 import { mockAssertions } from '../utils/testHelpers';
 
 describe('useDragAndDrop Hook', () => {

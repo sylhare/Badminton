@@ -9,18 +9,18 @@ import CourtAssignments from './components/CourtAssignments';
 import { createPlayersFromNames } from './utils/playerUtils';
 
 export interface Player {
-  id: string
-  name: string
-  isPresent: boolean
+  id: string;
+  name: string;
+  isPresent: boolean;
 }
 
 export interface Court {
-  courtNumber: number
-  players: Player[]
+  courtNumber: number;
+  players: Player[];
   teams?: {
     team1: Player[]
     team2: Player[]
-  }
+  };
 }
 
 function App(): React.ReactElement {

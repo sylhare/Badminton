@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { validatePlayerNames } from '../utils/playerUtils';
 
 interface ManualPlayerEntryProps {
-  onPlayersAdded: (players: string[]) => void
+  onPlayersAdded: (players: string[]) => void;
 }
 
 const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded }) => {

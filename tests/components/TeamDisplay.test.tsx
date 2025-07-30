@@ -1,14 +1,14 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import TeamDisplay from '../../src/components/TeamDisplay';
-import { MOCK_PLAYERS, createMockPlayers } from '../utils/testFactories';
+import { createMockPlayers, MOCK_PLAYERS } from '../utils/testFactories';
 import {
-  expectPlayersToBeRendered,
-  expectPlayersInOrder,
   expectParentToHaveClass,
+  expectPlayersInOrder,
+  expectPlayersToBeRendered,
   expectSiblingToHaveClass,
   getElementByText,
 } from '../utils/testHelpers';

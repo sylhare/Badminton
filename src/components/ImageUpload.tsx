@@ -1,12 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { createWorker } from 'tesseract.js';
 
 import { extractPlayerNames } from '../utils/ocrTextProcessor';
-import { isImageFile, getFirstFile } from '../utils/fileUtils';
+import { getFirstFile, isImageFile } from '../utils/fileUtils';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 interface ImageUploadProps {
-  onPlayersExtracted: (players: string[]) => void
+  onPlayersExtracted: (players: string[]) => void;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
