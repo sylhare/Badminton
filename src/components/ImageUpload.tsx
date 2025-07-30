@@ -11,13 +11,19 @@ interface ImageUploadProps {
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0); // 0–1 progress value
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processImage = async (file: File) => {
     setIsProcessing(true);
+    setProgress(0);
     try {
       const worker = await createWorker({
-        logger: m => console.log(m),
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            setProgress(m.progress);
+          }
+        },
       });
       await worker.loadLanguage('eng');
       await worker.initialize('eng');
@@ -36,6 +42,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
       alert('Failed to process image. Please try again or add players manually.');
     } finally {
       setIsProcessing(false);
+      setProgress(0);
     }
   };
 
@@ -86,7 +93,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
       {isProcessing && (
         <div className="processing">
           <p>🔍 Processing image and extracting player names...</p>
-          <p>This may take a few moments.</p>
+          <div className="progress-container">
+            <div
+              className="progress-bar"
+              style={{ width: `${(progress * 100).toFixed(0)}%` }}
+            />
+          </div>
+          <p>{Math.round(progress * 100)}%</p>
         </div>
       )}
     </div>
