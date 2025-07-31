@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { generateCourtAssignments, getBenchedPlayers } from './utils/assignmentUtils';
 
 import './App.css';
 import ImageUpload from './components/ImageUpload';
@@ -52,70 +53,9 @@ function App(): React.ReactElement {
     setPlayers(prev => prev.filter(player => player.id !== playerId));
   };
 
-  const createTeamsForCourt = (courtPlayers: Player[]) => {
-    if (courtPlayers.length >= 4) {
-      return {
-        team1: [courtPlayers[0], courtPlayers[1]],
-        team2: [courtPlayers[2], courtPlayers[3]],
-      };
-    } else if (courtPlayers.length === 2) {
-      return {
-        team1: [courtPlayers[0]],
-        team2: [courtPlayers[1]],
-      };
-    } else if (courtPlayers.length === 3) {
-      return {
-        team1: [courtPlayers[0]],
-        team2: [courtPlayers[1]],
-      };
-    }
-    return undefined;
-  };
-
   const generateAssignments = () => {
-    const presentPlayers = players.filter(player => player.isPresent);
-
-    if (presentPlayers.length === 0) {
-      setAssignments([]);
-      return;
-    }
-
-    const shuffledPlayers = [...presentPlayers].sort(() => Math.random() - 0.5);
-
-    const courts: Court[] = [];
-    const playersPerCourt = 4;
-
-    let playerIndex = 0;
-
-    for (let courtNum = 1; courtNum <= numberOfCourts; courtNum++) {
-      const courtPlayers: Player[] = [];
-
-      for (let i = 0; i < playersPerCourt && playerIndex < shuffledPlayers.length; i++) {
-        courtPlayers.push(shuffledPlayers[playerIndex]);
-        playerIndex++;
-      }
-
-      if (courtPlayers.length >= 2) {
-        const court: Court = {
-          courtNumber: courtNum,
-          players: courtPlayers,
-          teams: createTeamsForCourt(courtPlayers),
-        };
-
-        courts.push(court);
-      }
-    }
-
+    const courts = generateCourtAssignments(players, numberOfCourts);
     setAssignments(courts);
-  };
-
-  const getBenchedPlayers = (): Player[] => {
-    const assignedPlayerIds = new Set(
-      assignments.flatMap(court => court.players.map(p => p.id)),
-    );
-    return players.filter(player =>
-      player.isPresent && !assignedPlayerIds.has(player.id),
-    );
   };
 
   return (
@@ -164,7 +104,7 @@ function App(): React.ReactElement {
             <h2>Step 4: Court Assignments</h2>
             <CourtAssignments
               assignments={assignments}
-              benchedPlayers={getBenchedPlayers()}
+              benchedPlayers={getBenchedPlayers(assignments, players)}
               onGenerateNewAssignments={generateAssignments}
             />
           </div>
