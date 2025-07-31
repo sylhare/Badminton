@@ -4,12 +4,31 @@ export class CourtAssignmentEngine {
   private static benchCountMap: Map<string, number> = new Map();
   private static teammateCountMap: Map<string, number> = new Map();
   private static opponentCountMap: Map<string, number> = new Map();
+  private static winCountMap: Map<string, number> = new Map();
   private static readonly MAX_ATTEMPTS = 300;
 
   static resetHistory(): void {
     this.benchCountMap.clear();
     this.teammateCountMap.clear();
     this.opponentCountMap.clear();
+    this.winCountMap.clear();
+  }
+
+  // Track wins for players
+  static recordWins(courts: Court[]): void {
+    courts.forEach(court => {
+      if (court.winner && court.teams) {
+        const winningTeam = court.winner === 1 ? court.teams.team1 : court.teams.team2;
+        winningTeam.forEach(player => {
+          this.incrementMapCount(this.winCountMap, player.id);
+        });
+      }
+    });
+  }
+
+  // Get win counts for players (useful for future features like balancing)
+  static getWinCounts(): Map<string, number> {
+    return new Map(this.winCountMap);
   }
 
   private static pairKey(a: string, b: string): string {

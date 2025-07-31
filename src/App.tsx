@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateCourtAssignments, getBenchedPlayers } from './utils/assignmentUtils';
+import { generateCourtAssignments, getBenchedPlayers, CourtAssignmentEngine } from './utils/assignmentUtils';
 
 import './App.css';
 import ImageUpload from './components/ImageUpload';
@@ -22,6 +22,7 @@ export interface Court {
     team1: Player[]
     team2: Player[]
   };
+  winner?: 1 | 2; // 1 for team1, 2 for team2
 }
 
 function App(): React.ReactElement {
@@ -54,8 +55,22 @@ function App(): React.ReactElement {
   };
 
   const generateAssignments = () => {
+    // Record wins from previous assignments before generating new ones
+    if (assignments.length > 0) {
+      CourtAssignmentEngine.recordWins(assignments);
+    }
     const courts = generateCourtAssignments(players, numberOfCourts);
     setAssignments(courts);
+  };
+
+  const handleWinnerChange = (courtNumber: number, winner: 1 | 2 | undefined) => {
+    setAssignments(prevAssignments => 
+      prevAssignments.map(court => 
+        court.courtNumber === courtNumber 
+          ? { ...court, winner } 
+          : court
+      )
+    );
   };
 
   return (
@@ -106,6 +121,7 @@ function App(): React.ReactElement {
               assignments={assignments}
               benchedPlayers={getBenchedPlayers(assignments, players)}
               onGenerateNewAssignments={generateAssignments}
+              onWinnerChange={handleWinnerChange}
             />
           </div>
         )}

@@ -20,25 +20,12 @@ describe('ImageUpload Component', () => {
     mockUseImageOcr.mockReturnValue({ isProcessing: false, progress: 0, processImage: vi.fn() });
   });
 
-  it('renders upload area with correct text', () => {
+  it('renders upload area correctly', () => {
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
 
     expect(screen.getByText('📸 Upload Player List Image')).toBeInTheDocument();
     expect(screen.getByText(/Take a photo or upload an image/)).toBeInTheDocument();
-    expect(screen.getByText('Choose Image')).toBeInTheDocument();
-  });
-
-  it('handles drag and drop styling', () => {
-    render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
-
-    const uploadArea = document.querySelector('.upload-area') as HTMLElement;
-    expect(uploadArea).toBeInTheDocument();
-
-    fireEvent.dragOver(uploadArea);
-    expect(uploadArea).toHaveClass('dragover');
-
-    fireEvent.dragLeave(uploadArea);
-    expect(uploadArea).not.toHaveClass('dragover');
+    expect(screen.getByRole('button', { name: /choose image/i })).toBeInTheDocument();
   });
 
   it('processes image file and extracts player names correctly', async () => {

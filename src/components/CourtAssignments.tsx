@@ -1,21 +1,33 @@
 import React from 'react';
 
 import { Court, Player } from '../App';
-
-import TeamPlayerList from './TeamPlayerList';
 import TeamDisplay from './TeamDisplay';
+import TeamPlayerList from './TeamPlayerList';
 
 interface CourtAssignmentsProps {
   assignments: Court[];
   benchedPlayers: Player[];
   onGenerateNewAssignments: () => void;
+  onWinnerChange?: (courtNumber: number, winner: 1 | 2 | undefined) => void;
 }
 
 const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   assignments,
   benchedPlayers,
   onGenerateNewAssignments,
+  onWinnerChange,
 }) => {
+  const handleTeamClick = (courtNumber: number, teamNumber: number) => {
+    if (onWinnerChange) {
+      const court = assignments.find(c => c.courtNumber === courtNumber);
+      if (court) {
+        // Toggle winner: if clicking the current winner, clear it; otherwise set new winner
+        const newWinner = court.winner === teamNumber ? undefined : (teamNumber as 1 | 2);
+        onWinnerChange(courtNumber, newWinner);
+      }
+    }
+  };
+
   const renderSinglesMatch = (court: Court) => {
     const { teams } = court;
     if (!teams) return null;
@@ -23,12 +35,20 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     return (
       <div className="singles-match">
         <div className="singles-players">
-          <div className="singles-player">
+          <div 
+            className={`singles-player ${onWinnerChange ? 'singles-player-clickable' : ''} ${court.winner === 1 ? 'singles-player-winner' : ''}`}
+            onClick={() => onWinnerChange && handleTeamClick(court.courtNumber, 1)}
+          >
             {teams.team1[0].name}
+            {court.winner === 1 && <span className="crown">👑</span>}
           </div>
           <div className="vs-divider">VS</div>
-          <div className="singles-player">
+          <div 
+            className={`singles-player ${onWinnerChange ? 'singles-player-clickable' : ''} ${court.winner === 2 ? 'singles-player-winner' : ''}`}
+            onClick={() => onWinnerChange && handleTeamClick(court.courtNumber, 2)}
+          >
             {teams.team2[0].name}
+            {court.winner === 2 && <span className="crown">👑</span>}
           </div>
         </div>
         {court.players.length === 3 && (
@@ -46,8 +66,21 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
     return (
       <div className="teams">
-        <TeamDisplay teamNumber={1} players={teams.team1} showVsDivider />
-        <TeamDisplay teamNumber={2} players={teams.team2} />
+        <TeamDisplay 
+          teamNumber={1} 
+          players={teams.team1} 
+          showVsDivider 
+          isWinner={court.winner === 1}
+          onTeamClick={(teamNumber) => handleTeamClick(court.courtNumber, teamNumber)}
+          isClickable={!!onWinnerChange}
+        />
+        <TeamDisplay 
+          teamNumber={2} 
+          players={teams.team2} 
+          isWinner={court.winner === 2}
+          onTeamClick={(teamNumber) => handleTeamClick(court.courtNumber, teamNumber)}
+          isClickable={!!onWinnerChange}
+        />
       </div>
     );
   };
@@ -58,11 +91,23 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
     return (
       <div className="teams">
-        <TeamDisplay teamNumber={1} players={teams.team1} />
+        <TeamDisplay 
+          teamNumber={1} 
+          players={teams.team1} 
+          isWinner={court.winner === 1}
+          onTeamClick={(teamNumber) => handleTeamClick(court.courtNumber, teamNumber)}
+          isClickable={!!onWinnerChange}
+        />
         {teams.team2.length > 0 && (
           <>
             <div className="vs-divider">VS</div>
-            <TeamDisplay teamNumber={2} players={teams.team2} />
+            <TeamDisplay 
+              teamNumber={2} 
+              players={teams.team2} 
+              isWinner={court.winner === 2}
+              onTeamClick={(teamNumber) => handleTeamClick(court.courtNumber, teamNumber)}
+              isClickable={!!onWinnerChange}
+            />
           </>
         )}
       </div>
@@ -115,6 +160,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
   return (
     <div>
+      {onWinnerChange && (
+        <div className="winner-instructions">
+          💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the winning team. Click again to remove the winner.
+        </div>
+      )}
       <div className="courts-grid">
         {assignments.map(renderCourt)}
       </div>
