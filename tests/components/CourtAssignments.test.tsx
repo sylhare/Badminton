@@ -6,10 +6,10 @@ import userEvent from '@testing-library/user-event';
 
 import CourtAssignments from '../../src/components/CourtAssignments';
 import { Court, Player } from '../../src/App';
+import { TEST_COURTS, TEST_PLAYERS } from '../utils/testData';
 
 describe('CourtAssignments Component', () => {
   const mockOnGenerateNewAssignments = vi.fn();
-  const mockOnWinnerChange = vi.fn();
 
   const mockPlayers: Player[] = [
     { id: '1', name: 'Alice', isPresent: true },
@@ -144,81 +144,46 @@ describe('CourtAssignments Component', () => {
     expect(mockOnGenerateNewAssignments).toHaveBeenCalledTimes(1);
 
   });
+});
 
-  describe('Winner functionality', () => {
-    const assignmentsWithWinner: Court[] = [
-      {
-        courtNumber: 1,
-        players: [mockPlayers[0], mockPlayers[1], mockPlayers[2], mockPlayers[3]],
-        teams: {
-          team1: [mockPlayers[0], mockPlayers[1]],
-          team2: [mockPlayers[2], mockPlayers[3]],
-        },
-        winner: 1,
+// Integration-style winner selection tests moved from tests/integration/CourtAssignments.test.tsx
+
+describe('Winner Selection', () => {
+  const doublesAssignment: Court[] = [TEST_COURTS.doublesWithTeams()];
+  const singlesAssignment: Court[] = [TEST_COURTS.singlesWithTeams()];
+  const multipleCourtAssignments: Court[] = [
+    TEST_COURTS.doublesWithTeams(),
+    {
+      courtNumber: 2,
+      players: TEST_PLAYERS.slice(4, 6), // Eve and Frank
+      teams: {
+        team1: [TEST_PLAYERS[4]], // Eve
+        team2: [TEST_PLAYERS[5]], // Frank
       },
-    ];
+    },
+  ];
 
-    const singlesAssignment: Court[] = [
-      {
-        courtNumber: 1,
-        players: [mockPlayers[0], mockPlayers[1]],
-        teams: {
-          team1: [mockPlayers[0]],
-          team2: [mockPlayers[1]],
-        },
-        winner: 2,
-      },
-    ];
+  const mockOnGenerateNewAssignments = vi.fn();
+  const mockOnWinnerChange = vi.fn();
 
-    it('shows winner instructions when onWinnerChange is provided', () => {
-      render(
-        <CourtAssignments
-          {...defaultProps}
-          onWinnerChange={mockOnWinnerChange}
-        />,
-      );
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-      expect(screen.getByText(/Click on a team to mark them as the winner/)).toBeInTheDocument();
-    });
-
-    it('does not show winner instructions when onWinnerChange is not provided', () => {
-      render(<CourtAssignments {...defaultProps} />);
-
-      expect(screen.queryByText(/Click on a team to mark them as the winner/)).not.toBeInTheDocument();
-    });
-
-    it('displays crown for winning team in doubles match', () => {
-      render(
-        <CourtAssignments
-          {...defaultProps}
-          assignments={assignmentsWithWinner}
-          onWinnerChange={mockOnWinnerChange}
-        />,
-      );
-
-      expect(screen.getByText('👑')).toBeInTheDocument();
-    });
-
-    it('displays crown for winning player in singles match', () => {
-      render(
-        <CourtAssignments
-          {...defaultProps}
-          assignments={singlesAssignment}
-          onWinnerChange={mockOnWinnerChange}
-        />,
-      );
-
-      expect(screen.getByText('👑')).toBeInTheDocument();
-    });
-
-    it('calls onWinnerChange when team is clicked in doubles match', async () => {
+  describe('Basic winner selection', () => {
+    it('should allow selecting winner in doubles match', async () => {
       const user = userEvent.setup();
+
       render(
         <CourtAssignments
-          {...defaultProps}
+          assignments={doublesAssignment}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
+
+      expect(screen.queryByText('👑')).not.toBeInTheDocument();
 
       const team1Element = screen.getByText('Team 1').closest('.team');
       await user.click(team1Element!);
@@ -226,12 +191,14 @@ describe('CourtAssignments Component', () => {
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
     });
 
-    it('calls onWinnerChange when player is clicked in singles match', async () => {
+    it('should allow selecting winner in singles match', async () => {
       const user = userEvent.setup();
+
       render(
         <CourtAssignments
-          {...defaultProps}
           assignments={singlesAssignment}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -241,16 +208,39 @@ describe('CourtAssignments Component', () => {
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
     });
+  });
 
-    it('toggles winner when clicking the same team twice', async () => {
-      const user = userEvent.setup();
+  describe('Winner display', () => {
+    it('should display winner instructions', () => {
       render(
         <CourtAssignments
-          {...defaultProps}
-          assignments={assignmentsWithWinner}
+          assignments={doublesAssignment}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
+
+      expect(screen.getByText(/Click on a team to mark them as the winner/)).toBeInTheDocument();
+    });
+
+    it('should handle winner toggle workflow', async () => {
+      const user = userEvent.setup();
+
+      const assignmentWithWinner: Court[] = [
+        TEST_COURTS.withWinner(1),
+      ];
+
+      render(
+        <CourtAssignments
+          assignments={assignmentWithWinner}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
+          onWinnerChange={mockOnWinnerChange}
+        />,
+      );
+
+      expect(screen.getByText('👑')).toBeInTheDocument();
 
       const team1Element = screen.getByText('Team 1').closest('.team');
       await user.click(team1Element!);
@@ -258,12 +248,60 @@ describe('CourtAssignments Component', () => {
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, undefined);
     });
 
-    it('switches winner when clicking different team', async () => {
+    it('should handle multiple courts with independent winner selection', async () => {
       const user = userEvent.setup();
+
       render(
         <CourtAssignments
-          {...defaultProps}
-          assignments={assignmentsWithWinner}
+          assignments={multipleCourtAssignments}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
+          onWinnerChange={mockOnWinnerChange}
+        />,
+      );
+
+      const court1Team1 = screen.getAllByText('Team 1')[0].closest('.team');
+      await user.click(court1Team1!);
+
+      expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
+
+      const eveElement = screen.getByText('Eve');
+      await user.click(eveElement);
+
+      expect(mockOnWinnerChange).toHaveBeenCalledWith(2, 1);
+
+      expect(mockOnWinnerChange).toHaveBeenCalledTimes(2);
+    });
+
+    it('should display multiple winners correctly', () => {
+      const assignmentsWithWinners: Court[] = [
+        TEST_COURTS.withWinner(1),
+        { ...TEST_COURTS.singlesWithTeams(TEST_PLAYERS.slice(4, 6)), courtNumber: 2, winner: 2 },
+      ];
+
+      render(
+        <CourtAssignments
+          assignments={assignmentsWithWinners}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
+          onWinnerChange={mockOnWinnerChange}
+        />,
+      );
+
+      const crowns = screen.getAllByText('👑');
+      expect(crowns).toHaveLength(2);
+    });
+
+    it('should handle switching winners within same court', async () => {
+      const user = userEvent.setup();
+
+      const assignmentWithWinner: Court[] = [TEST_COURTS.withWinner(1)];
+
+      render(
+        <CourtAssignments
+          assignments={assignmentWithWinner}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -274,18 +312,34 @@ describe('CourtAssignments Component', () => {
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 2);
     });
 
-    it('handles court without teams gracefully', () => {
-      const courtWithoutTeams: Court[] = [
-        {
-          courtNumber: 1,
-          players: [mockPlayers[0], mockPlayers[1]],
-        },
-      ];
+    it('should handle click events correctly', async () => {
+      const user = userEvent.setup();
 
       render(
         <CourtAssignments
-          {...defaultProps}
+          assignments={doublesAssignment}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
+          onWinnerChange={mockOnWinnerChange}
+        />,
+      );
+
+      const team1Element = screen.getByText('Team 1').closest('.team');
+      await user.click(team1Element!);
+
+      expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should handle courts without teams', () => {
+      const courtWithoutTeams: Court[] = [TEST_COURTS.withoutTeams()];
+
+      render(
+        <CourtAssignments
           assignments={courtWithoutTeams}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -295,38 +349,51 @@ describe('CourtAssignments Component', () => {
       expect(screen.queryByText('👑')).not.toBeInTheDocument();
     });
 
-    it('handles multiple courts with different winners', () => {
-      const multipleCourtsWithWinners: Court[] = [
-        {
-          courtNumber: 1,
-          players: [mockPlayers[0], mockPlayers[1]],
-          teams: {
-            team1: [mockPlayers[0]],
-            team2: [mockPlayers[1]],
-          },
-          winner: 1,
-        },
-        {
-          courtNumber: 2,
-          players: [mockPlayers[2], mockPlayers[3]],
-          teams: {
-            team1: [mockPlayers[2]],
-            team2: [mockPlayers[3]],
-          },
-          winner: 2,
-        },
-      ];
+    it('should work without onWinnerChange callback', () => {
+      render(
+        <CourtAssignments
+          assignments={doublesAssignment}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
+        />,
+      );
+
+      expect(screen.queryByText(/Click on a team to mark them as the winner/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Functionality tests', () => {
+    it('should display crown for winners', () => {
+      const assignmentWithWinner: Court[] = [TEST_COURTS.withWinner(1)];
 
       render(
         <CourtAssignments
-          {...defaultProps}
-          assignments={multipleCourtsWithWinners}
+          assignments={assignmentWithWinner}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
 
-      const crowns = screen.getAllByText('👑');
-      expect(crowns).toHaveLength(2);
+      expect(screen.getByText('👑')).toBeInTheDocument();
+    });
+
+    it('should handle click interactions correctly', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <CourtAssignments
+          assignments={doublesAssignment}
+          benchedPlayers={[]}
+          onGenerateNewAssignments={mockOnGenerateNewAssignments}
+          onWinnerChange={mockOnWinnerChange}
+        />,
+      );
+
+      const team1Element = screen.getByText('Team 1').closest('.team') as HTMLElement;
+
+      await user.click(team1Element);
+      expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
     });
   });
 });

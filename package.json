@@ -9,6 +9,7 @@
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest --run",
+    "test:coverage": "vitest --run --coverage",
     "test:ui": "vitest --ui",
     "remove-comments": "node script/remove_comments.cjs"
   },
@@ -35,7 +36,8 @@
     "typescript": "^5.2.2",
     "typescript-eslint": "^8.22.0",
     "vite": "^5.2.0",
-    "vitest": "^1.0.4"
+    "vitest": "^1.0.4",
+    "@vitest/coverage-v8": "^1.0.4"
   },
   "overrides": {
     "esbuild": "0.25.5"
