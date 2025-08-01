@@ -21,7 +21,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     if (onWinnerChange) {
       const court = assignments.find(c => c.courtNumber === courtNumber);
       if (court) {
-        // Toggle winner: if clicking the current winner, clear it; otherwise set new winner
         const newWinner = court.winner === teamNumber ? undefined : (teamNumber as 1 | 2);
         onWinnerChange(courtNumber, newWinner);
       }

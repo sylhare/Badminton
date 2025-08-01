@@ -1,9 +1,9 @@
 // How to run this script:
-// From project root: node tests/utils/remove_comments.cjs
-// Or from tests/utils directory: node remove_comments.cjs
+// From project root: node script/remove_comments.cjs
+// Or from script directory: node remove_comments.cjs
 //
-// This script removes all comments from TypeScript/JavaScript files in src/ and tests/ directories
-// as well as config files in the project root.
+// This script removes all line (//) and block (/* */) comments from code files.
+// By default it targets the `tests/` directory, but you can pass other directories as CLI arguments.
 
 const fs = require('fs');
 const path = require('path');
@@ -44,21 +44,15 @@ function walkDirectory(dir, extensions = ['.ts', '.tsx', '.js', '.jsx']) {
     }
 }
 
-console.log('Removing comments from all TypeScript/JavaScript files...');
-walkDirectory('./src');
-walkDirectory('./tests');
-const configFiles = [
-    './vite.config.ts',
-    './vitest.config.ts',
-    './tsconfig.json',
-    './tsconfig.node.json',
-    './.eslintrc.cjs'
-];
+// Determine which directories to process:
+// Pass directories as CLI args, e.g. `node remove_comments.cjs src tests`.
+// If none supplied, we default to just the tests directory.
+const directories = process.argv.slice(2);
+if (directories.length === 0) {
+    directories.push('./tests');
+}
 
-configFiles.forEach(file => {
-    if (fs.existsSync(file)) {
-        processFile(file);
-    }
-});
+console.log(`Removing comments from: ${directories.join(', ')}`);
+directories.forEach(dir => walkDirectory(dir));
 
 console.log('Comment removal complete!'); 

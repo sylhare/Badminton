@@ -3,9 +3,6 @@ import { vi } from 'vitest';
 
 import { Player } from '../../src/App';
 
-/**
- * Factory for creating mock Player objects with sensible defaults
- */
 export function createMockPlayer(overrides: Partial<Player> = {}): Player {
   return {
     id: `player-${Date.now()}-${Math.random()}`,
@@ -15,9 +12,6 @@ export function createMockPlayer(overrides: Partial<Player> = {}): Player {
   };
 }
 
-/**
- * Factory for creating multiple mock players
- */
 export function createMockPlayers(count: number, baseOverrides: Partial<Player> = {}): Player[] {
   return Array.from({ length: count }, (_, index) =>
     createMockPlayer({
@@ -28,9 +22,6 @@ export function createMockPlayers(count: number, baseOverrides: Partial<Player> 
   );
 }
 
-/**
- * Predefined common mock player sets for testing
- */
 export const MOCK_PLAYERS = {
   basic: [
     createMockPlayer({ id: 'player-1', name: 'John Doe' }),
@@ -66,9 +57,6 @@ export const MOCK_PLAYERS = {
   team: createMockPlayers(2, { isPresent: true }),
 };
 
-/**
- * Factory for creating mock File objects
- */
 export function createMockFile(
   name: string,
   type: string,
@@ -77,9 +65,6 @@ export function createMockFile(
   return new File(content, name, { type });
 }
 
-/**
- * Common file types for testing
- */
 export const MOCK_FILES = {
   image: {
     jpg: createMockFile('test.jpg', 'image/jpeg'),
@@ -96,9 +81,6 @@ export const MOCK_FILES = {
   },
 };
 
-/**
- * Factory for creating mock FileList
- */
 export function createMockFileList(files: File[]): FileList {
   const fileList = {
     length: files.length,
@@ -112,9 +94,6 @@ export function createMockFileList(files: File[]): FileList {
   return fileList as unknown as FileList;
 }
 
-/**
- * Factory for creating mock drag events
- */
 export function createMockDragEvent(files: File[] = []): React.DragEvent<HTMLDivElement> {
   return {
     preventDefault: vi.fn(),

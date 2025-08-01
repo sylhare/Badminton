@@ -5,7 +5,6 @@ import '@testing-library/jest-dom';
 
 import ImageUpload from '../../src/components/ImageUpload';
 
-// Mock the custom OCR hook instead of low-level tesseract worker
 const mockUseImageOcr = vi.fn();
 vi.mock('../../src/hooks/useImageOcr', () => ({
   useImageOcr: (...args: any[]) => mockUseImageOcr(...args),
@@ -106,7 +105,7 @@ describe('ImageUpload Component', () => {
   });
 
   it('shows processing message during OCR', async () => {
-    // Return isProcessing true so loader text is visible immediately
+
     mockUseImageOcr.mockReturnValue({ isProcessing: true, progress: 0.3, processImage: vi.fn() });
 
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);

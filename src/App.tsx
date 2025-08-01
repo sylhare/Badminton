@@ -55,7 +55,6 @@ function App(): React.ReactElement {
   };
 
   const generateAssignments = () => {
-    // Record wins from previous assignments before generating new ones
     if (assignments.length > 0) {
       CourtAssignmentEngine.recordWins(assignments);
     }

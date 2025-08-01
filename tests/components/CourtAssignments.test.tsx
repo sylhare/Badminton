@@ -145,7 +145,6 @@ describe('CourtAssignments Component', () => {
 
   });
 
-  // Winner functionality tests
   describe('Winner functionality', () => {
     const assignmentsWithWinner: Court[] = [
       {
@@ -221,7 +220,6 @@ describe('CourtAssignments Component', () => {
         />
       );
 
-      // Find and click team 1
       const team1Element = screen.getByText('Team 1').closest('.team');
       await user.click(team1Element!);
 
@@ -238,7 +236,6 @@ describe('CourtAssignments Component', () => {
         />
       );
 
-      // Find and click the first singles player (Alice)
       const aliceElement = screen.getByText('Alice');
       await user.click(aliceElement);
 
@@ -255,7 +252,6 @@ describe('CourtAssignments Component', () => {
         />
       );
 
-      // Click team 1 (which is already the winner)
       const team1Element = screen.getByText('Team 1').closest('.team');
       await user.click(team1Element!);
 
@@ -272,7 +268,6 @@ describe('CourtAssignments Component', () => {
         />
       );
 
-      // Click team 2 (team 1 is currently the winner)
       const team2Element = screen.getByText('Team 2').closest('.team');
       await user.click(team2Element!);
 

@@ -16,7 +16,6 @@ export async function preprocessImage(file: File, scale = 1.5): Promise<HTMLCanv
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // convert to grayscale + simple binary threshold
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       for (let i = 0; i < data.length; i += 4) {

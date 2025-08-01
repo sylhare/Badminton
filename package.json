@@ -9,7 +9,8 @@
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest --run",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "remove-comments": "node script/remove_comments.cjs"
   },
   "dependencies": {
     "react": "^18.2.0",

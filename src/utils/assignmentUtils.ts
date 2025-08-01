@@ -14,7 +14,6 @@ export class CourtAssignmentEngine {
     this.winCountMap.clear();
   }
 
-  // Track wins for players
   static recordWins(courts: Court[]): void {
     courts.forEach(court => {
       if (court.winner && court.teams) {
@@ -26,7 +25,6 @@ export class CourtAssignmentEngine {
     });
   }
 
-  // Get win counts for players (useful for future features like balancing)
   static getWinCounts(): Map<string, number> {
     return new Map(this.winCountMap);
   }

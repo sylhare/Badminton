@@ -75,7 +75,6 @@ describe('assignmentUtils – core behaviour', () => {
     const numberOfCourts = 2;
     const rounds = 100;
 
-    // Track how many times every unordered pair of players were on the SAME team
     const pairCount: Record<string, number> = {};
     const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
@@ -100,17 +99,13 @@ describe('assignmentUtils – core behaviour', () => {
     const min = Math.min(...counts);
     const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
 
-    // 1) Every pair should have played together at least once
     expect(min).toBeGreaterThan(0);
 
-    // 2) The worst-case spread should be modest (no pair is teamed up more than twice as often as any other pair)
     expect(max / min).toBeLessThanOrEqual(2);
 
-    // 3) No pair should exceed 150% of the average frequency
     expect(max).toBeLessThanOrEqual(avg * 1.5);
   });
 
-  // Winner tracking functionality tests
   describe('Winner tracking functionality', () => {
     beforeEach(() => {
       __testResetHistory();
@@ -125,11 +120,9 @@ describe('assignmentUtils – core behaviour', () => {
       CourtAssignmentEngine.recordWins(courts);
       const winCounts = CourtAssignmentEngine.getWinCounts();
 
-      // Team1 players should have 1 win each
       expect(winCounts.get('P0')).toBe(1);
       expect(winCounts.get('P1')).toBe(1);
 
-      // Team2 players should have 0 wins
       expect(winCounts.get('P2')).toBe(undefined);
       expect(winCounts.get('P3')).toBe(undefined);
     });
@@ -143,11 +136,9 @@ describe('assignmentUtils – core behaviour', () => {
       CourtAssignmentEngine.recordWins(courts);
       const winCounts = CourtAssignmentEngine.getWinCounts();
 
-      // Team1 players should have 0 wins
       expect(winCounts.get('P0')).toBe(undefined);
       expect(winCounts.get('P1')).toBe(undefined);
 
-      // Team2 players should have 1 win each
       expect(winCounts.get('P2')).toBe(1);
       expect(winCounts.get('P3')).toBe(1);
     });
@@ -161,7 +152,6 @@ describe('assignmentUtils – core behaviour', () => {
       CourtAssignmentEngine.recordWins(courts);
       const winCounts = CourtAssignmentEngine.getWinCounts();
 
-      // No players should have wins recorded
       expect(winCounts.size).toBe(0);
     });
 
@@ -180,7 +170,6 @@ describe('assignmentUtils – core behaviour', () => {
       expect(winCounts.get('P6')).toBe(1);
       expect(winCounts.get('P7')).toBe(1);
 
-      // Other players should have no wins
       expect(winCounts.get('P2')).toBe(undefined);
       expect(winCounts.get('P3')).toBe(undefined);
       expect(winCounts.get('P4')).toBe(undefined);
@@ -189,18 +178,15 @@ describe('assignmentUtils – core behaviour', () => {
 
     it('should accumulate wins across multiple rounds', () => {
       const players = mockPlayers(4);
-      
-      // First round - team1 wins
+
       const courts1: Court[] = [createMockCourt(1, players, 1)];
       CourtAssignmentEngine.recordWins(courts1);
 
-      // Second round - team2 wins
       const courts2: Court[] = [createMockCourt(1, players, 2)];
       CourtAssignmentEngine.recordWins(courts2);
 
       const winCounts = CourtAssignmentEngine.getWinCounts();
 
-      // All players should have 1 win each
       expect(winCounts.get('P0')).toBe(1);
       expect(winCounts.get('P1')).toBe(1);
       expect(winCounts.get('P2')).toBe(1);
@@ -220,7 +206,6 @@ describe('assignmentUtils – core behaviour', () => {
       CourtAssignmentEngine.recordWins(courts);
       const winCounts = CourtAssignmentEngine.getWinCounts();
 
-      // No wins should be recorded without teams structure
       expect(winCounts.size).toBe(0);
     });
 
@@ -245,10 +230,8 @@ describe('assignmentUtils – core behaviour', () => {
       const winCounts1 = CourtAssignmentEngine.getWinCounts();
       const winCounts2 = CourtAssignmentEngine.getWinCounts();
 
-      // Should be different instances
       expect(winCounts1).not.toBe(winCounts2);
 
-      // But with same content
       expect(winCounts1.get('P0')).toBe(winCounts2.get('P0'));
     });
 
@@ -264,7 +247,6 @@ describe('assignmentUtils – core behaviour', () => {
       CourtAssignmentEngine.recordWins(courts);
       const winCounts = CourtAssignmentEngine.getWinCounts();
 
-      // Both players named "John" should be tracked separately by ID
       expect(winCounts.get('A1')).toBe(1);
       expect(winCounts.get('A2')).toBe(1);
       expect(winCounts.get('B1')).toBe(undefined);

@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { preprocessImage } from '../../src/utils/imagePreprocess';
 
-// Save originals so we can restore them after tests
 const OriginalImage = global.Image;
 const OriginalFileReader = global.FileReader;
 
@@ -11,7 +10,7 @@ describe('preprocessImage', () => {
   const mockHeight = 100;
 
   beforeEach(() => {
-    // Mock global Image
+
     class MockImage {
       public width = mockWidth;
       public height = mockHeight;
@@ -20,17 +19,16 @@ describe('preprocessImage', () => {
       private _src = '';
       set src(val: string) {
         this._src = val;
-        // simulate async load
+
         setTimeout(() => this.onload());
       }
       get src() {
         return this._src;
       }
     }
-    // @ts-ignore
+
     global.Image = MockImage as any;
 
-    // Mock FileReader
     class MockFileReader {
       public result: string | null = null;
       public onload: () => void = () => {};
@@ -40,10 +38,9 @@ describe('preprocessImage', () => {
         this.onload();
       }
     }
-    // @ts-ignore
+
     global.FileReader = MockFileReader as any;
 
-    // Mock canvas element
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
       if (tag === 'canvas') {
         return {
@@ -60,17 +57,16 @@ describe('preprocessImage', () => {
           }),
         } as unknown as HTMLCanvasElement;
       }
-      // default behaviour
-      // @ts-ignore
+
       return (document as any).createElement(tag);
     });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    // @ts-ignore
+
     global.Image = OriginalImage;
-    // @ts-ignore
+
     global.FileReader = OriginalFileReader;
   });
 

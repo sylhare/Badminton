@@ -116,7 +116,7 @@ describe('Court Interface', () => {
   });
 
   it('should maintain type safety for winner field', () => {
-    // TypeScript should enforce that winner can only be 1, 2, or undefined
+
     const validWinners: (1 | 2 | undefined)[] = [1, 2, undefined];
     
     validWinners.forEach((winner) => {
@@ -165,18 +165,14 @@ describe('Court Interface', () => {
         },
       };
 
-      // Initially no winner
       expect(court.winner).toBeUndefined();
 
-      // Set team1 as winner
       court = { ...court, winner: 1 };
       expect(court.winner).toBe(1);
 
-      // Switch to team2 as winner
       court = { ...court, winner: 2 };
       expect(court.winner).toBe(2);
 
-      // Clear winner
       court = { ...court, winner: undefined };
       expect(court.winner).toBeUndefined();
     });
@@ -196,11 +192,9 @@ describe('Court Interface', () => {
         winner: 1,
       };
 
-      // Original court should remain unchanged
       expect(originalCourt.winner).toBeUndefined();
       expect(updatedCourt.winner).toBe(1);
 
-      // Other properties should remain the same
       expect(updatedCourt.courtNumber).toBe(originalCourt.courtNumber);
       expect(updatedCourt.players).toBe(originalCourt.players);
       expect(updatedCourt.teams).toBe(originalCourt.teams);

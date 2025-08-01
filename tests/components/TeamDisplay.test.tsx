@@ -76,7 +76,6 @@ describe('TeamDisplay Component', () => {
     expectPlayersInOrder(orderedPlayers);
   });
 
-  // Winner functionality tests
   describe('Winner functionality', () => {
     const mockOnTeamClick = vi.fn();
 
@@ -156,7 +155,6 @@ describe('TeamDisplay Component', () => {
       const teamElement = screen.getByText('Team 1').closest('.team');
       await user.click(teamElement!);
 
-      // Should not throw error
     });
 
     it('should display both crown and VS divider when winner and showVsDivider', () => {
