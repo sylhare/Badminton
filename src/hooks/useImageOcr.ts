@@ -24,15 +24,13 @@ export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
     setIsProcessing(true);
     setProgress(0);
     try {
-      const worker = await createWorker({
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            setProgress(m.progress);
-          }
-        },
-      });
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
+
+      const worker: any = await createWorker('eng');
+      worker.logger = (m: any) => {
+        if (m.status === 'recognizing text') {
+          setProgress(m.progress);
+        }
+      };
 
       if (typeof (worker as any).setParameters === 'function') {
         await (worker as any).setParameters({

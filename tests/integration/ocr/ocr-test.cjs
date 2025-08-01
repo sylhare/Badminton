@@ -63,23 +63,12 @@ async function testRealOCR() {
         const imageBuffer = fs.readFileSync(imagePath);
         console.log(`✅ Image loaded successfully (${imageBuffer.length} bytes)\n`);
 
-        // Create a real Tesseract worker
+        // Create a real Tesseract worker (v6 syntax)
         console.log('🔧 Initializing Tesseract worker...');
-        const worker = await createWorker({
-            logger: m => {
-                if (m.status === 'recognizing text') {
-                    process.stdout.write(`\r📖 OCR Progress: ${Math.round(m.progress * 100)}%`);
-                } else {
-                    console.log(`   ${m.status}: ${m.progress ? Math.round(m.progress * 100) + '%' : ''}`);
-                }
-            },
-        });
+        const worker = await createWorker('eng');
 
         try {
-            // Initialize the worker
-            await worker.loadLanguage('eng');
-            await worker.initialize('eng');
-            console.log('✅ Tesseract worker initialized\n');
+            console.log('✅ Tesseract worker ready\n');
 
             // Process the real image
             console.log('🔍 Processing image with OCR...');

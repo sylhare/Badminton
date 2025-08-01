@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { createWorker } from 'tesseract.js';
 
@@ -53,9 +53,7 @@ describe('useImageOcr hook', () => {
       await hookApi!.processImage(file);
     });
 
-    expect(mockCreateWorker).toHaveBeenCalledWith({ logger: expect.any(Function) });
-    expect(mockWorker.loadLanguage).toHaveBeenCalledWith('eng');
-    expect(mockWorker.initialize).toHaveBeenCalledWith('eng');
+    expect(mockCreateWorker).toHaveBeenCalledWith('eng');
     expect(mockWorker.recognize).toHaveBeenCalledWith(file);
     expect(mockWorker.terminate).toHaveBeenCalled();
     expect(onPlayersExtracted).toHaveBeenCalledWith(['Alice', 'Bob']);
