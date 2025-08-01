@@ -1,14 +1,14 @@
 import React from 'react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import CourtAssignments from '../../src/components/CourtAssignments';
-import { TEST_PLAYERS, TEST_COURTS, DEFAULT_PROPS } from '../utils/testData';
+import { TEST_COURTS, TEST_PLAYERS } from '../utils/testData';
 import type { Court } from '../../src/App';
 
-describe('Winner Selection Integration', () => {
+describe('Winner Selection', () => {
   const doublesAssignment: Court[] = [TEST_COURTS.doublesWithTeams()];
   const singlesAssignment: Court[] = [TEST_COURTS.singlesWithTeams()];
   const multipleCourtAssignments: Court[] = [
@@ -33,14 +33,14 @@ describe('Winner Selection Integration', () => {
   describe('Basic winner selection', () => {
     it('should allow selecting winner in doubles match', async () => {
       const user = userEvent.setup();
-      
+
       render(
         <CourtAssignments
           assignments={doublesAssignment}
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.queryByText('👑')).not.toBeInTheDocument();
@@ -53,14 +53,14 @@ describe('Winner Selection Integration', () => {
 
     it('should allow selecting winner in singles match', async () => {
       const user = userEvent.setup();
-      
+
       render(
         <CourtAssignments
           assignments={singlesAssignment}
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const aliceElement = screen.getByText('Alice');
@@ -78,7 +78,7 @@ describe('Winner Selection Integration', () => {
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.getByText(/Click on a team to mark them as the winner/)).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe('Winner Selection Integration', () => {
 
     it('should handle winner toggle workflow', async () => {
       const user = userEvent.setup();
-      
+
       const assignmentWithWinner: Court[] = [
         TEST_COURTS.withWinner(1),
       ];
@@ -97,7 +97,7 @@ describe('Winner Selection Integration', () => {
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.getByText('👑')).toBeInTheDocument();
@@ -110,14 +110,14 @@ describe('Winner Selection Integration', () => {
 
     it('should handle multiple courts with independent winner selection', async () => {
       const user = userEvent.setup();
-      
+
       render(
         <CourtAssignments
           assignments={multipleCourtAssignments}
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const court1Team1 = screen.getAllByText('Team 1')[0].closest('.team');
@@ -145,7 +145,7 @@ describe('Winner Selection Integration', () => {
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const crowns = screen.getAllByText('👑');
@@ -154,7 +154,7 @@ describe('Winner Selection Integration', () => {
 
     it('should handle switching winners within same court', async () => {
       const user = userEvent.setup();
-      
+
       const assignmentWithWinner: Court[] = [TEST_COURTS.withWinner(1)];
 
       render(
@@ -163,7 +163,7 @@ describe('Winner Selection Integration', () => {
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const team2Element = screen.getByText('Team 2').closest('.team');
@@ -174,14 +174,14 @@ describe('Winner Selection Integration', () => {
 
     it('should handle click events correctly', async () => {
       const user = userEvent.setup();
-      
+
       render(
         <CourtAssignments
           assignments={doublesAssignment}
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const team1Element = screen.getByText('Team 1').closest('.team');
@@ -201,7 +201,7 @@ describe('Winner Selection Integration', () => {
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.getByText(/Court 1/)).toBeInTheDocument();
@@ -215,7 +215,7 @@ describe('Winner Selection Integration', () => {
           assignments={doublesAssignment}
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
-        />
+        />,
       );
 
       expect(screen.queryByText(/Click on a team to mark them as the winner/)).not.toBeInTheDocument();
@@ -232,7 +232,7 @@ describe('Winner Selection Integration', () => {
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.getByText('👑')).toBeInTheDocument();
@@ -240,20 +240,20 @@ describe('Winner Selection Integration', () => {
 
     it('should handle click interactions correctly', async () => {
       const user = userEvent.setup();
-      
+
       render(
         <CourtAssignments
           assignments={doublesAssignment}
           benchedPlayers={[]}
           onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const team1Element = screen.getByText('Team 1').closest('.team') as HTMLElement;
-      
+
       await user.click(team1Element);
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
     });
   });
-}); 
+});

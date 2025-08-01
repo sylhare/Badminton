@@ -29,7 +29,7 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({
 
   return (
     <>
-      <div 
+      <div
         className={`team ${isClickable ? 'team-clickable' : ''} ${isWinner ? 'team-winner' : ''}`}
         onClick={handleClick}
       >

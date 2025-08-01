@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
 import type { Court, Player } from '../../src/App';
 
 describe('Court Interface', () => {
@@ -118,7 +119,7 @@ describe('Court Interface', () => {
   it('should maintain type safety for winner field', () => {
 
     const validWinners: (1 | 2 | undefined)[] = [1, 2, undefined];
-    
+
     validWinners.forEach((winner) => {
       const court: Court = {
         courtNumber: 8,
@@ -236,4 +237,4 @@ describe('Court Interface', () => {
       expect(court.winner).toBe(2);
     });
   });
-}); 
+});

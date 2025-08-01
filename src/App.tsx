@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { generateCourtAssignments, getBenchedPlayers, CourtAssignmentEngine } from './utils/assignmentUtils';
 
 import './App.css';
 import ImageUpload from './components/ImageUpload';
@@ -7,6 +6,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import CourtSettings from './components/CourtSettings';
 import CourtAssignments from './components/CourtAssignments';
+import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
 
 export interface Player {
@@ -63,12 +63,12 @@ function App(): React.ReactElement {
   };
 
   const handleWinnerChange = (courtNumber: number, winner: 1 | 2 | undefined) => {
-    setAssignments(prevAssignments => 
-      prevAssignments.map(court => 
-        court.courtNumber === courtNumber 
-          ? { ...court, winner } 
-          : court
-      )
+    setAssignments(prevAssignments =>
+      prevAssignments.map(court =>
+        court.courtNumber === courtNumber
+          ? { ...court, winner }
+          : court,
+      ),
     );
   };
 

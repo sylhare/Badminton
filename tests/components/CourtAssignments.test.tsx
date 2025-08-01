@@ -172,10 +172,10 @@ describe('CourtAssignments Component', () => {
 
     it('shows winner instructions when onWinnerChange is provided', () => {
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.getByText(/Click on a team to mark them as the winner/)).toBeInTheDocument();
@@ -189,11 +189,11 @@ describe('CourtAssignments Component', () => {
 
     it('displays crown for winning team in doubles match', () => {
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           assignments={assignmentsWithWinner}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.getByText('👑')).toBeInTheDocument();
@@ -201,11 +201,11 @@ describe('CourtAssignments Component', () => {
 
     it('displays crown for winning player in singles match', () => {
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           assignments={singlesAssignment}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.getByText('👑')).toBeInTheDocument();
@@ -214,10 +214,10 @@ describe('CourtAssignments Component', () => {
     it('calls onWinnerChange when team is clicked in doubles match', async () => {
       const user = userEvent.setup();
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const team1Element = screen.getByText('Team 1').closest('.team');
@@ -229,11 +229,11 @@ describe('CourtAssignments Component', () => {
     it('calls onWinnerChange when player is clicked in singles match', async () => {
       const user = userEvent.setup();
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           assignments={singlesAssignment}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const aliceElement = screen.getByText('Alice');
@@ -245,11 +245,11 @@ describe('CourtAssignments Component', () => {
     it('toggles winner when clicking the same team twice', async () => {
       const user = userEvent.setup();
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           assignments={assignmentsWithWinner}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const team1Element = screen.getByText('Team 1').closest('.team');
@@ -261,11 +261,11 @@ describe('CourtAssignments Component', () => {
     it('switches winner when clicking different team', async () => {
       const user = userEvent.setup();
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           assignments={assignmentsWithWinner}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const team2Element = screen.getByText('Team 2').closest('.team');
@@ -283,11 +283,11 @@ describe('CourtAssignments Component', () => {
       ];
 
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           assignments={courtWithoutTeams}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       expect(screen.getByText(/Court 1/)).toBeInTheDocument();
@@ -318,11 +318,11 @@ describe('CourtAssignments Component', () => {
       ];
 
       render(
-        <CourtAssignments 
-          {...defaultProps} 
+        <CourtAssignments
+          {...defaultProps}
           assignments={multipleCourtsWithWinners}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const crowns = screen.getAllByText('👑');

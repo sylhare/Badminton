@@ -126,7 +126,8 @@ describe('ImageUpload Component', () => {
   });
 
   it('handles OCR errors gracefully', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {
+    });
     const processImageMock = vi.fn(() => {
       window.alert('Failed to process image. Please try again or add players manually.');
     });

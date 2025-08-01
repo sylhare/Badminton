@@ -1,6 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { generateCourtAssignments, getBenchedPlayers, __testResetHistory, CourtAssignmentEngine } from '../../src/utils/assignmentUtils';
-import type { Player, Court } from '../../src/App';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import {
+  __testResetHistory,
+  CourtAssignmentEngine,
+  generateCourtAssignments,
+  getBenchedPlayers,
+} from '../../src/utils/CourtAssignmentEngine';
+import type { Court, Player } from '../../src/App';
 
 function mockPlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -22,7 +28,7 @@ function createMockCourt(courtNumber: number, players: Player[], winner?: 1 | 2)
   };
 }
 
-describe('assignmentUtils – core behaviour', () => {
+describe('CourtAssignment Engine – core behaviour', () => {
   beforeEach(() => {
     __testResetHistory();
   });
@@ -253,4 +259,4 @@ describe('assignmentUtils – core behaviour', () => {
       expect(winCounts.get('B2')).toBe(undefined);
     });
   });
-}); 
+});

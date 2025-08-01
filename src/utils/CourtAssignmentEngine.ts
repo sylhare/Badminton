@@ -1,4 +1,4 @@
-import type { Player, Court } from '../App';
+import type { Court, Player } from '../App';
 
 export class CourtAssignmentEngine {
   private static benchCountMap: Map<string, number> = new Map();
@@ -6,6 +6,11 @@ export class CourtAssignmentEngine {
   private static opponentCountMap: Map<string, number> = new Map();
   private static winCountMap: Map<string, number> = new Map();
   private static readonly MAX_ATTEMPTS = 300;
+
+  constructor(private players: Player[], private numberOfCourts: number) {
+  }
+
+  private _assignments: Court[] = [];
 
   static resetHistory(): void {
     this.benchCountMap.clear();
@@ -29,6 +34,56 @@ export class CourtAssignmentEngine {
     return new Map(this.winCountMap);
   }
 
+  static generate(players: Player[], numberOfCourts: number): Court[] {
+    const presentPlayers = players.filter(p => p.isPresent);
+    if (presentPlayers.length === 0) return [];
+
+    const capacity = numberOfCourts * 4;
+    let benchSpots = Math.max(0, presentPlayers.length - capacity);
+    if ((presentPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
+    benchSpots = Math.min(benchSpots, presentPlayers.length);
+
+    const benchedPlayers = this.selectBenchedPlayers(presentPlayers, benchSpots);
+    const onCourtPlayers = presentPlayers.filter(p => !benchedPlayers.includes(p));
+
+    let best: { courts: Court[]; cost: number } | null = null;
+    for (let i = 0; i < this.MAX_ATTEMPTS; i++) {
+      const cand = this.generateCandidate(onCourtPlayers, numberOfCourts);
+      if (!best || cand.cost < best.cost) best = cand;
+    }
+
+    const finalCourts = best ? best.courts : [];
+
+    benchedPlayers.forEach(p => this.incrementMapCount(this.benchCountMap, p.id));
+    finalCourts.forEach(court => {
+      if (!court.teams) return;
+
+      const addTeamPairs = (team: Player[]): void => {
+        for (let i = 0; i < team.length; i++) {
+          for (let j = i + 1; j < team.length; j++) {
+            this.incrementMapCount(this.teammateCountMap, this.pairKey(team[i].id, team[j].id));
+          }
+        }
+      };
+
+      addTeamPairs(court.teams.team1);
+      addTeamPairs(court.teams.team2);
+
+      court.teams.team1.forEach(a => {
+        court.teams!.team2.forEach(b => {
+          this.incrementMapCount(this.opponentCountMap, this.pairKey(a.id, b.id));
+        });
+      });
+    });
+
+    return finalCourts;
+  }
+
+  static getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
+    const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
+    return players.filter(p => p.isPresent && !assignedIds.has(p.id));
+  }
+
   private static pairKey(a: string, b: string): string {
     return a < b ? `${a}|${b}` : `${b}|${a}`;
   }
@@ -44,12 +99,10 @@ export class CourtAssignmentEngine {
       if (!this.benchCountMap.has(p.id)) this.benchCountMap.set(p.id, 0);
     });
 
-    return [...players]
-      .sort((a, b) => {
-        const diff = (this.benchCountMap.get(a.id) ?? 0) - (this.benchCountMap.get(b.id) ?? 0);
-        return diff !== 0 ? diff : Math.random() - 0.5;
-      })
-      .slice(0, benchSpots);
+    return [...players].sort((a, b) => {
+      const diff = (this.benchCountMap.get(a.id) ?? 0) - (this.benchCountMap.get(b.id) ?? 0);
+      return diff !== 0 ? diff : Math.random() - 0.5;
+    }).slice(0, benchSpots);
   }
 
   private static evaluateCourtCost(court: Court): number {
@@ -138,78 +191,16 @@ export class CourtAssignmentEngine {
     return { courts, cost: totalCost };
   }
 
-  static generate(players: Player[], numberOfCourts: number): Court[] {
-    const presentPlayers = players.filter(p => p.isPresent);
-    if (presentPlayers.length === 0) return [];
-
-    const capacity = numberOfCourts * 4;
-    let benchSpots = Math.max(0, presentPlayers.length - capacity);
-    if ((presentPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
-    benchSpots = Math.min(benchSpots, presentPlayers.length);
-
-    const benchedPlayers = this.selectBenchedPlayers(presentPlayers, benchSpots);
-    const onCourtPlayers = presentPlayers.filter(p => !benchedPlayers.includes(p));
-
-    let best: { courts: Court[]; cost: number } | null = null;
-    for (let i = 0; i < this.MAX_ATTEMPTS; i++) {
-      const cand = this.generateCandidate(onCourtPlayers, numberOfCourts);
-      if (!best || cand.cost < best.cost) best = cand;
-    }
-
-    const finalCourts = best ? best.courts : [];
-
-    benchedPlayers.forEach(p => this.incrementMapCount(this.benchCountMap, p.id));
-    finalCourts.forEach(court => {
-      if (!court.teams) return;
-
-      const addTeamPairs = (team: Player[]): void => {
-        for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            this.incrementMapCount(this.teammateCountMap, this.pairKey(team[i].id, team[j].id));
-          }
-        }
-      };
-
-      addTeamPairs(court.teams.team1);
-      addTeamPairs(court.teams.team2);
-
-      court.teams.team1.forEach(a => {
-        court.teams!.team2.forEach(b => {
-          this.incrementMapCount(this.opponentCountMap, this.pairKey(a.id, b.id));
-        });
-      });
-    });
-
-    return finalCourts;
-  }
-
-  static getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
-    const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
-    return players.filter(p => p.isPresent && !assignedIds.has(p.id));
-  }
-
-  private _assignments: Court[] = [];
-
-  constructor(private players: Player[], private numberOfCourts: number) {}
-
   generate(): Court[] {
     this._assignments = CourtAssignmentEngine.generate(this.players, this.numberOfCourts);
     return this._assignments;
   }
-
-  get assignments(): Court[] {
-    return this._assignments;
-  }
-
-  getBenchedPlayers(): Player[] {
-    return CourtAssignmentEngine.getBenchedPlayers(this._assignments, this.players);
-  }
 }
 
-export const __testResetHistory = () => CourtAssignmentEngine.resetHistory();
+export const __testResetHistory = (): void => CourtAssignmentEngine.resetHistory();
 
-export const generateCourtAssignments = (players: Player[], courts: number) =>
+export const generateCourtAssignments = (players: Player[], courts: number): Court[] =>
   CourtAssignmentEngine.generate(players, courts);
 
-export const getBenchedPlayers = (assignments: Court[], players: Player[]) =>
-  CourtAssignmentEngine.getBenchedPlayers(assignments, players); 
+export const getBenchedPlayers = (assignments: Court[], players: Player[]): Player[] =>
+  CourtAssignmentEngine.getBenchedPlayers(assignments, players);

@@ -1,4 +1,4 @@
-import type { Player, Court } from '../../src/App';
+import type { Court, Player } from '../../src/App';
 
 export const TEST_PLAYERS: Player[] = [
   { id: '1', name: 'Alice', isPresent: true },
@@ -29,7 +29,7 @@ const createSinglesWithTeams = (players: Player[] = TEST_PLAYERS): Court => ({
 
 export const TEST_COURTS = {
   doublesWithTeams: createDoublesWithTeams,
-  
+
   singlesWithTeams: createSinglesWithTeams,
 
   withWinner: (teamNumber: 1 | 2, players: Player[] = TEST_PLAYERS): Court => ({
@@ -42,35 +42,3 @@ export const TEST_COURTS = {
     players: players.slice(0, 2),
   }),
 };
-
-export const PLAYER_NAMES = {
-  extracted: [
-    'Tinley',
-    'Ella', 
-    'Avrella',
-    'Yvette',
-    'Tiffany',
-    'Amabel',
-    'Abigael',
-    'Lucille',
-    'Elvaree',
-    'Tisha',
-    'Alana',
-    'Zara',
-    'Jaiden',
-  ],
-  
-  basic: ['Alice', 'Bob', 'Charlie', 'Diana'],
-  
-  special: ['José María', "O'Connor", 'Smith-Jones'],
-  
-  long: ['Alexander Maximilian Von Habsburg-Lorraine III'],
-};
-
-export const DEFAULT_PROPS = {
-  courtAssignments: {
-    assignments: [] as Court[],
-    benchedPlayers: [] as Player[],
-    onGenerateNewAssignments: () => {},
-  },
-}; 

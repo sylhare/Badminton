@@ -1,16 +1,12 @@
 import React from 'react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import TeamDisplay from '../../src/components/TeamDisplay';
 import { createMockPlayers, MOCK_PLAYERS } from '../utils/testFactories';
-import {
-  expectPlayersInOrder,
-  expectPlayersToBeRendered,
-  getElementByText,
-} from '../utils/testHelpers';
+import { expectPlayersInOrder, expectPlayersToBeRendered, getElementByText } from '../utils/testHelpers';
 
 describe('TeamDisplay Component', () => {
   it('should render team with correct number and players', () => {
@@ -85,11 +81,11 @@ describe('TeamDisplay Component', () => {
 
     it('should not display crown when team is not winner', () => {
       render(
-        <TeamDisplay 
-          teamNumber={1} 
-          players={MOCK_PLAYERS.team} 
+        <TeamDisplay
+          teamNumber={1}
+          players={MOCK_PLAYERS.team}
           isWinner={false}
-        />
+        />,
       );
 
       expect(screen.queryByText('👑')).not.toBeInTheDocument();
@@ -97,11 +93,11 @@ describe('TeamDisplay Component', () => {
 
     it('should display crown when team is winner', () => {
       render(
-        <TeamDisplay 
-          teamNumber={1} 
-          players={MOCK_PLAYERS.team} 
+        <TeamDisplay
+          teamNumber={1}
+          players={MOCK_PLAYERS.team}
           isWinner={true}
-        />
+        />,
       );
 
       expect(screen.getByText('👑')).toBeInTheDocument();
@@ -110,12 +106,12 @@ describe('TeamDisplay Component', () => {
     it('should call onTeamClick when team is clicked and clickable', async () => {
       const user = userEvent.setup();
       render(
-        <TeamDisplay 
-          teamNumber={2} 
-          players={MOCK_PLAYERS.team} 
+        <TeamDisplay
+          teamNumber={2}
+          players={MOCK_PLAYERS.team}
           isClickable={true}
           onTeamClick={mockOnTeamClick}
-        />
+        />,
       );
 
       const teamElement = screen.getByText('Team 2').closest('.team');
@@ -128,12 +124,12 @@ describe('TeamDisplay Component', () => {
     it('should not call onTeamClick when team is clicked but not clickable', async () => {
       const user = userEvent.setup();
       render(
-        <TeamDisplay 
-          teamNumber={1} 
-          players={MOCK_PLAYERS.team} 
+        <TeamDisplay
+          teamNumber={1}
+          players={MOCK_PLAYERS.team}
           isClickable={false}
           onTeamClick={mockOnTeamClick}
-        />
+        />,
       );
 
       const teamElement = screen.getByText('Team 1').closest('.team');
@@ -145,11 +141,11 @@ describe('TeamDisplay Component', () => {
     it('should not call onTeamClick when onTeamClick is not provided', async () => {
       const user = userEvent.setup();
       render(
-        <TeamDisplay 
-          teamNumber={1} 
-          players={MOCK_PLAYERS.team} 
+        <TeamDisplay
+          teamNumber={1}
+          players={MOCK_PLAYERS.team}
           isClickable={true}
-        />
+        />,
       );
 
       const teamElement = screen.getByText('Team 1').closest('.team');
@@ -159,12 +155,12 @@ describe('TeamDisplay Component', () => {
 
     it('should display both crown and VS divider when winner and showVsDivider', () => {
       render(
-        <TeamDisplay 
-          teamNumber={1} 
-          players={MOCK_PLAYERS.team} 
+        <TeamDisplay
+          teamNumber={1}
+          players={MOCK_PLAYERS.team}
           isWinner={true}
           showVsDivider={true}
-        />
+        />,
       );
 
       expect(screen.getByText('👑')).toBeInTheDocument();
