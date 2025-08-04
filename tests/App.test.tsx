@@ -20,4 +20,19 @@ describe('App Step Visibility', () => {
 
     expect(screen.getByText('Step 3: Court Settings')).toBeInTheDocument();
   });
+
+  it('renders court assignments after first generation', async () => {
+    render(<App />);
+    const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+    await user.type(
+      bulkInput,
+      'Alice\nBob\nCharlie\nDiana'
+    );
+    await user.click(screen.getByText('Add All Players'));
+
+    await user.click(screen.getByText('🎲 Generate Random Assignments'));
+
+    expect(screen.getByText('Court Assignments')).toBeInTheDocument();
+    expect(screen.queryByText('Step 4')).not.toBeInTheDocument();
+  });
 }); 

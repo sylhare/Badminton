@@ -1,6 +1,6 @@
 .app {
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--color-primary-start) 0%, var(--color-primary-end) 100%);
     padding: 15px;
 }
 
@@ -36,6 +36,24 @@ h1 {
     display: flex;
     align-items: center;
     gap: 10px;
+    cursor: pointer; /* Make header clickable for collapsing */
+}
+
+/* Hide step contents when collapsed */
+.step.collapsed > *:not(h2) {
+    display: none;
+}
+
+/* Reduce spacing when collapsed */
+.step.collapsed {
+    display: inline-flex; /* place collapsed cards in one line */
+    align-items: center;
+    padding: 8px 15px; /* smaller padding */
+    margin: 0 10px 20px 0; /* horizontal gap + reduced bottom gap */
+}
+
+.step.collapsed h2 {
+    margin-bottom: 0; /* remove gap under title */
 }
 
 .upload-area {
@@ -49,12 +67,12 @@ h1 {
 }
 
 .upload-area:hover {
-    border-color: #667eea;
+    border-color: var(--color-primary);
     background: #f7fafc;
 }
 
 .upload-area.dragover {
-    border-color: #667eea;
+    border-color: var(--color-primary);
     background: #ebf8ff;
 }
 
@@ -73,7 +91,7 @@ h1 {
 }
 
 .upload-button {
-    background: #667eea;
+    background: var(--color-primary);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -85,7 +103,7 @@ h1 {
 }
 
 .upload-button:hover {
-    background: #5a67d8;
+    background: var(--color-primary-hover);
 }
 
 .processing {
@@ -109,7 +127,7 @@ h1 {
 
 .progress-bar {
     height: 100%;
-    background: #667eea;
+    background: var(--color-primary);
     width: 0%;
     transition: width 0.2s ease;
 }
@@ -184,11 +202,11 @@ h1 {
 
 .add-player-input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--color-primary);
 }
 
 .add-button {
-    background: #48bb78;
+    background: var(--color-primary);
     color: white;
     border: none;
     padding: 12px 20px;
@@ -198,7 +216,7 @@ h1 {
 }
 
 .add-button:hover {
-    background: #38a169;
+    background: var(--color-primary-hover);
 }
 
 .add-players-options {
@@ -272,11 +290,11 @@ h1 {
 
 .single-player-input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--color-primary);
 }
 
 .add-single-button {
-    background: #48bb78;
+    background: var(--color-primary);
     color: white;
     border: none;
     padding: 12px 20px;
@@ -287,7 +305,7 @@ h1 {
 }
 
 .add-single-button:hover {
-    background: #38a169;
+    background: var(--color-primary-hover);
 }
 
 .bulk-add-form {
@@ -309,11 +327,11 @@ h1 {
 
 .bulk-input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--color-primary);
 }
 
 .add-bulk-button {
-    background: #667eea;
+    background: var(--color-primary);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -325,7 +343,7 @@ h1 {
 }
 
 .add-bulk-button:hover {
-    background: #5a67d8;
+    background: var(--color-primary-hover);
 }
 
 .court-settings {
@@ -352,11 +370,11 @@ h1 {
 
 .court-input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--color-primary);
 }
 
 .generate-button {
-    background: #9f7aea;
+    background: var(--color-primary);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -368,7 +386,7 @@ h1 {
 }
 
 .generate-button:hover {
-    background: #805ad5;
+    background: var(--color-primary-hover);
 }
 
 .generate-button:disabled {
@@ -435,7 +453,7 @@ h1 {
 .vs-divider {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #667eea;
+    color: var(--color-primary);
 }
 
 .singles-match {
@@ -639,6 +657,26 @@ h1 {
 
     .manual-entry-section {
         padding: 15px;
+    }
+
+    /* Hide headings and divider in Add Players area on small screens */
+    .add-option h3,
+    .add-option-divider {
+        display: none;
+    }
+
+    .add-option {
+        display: contents; /* remove the wrapper box */
+        padding: 0;
+        border: none;
+        background: none;
+    }
+
+    /* Improve contrast for input areas */
+    .upload-area,
+    .manual-entry-section {
+        background: #ffffff;
+        border: 1px solid #d2d6dc;
     }
 }
 

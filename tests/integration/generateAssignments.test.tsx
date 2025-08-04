@@ -40,7 +40,7 @@ describe('Generate Assignments Integration', () => {
 
     await user.click(screen.getByText('🎲 Generate Random Assignments'));
 
-    const courtAssignments = screen.getByText('Step 4: Court Assignments').parentElement;
+    const courtAssignments = screen.getByText('Court Assignments').parentElement;
     expect(courtAssignments).not.toHaveTextContent('Alice');
     expect(courtAssignments).not.toHaveTextContent('Bob');
     expect(courtAssignments).toHaveTextContent('Charlie');

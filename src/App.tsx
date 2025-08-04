@@ -30,15 +30,29 @@ function App(): React.ReactElement {
   const [players, setPlayers] = useState<Player[]>([]);
   const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
   const [assignments, setAssignments] = useState<Court[]>([]);
+  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(new Set());
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
     const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
     setPlayers(newPlayers);
+    setCollapsedSteps(prev => {
+      const next = new Set(prev);
+      next.add(1);
+      return next;
+    });
   };
 
   const handleManualPlayersAdded = (newNames: string[]) => {
     const newPlayers = createPlayersFromNames(newNames, 'manual');
     setPlayers(prev => [...prev, ...newPlayers]);
+    // If multiple players were added at once, treat it like a list addition and collapse Step 1
+    if (newNames.length > 1) {
+      setCollapsedSteps(prev => {
+        const next = new Set(prev);
+        next.add(1);
+        return next;
+      });
+    }
   };
 
   const handlePlayerToggle = (playerId: string) => {
@@ -55,12 +69,27 @@ function App(): React.ReactElement {
     setPlayers(prev => prev.filter(player => player.id !== playerId));
   };
 
+  // Toggle the collapsed state of a step when its header is clicked
+  const toggleStep = (stepNumber: number) => {
+    setCollapsedSteps(prev => {
+      const next = new Set(prev);
+      if (next.has(stepNumber)) {
+        next.delete(stepNumber);
+      } else {
+        next.add(stepNumber);
+      }
+      return next;
+    });
+  };
+
   const generateAssignments = () => {
     if (assignments.length > 0) {
       CourtAssignmentEngine.recordWins(assignments);
     }
     const courts = generateCourtAssignments(players, numberOfCourts);
     setAssignments(courts);
+    // Collapse the first three steps when assignments are generated
+    setCollapsedSteps(new Set([1, 2, 3]));
   };
 
   const handleWinnerChange = (courtNumber: number, winner: 1 | 2 | undefined) => {
@@ -73,13 +102,16 @@ function App(): React.ReactElement {
     );
   };
 
+  const getStepTitle = (stepNumber: number, baseTitle: string) =>
+    collapsedSteps.has(stepNumber) ? baseTitle : `Step ${stepNumber}: ${baseTitle}`;
+
   return (
     <div className="app">
       <div className="container">
         <h1>🏸 Badminton Court Manager</h1>
 
-        <div className="step">
-          <h2>Step 1: Add Players</h2>
+        <div className={`step ${collapsedSteps.has(1) ? 'collapsed' : ''}`}>
+          <h2 onClick={() => toggleStep(1)}>{getStepTitle(1, 'Add Players')}</h2>
           <div className="add-players-options">
             <div className="add-option">
               <h3>From Image</h3>
@@ -94,8 +126,8 @@ function App(): React.ReactElement {
         </div>
 
         {players.length > 0 && (
-          <div className="step">
-            <h2>Step 2: Manage Players</h2>
+          <div className={`step ${collapsedSteps.has(2) ? 'collapsed' : ''}`}>
+            <h2 onClick={() => toggleStep(2)}>{getStepTitle(2, 'Manage Players')}</h2>
             <PlayerList
               players={players}
               onPlayerToggle={handlePlayerToggle}
@@ -105,8 +137,8 @@ function App(): React.ReactElement {
         )}
 
         {players.some(p => p.isPresent) && (
-          <div className="step">
-            <h2>Step 3: Court Settings</h2>
+          <div className={`step ${collapsedSteps.has(3) ? 'collapsed' : ''}`}>
+            <h2 onClick={() => toggleStep(3)}>{getStepTitle(3, 'Court Settings')}</h2>
             <CourtSettings
               numberOfCourts={numberOfCourts}
               onNumberOfCourtsChange={setNumberOfCourts}
@@ -117,8 +149,8 @@ function App(): React.ReactElement {
         )}
 
         {assignments.length > 0 && (
-          <div className="step">
-            <h2>Step 4: Court Assignments</h2>
+          <div className={`step ${collapsedSteps.has(4) ? 'collapsed' : ''}`}>
+            <h2 onClick={() => toggleStep(4)}>Court Assignments</h2>
             <CourtAssignments
               assignments={assignments}
               benchedPlayers={getBenchedPlayers(assignments, players)}
