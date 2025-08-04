@@ -651,3 +651,26 @@ h1 {
         padding: 10px;
     }
 } 
+
+/* Leaderboard styles */
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.leaderboard-table th, .leaderboard-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.leaderboard-table th {
+    background: var(--color-primary);
+    color: white;
+    text-align: left;
+}
+
+.leaderboard-table tbody tr:nth-child(even) {
+    background: #f7fafc;
+}
+

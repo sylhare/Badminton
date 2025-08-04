@@ -6,6 +6,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import CourtSettings from './components/CourtSettings';
 import CourtAssignments from './components/CourtAssignments';
+import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
 
@@ -124,6 +125,9 @@ function App(): React.ReactElement {
             />
           </div>
         )}
+
+        {/* Leaderboard */}
+        <Leaderboard players={players} winCounts={CourtAssignmentEngine.getWinCounts()} />
       </div>
     </div>
   );

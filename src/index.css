@@ -12,6 +12,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
+    /* === Theme Colors (Orange → Pink) === */
+    --color-primary-start: #ffb84d; /* more yellow-orange */
+    --color-primary-end: #ff5f7e;  /* keep same pink */
+    --color-primary: #ffb84d;      /* primary solid colour */
+    --color-primary-hover: #e62cae; /* deeper shade for hover */
 }
 
 * {
