@@ -2,7 +2,6 @@ export async function preprocessImage(file: File, scale = 1.5): Promise<HTMLCanv
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      // create canvas and upscale
       const canvas = document.createElement('canvas');
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;

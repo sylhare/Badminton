@@ -26,7 +26,7 @@ describe('App Step Visibility', () => {
     const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
     await user.type(
       bulkInput,
-      'Alice\nBob\nCharlie\nDiana'
+      'Alice\nBob\nCharlie\nDiana',
     );
     await user.click(screen.getByText('Add All Players'));
 
@@ -35,4 +35,4 @@ describe('App Step Visibility', () => {
     expect(screen.getByText('Court Assignments')).toBeInTheDocument();
     expect(screen.queryByText('Step 4')).not.toBeInTheDocument();
   });
-}); 
+});

@@ -146,8 +146,6 @@ describe('CourtAssignments Component', () => {
   });
 });
 
-// Integration-style winner selection tests moved from tests/integration/CourtAssignments.test.tsx
-
 describe('Winner Selection', () => {
   const doublesAssignment: Court[] = [TEST_COURTS.doublesWithTeams()];
   const singlesAssignment: Court[] = [TEST_COURTS.singlesWithTeams()];

@@ -48,12 +48,27 @@ A React TypeScript application that helps organize badminton players into court 
 - Click "Generate Random Assignments" to create new team combinations
 - Click "Generate New Assignments" to shuffle players again
 
-### Assignment Logic
+### 🧮 Algorithm Rules & Fairness
 
-- **Doubles (4 players per court)**: Preferred format with 2 teams of 2 players each
-- **Singles (2 players per court)**: Used when odd numbers of players
-- **Bench**: Extra players are randomly assigned to the bench
-- **Waiting**: For 3 players on a court, one waits while two play singles
+The court-assignment engine aims to give everyone a fun, varied and fair session.  It does this by turning each candidate set of courts into a *cost* and repeatedly searching for the lowest-cost layout.  The cost function is made up of the rules below – lower cost means “more desirable”.
+
+1. **Bench rotation fairness** – players with fewer previous bench stints are prioritised for court time.
+2. **Minimise repeated team-mates** – two players who have already been on the same side several times incur a penalty when teamed up again.
+3. **Minimise repeated opponents** – the same logic applies to players facing each other across the net.
+4. **Result balancing**  
+   • The more *wins* a player already has, the less desirable it is to partner them with another high-win player.  
+   • Likewise, the more *losses* a player has, the less desirable it is to partner them with another high-loss player.  
+   • After teams are formed the engine penalises a court where one team has a much higher total number of wins (or losses) than the other – discouraging “winners vs. losers” mismatches.
+5. **No 3-player courts** – a court will always host either 2 (singles) or 4 (doubles) players.
+6. **Best team split** – for every group of 4 players the engine evaluates all three possible 2-player combinations and keeps the one with the lowest cost.
+
+These rules are layered on top of the basic constraints:
+
+* **Doubles preferred** – courts of 4 players are created whenever possible.
+* **Singles fallback** – courts of 2 players are allowed when numbers are odd.
+* **Bench** – any surplus players are rotated to the bench.
+
+Because the optimiser is stochastic there is always an element of randomness, but over time the history-based penalties push the system towards an even distribution of partners, opponents **and** results.
 
 ## Get Started
 

@@ -45,7 +45,6 @@ function App(): React.ReactElement {
   const handleManualPlayersAdded = (newNames: string[]) => {
     const newPlayers = createPlayersFromNames(newNames, 'manual');
     setPlayers(prev => [...prev, ...newPlayers]);
-    // If multiple players were added at once, treat it like a list addition and collapse Step 1
     if (newNames.length > 1) {
       setCollapsedSteps(prev => {
         const next = new Set(prev);
@@ -69,7 +68,6 @@ function App(): React.ReactElement {
     setPlayers(prev => prev.filter(player => player.id !== playerId));
   };
 
-  // Toggle the collapsed state of a step when its header is clicked
   const toggleStep = (stepNumber: number) => {
     setCollapsedSteps(prev => {
       const next = new Set(prev);
@@ -88,7 +86,6 @@ function App(): React.ReactElement {
     }
     const courts = generateCourtAssignments(players, numberOfCourts);
     setAssignments(courts);
-    // Collapse the first three steps when assignments are generated
     setCollapsedSteps(new Set([1, 2, 3]));
   };
 

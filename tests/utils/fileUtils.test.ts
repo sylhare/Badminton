@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { getFirstFile, isImageFile } from '../../src/utils/fileUtils';
-
 import { createMockFileList, MOCK_FILES } from '../data/testFactories';
 
 describe('File Utils', () => {

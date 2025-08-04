@@ -1,10 +1,18 @@
 import React from 'react';
+
 import type { Player } from '../App';
 
 interface LeaderboardProps {
   players: Player[];
   winCounts: Map<string, number>;
 }
+
+const medalForRank = (idx: number): string => {
+  if (idx === 0) return '🥇 ';
+  if (idx === 1) return '🥈 ';
+  if (idx === 2) return '🥉 ';
+  return '';
+};
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts }) => {
   const ranked = [...players]
@@ -30,7 +38,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts }) => {
           {ranked.map((p, idx) => (
             <tr key={p.id} className={idx === 0 ? 'top' : undefined}>
               <td>{idx + 1}</td>
-              <td>{idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : ''}{p.name}</td>
+              <td>{medalForRank(idx)}{p.name}</td>
               <td>{p.wins}</td>
             </tr>
           ))}
@@ -40,4 +48,4 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts }) => {
   );
 };
 
-export default Leaderboard; 
+export default Leaderboard;

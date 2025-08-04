@@ -5,6 +5,7 @@ export class CourtAssignmentEngine {
   private static teammateCountMap: Map<string, number> = new Map();
   private static opponentCountMap: Map<string, number> = new Map();
   private static winCountMap: Map<string, number> = new Map();
+  private static lossCountMap: Map<string, number> = new Map();
   private static readonly MAX_ATTEMPTS = 300;
 
   constructor(private players: Player[], private numberOfCourts: number) {
@@ -17,14 +18,19 @@ export class CourtAssignmentEngine {
     this.teammateCountMap.clear();
     this.opponentCountMap.clear();
     this.winCountMap.clear();
+    this.lossCountMap.clear();
   }
 
   static recordWins(courts: Court[]): void {
     courts.forEach(court => {
       if (court.winner && court.teams) {
         const winningTeam = court.winner === 1 ? court.teams.team1 : court.teams.team2;
+        const losingTeam = court.winner === 1 ? court.teams.team2 : court.teams.team1;
         winningTeam.forEach(player => {
           this.incrementMapCount(this.winCountMap, player.id);
+        });
+        losingTeam.forEach(player => {
+          this.incrementMapCount(this.lossCountMap, player.id);
         });
       }
     });
@@ -125,6 +131,33 @@ export class CourtAssignmentEngine {
           cost += this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
         });
       });
+
+      const addSkillPairPenalty = (team: Player[]): void => {
+        for (let i = 0; i < team.length; i++) {
+          for (let j = i + 1; j < team.length; j++) {
+            const p1 = team[i];
+            const p2 = team[j];
+            const wins1 = this.winCountMap.get(p1.id) ?? 0;
+            const wins2 = this.winCountMap.get(p2.id) ?? 0;
+            const losses1 = this.lossCountMap.get(p1.id) ?? 0;
+            const losses2 = this.lossCountMap.get(p2.id) ?? 0;
+
+            cost += wins1 * wins2;
+            cost += losses1 * losses2;
+          }
+        }
+      };
+
+      addSkillPairPenalty(court.teams.team1);
+      addSkillPairPenalty(court.teams.team2);
+
+      const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+      const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+      cost += Math.abs(team1WinSum - team2WinSum);
+
+      const team1LossSum = court.teams.team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
+      const team2LossSum = court.teams.team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
+      cost += Math.abs(team1LossSum - team2LossSum);
     }
 
     return cost;

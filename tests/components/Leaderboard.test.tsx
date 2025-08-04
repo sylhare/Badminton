@@ -26,4 +26,4 @@ describe('Leaderboard Component', () => {
     expect(screen.getByText(/Alice/)).toBeInTheDocument();
     expect(screen.getAllByText('2')).toHaveLength(2);
   });
-}); 
+});

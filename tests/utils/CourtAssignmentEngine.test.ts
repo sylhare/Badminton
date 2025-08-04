@@ -259,4 +259,50 @@ describe('CourtAssignment Engine – core behaviour', () => {
       expect(winCounts.get('B2')).toBe(undefined);
     });
   });
+
+  it('splits high-win players and high-loss players across teams', () => {
+    const players = Array.from({ length: 4 }, (_, i) => ({
+      id: `P${i}`,
+      name: `Player ${i}`,
+      isPresent: true,
+    }));
+
+    const trainingCourt: Court = {
+      courtNumber: 1,
+      players,
+      teams: {
+        team1: [players[0], players[1]],
+        team2: [players[2], players[3]],
+      },
+      winner: 1, // team1 wins
+    };
+
+    for (let i = 0; i < 50; i++) {
+      CourtAssignmentEngine.recordWins([trainingCourt]);
+    }
+
+    const assignments = generateCourtAssignments(players, 1);
+    expect(assignments.length).toBe(1);
+
+    const teams = assignments[0].teams!;
+    const team1Ids = teams.team1.map(p => p.id);
+    const team2Ids = teams.team2.map(p => p.id);
+
+    const highWinTogether =
+      (team1Ids.includes('P0') && team1Ids.includes('P1')) ||
+      (team2Ids.includes('P0') && team2Ids.includes('P1'));
+
+    const highLossTogether =
+      (team1Ids.includes('P2') && team1Ids.includes('P3')) ||
+      (team2Ids.includes('P2') && team2Ids.includes('P3'));
+
+    expect(highWinTogether).toBe(false);
+    expect(highLossTogether).toBe(false);
+
+    const winCounts = CourtAssignmentEngine.getWinCounts();
+    const team1WinSum = teams.team1.reduce((acc, p) => acc + (winCounts.get(p.id) ?? 0), 0);
+    const team2WinSum = teams.team2.reduce((acc, p) => acc + (winCounts.get(p.id) ?? 0), 0);
+
+    expect(Math.abs(team1WinSum - team2WinSum)).toBeLessThanOrEqual(10);
+  });
 });
