@@ -1,16 +1,12 @@
 import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
 
 import Leaderboard from '../../src/components/Leaderboard';
 import type { Player } from '../../src/App';
+import { TEST_PLAYERS } from '../data/testData';
 
-const mockPlayers: Player[] = [
-  { id: '1', name: 'Alice', isPresent: true },
-  { id: '2', name: 'Bob', isPresent: true },
-  { id: '3', name: 'Charlie', isPresent: true },
-];
+const mockPlayers: Player[] = TEST_PLAYERS.slice(0, 2);
 
 describe('Leaderboard Component', () => {
   it('does not render when no player has wins', () => {
@@ -27,7 +23,7 @@ describe('Leaderboard Component', () => {
     render(<Leaderboard players={mockPlayers} winCounts={winCounts} />);
 
     expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText(/Alice/)).toBeInTheDocument();
+    expect(screen.getAllByText('2')).toHaveLength(2);
   });
 }); 

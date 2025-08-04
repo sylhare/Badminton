@@ -104,15 +104,17 @@ function App(): React.ReactElement {
           </div>
         )}
 
-        <div className="step">
-          <h2>Step 3: Court Settings</h2>
-          <CourtSettings
-            numberOfCourts={numberOfCourts}
-            onNumberOfCourtsChange={setNumberOfCourts}
-            onGenerateAssignments={generateAssignments}
-            hasPlayers={players.some(p => p.isPresent)}
-          />
-        </div>
+        {players.some(p => p.isPresent) && (
+          <div className="step">
+            <h2>Step 3: Court Settings</h2>
+            <CourtSettings
+              numberOfCourts={numberOfCourts}
+              onNumberOfCourtsChange={setNumberOfCourts}
+              onGenerateAssignments={generateAssignments}
+              hasPlayers={players.some(p => p.isPresent)}
+            />
+          </div>
+        )}
 
         {assignments.length > 0 && (
           <div className="step">

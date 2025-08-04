@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 
 import CourtAssignments from '../../src/components/CourtAssignments';
 import { Court, Player } from '../../src/App';
-import { TEST_COURTS, TEST_PLAYERS } from '../utils/testData';
+import { TEST_COURTS, TEST_PLAYERS } from '../data/testData';
 
 describe('CourtAssignments Component', () => {
   const mockOnGenerateNewAssignments = vi.fn();

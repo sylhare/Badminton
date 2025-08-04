@@ -5,8 +5,8 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import TeamDisplay from '../../src/components/TeamDisplay';
-import { createMockPlayers, MOCK_PLAYERS } from '../utils/testFactories';
-import { expectPlayersInOrder, expectPlayersToBeRendered, getElementByText } from '../utils/testHelpers';
+import { createMockPlayers, MOCK_PLAYERS } from '../data/testFactories';
+import { expectPlayersInOrder, expectPlayersToBeRendered, getElementByText } from '../data/testHelpers';
 
 describe('TeamDisplay Component', () => {
   it('should render team with correct number and players', () => {

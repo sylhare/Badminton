@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
 import { useDragAndDrop } from '../../src/hooks/useDragAndDrop';
-import { createMockDragEvent, MOCK_FILES } from '../utils/testFactories';
-import { mockAssertions } from '../utils/testHelpers';
+import { createMockDragEvent, MOCK_FILES } from '../data/testFactories';
+import { mockAssertions } from '../data/testHelpers';
 
 describe('useDragAndDrop Hook', () => {
   const mockOnFileDropped = vi.fn();
