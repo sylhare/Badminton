@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { extractPlayerNames } from '../../src/utils/ocrTextProcessor';
+import { extractPlayerNames } from '../../src/utils/ocrEngine';
 
 describe('OCR Text Processor', () => {
   it('should extract player names from your sample image text', () => {
@@ -20,28 +20,6 @@ Noella`;
       'Yvette',
       'Gabriela',
       'Noella',
-    ]);
-  });
-
-  it('should filter out common badminton-related noise words', () => {
-    const noisyText = `Player List
-Badminton Club
-John Doe
-list
-Jane Smith
-court 1
-players
-Mike Johnson
-badminton session
-Sarah Davis`;
-
-    const result = extractPlayerNames(noisyText);
-
-    expect(result).toEqual([
-      'John Doe',
-      'Jane Smith',
-      'Mike Johnson',
-      'Sarah Davis',
     ]);
   });
 

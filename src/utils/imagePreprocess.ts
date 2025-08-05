@@ -1,10 +1,12 @@
-export async function preprocessImage(file: File, scale = 1.5): Promise<HTMLCanvasElement> {
+export async function preprocessImage(file: File): Promise<HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+      const autoScale = (Math.min(img.width, img.height) < 1400 ? 1400 / Math.min(img.width, img.height) : 1.5);
+
+      canvas.width = img.width * autoScale;
+      canvas.height = img.height * autoScale;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         reject(new Error('Cannot get canvas context'));

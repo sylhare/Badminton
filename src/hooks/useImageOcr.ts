@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import { createWorker } from 'tesseract.js';
-
-import { extractPlayerNames } from '../utils/ocrTextProcessor';
-import { preprocessImage } from '../utils/imagePreprocess';
+import { recognizePlayerNames } from '../utils/ocrEngine';
 
 interface UseImageOcrOptions {
   onPlayersExtracted: (players: string[]) => void;
@@ -25,35 +22,9 @@ export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
     setProgress(0);
     try {
 
-      const worker: any = await createWorker('eng');
-      worker.logger = (m: any) => {
-        if (m.status === 'recognizing text') {
-          setProgress(m.progress);
-        }
-      };
-
-      if (typeof (worker as any).setParameters === 'function') {
-        await (worker as any).setParameters({
-          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ',
-          preserve_interword_spaces: '1',
-          tessedit_pageseg_mode: '6' as any,
-          user_defined_dpi: '300',
-        });
-      }
-
-      let imageForOCR: File | HTMLCanvasElement = file;
-      try {
-        imageForOCR = await preprocessImage(file);
-      } catch (e) {
-        console.warn('Image preprocessing skipped:', e);
-      }
-
-      const { data: { text } } = await worker.recognize(imageForOCR as any);
-      await worker.terminate();
-
-      console.log('OCR Raw text:', text);
-      const playerNames = extractPlayerNames(text);
-      console.log('Extracted player names:', playerNames);
+      const playerNames = await recognizePlayerNames(file, {
+        onProgress: (p) => setProgress(p),
+      });
       onPlayersExtracted(playerNames);
     } catch (error) {
       console.error('OCR processing failed:', error);
