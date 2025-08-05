@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
@@ -29,8 +29,10 @@ describe('ManualPlayerEntry Component', () => {
     const input = screen.getByPlaceholderText('Enter player name...');
     const button = screen.getByRole('button', { name: /add player/i });
 
-    await user.type(input, 'John Doe');
-    await user.click(button);
+    await act(async () => {
+      await user.type(input, 'John Doe');
+      await user.click(button);
+    });
 
     expect(mockOnPlayersAdded).toHaveBeenCalledWith(['John Doe']);
     expect(input).toHaveValue('');
@@ -43,8 +45,10 @@ describe('ManualPlayerEntry Component', () => {
     const textarea = screen.getByPlaceholderText(/John Doe, Jane Smith/);
     const button = screen.getByRole('button', { name: /add all players/i });
 
-    await user.type(textarea, 'John Doe, Jane Smith, Mike Johnson');
-    await user.click(button);
+    await act(async () => {
+      await user.type(textarea, 'John Doe, Jane Smith, Mike Johnson');
+      await user.click(button);
+    });
 
     expect(mockOnPlayersAdded).toHaveBeenCalledWith([
       'John Doe',
@@ -61,8 +65,10 @@ describe('ManualPlayerEntry Component', () => {
     const textarea = screen.getByPlaceholderText(/John Doe, Jane Smith/);
     const button = screen.getByRole('button', { name: /add all players/i });
 
-    await user.type(textarea, 'John Doe\nJane Smith\nMike Johnson');
-    await user.click(button);
+    await act(async () => {
+      await user.type(textarea, 'John Doe\nJane Smith\nMike Johnson');
+      await user.click(button);
+    });
 
     expect(mockOnPlayersAdded).toHaveBeenCalledWith([
       'John Doe',
@@ -78,8 +84,10 @@ describe('ManualPlayerEntry Component', () => {
     const textarea = screen.getByPlaceholderText(/John Doe, Jane Smith/);
     const button = screen.getByRole('button', { name: /add all players/i });
 
-    await user.type(textarea, 'John Doe, Jane Smith\nMike Johnson,Sarah Davis');
-    await user.click(button);
+    await act(async () => {
+      await user.type(textarea, 'John Doe, Jane Smith\nMike Johnson,Sarah Davis');
+      await user.click(button);
+    });
 
     expect(mockOnPlayersAdded).toHaveBeenCalledWith([
       'John Doe',
@@ -96,8 +104,10 @@ describe('ManualPlayerEntry Component', () => {
     const textarea = screen.getByPlaceholderText(/John Doe, Jane Smith/);
     const button = screen.getByRole('button', { name: /add all players/i });
 
-    await user.type(textarea, 'John Doe,, \n  ,Jane Smith,   \n\nMike Johnson,');
-    await user.click(button);
+    await act(async () => {
+      await user.type(textarea, 'John Doe,, \n  ,Jane Smith,   \n\nMike Johnson,');
+      await user.click(button);
+    });
 
     expect(mockOnPlayersAdded).toHaveBeenCalledWith([
       'John Doe',
@@ -113,8 +123,10 @@ describe('ManualPlayerEntry Component', () => {
     const textarea = screen.getByPlaceholderText(/John Doe, Jane Smith/);
     const button = screen.getByRole('button', { name: /add all players/i });
 
-    await user.type(textarea, '  John Doe  ,  Jane Smith  ');
-    await user.click(button);
+    await act(async () => {
+      await user.type(textarea, '  John Doe  ,  Jane Smith  ');
+      await user.click(button);
+    });
 
     expect(mockOnPlayersAdded).toHaveBeenCalledWith([
       'John Doe',
@@ -129,8 +141,10 @@ describe('ManualPlayerEntry Component', () => {
     const input = screen.getByPlaceholderText('Enter player name...');
     const button = screen.getByRole('button', { name: /add player/i });
 
-    await user.type(input, '   ');
-    await user.click(button);
+    await act(async () => {
+      await user.type(input, '   ');
+      await user.click(button);
+    });
 
     expect(mockOnPlayersAdded).not.toHaveBeenCalled();
   });
@@ -142,8 +156,10 @@ describe('ManualPlayerEntry Component', () => {
     const textarea = screen.getByPlaceholderText(/John Doe, Jane Smith/);
     const button = screen.getByRole('button', { name: /add all players/i });
 
-    await user.type(textarea, '   \n  \n  ');
-    await user.click(button);
+    await act(async () => {
+      await user.type(textarea, '   \n  \n  ');
+      await user.click(button);
+    });
 
     expect(mockOnPlayersAdded).not.toHaveBeenCalled();
   });
