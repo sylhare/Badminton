@@ -91,3 +91,4 @@ public
 # Temporary folders
 tmp/
 temp/ 
+eng.traineddata
