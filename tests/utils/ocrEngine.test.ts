@@ -3,25 +3,23 @@
 import fs from 'fs';
 import path from 'path';
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { recognizePlayerNames } from '../../src/utils/ocrEngine';
 
 const workerPath = (() => {
-  // __dirname here is tests/integration/ocr
-  const root = path.resolve(__dirname, '../../../..'); // project root
+  const root = path.resolve(__dirname, '../../../..');
   return path.join(root, 'node_modules', 'tesseract.js', 'src', 'worker-script', 'node', 'index.js');
 })();
 
 const SAMPLES: Array<{
   filename: string;
   expected: string[];
-  minMatches?: number;
+  minMatches: number;
 }> = [
   {
     filename: path.resolve(__dirname, '../../tests/data/names.png'),
     expected: ['Tinley', 'Ella', 'Avrella', 'Yvette', 'Gabriela', 'Noella'],
-    // Expect at least 4/6 matches on the clean printed sample
     minMatches: 4,
   },
   {
@@ -34,7 +32,6 @@ const SAMPLES: Array<{
       'Lori Davis',
       'Wendy Clark',
     ],
-    // Handwriting is harder – require at least 2 matches as a smoke test
     minMatches: 2,
   },
 ];
@@ -53,6 +50,7 @@ describe('OCR integration', () => {
           ),
         );
         console.log(matches);
+        //expect(matches.length).toBeGreaterThanOrEqual(sample.minMatches);
       },
       60000, // timeout per test – OCR can be slow
     );

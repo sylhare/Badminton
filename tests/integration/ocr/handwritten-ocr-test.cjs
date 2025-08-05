@@ -51,12 +51,11 @@ async function run() {
   const imageBuffer = fs.readFileSync(imagePath);
 
   const worker = await createWorker('eng');
-  // Apply the same parameters used in the app for better consistency
   if (typeof worker.setParameters === 'function') {
     await worker.setParameters({
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ',
       preserve_interword_spaces: '1',
-      tessedit_pageseg_mode: '11', // sparse text – better for lists
+      tessedit_pageseg_mode: '3', 
       user_defined_dpi: '300',
     });
   }
