@@ -7,11 +7,10 @@ export class CourtAssignmentEngine {
   private static winCountMap: Map<string, number> = new Map();
   private static lossCountMap: Map<string, number> = new Map();
   private static readonly MAX_ATTEMPTS = 300;
+  private _assignments: Court[] = [];
 
   constructor(private players: Player[], private numberOfCourts: number) {
   }
-
-  private _assignments: Court[] = [];
 
   static resetHistory(): void {
     this.benchCountMap.clear();

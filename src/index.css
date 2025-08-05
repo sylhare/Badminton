@@ -14,8 +14,8 @@
     -webkit-text-size-adjust: 100%;
     /* === Theme Colors (Orange → Pink) === */
     --color-primary-start: #ffb84d; /* more yellow-orange */
-    --color-primary-end: #ff5f7e;  /* keep same pink */
-    --color-primary: #ffb84d;      /* primary solid colour */
+    --color-primary-end: #ff5f7e; /* keep same pink */
+    --color-primary: #ffb84d; /* primary solid colour */
     --color-primary-hover: #ff5f7e; /* deeper shade for hover */
 }
 

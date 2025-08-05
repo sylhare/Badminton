@@ -14,7 +14,6 @@ function deskew(cv: any, srcGray: any): any {
   let angleSum = 0;
   let count = 0;
   for (let i = 0; i < lines.rows; i++) {
-    const rho = lines.data32F[i * 2];
     const theta = lines.data32F[i * 2 + 1];
     const deg = (theta * 180) / Math.PI;
     if (deg > 45 && deg < 135) {

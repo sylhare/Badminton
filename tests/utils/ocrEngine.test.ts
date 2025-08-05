@@ -3,7 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 
 import { recognizePlayerNames } from '../../src/utils/ocrEngine';
 
