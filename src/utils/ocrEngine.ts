@@ -19,15 +19,25 @@ export async function recognizePlayerNames(
   image: File | Blob | Buffer,
   { workerPath, onProgress, preprocess }: OcrOptions = {},
 ): Promise<string[]> {
+  const pushProgress = (progress: number) => {
+    if (onProgress) {
+      onProgress(progress);
+    }
+  };
+
   const isBrowser = typeof window !== 'undefined' && !!window.document;
   const shouldPreprocess = preprocess ?? isBrowser;
+
+  pushProgress(0.1);
 
   // Dynamically import path only in Node to avoid bundler complaints in browser
   const worker: any = await (createWorker as any)('eng', workerPath ? { workerPath } : undefined);
 
+  pushProgress(0.2);
+
   worker.logger = (m: any) => {
-    if (m.status === 'recognizing text' && onProgress) {
-      onProgress(m.progress);
+    if (m.status === 'recognizing text') {
+      pushProgress(0.6 + (m.progress * 0.4));
     }
   };
 
@@ -40,13 +50,22 @@ export async function recognizePlayerNames(
     });
   }
 
+  pushProgress(0.3);
+
   let imageForOCR: any = image;
   if (shouldPreprocess && image instanceof File) {
     try {
+      pushProgress(0.35);
+
       imageForOCR = await preprocessImage(image);
+
+      pushProgress(0.6);
     } catch (err) {
       console.warn('Image preprocessing skipped:', err);
+      pushProgress(0.6);
     }
+  } else {
+    pushProgress(0.6);
   }
 
   const {
