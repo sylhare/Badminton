@@ -3,6 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+vi.mock('../../src/components/ImageCropper', () => ({
+  default: ({ file, onCropped }: { file: File | null; onCropped: (f: File) => void }) => {
+    if (file) {
+      onCropped(file);
+    }
+    return null;
+  },
+}));
+
 import ImageUpload from '../../src/components/ImageUpload';
 
 const mockUseImageOcr = vi.fn();

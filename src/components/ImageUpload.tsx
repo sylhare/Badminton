@@ -1,8 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 
 import { useImageOcr } from '../hooks/useImageOcr';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { getFirstFile, isImageFile } from '../utils/fileUtils';
+
+import ImageCropper from './ImageCropper';
 
 interface ImageUploadProps {
   onPlayersExtracted: (players: string[]) => void;
@@ -12,19 +14,38 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
   const { isProcessing, progress, processImage } = useImageOcr({ onPlayersExtracted });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { isDragOver, handleDrop, handleDragOver, handleDragLeave } = useDragAndDrop({
-    onFileDropped: processImage,
+  // Hold the file to crop (if the user chooses to)
+  const [fileToCrop, setFileToCrop] = useState<File | null>(null);
+
+  const startCropFlow = (file: File) => {
+    setFileToCrop(file);
+  };
+
+  const { isDragOver, handleDrop: dndDrop, handleDragOver, handleDragLeave } = useDragAndDrop({
+    onFileDropped: startCropFlow,
   });
+
+  // Wrap original DnD handler to route to cropping
+  const handleDrop = dndDrop;
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = getFirstFile(event.target.files);
     if (isImageFile(file)) {
-      processImage(file);
+      startCropFlow(file);
     }
   };
 
   const handleClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleCropCancel = () => {
+    setFileToCrop(null);
+  };
+
+  const handleCropDone = (croppedFile: File) => {
+    setFileToCrop(null);
+    processImage(croppedFile);
   };
 
   return (
@@ -68,6 +89,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
           <p>{Math.round(progress * 100)}%</p>
         </div>
       )}
+
+      {/* Cropper overlay */}
+      <ImageCropper
+        file={fileToCrop}
+        isOpen={fileToCrop !== null}
+        onCancel={handleCropCancel}
+        onCropped={handleCropDone}
+      />
     </div>
   );
 };
