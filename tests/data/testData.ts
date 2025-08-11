@@ -29,14 +29,11 @@ const createSinglesWithTeams = (players: Player[] = TEST_PLAYERS): Court => ({
 
 export const TEST_COURTS = {
   doublesWithTeams: createDoublesWithTeams,
-
   singlesWithTeams: createSinglesWithTeams,
-
   withWinner: (teamNumber: 1 | 2, players: Player[] = TEST_PLAYERS): Court => ({
     ...createDoublesWithTeams(players),
     winner: teamNumber,
   }),
-
   withoutTeams: (players: Player[] = TEST_PLAYERS): Court => ({
     courtNumber: 1,
     players: players.slice(0, 2),
