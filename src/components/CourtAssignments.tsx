@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Court, Player } from '../App';
+import { triggerConfetti } from '../utils/confetti';
 
 import TeamDisplay from './TeamDisplay';
 import TeamPlayerList from './TeamPlayerList';
@@ -28,6 +29,23 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     }
   };
 
+  const handleSinglesClick = (event: React.MouseEvent<HTMLDivElement>, courtNumber: number, teamNumber: number) => {
+    if (onWinnerChange) {
+      const court = assignments.find(c => c.courtNumber === courtNumber);
+      if (court) {
+        const newWinner = court.winner === teamNumber ? undefined : (teamNumber as 1 | 2);
+
+        if (court.winner !== teamNumber && newWinner !== undefined) {
+          const x = event.clientX;
+          const y = event.clientY;
+          triggerConfetti(x, y, 30);
+        }
+
+        onWinnerChange(courtNumber, newWinner);
+      }
+    }
+  };
+
   const renderSinglesMatch = (court: Court) => {
     const { teams } = court;
     if (!teams) return null;
@@ -37,7 +55,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
         <div className="singles-players">
           <div
             className={`singles-player ${onWinnerChange ? 'singles-player-clickable' : ''} ${court.winner === 1 ? 'singles-player-winner' : ''}`}
-            onClick={() => onWinnerChange && handleTeamClick(court.courtNumber, 1)}
+            onClick={(event) => onWinnerChange && handleSinglesClick(event, court.courtNumber, 1)}
           >
             {teams.team1[0].name}
             {court.winner === 1 && <span className="crown">👑</span>}
@@ -45,7 +63,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           <div className="vs-divider">VS</div>
           <div
             className={`singles-player ${onWinnerChange ? 'singles-player-clickable' : ''} ${court.winner === 2 ? 'singles-player-winner' : ''}`}
-            onClick={() => onWinnerChange && handleTeamClick(court.courtNumber, 2)}
+            onClick={(event) => onWinnerChange && handleSinglesClick(event, court.courtNumber, 2)}
           >
             {teams.team2[0].name}
             {court.winner === 2 && <span className="crown">👑</span>}
