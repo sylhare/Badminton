@@ -10,9 +10,11 @@ updates:
       - dependency-type: "direct"
     groups:
       react-ecosystem:
-        patterns:
+        patterns: 
           - "react*"
           - "@types/react*"
+          - "react-dom"
+          - "@types/react-dom"
         update-types:
           - "minor"
           - "patch"
