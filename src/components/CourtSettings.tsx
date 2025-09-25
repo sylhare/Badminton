@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { useAnalytics } from '../hooks/useAnalytics';
+
 interface CourtSettingsProps {
   numberOfCourts: number;
   onNumberOfCourtsChange: (courts: number) => void;
@@ -13,6 +15,7 @@ const CourtSettings: React.FC<CourtSettingsProps> = ({
   onGenerateAssignments,
   hasPlayers,
 }) => {
+  const { trackCourtAction } = useAnalytics();
   const handleCourtsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
     if (value > 0 && value <= 20) {
@@ -36,7 +39,10 @@ const CourtSettings: React.FC<CourtSettingsProps> = ({
       </div>
 
       <button
-        onClick={onGenerateAssignments}
+        onClick={() => {
+          trackCourtAction('generate_assignments', { courtCount: numberOfCourts });
+          onGenerateAssignments();
+        }}
         disabled={!hasPlayers}
         className="generate-button"
       >
