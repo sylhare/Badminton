@@ -47,6 +47,17 @@ function App(): React.ReactElement {
     }, 0);
   }, []);
 
+  // Record wins when assignments change and have winners
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    
+    // Record wins from assignments that have winners set
+    const assignmentsWithWinners = assignments.filter(court => court.winner);
+    if (assignmentsWithWinners.length > 0) {
+      CourtAssignmentEngine.recordWins(assignmentsWithWinners);
+    }
+  }, [assignments]);
+
   // Save state whenever it changes (but not on initial load)
   useEffect(() => {
     if (isInitialLoad.current) return;
@@ -96,6 +107,15 @@ function App(): React.ReactElement {
     setPlayers(prev => prev.filter(player => player.id !== playerId));
   };
 
+  const recordCurrentWins = () => {
+    if (assignments.length > 0) {
+      const assignmentsWithWinners = assignments.filter(court => court.winner);
+      if (assignmentsWithWinners.length > 0) {
+        CourtAssignmentEngine.recordWins(assignmentsWithWinners);
+      }
+    }
+  };
+
   const handleClearAllPlayers = () => {
     setPlayers([]);
     setAssignments([]);
@@ -118,9 +138,8 @@ function App(): React.ReactElement {
   };
 
   const generateAssignments = () => {
-    if (assignments.length > 0) {
-      CourtAssignmentEngine.recordWins(assignments);
-    }
+    // Record wins from current assignments before generating new ones
+    recordCurrentWins();
     const courts = generateCourtAssignments(players, numberOfCourts);
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
