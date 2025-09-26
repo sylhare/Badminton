@@ -28,7 +28,7 @@ describe('ConfirmModal Component', () => {
         <ConfirmModal
           {...defaultProps}
           isOpen={false}
-        />
+        />,
       );
 
       expect(screen.queryByText('Test Title')).not.toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('ConfirmModal Component', () => {
           {...defaultProps}
           confirmText="Delete"
           cancelText="Keep"
-        />
+        />,
       );
 
       expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe('ConfirmModal Component', () => {
         <ConfirmModal
           {...defaultProps}
           isDestructive={true}
-        />
+        />,
       );
 
       const confirmButton = screen.getByRole('button', { name: 'Confirm' });
@@ -74,7 +74,7 @@ describe('ConfirmModal Component', () => {
         <ConfirmModal
           {...defaultProps}
           isDestructive={false}
-        />
+        />,
       );
 
       const confirmButton = screen.getByRole('button', { name: 'Confirm' });
@@ -127,7 +127,7 @@ describe('ConfirmModal Component', () => {
 
       const overlay = document.querySelector('.modal-overlay');
       expect(overlay).toBeInTheDocument();
-      
+
       fireEvent.click(overlay!);
 
       expect(mockOnCancel).toHaveBeenCalledTimes(1);
@@ -139,7 +139,7 @@ describe('ConfirmModal Component', () => {
 
       const modalContent = document.querySelector('.modal-content');
       expect(modalContent).toBeInTheDocument();
-      
+
       fireEvent.click(modalContent!);
 
       expect(mockOnCancel).not.toHaveBeenCalled();
@@ -151,11 +151,9 @@ describe('ConfirmModal Component', () => {
     it('should have proper ARIA structure', () => {
       render(<ConfirmModal {...defaultProps} />);
 
-      // Check that buttons have proper roles
       expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-      
-      // Check heading structure
+
       expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Test Title');
     });
 
@@ -163,22 +161,18 @@ describe('ConfirmModal Component', () => {
       const user = userEvent.setup();
       render(<ConfirmModal {...defaultProps} />);
 
-      // First tab goes to the close button (X)
       await user.tab();
-      const closeButton = screen.getAllByRole('button').find(button => 
-        button.innerHTML.includes('svg') && !button.textContent?.trim()
+      const closeButton = screen.getAllByRole('button').find(button =>
+        button.innerHTML.includes('svg') && !button.textContent?.trim(),
       );
       expect(closeButton).toHaveFocus();
 
-      // Second tab goes to Cancel button
       await user.tab();
       expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
 
-      // Third tab goes to Confirm button
       await user.tab();
       expect(screen.getByRole('button', { name: 'Confirm' })).toHaveFocus();
 
-      // Enter should trigger the focused button
       await user.keyboard('{Enter}');
       expect(mockOnConfirm).toHaveBeenCalledTimes(1);
     });
@@ -190,15 +184,14 @@ describe('ConfirmModal Component', () => {
       render(
         <div onClick={overlayClickHandler}>
           <ConfirmModal {...defaultProps} />
-        </div>
+        </div>,
       );
 
       const modalContent = document.querySelector('.modal-content');
       expect(modalContent).toBeInTheDocument();
-      
+
       fireEvent.click(modalContent!);
 
-      // The parent click handler should not be called because event propagation is stopped
       expect(overlayClickHandler).not.toHaveBeenCalled();
     });
   });

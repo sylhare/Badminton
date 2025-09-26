@@ -50,7 +50,7 @@ describe('OCR integration', () => {
           ),
         );
         console.log(matches);
-        //expect(matches.length).toBeGreaterThanOrEqual(sample.minMatches);
+
       },
       60000, // timeout per test – OCR can be slow
     );

@@ -15,8 +15,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   title,
   message,
-  confirmText = "Confirm",
-  cancelText = "Cancel",
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
   onConfirm,
   onCancel,
   isDestructive = false,
@@ -34,16 +34,16 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </svg>
           </button>
         </div>
-        
+
         <div className="modal-body">
           <p>{message}</p>
         </div>
-        
+
         <div className="modal-footer">
           <button className="button button-secondary" onClick={onCancel}>
             {cancelText}
           </button>
-          <button 
+          <button
             className={`button ${isDestructive ? 'button-danger' : 'button-primary'}`}
             onClick={onConfirm}
           >

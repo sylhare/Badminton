@@ -9,7 +9,6 @@ import { __testResetHistory } from '../src/utils/CourtAssignmentEngine';
 
 describe('App', () => {
   beforeEach(() => {
-    // Clear localStorage and reset engine history before each test
     localStorage.clear();
     __testResetHistory();
   });
@@ -173,7 +172,6 @@ describe('App', () => {
       it('keeps all players visible when all are toggled off', async () => {
         const checkboxes = screen.getAllByRole('checkbox');
 
-        // Toggle off all players
         await user.click(checkboxes[0]); // Alice
         await user.click(checkboxes[1]); // Bob
         await user.click(checkboxes[2]); // Charlie
@@ -194,12 +192,10 @@ describe('App', () => {
       it('updates stats when toggling a player back on', async () => {
         const checkboxes = screen.getAllByRole('checkbox');
 
-        // Toggle all off first
         await user.click(checkboxes[0]);
         await user.click(checkboxes[1]);
         await user.click(checkboxes[2]);
 
-        // Toggle Alice back on
         await user.click(checkboxes[0]);
 
         expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -237,11 +233,9 @@ describe('App', () => {
       it('shows court settings again when at least one player is toggled on', async () => {
         const checkboxes = screen.getAllByRole('checkbox');
 
-        // Toggle all off first
         await user.click(checkboxes[0]); // Alice
         await user.click(checkboxes[1]); // Bob
 
-        // Toggle Alice back on
         await user.click(checkboxes[0]);
 
         expect(screen.getByText('Step 3: Court Settings')).toBeInTheDocument();

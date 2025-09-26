@@ -48,7 +48,7 @@ export const loadAppState = (): Partial<{
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.APP_STATE);
     if (!saved) return {};
-    
+
     const parsed: AppState = JSON.parse(saved);
     return {
       players: parsed.players || [],
@@ -87,7 +87,7 @@ export const loadCourtEngineState = (): Partial<CourtEngineState> => {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.COURT_ENGINE_STATE);
     if (!saved) return {};
-    
+
     const parsed: CourtEngineState = JSON.parse(saved);
     return parsed;
   } catch (error) {

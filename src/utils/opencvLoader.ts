@@ -1,15 +1,9 @@
-// Cached cv instance to ensure the WASM is initialised only once.
-// `any` here keeps the loader agnostic to build signature differences (promise vs direct object).
 let cachedCv: any = null;
 
 function isPromiseInstance(obj: any): obj is Promise<any> {
   return obj instanceof Promise;
 }
 
-/**
- * Loads OpenCV.js (WASM) and returns the ready-to-use `cv` object.
- * Subsequent calls resolve immediately with the cached instance.
- */
 export async function loadOpenCV(): Promise<any> {
   if (cachedCv) return cachedCv;
 

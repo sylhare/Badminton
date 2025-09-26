@@ -28,40 +28,33 @@ export interface Court {
 }
 
 function App(): React.ReactElement {
-  // Initialize state with loaded data from localStorage
   const loadedState = loadAppState();
   const [players, setPlayers] = useState<Player[]>(loadedState.players || []);
   const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts || 4);
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments || []);
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps || new Set());
 
-  // Track if this is the initial load
   const isInitialLoad = useRef(true);
 
-  // Load CourtAssignmentEngine state on mount
   useEffect(() => {
     CourtAssignmentEngine.loadState();
-    // Mark initial load as complete after a short delay
     setTimeout(() => {
       isInitialLoad.current = false;
     }, 0);
   }, []);
 
-  // Record wins when assignments change and have winners
   useEffect(() => {
     if (isInitialLoad.current) return;
-    
-    // Record wins from assignments that have winners set
+
     const assignmentsWithWinners = assignments.filter(court => court.winner);
     if (assignmentsWithWinners.length > 0) {
       CourtAssignmentEngine.recordWins(assignmentsWithWinners);
     }
   }, [assignments]);
 
-  // Save state whenever it changes (but not on initial load)
   useEffect(() => {
     if (isInitialLoad.current) return;
-    
+
     saveAppState({
       players,
       numberOfCourts,
@@ -121,7 +114,6 @@ function App(): React.ReactElement {
     setAssignments([]);
     setCollapsedSteps(new Set());
     CourtAssignmentEngine.resetHistory();
-    // Clear storage after state updates to prevent immediate re-saving
     setTimeout(() => clearAllStoredState(), 0);
   };
 
@@ -138,7 +130,6 @@ function App(): React.ReactElement {
   };
 
   const generateAssignments = () => {
-    // Record wins from current assignments before generating new ones
     recordCurrentWins();
     const courts = generateCourtAssignments(players, numberOfCourts);
     setAssignments(courts);
@@ -214,7 +205,7 @@ function App(): React.ReactElement {
           </div>
         )}
 
-        {/* Leaderboard */}
+        {}
         <Leaderboard players={players} winCounts={CourtAssignmentEngine.getWinCounts()} />
       </div>
     </div>

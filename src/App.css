@@ -36,7 +36,7 @@ h1 {
     display: flex;
     align-items: center;
     gap: 10px;
-    cursor: pointer; /* Make header clickable for collapsing */
+    cursor: pointer;
 }
 
 /* Hide step contents when collapsed */
@@ -46,14 +46,14 @@ h1 {
 
 /* Reduce spacing when collapsed */
 .step.collapsed {
-    display: inline-flex; /* place collapsed cards in one line */
+    display: inline-flex;
     align-items: center;
-    padding: 8px 15px; /* smaller padding */
-    margin: 0 10px 20px 0; /* horizontal gap + reduced bottom gap */
+    padding: 8px 15px;
+    margin: 0 10px 20px 0;
 }
 
 .step.collapsed h2 {
-    margin-bottom: 0; /* remove gap under title */
+    margin-bottom: 0;
 }
 
 .upload-area {
@@ -833,7 +833,7 @@ h1 {
     }
 
     .add-option {
-        display: contents; /* remove the wrapper box */
+        display: contents;
         padding: 0;
         border: none;
         background: none;

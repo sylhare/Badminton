@@ -87,12 +87,10 @@ export class ConfettiEffect {
   }
 
   public burst(x: number, y: number, particleCount: number = 50): void {
-    // Create new particles
     for (let i = 0; i < particleCount; i++) {
       this.particles.push(this.createParticle(x, y));
     }
 
-    // Start animation if not already running
     if (!this.animationId) {
       document.body.appendChild(this.canvas);
       this.animate();
@@ -102,48 +100,37 @@ export class ConfettiEffect {
   private animate = () => {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Update and draw particles
     this.particles = this.particles.filter(particle => {
-      // Update oscillation for curly motion
       particle.oscillation += particle.oscillationSpeed;
 
-      // Update position with oscillating horizontal movement
       particle.x += particle.vx + Math.sin(particle.oscillation) * particle.curliness;
       particle.y += particle.vy;
       particle.vy += particle.gravity;
 
-      // Slower rotation for more natural paper-like movement
       particle.rotation += particle.rotationSpeed;
 
-      // Add air resistance to horizontal movement
       particle.vx *= 0.995;
 
       particle.life++;
 
-      // Calculate alpha based on remaining life
       const alpha = Math.max(0, 1 - particle.life / particle.maxLife);
 
       if (alpha <= 0) {
-        return false; // Remove particle
+        return false;
       }
-
-      // Draw particle as a paper strip
       this.ctx.save();
       this.ctx.translate(particle.x, particle.y);
       this.ctx.rotate(particle.rotation);
       this.ctx.globalAlpha = alpha;
       this.ctx.fillStyle = particle.color;
 
-      // Draw as a longer rectangle (paper strip) with rounded corners
       const halfWidth = particle.width / 2;
       const halfHeight = particle.height / 2;
 
-      // Simple rounded rectangle
       this.ctx.beginPath();
       this.ctx.roundRect(-halfWidth, -halfHeight, particle.width, particle.height, 1);
       this.ctx.fill();
 
-      // Add a subtle gradient effect for more paper-like appearance
       this.ctx.globalAlpha = alpha * 0.3;
       this.ctx.fillStyle = '#ffffff';
       this.ctx.beginPath();
@@ -152,10 +139,9 @@ export class ConfettiEffect {
 
       this.ctx.restore();
 
-      return true; // Keep particle
+      return true;
     });
 
-    // Continue animation if there are particles, otherwise clean up
     if (this.particles.length > 0) {
       this.animationId = requestAnimationFrame(this.animate);
     } else {
@@ -175,7 +161,6 @@ export class ConfettiEffect {
   }
 }
 
-// Global confetti instance
 let confettiInstance: ConfettiEffect | null = null;
 
 export const triggerConfetti = (x: number, y: number, particleCount?: number): void => {
@@ -185,7 +170,6 @@ export const triggerConfetti = (x: number, y: number, particleCount?: number): v
   confettiInstance.burst(x, y, particleCount);
 };
 
-// Clean up on page unload
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     if (confettiInstance) {
