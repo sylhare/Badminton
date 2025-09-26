@@ -1,4 +1,5 @@
 import type { Court, Player } from '../App';
+import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 
 export class CourtAssignmentEngine {
   private static benchCountMap: Map<string, number> = new Map();
@@ -18,6 +19,36 @@ export class CourtAssignmentEngine {
     this.opponentCountMap.clear();
     this.winCountMap.clear();
     this.lossCountMap.clear();
+  }
+
+  static saveState(): void {
+    saveCourtEngineState({
+      benchCountMap: this.benchCountMap,
+      teammateCountMap: this.teammateCountMap,
+      opponentCountMap: this.opponentCountMap,
+      winCountMap: this.winCountMap,
+      lossCountMap: this.lossCountMap,
+    });
+  }
+
+  static loadState(): void {
+    const state = loadCourtEngineState();
+    
+    if (state.benchCountMap) {
+      this.benchCountMap = new Map(Object.entries(state.benchCountMap));
+    }
+    if (state.teammateCountMap) {
+      this.teammateCountMap = new Map(Object.entries(state.teammateCountMap));
+    }
+    if (state.opponentCountMap) {
+      this.opponentCountMap = new Map(Object.entries(state.opponentCountMap));
+    }
+    if (state.winCountMap) {
+      this.winCountMap = new Map(Object.entries(state.winCountMap));
+    }
+    if (state.lossCountMap) {
+      this.lossCountMap = new Map(Object.entries(state.lossCountMap));
+    }
   }
 
   static recordWins(courts: Court[]): void {

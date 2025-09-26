@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import './App.css';
 import ImageUpload from './components/ImageUpload';
@@ -9,6 +9,7 @@ import CourtAssignments from './components/CourtAssignments';
 import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
+import { saveAppState, loadAppState, clearAllStoredState } from './utils/storageUtils';
 
 export interface Player {
   id: string;
@@ -27,10 +28,37 @@ export interface Court {
 }
 
 function App(): React.ReactElement {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
-  const [assignments, setAssignments] = useState<Court[]>([]);
-  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(new Set());
+  // Initialize state with loaded data from localStorage
+  const loadedState = loadAppState();
+  const [players, setPlayers] = useState<Player[]>(loadedState.players || []);
+  const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts || 4);
+  const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments || []);
+  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps || new Set());
+
+  // Track if this is the initial load
+  const isInitialLoad = useRef(true);
+
+  // Load CourtAssignmentEngine state on mount
+  useEffect(() => {
+    CourtAssignmentEngine.loadState();
+    // Mark initial load as complete after a short delay
+    setTimeout(() => {
+      isInitialLoad.current = false;
+    }, 0);
+  }, []);
+
+  // Save state whenever it changes (but not on initial load)
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+    
+    saveAppState({
+      players,
+      numberOfCourts,
+      assignments,
+      collapsedSteps,
+    });
+    CourtAssignmentEngine.saveState();
+  }, [players, numberOfCourts, assignments, collapsedSteps]);
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
     const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
@@ -66,6 +94,15 @@ function App(): React.ReactElement {
 
   const handleRemovePlayer = (playerId: string) => {
     setPlayers(prev => prev.filter(player => player.id !== playerId));
+  };
+
+  const handleClearAllPlayers = () => {
+    setPlayers([]);
+    setAssignments([]);
+    setCollapsedSteps(new Set());
+    CourtAssignmentEngine.resetHistory();
+    // Clear storage after state updates to prevent immediate re-saving
+    setTimeout(() => clearAllStoredState(), 0);
   };
 
   const toggleStep = (stepNumber: number) => {
@@ -129,6 +166,7 @@ function App(): React.ReactElement {
               players={players}
               onPlayerToggle={handlePlayerToggle}
               onRemovePlayer={handleRemovePlayer}
+              onClearAllPlayers={handleClearAllPlayers}
             />
           </div>
         )}

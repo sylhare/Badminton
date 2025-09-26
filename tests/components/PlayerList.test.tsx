@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -9,17 +9,23 @@ import { createMockPlayers } from '../data/testFactories';
 
 describe('PlayerList Component', () => {
   const user = userEvent.setup();
+  const mockToggle = vi.fn();
+  const mockRemove = vi.fn();
+  const mockClearAll = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('displays all players in the list', () => {
     const players = createMockPlayers(3);
-    const mockToggle = vi.fn();
-    const mockRemove = vi.fn();
 
     render(
       <PlayerList
         players={players}
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
+        onClearAllPlayers={mockClearAll}
       />,
     );
 
@@ -34,14 +40,13 @@ describe('PlayerList Component', () => {
       { id: '2', name: 'Present Player 2', isPresent: true },
       { id: '3', name: 'Absent Player 1', isPresent: false },
     ];
-    const mockToggle = vi.fn();
-    const mockRemove = vi.fn();
 
     render(
       <PlayerList
         players={players}
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
+        onClearAllPlayers={mockClearAll}
       />,
     );
 
@@ -52,14 +57,13 @@ describe('PlayerList Component', () => {
 
   it('calls onPlayerToggle when checkbox is clicked', async () => {
     const players = createMockPlayers(1);
-    const mockToggle = vi.fn();
-    const mockRemove = vi.fn();
 
     render(
       <PlayerList
         players={players}
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
+        onClearAllPlayers={mockClearAll}
       />,
     );
 
@@ -74,14 +78,13 @@ describe('PlayerList Component', () => {
       { id: '1', name: 'Present Player', isPresent: true },
       { id: '2', name: 'Absent Player', isPresent: false },
     ];
-    const mockToggle = vi.fn();
-    const mockRemove = vi.fn();
 
     render(
       <PlayerList
         players={players}
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
+        onClearAllPlayers={mockClearAll}
       />,
     );
 
@@ -102,14 +105,13 @@ describe('PlayerList Component', () => {
       { id: '3', name: 'Player C', isPresent: true },
       { id: '4', name: 'Player D', isPresent: false },
     ];
-    const mockToggle = vi.fn();
-    const mockRemove = vi.fn();
 
     render(
       <PlayerList
         players={players}
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
+        onClearAllPlayers={mockClearAll}
       />,
     );
 
@@ -128,14 +130,13 @@ describe('PlayerList Component', () => {
 
   it('calls onRemovePlayer when remove button is clicked', async () => {
     const players = createMockPlayers(1);
-    const mockToggle = vi.fn();
-    const mockRemove = vi.fn();
 
     render(
       <PlayerList
         players={players}
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
+        onClearAllPlayers={mockClearAll}
       />,
     );
 
@@ -143,5 +144,151 @@ describe('PlayerList Component', () => {
     await user.click(removeButton);
 
     expect(mockRemove).toHaveBeenCalledWith('player-0');
+  });
+
+  describe('Clear All Players Functionality', () => {
+    it('shows clear all button when there are players', () => {
+      const players = createMockPlayers(2);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: /clear all players/i })).toBeInTheDocument();
+    });
+
+    it('does not show clear all button when there are no players', () => {
+      render(
+        <PlayerList
+          players={[]}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+        />,
+      );
+
+      expect(screen.queryByRole('button', { name: /clear all players/i })).not.toBeInTheDocument();
+    });
+
+    it('opens confirmation modal when clear all button is clicked', async () => {
+      const players = createMockPlayers(2);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+        />,
+      );
+
+      const clearButton = screen.getByRole('button', { name: /clear all players/i });
+      await user.click(clearButton);
+
+      // Modal should be visible
+      expect(screen.getByRole('heading', { name: 'Clear All Players' })).toBeInTheDocument();
+      expect(screen.getByText(/are you sure you want to remove all players/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Clear All' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    it('calls onClearAllPlayers when confirmation is accepted', async () => {
+      const players = createMockPlayers(2);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+        />,
+      );
+
+      // Click clear all button
+      const clearButton = screen.getByRole('button', { name: /clear all players/i });
+      await user.click(clearButton);
+
+      // Confirm the action
+      const confirmButton = screen.getByRole('button', { name: 'Clear All' });
+      await user.click(confirmButton);
+
+      expect(mockClearAll).toHaveBeenCalledTimes(1);
+      
+      // Modal should be closed after confirmation
+      expect(screen.queryByRole('heading', { name: 'Clear All Players' })).not.toBeInTheDocument();
+    });
+
+    it('does not call onClearAllPlayers when confirmation is cancelled', async () => {
+      const players = createMockPlayers(2);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+        />,
+      );
+
+      // Click clear all button
+      const clearButton = screen.getByRole('button', { name: /clear all players/i });
+      await user.click(clearButton);
+
+      // Cancel the action
+      const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+      await user.click(cancelButton);
+
+      expect(mockClearAll).not.toHaveBeenCalled();
+      
+      // Modal should be closed after cancellation
+      expect(screen.queryByRole('heading', { name: 'Clear All Players' })).not.toBeInTheDocument();
+    });
+
+    it('closes modal when clicking the X button', async () => {
+      const players = createMockPlayers(1);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+        />,
+      );
+
+      // Open modal
+      const clearButton = screen.getByRole('button', { name: /clear all players/i });
+      await user.click(clearButton);
+
+      // Close with X button - it should have the modal-close class
+      const closeButton = document.querySelector('.modal-close');
+      
+      expect(closeButton).toBeInTheDocument();
+      await user.click(closeButton!);
+
+      expect(mockClearAll).not.toHaveBeenCalled();
+      expect(screen.queryByRole('heading', { name: 'Clear All Players' })).not.toBeInTheDocument();
+    });
+
+    it('has proper tooltip on clear all button', () => {
+      const players = createMockPlayers(1);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+        />,
+      );
+
+      const clearButton = screen.getByRole('button', { name: /clear all players/i });
+      expect(clearButton).toHaveAttribute('title', 'Remove all players and reset scores');
+    });
   });
 });
