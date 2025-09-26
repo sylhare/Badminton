@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
@@ -162,7 +162,7 @@ describe('App Leaderboard Persistence', () => {
       const singleInput = screen.getByPlaceholderText('Enter player name...');
       const addButton = screen.getByRole('button', { name: /add player/i });
 
-      for (const player of ['Alice', 'Bob', 'Charlie', 'Diana']) {
+      for (const player of mockPlayers.map(p => p.name)) {
         await act(async () => {
           await user.clear(singleInput);
           await user.type(singleInput, player);
@@ -194,7 +194,7 @@ describe('App Leaderboard Persistence', () => {
 
       const totalBefore = Array.from(winCountsBefore.values()).reduce((sum, wins) => sum + wins, 0);
       const totalAfter = Array.from(winCountsAfter.values()).reduce((sum, wins) => sum + wins, 0);
-      
+
       expect(totalAfter).toBe(totalBefore);
 
       for (const [playerId, wins] of winCountsBefore) {
@@ -225,9 +225,6 @@ describe('App Leaderboard Persistence', () => {
         });
 
         await new Promise(resolve => setTimeout(resolve, 50));
-        const winCountsAfterFirst = CourtAssignmentEngine.getWinCounts();
-        const totalAfterFirst = Array.from(winCountsAfterFirst.values()).reduce((sum, wins) => sum + wins, 0);
-
         await act(async () => {
           await user.click(winnerRadios[1]);
         });

@@ -91,10 +91,8 @@ describe('PlayerList Component', () => {
     const checkboxes = screen.getAllByRole('checkbox');
     expect(checkboxes).toHaveLength(2);
 
-    // First checkbox should be checked (present player)
     expect(checkboxes[0]).toBeChecked();
 
-    // Second checkbox should be unchecked (absent player)
     expect(checkboxes[1]).not.toBeChecked();
   });
 
@@ -115,16 +113,13 @@ describe('PlayerList Component', () => {
       />,
     );
 
-    // All players should be visible in the list
     expect(screen.getByText('Player A')).toBeInTheDocument();
     expect(screen.getByText('Player B')).toBeInTheDocument();
     expect(screen.getByText('Player C')).toBeInTheDocument();
     expect(screen.getByText('Player D')).toBeInTheDocument();
 
-    // Should have 4 checkboxes total
     expect(screen.getAllByRole('checkbox')).toHaveLength(4);
 
-    // Should have 4 remove buttons total
     expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(4);
   });
 
@@ -190,7 +185,6 @@ describe('PlayerList Component', () => {
       const clearButton = screen.getByRole('button', { name: /clear all players/i });
       await user.click(clearButton);
 
-      // Modal should be visible
       expect(screen.getByRole('heading', { name: 'Clear All Players' })).toBeInTheDocument();
       expect(screen.getByText(/are you sure you want to remove all players/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Clear All' })).toBeInTheDocument();
@@ -209,17 +203,14 @@ describe('PlayerList Component', () => {
         />,
       );
 
-      // Click clear all button
       const clearButton = screen.getByRole('button', { name: /clear all players/i });
       await user.click(clearButton);
 
-      // Confirm the action
       const confirmButton = screen.getByRole('button', { name: 'Clear All' });
       await user.click(confirmButton);
 
       expect(mockClearAll).toHaveBeenCalledTimes(1);
-      
-      // Modal should be closed after confirmation
+
       expect(screen.queryByRole('heading', { name: 'Clear All Players' })).not.toBeInTheDocument();
     });
 
@@ -235,17 +226,14 @@ describe('PlayerList Component', () => {
         />,
       );
 
-      // Click clear all button
       const clearButton = screen.getByRole('button', { name: /clear all players/i });
       await user.click(clearButton);
 
-      // Cancel the action
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       await user.click(cancelButton);
 
       expect(mockClearAll).not.toHaveBeenCalled();
-      
-      // Modal should be closed after cancellation
+
       expect(screen.queryByRole('heading', { name: 'Clear All Players' })).not.toBeInTheDocument();
     });
 
@@ -261,13 +249,11 @@ describe('PlayerList Component', () => {
         />,
       );
 
-      // Open modal
       const clearButton = screen.getByRole('button', { name: /clear all players/i });
       await user.click(clearButton);
 
-      // Close with X button - it should have the modal-close class
       const closeButton = document.querySelector('.modal-close');
-      
+
       expect(closeButton).toBeInTheDocument();
       await user.click(closeButton!);
 

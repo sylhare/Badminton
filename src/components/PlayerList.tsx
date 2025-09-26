@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { Player } from '../App';
+
 import ConfirmModal from './ConfirmModal';
 
 interface PlayerListProps {

@@ -373,8 +373,8 @@ describe('CourtAssignment Engine – core behaviour', () => {
       expect(() => CourtAssignmentEngine.loadState()).not.toThrow();
 
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load court engine state from localStorage:', 
-        expect.any(SyntaxError)
+        'Failed to load court engine state from localStorage:',
+        expect.any(SyntaxError),
       );
 
       const winCounts = CourtAssignmentEngine.getWinCounts();
@@ -426,8 +426,8 @@ describe('CourtAssignment Engine – core behaviour', () => {
       expect(() => CourtAssignmentEngine.saveState()).not.toThrow();
 
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to save court engine state to localStorage:', 
-        expect.any(Error)
+        'Failed to save court engine state to localStorage:',
+        expect.any(Error),
       );
     });
 
@@ -577,7 +577,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
     it('should accumulate wins across multiple recordings', () => {
       const players = mockPlayers(4);
-      
+
       const firstCourt: Court[] = [
         {
           courtNumber: 1,

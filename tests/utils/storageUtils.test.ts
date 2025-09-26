@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { 
-  saveAppState, 
-  loadAppState, 
-  saveCourtEngineState, 
-  loadCourtEngineState, 
-  clearAllStoredState 
+import {
+  saveAppState,
+  loadAppState,
+  saveCourtEngineState,
+  loadCourtEngineState,
+  clearAllStoredState,
 } from '../../src/utils/storageUtils';
 import type { Player, Court } from '../../src/App';
 
@@ -59,10 +59,9 @@ describe('StorageUtils', () => {
     });
 
     it('should load app state from localStorage', () => {
-      // First save the state
+
       saveAppState(mockAppState);
 
-      // Then load it
       const loaded = loadAppState();
 
       expect(loaded.players).toEqual(mockPlayers);
@@ -78,26 +77,26 @@ describe('StorageUtils', () => {
 
     it('should handle corrupted localStorage data gracefully', () => {
       localStorage.setItem('badminton-app-state', 'invalid-json');
-      
+
       const loaded = loadAppState();
       expect(loaded).toEqual({});
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load app state from localStorage:', 
-        expect.any(SyntaxError)
+        'Failed to load app state from localStorage:',
+        expect.any(SyntaxError),
       );
     });
 
     it('should handle localStorage save errors gracefully', () => {
-      // Mock localStorage to throw an error
+
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 
       saveAppState(mockAppState);
-      
+
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to save app state to localStorage:', 
-        expect.any(Error)
+        'Failed to save app state to localStorage:',
+        expect.any(Error),
       );
     });
   });
@@ -126,10 +125,9 @@ describe('StorageUtils', () => {
     });
 
     it('should load court engine state from localStorage', () => {
-      // First save the state
+
       saveCourtEngineState(mockCourtEngineState);
 
-      // Then load it
       const loaded = loadCourtEngineState();
 
       expect(loaded.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
@@ -146,33 +144,33 @@ describe('StorageUtils', () => {
 
     it('should handle corrupted court engine data gracefully', () => {
       localStorage.setItem('badminton-court-engine-state', 'invalid-json');
-      
+
       const loaded = loadCourtEngineState();
       expect(loaded).toEqual({});
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load court engine state from localStorage:', 
-        expect.any(SyntaxError)
+        'Failed to load court engine state from localStorage:',
+        expect.any(SyntaxError),
       );
     });
 
     it('should handle court engine save errors gracefully', () => {
-      // Mock localStorage to throw an error
+
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 
       saveCourtEngineState(mockCourtEngineState);
-      
+
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to save court engine state to localStorage:', 
-        expect.any(Error)
+        'Failed to save court engine state to localStorage:',
+        expect.any(Error),
       );
     });
   });
 
   describe('clearAllStoredState', () => {
     it('should remove all stored state from localStorage', () => {
-      // Set up some data first
+
       localStorage.setItem('badminton-app-state', '{"test": "data"}');
       localStorage.setItem('badminton-court-engine-state', '{"test": "data"}');
       localStorage.setItem('other-data', 'should remain');
@@ -189,16 +187,16 @@ describe('StorageUtils', () => {
     });
 
     it('should handle clear errors gracefully', () => {
-      // Mock removeItem to throw an error
+
       vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
         throw new Error('Cannot remove item');
       });
 
       clearAllStoredState();
-      
+
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to clear stored state:', 
-        expect.any(Error)
+        'Failed to clear stored state:',
+        expect.any(Error),
       );
     });
   });

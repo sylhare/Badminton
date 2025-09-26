@@ -1,4 +1,5 @@
 import type { Court, Player } from '../App';
+
 import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 
 export class CourtAssignmentEngine {
@@ -33,7 +34,7 @@ export class CourtAssignmentEngine {
 
   static loadState(): void {
     const state = loadCourtEngineState();
-    
+
     if (state.benchCountMap) {
       this.benchCountMap = new Map(Object.entries(state.benchCountMap));
     }
