@@ -1,12 +1,24 @@
 import React from 'react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import App from '../src/App';
+import { __testResetHistory } from '../src/utils/CourtAssignmentEngine';
 
 describe('App', () => {
+  beforeEach(() => {
+    // Clear localStorage and reset engine history before each test
+    localStorage.clear();
+    __testResetHistory();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    __testResetHistory();
+  });
+
   describe('App Step Visibility', () => {
     const user = userEvent.setup();
 

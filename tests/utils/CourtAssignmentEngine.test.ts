@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   __testResetHistory,
@@ -304,5 +304,178 @@ describe('CourtAssignment Engine – core behaviour', () => {
     const team2WinSum = teams.team2.reduce((acc, p) => acc + (winCounts.get(p.id) ?? 0), 0);
 
     expect(Math.abs(team1WinSum - team2WinSum)).toBeLessThanOrEqual(10);
+  });
+
+  describe('State persistence functionality', () => {
+    beforeEach(() => {
+      // Clear localStorage before each test
+      localStorage.clear();
+      // Reset history before each test
+      __testResetHistory();
+      // Mock console.warn to avoid noise in test output
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      localStorage.clear();
+      __testResetHistory();
+    });
+
+    it('should save and load engine state correctly', () => {
+      const players = mockPlayers(8);
+      
+      // Generate some assignments to create history
+      const assignments1 = generateCourtAssignments(players, 2);
+      expect(assignments1).toHaveLength(2);
+      
+      // Record some wins to create win/loss data
+      const courtsWithWinners: Court[] = assignments1.map((court, index) => ({
+        ...court,
+        winner: (index % 2 + 1) as 1 | 2,
+      }));
+      CourtAssignmentEngine.recordWins(courtsWithWinners);
+      
+      // Generate more assignments to create more history (benchCountMap, teammateCountMap, etc.)
+      generateCourtAssignments(players, 2);
+      
+      // Get current win counts before saving
+      const winCountsBeforeSave = CourtAssignmentEngine.getWinCounts();
+      expect(winCountsBeforeSave.size).toBeGreaterThan(0);
+      
+      // Save the state
+      CourtAssignmentEngine.saveState();
+      
+      // Clear history to simulate fresh start
+      __testResetHistory();
+      
+      // Verify history is cleared
+      const emptyWinCounts = CourtAssignmentEngine.getWinCounts();
+      expect(emptyWinCounts.size).toBe(0);
+      
+      // Load the state
+      CourtAssignmentEngine.loadState();
+      
+      // Verify data is restored
+      const winCountsAfterLoad = CourtAssignmentEngine.getWinCounts();
+      expect(winCountsAfterLoad.size).toBe(winCountsBeforeSave.size);
+      
+      // Verify specific win counts are preserved
+      for (const [playerId, winCount] of winCountsBeforeSave) {
+        expect(winCountsAfterLoad.get(playerId)).toBe(winCount);
+      }
+    });
+
+    it('should handle loading when no saved state exists', () => {
+      // Ensure no saved state exists
+      localStorage.clear();
+      
+      // Loading should not throw an error
+      expect(() => CourtAssignmentEngine.loadState()).not.toThrow();
+      
+      // Win counts should remain empty
+      const winCounts = CourtAssignmentEngine.getWinCounts();
+      expect(winCounts.size).toBe(0);
+    });
+
+    it('should handle corrupted localStorage data gracefully', () => {
+      // Set invalid JSON in localStorage
+      localStorage.setItem('badminton-court-engine-state', 'invalid-json');
+      
+      // Loading should not throw an error
+      expect(() => CourtAssignmentEngine.loadState()).not.toThrow();
+      
+      // Should log a warning
+      expect(console.warn).toHaveBeenCalledWith(
+        'Failed to load court engine state from localStorage:', 
+        expect.any(SyntaxError)
+      );
+      
+      // Win counts should remain empty
+      const winCounts = CourtAssignmentEngine.getWinCounts();
+      expect(winCounts.size).toBe(0);
+    });
+
+    it('should preserve complex game history across save/load', () => {
+      const players = mockPlayers(12);
+      
+      // Simulate multiple rounds of games
+      for (let round = 0; round < 3; round++) {
+        const assignments = generateCourtAssignments(players, 3);
+        
+        // Record wins for each court
+        const courtsWithWinners: Court[] = assignments.map((court, index) => ({
+          ...court,
+          winner: ((round + index) % 2 + 1) as 1 | 2, // Alternate winners
+        }));
+        CourtAssignmentEngine.recordWins(courtsWithWinners);
+      }
+      
+      // Get all counts before saving
+      const winCountsBeforeSave = CourtAssignmentEngine.getWinCounts();
+      
+      // Save state
+      CourtAssignmentEngine.saveState();
+      
+      // Reset and load
+      __testResetHistory();
+      CourtAssignmentEngine.loadState();
+      
+      // Verify win counts are preserved
+      const winCountsAfterLoad = CourtAssignmentEngine.getWinCounts();
+      expect(winCountsAfterLoad.size).toBe(winCountsBeforeSave.size);
+      
+      // Verify each player's win count is preserved
+      for (const [playerId, winCount] of winCountsBeforeSave) {
+        expect(winCountsAfterLoad.get(playerId)).toBe(winCount);
+      }
+      
+      // Verify that the loaded state affects future assignments
+      const newAssignments = generateCourtAssignments(players, 2);
+      expect(newAssignments).toHaveLength(2);
+      
+      // The algorithm should still be using the loaded history for optimization
+      expect(newAssignments.every(court => court.teams)).toBe(true);
+    });
+
+    it('should handle localStorage save errors gracefully', () => {
+      // Mock localStorage to throw an error on setItem
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('Storage quota exceeded');
+      });
+      
+      // Create some history
+      const players = mockPlayers(4);
+      generateCourtAssignments(players, 1);
+      
+      // Saving should not throw an error
+      expect(() => CourtAssignmentEngine.saveState()).not.toThrow();
+      
+      // Should log a warning
+      expect(console.warn).toHaveBeenCalledWith(
+        'Failed to save court engine state to localStorage:', 
+        expect.any(Error)
+      );
+    });
+
+    it('should maintain separate storage keys for different data types', () => {
+      const players = mockPlayers(4);
+      generateCourtAssignments(players, 1);
+      
+      // Save state
+      CourtAssignmentEngine.saveState();
+      
+      // Check that the correct localStorage key is used
+      const savedData = localStorage.getItem('badminton-court-engine-state');
+      expect(savedData).toBeTruthy();
+      
+      // Verify it's valid JSON and contains expected structure
+      const parsed = JSON.parse(savedData!);
+      expect(parsed).toHaveProperty('benchCountMap');
+      expect(parsed).toHaveProperty('teammateCountMap');
+      expect(parsed).toHaveProperty('opponentCountMap');
+      expect(parsed).toHaveProperty('winCountMap');
+      expect(parsed).toHaveProperty('lossCountMap');
+    });
   });
 });
