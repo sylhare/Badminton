@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <!-- Perfectly Centered Badminton Shuttlecock with Rectangle Backing and Subtle Orange Highlight - 16px -->
+  <defs>
+    <linearGradient id="headGrad16" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#f0f0f0"/>
+    </linearGradient>
+    <linearGradient id="ribbonGrad16" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2196f3"/>
+      <stop offset="100%" style="stop-color:#1565c0"/>
+    </linearGradient>
+    <linearGradient id="featherGrad16" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0f0f0"/>
+      <stop offset="100%" style="stop-color:#d0d0d0"/>
+    </linearGradient>
+    <radialGradient id="backgroundGrad16" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffc107"/>
+      <stop offset="90%" style="stop-color:#ffc107"/>
+      <stop offset="100%" style="stop-color:#ffb347"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Uniform yellow background with very subtle orange edge highlight -->
+  <circle cx="8" cy="8" r="8" fill="url(#backgroundGrad16)"/>
+  
+  <!-- Very subtle orange edge highlight -->
+  <circle cx="8" cy="8" r="7.5" fill="none" stroke="#ffb347" stroke-width="0.5" opacity="0.2"/>
+  
+  <!-- 1. Smaller half circle (white) - the head, perfectly centered -->
+  <path d="M 6 3.5 A 2 2 0 0 1 10 3.5 Z" fill="url(#headGrad16)"/>
+  <path d="M 6.2 3.5 A 1.8 1.8 0 0 1 9.8 3.5 Z" fill="#ffffff"/>
+  
+  <!-- 2. Rectangle (blue) - the ribbon, centered -->
+  <rect x="6" y="3.5" width="4" height="0.8" fill="url(#ribbonGrad16)"/>
+  
+  <!-- 3. Rectangle (white) - the end of the head, centered -->
+  <rect x="6" y="4.3" width="4" height="0.7" fill="#ffffff"/>
+  <rect x="6.1" y="4.4" width="3.8" height="0.5" fill="#f8f8f8"/>
+  
+  <!-- 4. Rectangle backing from white rectangle to hide yellow background - shorter -->
+  <rect x="6" y="5" width="4" height="7" fill="#e0e0e0"/>
+  
+  <!-- 5. Dense feathers with more angle and longer length -->
+  <!-- Far left feathers -->
+  <path d="M 6 5 L 3 12.5 L 6.5 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  <path d="M 6.3 5 L 3.8 12.5 L 6.7 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  
+  <!-- Left feathers -->
+  <path d="M 6.6 5 L 4.5 12.5 L 7 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  <path d="M 7 5 L 5.5 12.5 L 7.3 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  <path d="M 7.3 5 L 6.5 12.5 L 7.6 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  
+  <!-- Center feathers -->
+  <path d="M 7.6 5 L 7.3 12.5 L 7.9 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  <path d="M 8 5 L 8 12.5 L 8.2 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  <path d="M 8.4 5 L 8.7 12.5 L 8.5 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  
+  <!-- Right feathers -->
+  <path d="M 8.7 5 L 9.5 12.5 L 8.8 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  <path d="M 9 5 L 10.5 12.5 L 9.1 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  
+  <!-- Far right feathers -->
+  <path d="M 9.7 5 L 12.2 12.5 L 9.5 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  <path d="M 10 5 L 13 12.5 L 9.8 12 Z" fill="url(#featherGrad16)" stroke="#c0c0c0" stroke-width="0.1"/>
+  
+  <!-- Feather spines with angles -->
+  <line x1="6" y1="5" x2="3.5" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="6.3" y1="5" x2="4.2" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="6.6" y1="5" x2="5" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="7" y1="5" x2="6" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="7.3" y1="5" x2="7" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="7.6" y1="5" x2="7.5" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="8" y1="5" x2="8" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="8.4" y1="5" x2="8.5" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="8.7" y1="5" x2="9.2" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="9" y1="5" x2="10.2" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="9.7" y1="5" x2="12" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  <line x1="10" y1="5" x2="12.5" y2="12.2" stroke="#b0b0b0" stroke-width="0.2" opacity="0.6"/>
+  
+  <!-- Head highlight -->
+  <ellipse cx="7.5" cy="2.5" rx="0.8" ry="0.6" fill="#ffffff" opacity="0.6"/>
+</svg>

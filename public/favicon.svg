@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Perfectly Centered Badminton Shuttlecock with Rectangle Backing and Subtle Orange Highlight -->
+  <defs>
+    <linearGradient id="headGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#f0f0f0"/>
+    </linearGradient>
+    <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2196f3"/>
+      <stop offset="100%" style="stop-color:#1565c0"/>
+    </linearGradient>
+    <linearGradient id="featherGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0f0f0"/>
+      <stop offset="100%" style="stop-color:#d0d0d0"/>
+    </linearGradient>
+    <radialGradient id="backgroundGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffc107"/>
+      <stop offset="90%" style="stop-color:#ffc107"/>
+      <stop offset="100%" style="stop-color:#ffb347"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Uniform yellow background with very subtle orange edge highlight -->
+  <circle cx="16" cy="16" r="16" fill="url(#backgroundGrad)"/>
+  
+  <!-- Very subtle orange edge highlight -->
+  <circle cx="16" cy="16" r="15" fill="none" stroke="#ffb347" stroke-width="1" opacity="0.2"/>
+  
+  <!-- 1. Smaller half circle (white) - the head, perfectly centered -->
+  <path d="M 12 7 A 4 4 0 0 1 20 7 Z" fill="url(#headGrad)"/>
+  <path d="M 12.3 7 A 3.7 3.7 0 0 1 19.7 7 Z" fill="#ffffff"/>
+  
+  <!-- 2. Rectangle (blue) - the ribbon, centered -->
+  <rect x="12" y="7" width="8" height="1.5" fill="url(#ribbonGrad)"/>
+  
+  <!-- 3. Rectangle (white) - the end of the head, centered -->
+  <rect x="12" y="8.5" width="8" height="1.5" fill="#ffffff"/>
+  <rect x="12.2" y="8.7" width="7.6" height="1.1" fill="#f8f8f8"/>
+  
+  <!-- 4. Rectangle backing from white rectangle to hide yellow background - shorter -->
+  <rect x="12" y="10" width="8" height="13" fill="#e0e0e0"/>
+  
+  <!-- 5. Dense feathers with more angle and longer length -->
+  <!-- Far left feathers -->
+  <path d="M 12 10 L 6 25 L 12.8 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 12.4 10 L 7 25 L 13.2 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 12.8 10 L 8 25 L 13.6 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  
+  <!-- Left feathers -->
+  <path d="M 13.2 10 L 9 25 L 14 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 13.6 10 L 10 25 L 14.4 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 14 10 L 11 25 L 14.8 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 14.4 10 L 12 25 L 15.2 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  
+  <!-- Center feathers -->
+  <path d="M 14.8 10 L 13 25 L 15.6 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 15.2 10 L 14 25 L 16 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 15.6 10 L 15 25 L 16.4 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 16 10 L 15.5 25 L 16.8 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 16.4 10 L 16.5 25 L 17.2 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 16.8 10 L 17 25 L 17.6 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 17.2 10 L 18 25 L 18 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  
+  <!-- Right feathers -->
+  <path d="M 17.6 10 L 19 25 L 18.4 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 18 10 L 20 25 L 18.8 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 18.4 10 L 21 25 L 19.2 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 18.8 10 L 22 25 L 19.6 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  
+  <!-- Far right feathers -->
+  <path d="M 19.2 10 L 24 25 L 20 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 19.6 10 L 25 25 L 20.4 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  <path d="M 20 10 L 26 25 L 20.8 23.5 Z" fill="url(#featherGrad)" stroke="#c0c0c0" stroke-width="0.2"/>
+  
+  <!-- Feather spines from each starting point with angles -->
+  <line x1="12" y1="10" x2="7" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="12.4" y1="10" x2="8" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="12.8" y1="10" x2="9" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="13.2" y1="10" x2="10" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="13.6" y1="10" x2="11" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="14" y1="10" x2="12" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="14.4" y1="10" x2="13" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="14.8" y1="10" x2="14" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="15.2" y1="10" x2="15" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="15.6" y1="10" x2="15.5" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="16" y1="10" x2="16" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="16.4" y1="10" x2="16.5" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="16.8" y1="10" x2="17" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="17.2" y1="10" x2="18" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="17.6" y1="10" x2="19" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="18" y1="10" x2="20" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="18.4" y1="10" x2="21" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="18.8" y1="10" x2="22" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="19.2" y1="10" x2="24" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="19.6" y1="10" x2="25" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  <line x1="20" y1="10" x2="25.5" y2="24.5" stroke="#b0b0b0" stroke-width="0.3" opacity="0.6"/>
+  
+  <!-- Head highlight -->
+  <ellipse cx="15" cy="5" rx="1.5" ry="1.2" fill="#ffffff" opacity="0.6"/>
+</svg>
