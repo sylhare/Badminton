@@ -308,5 +308,37 @@ describe('App Leaderboard Persistence', () => {
       const winCounts = CourtAssignmentEngine.getWinCounts();
       expect(winCounts.size).toBe(0);
     });
+
+    it.skip('should show leaderboard with historical data on refresh even without current players', async () => {
+      const { unmount } = render(<App />);
+
+      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      await act(async () => {
+        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDave');
+        await user.click(screen.getByText('Add All Players'));
+      });
+
+      await act(async () => {
+        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+      });
+
+      const team1Element = screen.getByText('Team 1');
+      await act(async () => {
+        await user.click(team1Element);
+      });
+
+      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      unmount();
+
+      await act(async () => {
+        render(<App />);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+
+      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
+    });
   });
 });
