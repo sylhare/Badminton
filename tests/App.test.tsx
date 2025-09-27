@@ -5,17 +5,17 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import App from '../src/App';
-import { __testResetHistory } from '../src/utils/CourtAssignmentEngine';
+import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
 
 describe('App', () => {
   beforeEach(() => {
     localStorage.clear();
-    __testResetHistory();
+    CourtAssignmentEngine.resetHistory();
   });
 
   afterEach(() => {
     localStorage.clear();
-    __testResetHistory();
+    CourtAssignmentEngine.resetHistory();
   });
 
   describe('App Step Visibility', () => {

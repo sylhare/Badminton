@@ -131,6 +131,7 @@ function App(): React.ReactElement {
 
   const generateAssignments = () => {
     recordCurrentWins();
+    CourtAssignmentEngine.clearCurrentSession();
     const courts = generateCourtAssignments(players, numberOfCourts);
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));

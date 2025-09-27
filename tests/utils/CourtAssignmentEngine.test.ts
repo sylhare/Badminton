@@ -1,12 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  __testResetHistory,
   CourtAssignmentEngine,
   generateCourtAssignments,
   getBenchedPlayers,
 } from '../../src/utils/CourtAssignmentEngine';
 import type { Court, Player } from '../../src/App';
+
+const testResetHistory = (): void => CourtAssignmentEngine.resetHistory();
+
+const testShouldReversePreviousRecord = (
+  previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] },
+  currentWinner: 1 | 2,
+  currentWinningPlayerIds: string[]
+): boolean => CourtAssignmentEngine['shouldReversePreviousRecord'](previousRecord, currentWinner, currentWinningPlayerIds);
+
+const testReversePreviousWinRecord = (
+  previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }
+): void => CourtAssignmentEngine['reversePreviousWinRecord'](previousRecord);
 
 function mockPlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -30,7 +41,7 @@ function createMockCourt(courtNumber: number, players: Player[], winner?: 1 | 2)
 
 describe('CourtAssignment Engine – core behaviour', () => {
   beforeEach(() => {
-    __testResetHistory();
+    testResetHistory();
   });
 
   it('returns empty assignments when no present players', () => {
@@ -112,9 +123,9 @@ describe('CourtAssignment Engine – core behaviour', () => {
     expect(max).toBeLessThanOrEqual(avg * 1.5);
   });
 
-  describe('Winner tracking functionality', () => {
+    describe('Winner tracking functionality', () => {
     beforeEach(() => {
-      __testResetHistory();
+      testResetHistory();
     });
 
     it('should record wins for winning team players', () => {
@@ -188,6 +199,8 @@ describe('CourtAssignment Engine – core behaviour', () => {
       const courts1: Court[] = [createMockCourt(1, players, 1)];
       CourtAssignmentEngine.recordWins(courts1);
 
+      CourtAssignmentEngine.clearCurrentSession();
+
       const courts2: Court[] = [createMockCourt(1, players, 2)];
       CourtAssignmentEngine.recordWins(courts2);
 
@@ -223,7 +236,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
       let winCounts = CourtAssignmentEngine.getWinCounts();
       expect(winCounts.size).toBeGreaterThan(0);
 
-      __testResetHistory();
+      testResetHistory();
       winCounts = CourtAssignmentEngine.getWinCounts();
       expect(winCounts.size).toBe(0);
     });
@@ -311,7 +324,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
       localStorage.clear();
 
-      __testResetHistory();
+      testResetHistory();
 
       vi.spyOn(console, 'warn').mockImplementation(() => {});
     });
@@ -319,7 +332,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
     afterEach(() => {
       vi.restoreAllMocks();
       localStorage.clear();
-      __testResetHistory();
+      testResetHistory();
     });
 
     it('should save and load engine state correctly', () => {
@@ -341,7 +354,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
       CourtAssignmentEngine.saveState();
 
-      __testResetHistory();
+      testResetHistory();
 
       const emptyWinCounts = CourtAssignmentEngine.getWinCounts();
       expect(emptyWinCounts.size).toBe(0);
@@ -398,7 +411,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
       CourtAssignmentEngine.saveState();
 
-      __testResetHistory();
+      testResetHistory();
       CourtAssignmentEngine.loadState();
 
       const winCountsAfterLoad = CourtAssignmentEngine.getWinCounts();
@@ -447,16 +460,218 @@ describe('CourtAssignment Engine – core behaviour', () => {
       expect(parsed).toHaveProperty('winCountMap');
       expect(parsed).toHaveProperty('lossCountMap');
     });
+
+    describe('State preparation functionality', () => {
+      it('should return state object with all required properties', () => {
+        const state = CourtAssignmentEngine.prepareStateForSaving();
+
+        expect(state).toHaveProperty('benchCountMap');
+        expect(state).toHaveProperty('teammateCountMap');
+        expect(state).toHaveProperty('opponentCountMap');
+        expect(state).toHaveProperty('winCountMap');
+        expect(state).toHaveProperty('lossCountMap');
+
+        expect(state.benchCountMap).toBeInstanceOf(Map);
+        expect(state.teammateCountMap).toBeInstanceOf(Map);
+        expect(state.opponentCountMap).toBeInstanceOf(Map);
+        expect(state.winCountMap).toBeInstanceOf(Map);
+        expect(state.lossCountMap).toBeInstanceOf(Map);
+      });
+
+      it('should return empty maps when no data exists', () => {
+        testResetHistory();
+
+        const state = CourtAssignmentEngine.prepareStateForSaving();
+
+        expect(state.benchCountMap.size).toBe(0);
+        expect(state.teammateCountMap.size).toBe(0);
+        expect(state.opponentCountMap.size).toBe(0);
+        expect(state.winCountMap.size).toBe(0);
+        expect(state.lossCountMap.size).toBe(0);
+      });
+
+      it('should return actual state data when present', () => {
+        const players = mockPlayers(6);
+        
+        generateCourtAssignments(players, 1);
+        
+        const courtsWithWinners: Court[] = [
+          createMockCourt(1, players.slice(0, 4), 1),
+        ];
+        CourtAssignmentEngine.recordWins(courtsWithWinners);
+
+        const state = CourtAssignmentEngine.prepareStateForSaving();
+
+        expect(state.winCountMap.size).toBeGreaterThan(0);
+        expect(state.lossCountMap.size).toBeGreaterThan(0);
+        expect(state.benchCountMap.size).toBeGreaterThan(0);
+
+        expect(state.winCountMap.get('P0')).toBe(1);
+        expect(state.winCountMap.get('P1')).toBe(1);
+      });
+
+      it('should return references to actual maps, not copies', () => {
+        const players = mockPlayers(4);
+        generateCourtAssignments(players, 1);
+
+        const state1 = CourtAssignmentEngine.prepareStateForSaving();
+        const state2 = CourtAssignmentEngine.prepareStateForSaving();
+
+        expect(state1.benchCountMap).toBe(state2.benchCountMap);
+        expect(state1.teammateCountMap).toBe(state2.teammateCountMap);
+        expect(state1.opponentCountMap).toBe(state2.opponentCountMap);
+        expect(state1.winCountMap).toBe(state2.winCountMap);
+        expect(state1.lossCountMap).toBe(state2.lossCountMap);
+      });
+    });
+
+    describe('Previous record reversal functionality', () => {
+      describe('shouldReversePreviousRecord', () => {
+        it('should return true when winner is different', () => {
+          const previousRecord = {
+            winner: 1 as const,
+            winningPlayers: ['P0', 'P1'],
+            losingPlayers: ['P2', 'P3'],
+          };
+          
+          const result = testShouldReversePreviousRecord(previousRecord, 2, ['P2', 'P3']);
+          expect(result).toBe(true);
+        });
+
+        it('should return true when winner is same but players are different', () => {
+          const previousRecord = {
+            winner: 1 as const,
+            winningPlayers: ['P0', 'P1'],
+            losingPlayers: ['P2', 'P3'],
+          };
+          
+          const result = testShouldReversePreviousRecord(previousRecord, 1, ['P0', 'P2']);
+          expect(result).toBe(true);
+        });
+
+        it('should return false when winner and players are identical', () => {
+          const previousRecord = {
+            winner: 1 as const,
+            winningPlayers: ['P0', 'P1'],
+            losingPlayers: ['P2', 'P3'],
+          };
+          
+          const result = testShouldReversePreviousRecord(previousRecord, 1, ['P0', 'P1']);
+          expect(result).toBe(false);
+        });
+
+        it('should return false when winner and players are identical but in different order', () => {
+          const previousRecord = {
+            winner: 1 as const,
+            winningPlayers: ['P0', 'P1'],
+            losingPlayers: ['P2', 'P3'],
+          };
+          
+          const result = testShouldReversePreviousRecord(previousRecord, 1, ['P1', 'P0']);
+          expect(result).toBe(false);
+        });
+
+        it('should handle single player teams', () => {
+          const previousRecord = {
+            winner: 2 as const,
+            winningPlayers: ['P0'],
+            losingPlayers: ['P1'],
+          };
+          
+          expect(testShouldReversePreviousRecord(previousRecord, 2, ['P0'])).toBe(false);
+          expect(testShouldReversePreviousRecord(previousRecord, 1, ['P1'])).toBe(true);
+          expect(testShouldReversePreviousRecord(previousRecord, 2, ['P1'])).toBe(true);
+        });
+      });
+
+      describe('reversePreviousWinRecord', () => {
+        beforeEach(() => {
+          testResetHistory();
+        });
+
+        it('should decrement win counts for previous winners', () => {
+          const players = mockPlayers(4);
+          
+          const initialRecord: Court[] = [createMockCourt(1, players, 1)];
+          CourtAssignmentEngine.recordWins(initialRecord);
+          
+          let winCounts = CourtAssignmentEngine.getWinCounts();
+          expect(winCounts.get('P0')).toBe(1);
+          expect(winCounts.get('P1')).toBe(1);
+          
+          const previousRecord = {
+            winner: 1 as const,
+            winningPlayers: ['P0', 'P1'],
+            losingPlayers: ['P2', 'P3'],
+          };
+          
+          testReversePreviousWinRecord(previousRecord);
+          
+          winCounts = CourtAssignmentEngine.getWinCounts();
+          expect(winCounts.get('P0')).toBe(0);
+          expect(winCounts.get('P1')).toBe(0);
+        });
+
+        it('should not decrement win counts below zero', () => {
+          const previousRecord = {
+            winner: 1 as const,
+            winningPlayers: ['P0', 'P1'],
+            losingPlayers: ['P2', 'P3'],
+          };
+          
+          testReversePreviousWinRecord(previousRecord);
+          
+          const winCounts = CourtAssignmentEngine.getWinCounts();
+          expect(winCounts.get('P0') || 0).toBe(0);
+          expect(winCounts.get('P1') || 0).toBe(0);
+        });
+
+        it('should handle players with multiple wins correctly', () => {
+          const players = mockPlayers(4);
+          
+          const record1: Court[] = [createMockCourt(1, players, 1)];
+          const record2: Court[] = [createMockCourt(2, players, 1)];
+          CourtAssignmentEngine.recordWins(record1);
+          CourtAssignmentEngine.recordWins(record2);
+          
+          let winCounts = CourtAssignmentEngine.getWinCounts();
+          expect(winCounts.get('P0')).toBe(2);
+          expect(winCounts.get('P1')).toBe(2);
+          
+          const previousRecord = {
+            winner: 1 as const,
+            winningPlayers: ['P0', 'P1'],
+            losingPlayers: ['P2', 'P3'],
+          };
+          
+          testReversePreviousWinRecord(previousRecord);
+          
+          winCounts = CourtAssignmentEngine.getWinCounts();
+          expect(winCounts.get('P0')).toBe(1);
+          expect(winCounts.get('P1')).toBe(1);
+        });
+
+        it('should handle empty player arrays gracefully', () => {
+          const previousRecord = {
+            winner: 1 as const,
+            winningPlayers: [],
+            losingPlayers: [],
+          };
+          
+          expect(() => testReversePreviousWinRecord(previousRecord)).not.toThrow();
+        });
+      });
+    });
   });
 
   describe('Immediate win recording functionality', () => {
     beforeEach(() => {
-      __testResetHistory();
+      testResetHistory();
       localStorage.clear();
     });
 
     afterEach(() => {
-      __testResetHistory();
+      testResetHistory();
       localStorage.clear();
     });
 
@@ -565,7 +780,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
       const player0WinsBefore = winCountsBefore.get(players[0].id) || 0;
       const player1WinsBefore = winCountsBefore.get(players[1].id) || 0;
 
-      __testResetHistory();
+      testResetHistory();
       CourtAssignmentEngine.loadState();
 
       const winCountsAfter = CourtAssignmentEngine.getWinCounts();

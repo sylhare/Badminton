@@ -8,6 +8,7 @@ export class CourtAssignmentEngine {
   private static opponentCountMap: Map<string, number> = new Map();
   private static winCountMap: Map<string, number> = new Map();
   private static lossCountMap: Map<string, number> = new Map();
+  private static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
   private static readonly MAX_ATTEMPTS = 300;
   private _assignments: Court[] = [];
 
@@ -20,16 +21,25 @@ export class CourtAssignmentEngine {
     this.opponentCountMap.clear();
     this.winCountMap.clear();
     this.lossCountMap.clear();
+    this.recordedWinsMap.clear();
   }
 
-  static saveState(): void {
-    saveCourtEngineState({
+  static clearCurrentSession(): void {
+    this.recordedWinsMap.clear();
+  }
+
+  static prepareStateForSaving() {
+    return {
       benchCountMap: this.benchCountMap,
       teammateCountMap: this.teammateCountMap,
       opponentCountMap: this.opponentCountMap,
       winCountMap: this.winCountMap,
       lossCountMap: this.lossCountMap,
-    });
+    };
+  }
+
+  static saveState(): void {
+    saveCourtEngineState(this.prepareStateForSaving());
   }
 
   static loadState(): void {
@@ -52,16 +62,55 @@ export class CourtAssignmentEngine {
     }
   }
 
+  private static shouldReversePreviousRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }, currentWinner: 1 | 2, currentWinningPlayerIds: string[]): boolean {
+    return !(previousRecord.winner === currentWinner && 
+             JSON.stringify(previousRecord.winningPlayers.sort()) === JSON.stringify(currentWinningPlayerIds.sort()));
+  }
+
+  private static reversePreviousWinRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }): void {
+    previousRecord.winningPlayers.forEach(playerId => {
+      const currentWins = this.winCountMap.get(playerId) || 0;
+      if (currentWins > 0) {
+        this.winCountMap.set(playerId, currentWins - 1);
+      }
+    });
+    
+    previousRecord.losingPlayers.forEach(playerId => {
+      const currentLosses = this.lossCountMap.get(playerId) || 0;
+      if (currentLosses > 0) {
+        this.lossCountMap.set(playerId, currentLosses - 1);
+      }
+    });
+  }
+
   static recordWins(courts: Court[]): void {
     courts.forEach(court => {
       if (court.winner && court.teams) {
+        const courtNumber = court.courtNumber;
         const winningTeam = court.winner === 1 ? court.teams.team1 : court.teams.team2;
         const losingTeam = court.winner === 1 ? court.teams.team2 : court.teams.team1;
+        const winningPlayerIds = winningTeam.map(p => p.id);
+        const losingPlayerIds = losingTeam.map(p => p.id);
+
+        const previousRecord = this.recordedWinsMap.get(courtNumber);
+        
+        if (previousRecord && this.shouldReversePreviousRecord(previousRecord, court.winner, winningPlayerIds)) {
+          this.reversePreviousWinRecord(previousRecord);
+        } else if (previousRecord) {
+          return;
+        }
+
         winningTeam.forEach(player => {
           this.incrementMapCount(this.winCountMap, player.id);
         });
         losingTeam.forEach(player => {
           this.incrementMapCount(this.lossCountMap, player.id);
+        });
+
+        this.recordedWinsMap.set(courtNumber, {
+          winner: court.winner,
+          winningPlayers: winningPlayerIds,
+          losingPlayers: losingPlayerIds
         });
       }
     });
@@ -261,7 +310,6 @@ export class CourtAssignmentEngine {
   }
 }
 
-export const __testResetHistory = (): void => CourtAssignmentEngine.resetHistory();
 
 export const generateCourtAssignments = (players: Player[], courts: number): Court[] =>
   CourtAssignmentEngine.generate(players, courts);
