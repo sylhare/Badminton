@@ -5,21 +5,21 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import App from '../src/App';
-import { __testResetHistory } from '../src/utils/CourtAssignmentEngine';
+import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
 
 describe('App Persistence Integration', () => {
   const user = userEvent.setup();
 
   beforeEach(() => {
     localStorage.clear();
-    __testResetHistory();
+    CourtAssignmentEngine.resetHistory();
     vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
-    __testResetHistory();
+    CourtAssignmentEngine.resetHistory();
   });
 
   describe('State persistence across app reload', () => {

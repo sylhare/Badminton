@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import App from '../src/App';
-import { CourtAssignmentEngine, __testResetHistory } from '../src/utils/CourtAssignmentEngine';
+import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
 
 describe('App Leaderboard Persistence', () => {
   const user = userEvent.setup();
@@ -13,12 +13,12 @@ describe('App Leaderboard Persistence', () => {
   beforeEach(() => {
 
     localStorage.clear();
-    __testResetHistory();
+    CourtAssignmentEngine.resetHistory();
   });
 
   afterEach(() => {
     localStorage.clear();
-    __testResetHistory();
+    CourtAssignmentEngine.resetHistory();
   });
 
   describe('Winner selection and recording', () => {
@@ -235,6 +235,58 @@ describe('App Leaderboard Persistence', () => {
 
         expect(totalAfterChange).toBeGreaterThan(0);
         expect(totalAfterChange).toBeLessThan(20); // Sanity check
+      }
+    });
+
+    it('should handle changing winner on same court without duplicate counting in session', async () => {
+      render(<App />);
+
+      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      await act(async () => {
+        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
+        await user.click(screen.getByText('Add All Players'));
+      });
+
+      await act(async () => {
+        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+      });
+
+      const courtElements = screen.getAllByText(/Court \d+/);
+      expect(courtElements.length).toBeGreaterThan(0);
+
+      const firstCourtElement = courtElements[0].closest('.court-card');
+      if (firstCourtElement) {
+        const team1Element = firstCourtElement.querySelector('.team:first-of-type');
+        const team2Element = firstCourtElement.querySelector('.team:last-of-type');
+
+        if (team1Element && team2Element) {
+          const initialWinCounts = CourtAssignmentEngine.getWinCounts();
+          const initialTotal = Array.from(initialWinCounts.values()).reduce((sum, wins) => sum + wins, 0);
+
+          await act(async () => {
+            await user.click(team1Element as Element);
+          });
+
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          const afterFirstClickWinCounts = CourtAssignmentEngine.getWinCounts();
+          const afterFirstClickTotal = Array.from(afterFirstClickWinCounts.values()).reduce((sum, wins) => sum + wins, 0);
+
+          expect(afterFirstClickTotal).toBeGreaterThan(initialTotal);
+
+          await act(async () => {
+            await user.click(team2Element as Element);
+          });
+
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          const finalWinCounts = CourtAssignmentEngine.getWinCounts();
+          const finalTotal = Array.from(finalWinCounts.values()).reduce((sum, wins) => sum + wins, 0);
+
+          expect(finalTotal).toBe(afterFirstClickTotal);
+          expect(finalTotal).toBeGreaterThan(0);
+          expect(finalTotal).toBeLessThan(10);
+        }
       }
     });
 
