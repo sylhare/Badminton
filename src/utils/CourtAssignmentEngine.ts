@@ -63,7 +63,7 @@ export class CourtAssignmentEngine {
   }
 
   private static shouldReversePreviousRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }, currentWinner: 1 | 2, currentWinningPlayerIds: string[]): boolean {
-    return !(previousRecord.winner === currentWinner && 
+    return !(previousRecord.winner === currentWinner &&
              JSON.stringify(previousRecord.winningPlayers.sort()) === JSON.stringify(currentWinningPlayerIds.sort()));
   }
 
@@ -74,7 +74,7 @@ export class CourtAssignmentEngine {
         this.winCountMap.set(playerId, currentWins - 1);
       }
     });
-    
+
     previousRecord.losingPlayers.forEach(playerId => {
       const currentLosses = this.lossCountMap.get(playerId) || 0;
       if (currentLosses > 0) {
@@ -93,7 +93,7 @@ export class CourtAssignmentEngine {
         const losingPlayerIds = losingTeam.map(p => p.id);
 
         const previousRecord = this.recordedWinsMap.get(courtNumber);
-        
+
         if (previousRecord && this.shouldReversePreviousRecord(previousRecord, court.winner, winningPlayerIds)) {
           this.reversePreviousWinRecord(previousRecord);
         } else if (previousRecord) {
@@ -110,7 +110,7 @@ export class CourtAssignmentEngine {
         this.recordedWinsMap.set(courtNumber, {
           winner: court.winner,
           winningPlayers: winningPlayerIds,
-          losingPlayers: losingPlayerIds
+          losingPlayers: losingPlayerIds,
         });
       }
     });
@@ -309,7 +309,6 @@ export class CourtAssignmentEngine {
     return this._assignments;
   }
 }
-
 
 export const generateCourtAssignments = (players: Player[], courts: number): Court[] =>
   CourtAssignmentEngine.generate(players, courts);

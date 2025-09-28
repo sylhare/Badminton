@@ -12,11 +12,11 @@ const testResetHistory = (): void => CourtAssignmentEngine.resetHistory();
 const testShouldReversePreviousRecord = (
   previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] },
   currentWinner: 1 | 2,
-  currentWinningPlayerIds: string[]
+  currentWinningPlayerIds: string[],
 ): boolean => CourtAssignmentEngine['shouldReversePreviousRecord'](previousRecord, currentWinner, currentWinningPlayerIds);
 
 const testReversePreviousWinRecord = (
-  previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }
+  previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] },
 ): void => CourtAssignmentEngine['reversePreviousWinRecord'](previousRecord);
 
 function mockPlayers(count: number): Player[] {
@@ -492,9 +492,9 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
       it('should return actual state data when present', () => {
         const players = mockPlayers(6);
-        
+
         generateCourtAssignments(players, 1);
-        
+
         const courtsWithWinners: Court[] = [
           createMockCourt(1, players.slice(0, 4), 1),
         ];
@@ -533,7 +533,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             winningPlayers: ['P0', 'P1'],
             losingPlayers: ['P2', 'P3'],
           };
-          
+
           const result = testShouldReversePreviousRecord(previousRecord, 2, ['P2', 'P3']);
           expect(result).toBe(true);
         });
@@ -544,7 +544,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             winningPlayers: ['P0', 'P1'],
             losingPlayers: ['P2', 'P3'],
           };
-          
+
           const result = testShouldReversePreviousRecord(previousRecord, 1, ['P0', 'P2']);
           expect(result).toBe(true);
         });
@@ -555,7 +555,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             winningPlayers: ['P0', 'P1'],
             losingPlayers: ['P2', 'P3'],
           };
-          
+
           const result = testShouldReversePreviousRecord(previousRecord, 1, ['P0', 'P1']);
           expect(result).toBe(false);
         });
@@ -566,7 +566,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             winningPlayers: ['P0', 'P1'],
             losingPlayers: ['P2', 'P3'],
           };
-          
+
           const result = testShouldReversePreviousRecord(previousRecord, 1, ['P1', 'P0']);
           expect(result).toBe(false);
         });
@@ -577,7 +577,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             winningPlayers: ['P0'],
             losingPlayers: ['P1'],
           };
-          
+
           expect(testShouldReversePreviousRecord(previousRecord, 2, ['P0'])).toBe(false);
           expect(testShouldReversePreviousRecord(previousRecord, 1, ['P1'])).toBe(true);
           expect(testShouldReversePreviousRecord(previousRecord, 2, ['P1'])).toBe(true);
@@ -591,22 +591,22 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
         it('should decrement win counts for previous winners', () => {
           const players = mockPlayers(4);
-          
+
           const initialRecord: Court[] = [createMockCourt(1, players, 1)];
           CourtAssignmentEngine.recordWins(initialRecord);
-          
+
           let winCounts = CourtAssignmentEngine.getWinCounts();
           expect(winCounts.get('P0')).toBe(1);
           expect(winCounts.get('P1')).toBe(1);
-          
+
           const previousRecord = {
             winner: 1 as const,
             winningPlayers: ['P0', 'P1'],
             losingPlayers: ['P2', 'P3'],
           };
-          
+
           testReversePreviousWinRecord(previousRecord);
-          
+
           winCounts = CourtAssignmentEngine.getWinCounts();
           expect(winCounts.get('P0')).toBe(0);
           expect(winCounts.get('P1')).toBe(0);
@@ -618,9 +618,9 @@ describe('CourtAssignment Engine – core behaviour', () => {
             winningPlayers: ['P0', 'P1'],
             losingPlayers: ['P2', 'P3'],
           };
-          
+
           testReversePreviousWinRecord(previousRecord);
-          
+
           const winCounts = CourtAssignmentEngine.getWinCounts();
           expect(winCounts.get('P0') || 0).toBe(0);
           expect(winCounts.get('P1') || 0).toBe(0);
@@ -628,24 +628,24 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
         it('should handle players with multiple wins correctly', () => {
           const players = mockPlayers(4);
-          
+
           const record1: Court[] = [createMockCourt(1, players, 1)];
           const record2: Court[] = [createMockCourt(2, players, 1)];
           CourtAssignmentEngine.recordWins(record1);
           CourtAssignmentEngine.recordWins(record2);
-          
+
           let winCounts = CourtAssignmentEngine.getWinCounts();
           expect(winCounts.get('P0')).toBe(2);
           expect(winCounts.get('P1')).toBe(2);
-          
+
           const previousRecord = {
             winner: 1 as const,
             winningPlayers: ['P0', 'P1'],
             losingPlayers: ['P2', 'P3'],
           };
-          
+
           testReversePreviousWinRecord(previousRecord);
-          
+
           winCounts = CourtAssignmentEngine.getWinCounts();
           expect(winCounts.get('P0')).toBe(1);
           expect(winCounts.get('P1')).toBe(1);
@@ -657,7 +657,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             winningPlayers: [],
             losingPlayers: [],
           };
-          
+
           expect(() => testReversePreviousWinRecord(previousRecord)).not.toThrow();
         });
       });
