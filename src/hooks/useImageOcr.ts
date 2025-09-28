@@ -6,10 +6,6 @@ interface UseImageOcrOptions {
   onPlayersExtracted: (players: string[]) => void;
 }
 
-/**
- * Hook that exposes OCR processing for an image file.
- * Provides processing state, progress percentage and a function to invoke OCR.
- */
 export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
   isProcessing: boolean;
   progress: number;

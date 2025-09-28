@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import './App.css';
 import ImageUpload from './components/ImageUpload';
@@ -9,6 +9,7 @@ import CourtAssignments from './components/CourtAssignments';
 import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
+import { saveAppState, loadAppState, clearAllStoredState } from './utils/storageUtils';
 
 export interface Player {
   id: string;
@@ -27,10 +28,41 @@ export interface Court {
 }
 
 function App(): React.ReactElement {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
-  const [assignments, setAssignments] = useState<Court[]>([]);
-  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(new Set());
+  const loadedState = loadAppState();
+  const [players, setPlayers] = useState<Player[]>(loadedState.players || []);
+  const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts || 4);
+  const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments || []);
+  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps || new Set());
+
+  const isInitialLoad = useRef(true);
+
+  useEffect(() => {
+    CourtAssignmentEngine.loadState();
+    setTimeout(() => {
+      isInitialLoad.current = false;
+    }, 0);
+  }, []);
+
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+
+    const assignmentsWithWinners = assignments.filter(court => court.winner);
+    if (assignmentsWithWinners.length > 0) {
+      CourtAssignmentEngine.recordWins(assignmentsWithWinners);
+    }
+  }, [assignments]);
+
+  useEffect(() => {
+    if (isInitialLoad.current) return;
+
+    saveAppState({
+      players,
+      numberOfCourts,
+      assignments,
+      collapsedSteps,
+    });
+    CourtAssignmentEngine.saveState();
+  }, [players, numberOfCourts, assignments, collapsedSteps]);
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
     const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
@@ -68,6 +100,23 @@ function App(): React.ReactElement {
     setPlayers(prev => prev.filter(player => player.id !== playerId));
   };
 
+  const recordCurrentWins = () => {
+    if (assignments.length > 0) {
+      const assignmentsWithWinners = assignments.filter(court => court.winner);
+      if (assignmentsWithWinners.length > 0) {
+        CourtAssignmentEngine.recordWins(assignmentsWithWinners);
+      }
+    }
+  };
+
+  const handleClearAllPlayers = () => {
+    setPlayers([]);
+    setAssignments([]);
+    setCollapsedSteps(new Set());
+    CourtAssignmentEngine.resetHistory();
+    setTimeout(() => clearAllStoredState(), 0);
+  };
+
   const toggleStep = (stepNumber: number) => {
     setCollapsedSteps(prev => {
       const next = new Set(prev);
@@ -81,9 +130,8 @@ function App(): React.ReactElement {
   };
 
   const generateAssignments = () => {
-    if (assignments.length > 0) {
-      CourtAssignmentEngine.recordWins(assignments);
-    }
+    recordCurrentWins();
+    CourtAssignmentEngine.clearCurrentSession();
     const courts = generateCourtAssignments(players, numberOfCourts);
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
@@ -129,6 +177,7 @@ function App(): React.ReactElement {
               players={players}
               onPlayerToggle={handlePlayerToggle}
               onRemovePlayer={handleRemovePlayer}
+              onClearAllPlayers={handleClearAllPlayers}
             />
           </div>
         )}
@@ -157,7 +206,7 @@ function App(): React.ReactElement {
           </div>
         )}
 
-        {/* Leaderboard */}
+        {}
         <Leaderboard players={players} winCounts={CourtAssignmentEngine.getWinCounts()} />
       </div>
     </div>
