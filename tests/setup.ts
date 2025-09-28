@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// Mock canvas context for confetti effect (only in jsdom environment)
 if (typeof HTMLCanvasElement !== 'undefined') {
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     value: vi.fn(() => ({
@@ -19,7 +18,6 @@ if (typeof HTMLCanvasElement !== 'undefined') {
   });
 }
 
-// Mock requestAnimationFrame and cancelAnimationFrame (only in browser environment)
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'requestAnimationFrame', {
     value: vi.fn((cb) => setTimeout(cb, 16)),
@@ -29,7 +27,6 @@ if (typeof window !== 'undefined') {
     value: vi.fn((id) => clearTimeout(id)),
   });
 
-  // Mock window dimensions for canvas sizing
   Object.defineProperty(window, 'innerWidth', {
     writable: true,
     configurable: true,
