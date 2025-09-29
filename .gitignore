@@ -92,3 +92,8 @@ public
 tmp/
 temp/ 
 eng.traineddata
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/

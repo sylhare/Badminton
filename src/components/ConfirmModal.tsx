@@ -24,7 +24,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay" onClick={onCancel} data-testid="confirm-modal">
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{title}</h3>
@@ -46,6 +46,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button
             className={`button ${isDestructive ? 'button-danger' : 'button-primary'}`}
             onClick={onConfirm}
+            data-testid="confirm-modal-confirm"
           >
             {confirmText}
           </button>

@@ -29,17 +29,17 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
   return (
     <div>
-      <div className="player-stats">
-        <div className="stats-item">
-          <div className="stats-number">{presentCount}</div>
+      <div className="player-stats" data-testid="player-stats">
+        <div className="stats-item" data-testid="stats-present">
+          <div className="stats-number" data-testid="stats-present-count">{presentCount}</div>
           <div>Present</div>
         </div>
-        <div className="stats-item">
-          <div className="stats-number">{totalCount - presentCount}</div>
+        <div className="stats-item" data-testid="stats-absent">
+          <div className="stats-number" data-testid="stats-absent-count">{totalCount - presentCount}</div>
           <div>Absent</div>
         </div>
-        <div className="stats-item">
-          <div className="stats-number">{totalCount}</div>
+        <div className="stats-item" data-testid="stats-total">
+          <div className="stats-number" data-testid="stats-total-count">{totalCount}</div>
           <div>Total</div>
         </div>
       </div>
@@ -56,13 +56,15 @@ const PlayerList: React.FC<PlayerListProps> = ({
                 checked={player.isPresent}
                 onChange={() => onPlayerToggle(player.id)}
                 className="player-checkbox"
+                data-testid={`player-checkbox-${player.id}`}
                 title={player.isPresent ? 'Uncheck to exclude from games' : 'Check to include in games'}
               />
-              <span className="player-name">{player.name}</span>
+              <span className="player-name" data-testid={`player-name-${player.id}`}>{player.name}</span>
             </div>
             <button
               onClick={() => onRemovePlayer(player.id)}
               className="remove-button"
+              data-testid={`remove-player-${player.id}`}
               title="Delete player permanently"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -78,6 +80,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
         <button
           onClick={() => setShowClearModal(true)}
           className="clear-all-button"
+          data-testid="clear-all-button"
           title="Remove all players and reset scores"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

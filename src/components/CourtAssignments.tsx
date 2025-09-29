@@ -137,7 +137,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
     if (!teams) {
       return (
-        <div key={court.courtNumber} className="court-card">
+        <div key={court.courtNumber} className="court-card" data-testid={`court-${court.courtNumber}`}>
           <div className="court-header">Court {court.courtNumber}</div>
           <div className="singles-match">
             <div>Players on court:</div>
@@ -152,7 +152,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
     if (isSingles) {
       return (
-        <div key={court.courtNumber} className="court-card">
+        <div key={court.courtNumber} className="court-card" data-testid={`court-${court.courtNumber}`}>
           <div className="court-header">Court {court.courtNumber} - Singles</div>
           {renderSinglesMatch(court)}
         </div>
@@ -161,7 +161,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
     if (isDoubles) {
       return (
-        <div key={court.courtNumber} className="court-card">
+        <div key={court.courtNumber} className="court-card" data-testid={`court-${court.courtNumber}`}>
           <div className="court-header">Court {court.courtNumber} - Doubles</div>
           {renderDoublesMatch(court)}
         </div>
@@ -169,7 +169,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     }
 
     return (
-      <div key={court.courtNumber} className="court-card">
+      <div key={court.courtNumber} className="court-card" data-testid={`court-${court.courtNumber}`}>
         <div className="court-header">Court {court.courtNumber}</div>
         {renderGenericCourt(court)}
       </div>
@@ -203,6 +203,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
         <button
           onClick={onGenerateNewAssignments}
           className="generate-button"
+          data-testid="generate-new-assignments-button"
         >
           🎲 Generate New Assignments
         </button>

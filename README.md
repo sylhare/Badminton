@@ -92,3 +92,4 @@ npm run dev
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint
 - `npm run test` - Run unit tests
+- `npm run test:e2e` - Run e2e tests
