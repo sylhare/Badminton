@@ -39,6 +39,7 @@ const CourtSettings: React.FC<CourtSettingsProps> = ({
         onClick={onGenerateAssignments}
         disabled={!hasPlayers}
         className="generate-button"
+        data-testid="generate-assignments-button"
       >
         🎲 Generate Random Assignments
       </button>
