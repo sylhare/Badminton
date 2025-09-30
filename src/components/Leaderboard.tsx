@@ -15,13 +15,30 @@ const medalForRank = (idx: number): string => {
 };
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts }) => {
-  const ranked = [...players].filter(p => p.isPresent).map(p => ({
+  const currentPlayers = [...players].filter(p => p.isPresent).map(p => ({
     ...p,
     wins: winCounts.get(p.id) ?? 0,
-  })).sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name));
+  }));
 
-  const hasWins = ranked.some(p => p.wins > 0);
-  if (!hasWins) return null;
+  const playersWithWinsFromHistory = Array.from(winCounts.entries())
+    .filter(([_, wins]) => wins > 0)
+    .map(([playerId, wins]) => {
+      const existingPlayer = players.find(p => p.id === playerId);
+      return existingPlayer ? null : {
+        id: playerId,
+        name: playerId.replace(/^(extracted|manual)_/, ''),
+        isPresent: false,
+        wins,
+      };
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null);
+
+  const allPlayersWithData = [...currentPlayers, ...playersWithWinsFromHistory];
+  const ranked = allPlayersWithData
+    .filter(p => p.wins > 0)
+    .sort((a, b) => b.wins - a.wins || a.name.localeCompare(b.name));
+
+  if (ranked.length === 0) return null;
 
   return (
     <div className="leaderboard step">

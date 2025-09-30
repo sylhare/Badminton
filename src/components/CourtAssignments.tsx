@@ -2,6 +2,7 @@ import React from 'react';
 
 import { Court, Player } from '../App';
 import { triggerConfetti } from '../utils/confetti';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 import TeamDisplay from './TeamDisplay';
 import TeamPlayerList from './TeamPlayerList';
@@ -19,6 +20,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   onGenerateNewAssignments,
   onWinnerChange,
 }) => {
+  const { trackCourtAction } = useAnalytics();
   const handleTeamClick = (courtNumber: number, teamNumber: number) => {
     if (onWinnerChange) {
       const court = assignments.find(c => c.courtNumber === courtNumber);
@@ -201,7 +203,10 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
       <div style={{ marginTop: '20px', textAlign: 'center' }}>
         <button
-          onClick={onGenerateNewAssignments}
+          onClick={() => {
+            trackCourtAction('regenerate_assignments', { courtCount: assignments.length });
+            onGenerateNewAssignments();
+          }}
           className="generate-button"
         >
           🎲 Generate New Assignments
