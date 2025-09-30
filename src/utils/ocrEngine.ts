@@ -3,18 +3,14 @@ import { createWorker } from 'tesseract.js';
 import { preprocessImage } from './imagePreprocess';
 
 export interface OcrOptions {
-  /** When running in Node, provide the absolute path to tesseract.js node worker */
+
   workerPath?: string;
-  /** Callback for progress (0–1) */
+
   onProgress?: (progress: number) => void;
-  /** Whether to preprocess image (browser only). Defaults to true in browsers, false in Node. */
+
   preprocess?: boolean;
 }
 
-/**
- * Runs Tesseract OCR on an image (File, Blob or Buffer) and extracts player names.
- * The same parameters are used as in the React hook so results match the app.
- */
 export async function recognizePlayerNames(
   image: File | Blob | Buffer,
   { workerPath, onProgress, preprocess }: OcrOptions = {},
@@ -30,7 +26,6 @@ export async function recognizePlayerNames(
 
   pushProgress(0.1);
 
-  // Dynamically import path only in Node to avoid bundler complaints in browser
   const worker: any = await (createWorker as any)('eng', workerPath ? { workerPath } : undefined);
 
   pushProgress(0.2);
@@ -76,15 +71,6 @@ export async function recognizePlayerNames(
   return extractPlayerNames(text);
 }
 
-/**
- * Processes OCR text and extracts player names
- * Remove simple list numbering like "1." or "2)"
- * Skip very short or very long strings
- * Require that at least 70% of the characters are letters (ignores spaces)
- * Split by common separators in case multiple names are on one line
- * @param text Raw OCR text
- * @returns Array of filtered player names
- */
 export function extractPlayerNames(text: string): string[] {
   if (!text) {
     return [];
