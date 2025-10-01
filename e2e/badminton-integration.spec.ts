@@ -2,7 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Badminton Court Manager - Integration Tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+
+    // Use absolute URL directly since baseURL configuration doesn't work with subpaths
+    await page.goto(targetUrl);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
   });
@@ -99,7 +102,8 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
   });
 
   test('Player toggle functionality', async ({ page }) => {
-    await page.goto('/');
+    const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+    await page.goto(targetUrl);
 
     const singlePlayerInput = page.getByTestId('single-player-input');
     await singlePlayerInput.fill('Test Player 1');
@@ -124,7 +128,8 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
   });
 
   test('Clear all players functionality', async ({ page }) => {
-    await page.goto('/');
+    const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+    await page.goto(targetUrl);
 
     const bulkTextarea = page.getByTestId('bulk-input');
     await bulkTextarea.fill('Player 1\nPlayer 2\nPlayer 3');
