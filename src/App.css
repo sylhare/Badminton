@@ -339,7 +339,7 @@ h1 {
     padding: 15px;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 16px;
     font-family: inherit;
     resize: vertical;
     min-height: 120px;
@@ -771,6 +771,24 @@ h1 {
     }
 
     .app {
+        padding: 15px;
+    }
+
+    /* Ensure inputs work properly on mobile */
+    .single-player-input, .bulk-input {
+        font-size: 16px; /* Prevents iOS zoom */
+        -webkit-appearance: none; /* Remove iOS styling */
+        -webkit-border-radius: 8px; /* Ensure consistent border radius */
+    }
+
+    /* Better mobile form layout */
+    .single-player-form {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .add-single-button {
+        width: 100%;
         padding: 15px;
     }
 
