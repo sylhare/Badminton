@@ -50,14 +50,30 @@ export const loadAppState = (): Partial<{
     if (!saved) return {};
 
     const parsed: AppState = JSON.parse(saved);
+    if (typeof parsed !== 'object' || parsed === null) {
+      localStorage.removeItem(STORAGE_KEYS.APP_STATE);
+      return {};
+    }
+
+    if (parsed.players && !Array.isArray(parsed.players)) {
+      localStorage.removeItem(STORAGE_KEYS.APP_STATE);
+      return {};
+    }
+
+    if (parsed.assignments && !Array.isArray(parsed.assignments)) {
+      localStorage.removeItem(STORAGE_KEYS.APP_STATE);
+      return {};
+    }
+
     return {
-      players: parsed.players || [],
-      numberOfCourts: parsed.numberOfCourts || 4,
-      assignments: parsed.assignments || [],
-      collapsedSteps: new Set(parsed.collapsedSteps || []),
+      players: Array.isArray(parsed.players) ? parsed.players : [],
+      numberOfCourts: typeof parsed.numberOfCourts === 'number' ? parsed.numberOfCourts : 4,
+      assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
+      collapsedSteps: new Set(Array.isArray(parsed.collapsedSteps) ? parsed.collapsedSteps : []),
     };
-  } catch (error) {
-    console.warn('Failed to load app state from localStorage:', error);
+  } catch (_error) {
+    localStorage.removeItem(STORAGE_KEYS.APP_STATE);
+    localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
     return {};
   }
 };
@@ -89,9 +105,13 @@ export const loadCourtEngineState = (): Partial<CourtEngineState> => {
     if (!saved) return {};
 
     const parsed: CourtEngineState = JSON.parse(saved);
+    if (typeof parsed !== 'object' || parsed === null) {
+      localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
+      return {};
+    }
     return parsed;
-  } catch (error) {
-    console.warn('Failed to load court engine state from localStorage:', error);
+  } catch (_error) {
+    localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
     return {};
   }
 };

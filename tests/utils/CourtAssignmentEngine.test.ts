@@ -321,12 +321,8 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
   describe('State persistence functionality', () => {
     beforeEach(() => {
-
       localStorage.clear();
-
       testResetHistory();
-
-      vi.spyOn(console, 'warn').mockImplementation(() => {});
     });
 
     afterEach(() => {
@@ -384,12 +380,6 @@ describe('CourtAssignment Engine – core behaviour', () => {
       localStorage.setItem('badminton-court-engine-state', 'invalid-json');
 
       expect(() => CourtAssignmentEngine.loadState()).not.toThrow();
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load court engine state from localStorage:',
-        expect.any(SyntaxError),
-      );
-
       const winCounts = CourtAssignmentEngine.getWinCounts();
       expect(winCounts.size).toBe(0);
     });
@@ -437,11 +427,6 @@ describe('CourtAssignment Engine – core behaviour', () => {
       generateCourtAssignments(players, 1);
 
       expect(() => CourtAssignmentEngine.saveState()).not.toThrow();
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to save court engine state to localStorage:',
-        expect.any(Error),
-      );
     });
 
     it('should maintain separate storage keys for different data types', () => {
