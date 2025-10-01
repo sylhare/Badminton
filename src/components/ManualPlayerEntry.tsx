@@ -44,8 +44,9 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
             onChange={(e) => setSinglePlayerName(e.target.value)}
             placeholder="Enter player name..."
             className="single-player-input"
+            data-testid="single-player-input"
           />
-          <button type="submit" className="add-single-button">
+          <button type="submit" className="add-single-button" data-testid="add-single-button">
             Add Player
           </button>
         </form>
@@ -63,8 +64,9 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
             placeholder="John Doe, Jane Smith, Mike Johnson&#10;Or one name per line:&#10;Alice Brown&#10;Bob Wilson&#10;Sarah Davis"
             className="bulk-input"
             rows={6}
+            data-testid="bulk-input"
           />
-          <button type="submit" className="add-bulk-button">
+          <button type="submit" className="add-bulk-button" data-testid="add-bulk-button">
             Add All Players
           </button>
         </form>

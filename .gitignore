@@ -81,3 +81,8 @@ jspm_packages/
 tmp/
 temp/ 
 eng.traineddata
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
