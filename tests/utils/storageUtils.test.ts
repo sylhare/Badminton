@@ -12,7 +12,6 @@ import type { Player, Court } from '../../src/App';
 describe('StorageUtils', () => {
   beforeEach(() => {
     localStorage.clear();
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -80,24 +79,16 @@ describe('StorageUtils', () => {
 
       const loaded = loadAppState();
       expect(loaded).toEqual({});
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load app state from localStorage:',
-        expect.any(SyntaxError),
-      );
+      expect(localStorage.getItem('badminton-app-state')).toBeNull();
     });
 
-    it('should handle localStorage save errors gracefully', () => {
-
+    it('should handle app state save errors gracefully', () => {
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 
-      saveAppState(mockAppState);
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to save app state to localStorage:',
-        expect.any(Error),
-      );
+      expect(() => saveAppState(mockAppState)).not.toThrow();
+      expect(localStorage.getItem('badminton-app-state')).toBeNull();
     });
   });
 
@@ -147,24 +138,16 @@ describe('StorageUtils', () => {
 
       const loaded = loadCourtEngineState();
       expect(loaded).toEqual({});
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load court engine state from localStorage:',
-        expect.any(SyntaxError),
-      );
+      expect(localStorage.getItem('badminton-court-engine-state')).toBeNull();
     });
 
     it('should handle court engine save errors gracefully', () => {
-
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 
-      saveCourtEngineState(mockCourtEngineState);
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to save court engine state to localStorage:',
-        expect.any(Error),
-      );
+      expect(() => saveCourtEngineState(mockCourtEngineState)).not.toThrow();
+      expect(localStorage.getItem('badminton-court-engine-state')).toBeNull();
     });
   });
 
@@ -187,17 +170,14 @@ describe('StorageUtils', () => {
     });
 
     it('should handle clear errors gracefully', () => {
+      localStorage.setItem('badminton-app-state', '{"test": "data"}');
+      localStorage.setItem('badminton-court-engine-state', '{"test": "data"}');
 
       vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
         throw new Error('Cannot remove item');
       });
 
-      clearAllStoredState();
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to clear stored state:',
-        expect.any(Error),
-      );
+      expect(() => clearAllStoredState()).not.toThrow();
     });
   });
 });

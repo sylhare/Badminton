@@ -20,6 +20,7 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
 
   const handleBulkAdd = (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (playerText.trim()) {
       const players = playerText.split(/[\n,]+/);
       handleSubmit(players, () => setPlayerText(''));
@@ -28,6 +29,7 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
 
   const handleSingleAdd = (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (singlePlayerName.trim()) {
       handleSubmit([singlePlayerName], () => setSinglePlayerName(''));
     }
@@ -45,6 +47,10 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
             placeholder="Enter player name..."
             className="single-player-input"
             data-testid="single-player-input"
+            autoComplete="off"
+            autoCapitalize="words"
+            autoCorrect="off"
+            spellCheck="false"
           />
           <button type="submit" className="add-single-button" data-testid="add-single-button">
             Add Player
@@ -65,6 +71,10 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
             className="bulk-input"
             rows={6}
             data-testid="bulk-input"
+            autoComplete="off"
+            autoCapitalize="words"
+            autoCorrect="off"
+            spellCheck="false"
           />
           <button type="submit" className="add-bulk-button" data-testid="add-bulk-button">
             Add All Players

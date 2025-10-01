@@ -206,7 +206,6 @@ function App(): React.ReactElement {
           </div>
         )}
 
-        {}
         <Leaderboard players={players} winCounts={CourtAssignmentEngine.getWinCounts()} />
       </div>
     </div>

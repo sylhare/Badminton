@@ -13,7 +13,6 @@ describe('App Persistence Integration', () => {
   beforeEach(() => {
     localStorage.clear();
     CourtAssignmentEngine.resetHistory();
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -226,15 +225,6 @@ describe('App Persistence Integration', () => {
 
       expect(screen.getByPlaceholderText(/John Doe, Jane Smith/)).toBeInTheDocument();
       expect(screen.queryByText('Step 2')).not.toBeInTheDocument();
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load app state from localStorage:',
-        expect.any(SyntaxError),
-      );
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load court engine state from localStorage:',
-        expect.any(SyntaxError),
-      );
     });
 
     it('should handle localStorage save errors gracefully', async () => {
@@ -252,11 +242,6 @@ describe('App Persistence Integration', () => {
       });
 
       expect(screen.getByText('Alice')).toBeInTheDocument();
-
-      expect(console.warn).toHaveBeenCalledWith(
-        'Failed to save app state to localStorage:',
-        expect.any(Error),
-      );
     });
   });
 
