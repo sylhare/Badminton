@@ -1,10 +1,11 @@
-import type { Player, Court } from '../App';
+import type { Player, Court, ManualCourtSelection } from '../App';
 
 interface AppState {
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
   collapsedSteps: number[];
+  manualCourt: ManualCourtSelection | null;
 }
 
 interface CourtEngineState {
@@ -25,6 +26,7 @@ export const saveAppState = (state: {
   numberOfCourts: number;
   assignments: Court[];
   collapsedSteps: Set<number>;
+  manualCourt: ManualCourtSelection | null;
 }): void => {
   try {
     const stateToSave: AppState = {
@@ -32,6 +34,7 @@ export const saveAppState = (state: {
       numberOfCourts: state.numberOfCourts,
       assignments: state.assignments,
       collapsedSteps: Array.from(state.collapsedSteps),
+      manualCourt: state.manualCourt,
     };
     localStorage.setItem(STORAGE_KEYS.APP_STATE, JSON.stringify(stateToSave));
   } catch (error) {
@@ -39,30 +42,55 @@ export const saveAppState = (state: {
   }
 };
 
-export const loadAppState = (): Partial<{
+export const loadAppState = (): {
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
   collapsedSteps: Set<number>;
-}> => {
+  manualCourt: ManualCourtSelection | null;
+} => {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.APP_STATE);
-    if (!saved) return {};
+    if (!saved) return {
+      players: [],
+      numberOfCourts: 4,
+      assignments: [],
+      collapsedSteps: new Set(),
+      manualCourt: null,
+    };
 
     const parsed: AppState = JSON.parse(saved);
     if (typeof parsed !== 'object' || parsed === null) {
       localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-      return {};
+      return {
+        players: [],
+        numberOfCourts: 4,
+        assignments: [],
+        collapsedSteps: new Set(),
+        manualCourt: null,
+      };
     }
 
     if (parsed.players && !Array.isArray(parsed.players)) {
       localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-      return {};
+      return {
+        players: [],
+        numberOfCourts: 4,
+        assignments: [],
+        collapsedSteps: new Set(),
+        manualCourt: null,
+      };
     }
 
     if (parsed.assignments && !Array.isArray(parsed.assignments)) {
       localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-      return {};
+      return {
+        players: [],
+        numberOfCourts: 4,
+        assignments: [],
+        collapsedSteps: new Set(),
+        manualCourt: null,
+      };
     }
 
     return {
@@ -70,11 +98,19 @@ export const loadAppState = (): Partial<{
       numberOfCourts: typeof parsed.numberOfCourts === 'number' ? parsed.numberOfCourts : 4,
       assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
       collapsedSteps: new Set(Array.isArray(parsed.collapsedSteps) ? parsed.collapsedSteps : []),
+      manualCourt: parsed.manualCourt || null,
     };
-  } catch (_error) {
+  } catch (error) {
+    console.warn('Failed to load app state from localStorage:', error);
     localStorage.removeItem(STORAGE_KEYS.APP_STATE);
     localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
-    return {};
+    return {
+      players: [],
+      numberOfCourts: 4,
+      assignments: [],
+      collapsedSteps: new Set(),
+      manualCourt: null,
+    };
   }
 };
 
