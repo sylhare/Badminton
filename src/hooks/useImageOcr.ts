@@ -12,7 +12,7 @@ export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
   processImage: (file: File) => Promise<void>;
 } {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0); // 0–1
+  const [progress, setProgress] = useState(0);
 
   const processImage = async (file: File) => {
     setIsProcessing(true);
