@@ -120,17 +120,16 @@ export class CourtAssignmentEngine {
     return new Map(this.winCountMap);
   }
 
-  static generate(players: Player[], numberOfCourts: number, manualCourt?: ManualCourtSelection): Court[] {
+  static generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
-    // Handle manual court assignment first
     let manualCourtResult: Court | null = null;
     let remainingPlayers = presentPlayers;
     let remainingCourts = numberOfCourts;
 
-    if (manualCourt && manualCourt.players.length > 0) {
-      const manualPlayers = manualCourt.players.filter(p => p.isPresent);
+    if (manualSelection && manualSelection.players.length > 0) {
+      const manualPlayers = manualSelection.players.filter(p => p.isPresent);
       if (manualPlayers.length >= 2 && manualPlayers.length <= 4) {
         manualCourtResult = this.createManualCourt(manualPlayers, 1);
         remainingPlayers = presentPlayers.filter(p => !manualPlayers.some(mp => mp.id === p.id));
@@ -138,7 +137,6 @@ export class CourtAssignmentEngine {
       }
     }
 
-    // Generate assignments for remaining players
     const capacity = remainingCourts * 4;
     let benchSpots = Math.max(0, remainingPlayers.length - capacity);
     if ((remainingPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
@@ -154,8 +152,7 @@ export class CourtAssignmentEngine {
     }
 
     let finalCourts = best ? best.courts : [];
-    
-    // Add manual court as first court if it exists
+
     if (manualCourtResult) {
       finalCourts = [manualCourtResult, ...finalCourts];
     }
@@ -286,6 +283,9 @@ export class CourtAssignmentEngine {
     return { teams: bestTeams, cost: bestCost };
   }
 
+  /**
+   * Create a manual court with the specified players
+   */
   private static createManualCourt(players: Player[], courtNumber: number): Court {
     const court: Court = {
       courtNumber,
@@ -293,20 +293,17 @@ export class CourtAssignmentEngine {
     };
 
     if (players.length === 4) {
-      // For 4 players, create optimal team split
       const res = this.chooseBestTeamSplit(players);
       court.teams = res.teams;
     } else if (players.length === 2) {
-      // For 2 players, create singles match
       court.teams = {
         team1: [players[0]],
-        team2: [players[1]]
+        team2: [players[1]],
       };
     } else if (players.length === 3) {
-      // For 3 players, singles with one waiting
       court.teams = {
         team1: [players[0]],
-        team2: [players[1]]
+        team2: [players[1]],
       };
     }
 
