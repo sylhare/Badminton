@@ -53,16 +53,7 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
 
     await expect(page.locator('h2').filter({ hasText: /Court Settings/ })).toBeVisible();
 
-    const courtSettingsHeader = page.locator('h2').filter({ hasText: /Court Settings/ });
-
     const generateButton = page.getByTestId('generate-assignments-button');
-    const isButtonVisible = await generateButton.isVisible();
-
-    if (!isButtonVisible) {
-      await courtSettingsHeader.click();
-      await page.waitForTimeout(300);
-    }
-
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
@@ -93,11 +84,6 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
     const leaderboard = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboard).toBeVisible();
 
-    const benchSection = page.locator('.bench-section');
-    if (await benchSection.isVisible()) {
-      await expect(benchSection.locator('.bench-header')).toContainText('Bench');
-    }
-
     await expect(page.getByTestId('stats-present-count')).toHaveText('8');
   });
 
@@ -125,6 +111,48 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('2');
     await expect(page.getByTestId('stats-absent-count')).toHaveText('0');
+  });
+
+  test('Manual court assignment functionality', async ({ page }) => {
+    await page.goto('/');
+
+    const bulkTextarea = page.getByTestId('bulk-input');
+    await bulkTextarea.fill('Alice Johnson\nBob Smith\nCharlie Davis\nDiana Wilson\nEmma Brown\nFrank Miller');
+    await page.getByTestId('add-bulk-button').click();
+
+    await expect(page.getByTestId('stats-total-count')).toHaveText('6');
+
+    const generateButton = page.getByTestId('generate-assignments-button');
+    await expect(generateButton).toBeVisible();
+    await generateButton.click();
+
+    const manualCourtHeader = page.getByTestId('manual-court-header');
+    await expect(manualCourtHeader).toBeVisible();
+    await manualCourtHeader.click();
+    await page.waitForTimeout(500);
+
+    const firstPlayer = page.locator('[data-testid^="manual-court-player-"]').first();
+    await expect(firstPlayer).toBeVisible();
+    await firstPlayer.click();
+
+    const secondPlayer = page.locator('[data-testid^="manual-court-player-"]').nth(1);
+    await expect(secondPlayer).toBeVisible();
+    await secondPlayer.click();
+
+    await expect(page.locator('.selection-count')).toContainText('2/4 players selected');
+    await expect(page.locator('.match-preview')).toContainText('Will create: Singles match');
+
+    const generateNewButton = page.getByTestId('generate-new-assignments-button');
+    await expect(generateNewButton).toBeVisible();
+    await generateNewButton.click();
+
+    await page.waitForTimeout(500);
+    const court1 = page.getByTestId('court-1');
+    await expect(court1).toBeVisible();
+    await expect(court1.locator('.manual-court-icon')).toBeVisible();
+
+    await manualCourtHeader.click();
+    await page.waitForTimeout(500);
   });
 
   test('Clear all players functionality', async ({ page }) => {

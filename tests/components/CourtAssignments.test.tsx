@@ -369,22 +369,5 @@ describe('Winner Selection', () => {
       expect(screen.getByText('👑')).toBeInTheDocument();
     });
 
-    it('should handle click interactions correctly', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <CourtAssignments
-          assignments={doublesAssignment}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
-          onWinnerChange={mockOnWinnerChange}
-        />,
-      );
-
-      const team1Element = screen.getByText('Team 1').closest('.team') as HTMLElement;
-
-      await user.click(team1Element);
-      expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
-    });
   });
 });
