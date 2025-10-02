@@ -6,6 +6,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import CourtSettings from './components/CourtSettings';
 import CourtAssignments from './components/CourtAssignments';
+import ManualCourtSelection from './components/ManualCourtSelection';
 import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
@@ -15,6 +16,10 @@ export interface Player {
   id: string;
   name: string;
   isPresent: boolean;
+}
+
+export interface ManualCourtSelection {
+  players: Player[];
 }
 
 export interface Court {
@@ -33,6 +38,7 @@ function App(): React.ReactElement {
   const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts || 4);
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments || []);
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps || new Set());
+  const [manualCourt, setManualCourt] = useState<ManualCourtSelection | null>(loadedState.manualCourt || null);
 
   const isInitialLoad = useRef(true);
 
@@ -60,9 +66,10 @@ function App(): React.ReactElement {
       numberOfCourts,
       assignments,
       collapsedSteps,
+      manualCourt,
     });
     CourtAssignmentEngine.saveState();
-  }, [players, numberOfCourts, assignments, collapsedSteps]);
+  }, [players, numberOfCourts, assignments, collapsedSteps, manualCourt]);
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
     const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
@@ -113,6 +120,7 @@ function App(): React.ReactElement {
     setPlayers([]);
     setAssignments([]);
     setCollapsedSteps(new Set());
+    setManualCourt(null);
     CourtAssignmentEngine.resetHistory();
     setTimeout(() => clearAllStoredState(), 0);
   };
@@ -132,7 +140,7 @@ function App(): React.ReactElement {
   const generateAssignments = () => {
     recordCurrentWins();
     CourtAssignmentEngine.clearCurrentSession();
-    const courts = generateCourtAssignments(players, numberOfCourts);
+    const courts = generateCourtAssignments(players, numberOfCourts, manualCourt || undefined);
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
   };
@@ -185,6 +193,11 @@ function App(): React.ReactElement {
         {players.some(p => p.isPresent) && (
           <div className={`step ${collapsedSteps.has(3) ? 'collapsed' : ''}`}>
             <h2 onClick={() => toggleStep(3)}>{getStepTitle(3, 'Court Settings')}</h2>
+            <ManualCourtSelection
+              players={players}
+              onManualCourtChange={setManualCourt}
+              currentSelection={manualCourt}
+            />
             <CourtSettings
               numberOfCourts={numberOfCourts}
               onNumberOfCourtsChange={setNumberOfCourts}
