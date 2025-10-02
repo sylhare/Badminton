@@ -108,7 +108,7 @@ describe('App Leaderboard Persistence', () => {
       const winCountsBeforeUnmount = CourtAssignmentEngine.getWinCounts();
       const totalWinsBefore = Array.from(winCountsBeforeUnmount.values()).reduce((sum, wins) => sum + wins, 0);
 
-      expect(totalWinsBefore).toBe(2); // Alice and Bob should each have 1 win
+      expect(totalWinsBefore).toBe(2);
 
       unmount();
 
@@ -211,7 +211,7 @@ describe('App Leaderboard Persistence', () => {
         const totalAfterChange = Array.from(winCountsAfterChange.values()).reduce((sum, wins) => sum + wins, 0);
 
         expect(totalAfterChange).toBeGreaterThan(0);
-        expect(totalAfterChange).toBeLessThan(20); // Sanity check
+        expect(totalAfterChange).toBeLessThan(20);
       }
     });
 

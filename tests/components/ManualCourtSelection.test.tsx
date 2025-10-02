@@ -87,7 +87,6 @@ describe('ManualCourtSelection Component', () => {
         />,
       );
 
-      // Expand the selection panel
       await act(async () => {
         await user.click(screen.getByTestId('manual-court-header'));
       });
@@ -143,7 +142,7 @@ describe('ManualCourtSelection Component', () => {
 
     it('prevents selection of more than 4 players', async () => {
       const user = userEvent.setup();
-      const selection = { players: mockPlayers.slice(0, 4) }; // 4 players already selected
+      const selection = { players: mockPlayers.slice(0, 4) };
 
       render(
         <ManualCourtSelection
@@ -157,7 +156,6 @@ describe('ManualCourtSelection Component', () => {
         await user.click(screen.getByTestId('manual-court-header'));
       });
 
-      // Try to click a 5th player
       const fifthPlayerButton = screen.getByTestId(`manual-court-player-${mockPlayers[4].id}`);
       expect(fifthPlayerButton).toBeDisabled();
     });
@@ -252,7 +250,6 @@ describe('ManualCourtSelection Component', () => {
       expect(screen.getByText('Selected for Court 1:')).toBeInTheDocument();
       expect(screen.getByText(/Selected for Court 1:/)).toBeInTheDocument();
 
-      // Check for selected player tags specifically
       const selectedPlayerTags = screen.getAllByText(mockPlayers[0].name);
       expect(selectedPlayerTags.length).toBeGreaterThan(0);
 
@@ -276,7 +273,6 @@ describe('ManualCourtSelection Component', () => {
         await user.click(screen.getByTestId('manual-court-header'));
       });
 
-      // Find and click the remove button (×) for the first player
       const removeButtons = screen.getAllByText('×');
       await act(async () => {
         await user.click(removeButtons[0]);
@@ -329,7 +325,6 @@ describe('ManualCourtSelection Component', () => {
         />,
       );
 
-      // Should render because there are 3 present players (>= 2)
       expect(screen.getByTestId('manual-court-header')).toBeInTheDocument();
     });
 

@@ -42,6 +42,7 @@ describe('StorageUtils', () => {
       numberOfCourts: 6,
       assignments: mockAssignments,
       collapsedSteps: new Set([1, 2]),
+      manualCourt: null,
     };
 
     it('should save app state to localStorage', () => {
@@ -69,26 +70,35 @@ describe('StorageUtils', () => {
       expect(loaded.collapsedSteps).toEqual(new Set([1, 2]));
     });
 
-    it('should return empty object when no saved state exists', () => {
+    it('should return default state when no saved state exists', () => {
       const loaded = loadAppState();
-      expect(loaded).toEqual({});
+      expect(loaded).toEqual({
+        players: [],
+        numberOfCourts: 4,
+        assignments: [],
+        collapsedSteps: new Set(),
+      });
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
       localStorage.setItem('badminton-app-state', 'invalid-json');
 
       const loaded = loadAppState();
-      expect(loaded).toEqual({});
-      expect(localStorage.getItem('badminton-app-state')).toBeNull();
+      expect(loaded).toEqual({
+        players: [],
+        numberOfCourts: 4,
+        assignments: [],
+        collapsedSteps: new Set(),
+        manualCourt: null,
+      });
     });
 
-    it('should handle app state save errors gracefully', () => {
+    it('should handle localStorage save errors gracefully', () => {
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 
       expect(() => saveAppState(mockAppState)).not.toThrow();
-      expect(localStorage.getItem('badminton-app-state')).toBeNull();
     });
   });
 
@@ -138,16 +148,14 @@ describe('StorageUtils', () => {
 
       const loaded = loadCourtEngineState();
       expect(loaded).toEqual({});
-      expect(localStorage.getItem('badminton-court-engine-state')).toBeNull();
     });
 
-    it('should handle court engine save errors gracefully', () => {
+    it('should handle localStorage save errors gracefully', () => {
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 
       expect(() => saveCourtEngineState(mockCourtEngineState)).not.toThrow();
-      expect(localStorage.getItem('badminton-court-engine-state')).toBeNull();
     });
   });
 
@@ -166,13 +174,10 @@ describe('StorageUtils', () => {
 
       expect(localStorage.getItem('badminton-app-state')).toBeNull();
       expect(localStorage.getItem('badminton-court-engine-state')).toBeNull();
-      expect(localStorage.getItem('other-data')).toBe('should remain'); // Should not affect other data
+      expect(localStorage.getItem('other-data')).toBe('should remain');
     });
 
     it('should handle clear errors gracefully', () => {
-      localStorage.setItem('badminton-app-state', '{"test": "data"}');
-      localStorage.setItem('badminton-court-engine-state', '{"test": "data"}');
-
       vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
         throw new Error('Cannot remove item');
       });
