@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
-import type { Player, ManualCourtSelection } from '../App';
+
+import type { Player } from '../App';
+
+export interface ManualCourtSelection {
+  players: Player[];
+}
 
 interface ManualCourtSelectionProps {
   players: Player[];
-  onManualCourtChange: (manualCourt: ManualCourtSelection | null) => void;
+  onSelectionChange: (selection: ManualCourtSelection | null) => void;
   currentSelection: ManualCourtSelection | null;
 }
 
 const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
   players,
-  onManualCourtChange,
-  currentSelection
+  onSelectionChange,
+  currentSelection,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const presentPlayers = players.filter(p => p.isPresent);
   const selectedPlayerIds = new Set(currentSelection?.players.map(p => p.id) || []);
+  const maxPlayers = 4;
 
+  /**
+   * Handle toggling a player's selection for manual court assignment
+   */
   const handlePlayerToggle = (player: Player) => {
     const isSelected = selectedPlayerIds.has(player.id);
     let newSelectedPlayers: Player[];
@@ -23,42 +32,61 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
     if (isSelected) {
       newSelectedPlayers = currentSelection?.players.filter(p => p.id !== player.id) || [];
     } else {
-      if (selectedPlayerIds.size >= 4) {
-        return; // Max 4 players
+      if (selectedPlayerIds.size >= maxPlayers) {
+        return;
       }
       newSelectedPlayers = [...(currentSelection?.players || []), player];
     }
 
     if (newSelectedPlayers.length === 0) {
-      onManualCourtChange(null);
+      onSelectionChange(null);
     } else {
-      onManualCourtChange({ players: newSelectedPlayers });
+      onSelectionChange({ players: newSelectedPlayers });
     }
   };
 
+  /**
+   * Clear all selected players
+   */
   const clearSelection = () => {
-    onManualCourtChange(null);
+    onSelectionChange(null);
+  };
+
+  /**
+   * Get match type description based on player count
+   */
+  const getMatchType = (playerCount: number): string => {
+    switch (playerCount) {
+      case 2: return 'Singles match';
+      case 3: return 'Singles match (1 waiting)';
+      case 4: return 'Doubles match';
+      default: return '';
+    }
   };
 
   if (presentPlayers.length < 2) {
-    return null; // Need at least 2 players to form a manual court
+    return null;
   }
 
   return (
     <div className="manual-court-selection" data-testid="manual-court-selection">
-      <div className="manual-court-header" onClick={() => setIsExpanded(!isExpanded)} data-testid="manual-court-header">
+      <div
+        className="manual-court-header"
+        onClick={() => setIsExpanded(!isExpanded)}
+        data-testid="manual-court-header"
+      >
         <h3>⚙️ Manual Court Assignment (Optional)</h3>
         <div className="manual-court-toggle">
           {isExpanded ? '▼' : '▶'}
         </div>
       </div>
-      
+
       {isExpanded && (
         <div className="manual-court-content">
           <p className="manual-court-description">
             Select 2-4 players to play together on Court 1. The rest will be assigned automatically.
           </p>
-          
+
           {currentSelection && currentSelection.players.length > 0 && (
             <div className="manual-court-selected">
               <div className="selected-players">
@@ -71,6 +99,7 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
                         onClick={() => handlePlayerToggle(player)}
                         className="remove-selected-player"
                         title="Remove from manual court"
+                        aria-label={`Remove ${player.name} from manual court`}
                       >
                         ×
                       </button>
@@ -78,7 +107,11 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
                   ))}
                 </div>
               </div>
-              <button onClick={clearSelection} className="clear-manual-selection" data-testid="clear-manual-selection">
+              <button
+                onClick={clearSelection}
+                className="clear-manual-selection"
+                data-testid="clear-manual-selection"
+              >
                 Clear Selection
               </button>
             </div>
@@ -87,8 +120,8 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
           <div className="player-selection-grid">
             {presentPlayers.map(player => {
               const isSelected = selectedPlayerIds.has(player.id);
-              const isDisabled = !isSelected && selectedPlayerIds.size >= 4;
-              
+              const isDisabled = !isSelected && selectedPlayerIds.size >= maxPlayers;
+
               return (
                 <button
                   key={player.id}
@@ -96,6 +129,7 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
                   disabled={isDisabled}
                   className={`player-selection-button ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
                   data-testid={`manual-court-player-${player.id}`}
+                  aria-label={`${isSelected ? 'Remove' : 'Add'} ${player.name} ${isSelected ? 'from' : 'to'} manual court`}
                 >
                   <span className="player-selection-checkbox">
                     {isSelected ? '✓' : ''}
@@ -108,13 +142,11 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
 
           <div className="manual-court-info">
             <div className="selection-count">
-              {selectedPlayerIds.size}/4 players selected
+              {selectedPlayerIds.size}/{maxPlayers} players selected
             </div>
             {selectedPlayerIds.size >= 2 && (
               <div className="match-preview">
-                {selectedPlayerIds.size === 2 && "Will create: Singles match"}
-                {selectedPlayerIds.size === 3 && "Will create: Singles match (1 waiting)"}
-                {selectedPlayerIds.size === 4 && "Will create: Doubles match"}
+                Will create: {getMatchType(selectedPlayerIds.size)}
               </div>
             )}
           </div>
