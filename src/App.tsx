@@ -34,11 +34,11 @@ export interface Court {
 
 function App(): React.ReactElement {
   const loadedState = loadAppState();
-  const [players, setPlayers] = useState<Player[]>(loadedState.players || []);
-  const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts || 4);
-  const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments || []);
-  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps || new Set());
-  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(null);
+  const [players, setPlayers] = useState<Player[]>(loadedState.players ?? []);
+  const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
+  const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
+  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
+  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
 
   const isInitialLoad = useRef(true);
 
@@ -66,6 +66,7 @@ function App(): React.ReactElement {
         numberOfCourts,
         assignments,
         collapsedSteps,
+        manualCourt: manualCourtSelection,
       });
     CourtAssignmentEngine.saveState();
     }, [players, numberOfCourts, assignments, collapsedSteps]);

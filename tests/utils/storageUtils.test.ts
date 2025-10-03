@@ -72,25 +72,15 @@ describe('StorageUtils', () => {
 
     it('should return default state when no saved state exists', () => {
       const loaded = loadAppState();
-      expect(loaded).toEqual({
-        players: [],
-        numberOfCourts: 4,
-        assignments: [],
-        collapsedSteps: new Set(),
-      });
+      expect(loaded).toEqual({});
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
       localStorage.setItem('badminton-app-state', 'invalid-json');
 
       const loaded = loadAppState();
-      expect(loaded).toEqual({
-        players: [],
-        numberOfCourts: 4,
-        assignments: [],
-        collapsedSteps: new Set(),
-        manualCourt: null,
-      });
+      expect(loaded).toEqual({});
+      expect(localStorage.getItem('badminton-app-state')).toBeNull();
     });
 
     it('should handle localStorage save errors gracefully', () => {
