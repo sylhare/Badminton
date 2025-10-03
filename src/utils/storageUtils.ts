@@ -42,55 +42,31 @@ export const saveAppState = (state: {
   }
 };
 
-export const loadAppState = (): {
+export const loadAppState = (): Partial<{
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
   collapsedSteps: Set<number>;
   manualCourt: ManualCourtSelection | null;
-} => {
+}> => {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.APP_STATE);
-    if (!saved) return {
-      players: [],
-      numberOfCourts: 4,
-      assignments: [],
-      collapsedSteps: new Set(),
-      manualCourt: null,
-    };
+    if (!saved) return {};
 
     const parsed: AppState = JSON.parse(saved);
     if (typeof parsed !== 'object' || parsed === null) {
       localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-      return {
-        players: [],
-        numberOfCourts: 4,
-        assignments: [],
-        collapsedSteps: new Set(),
-        manualCourt: null,
-      };
+      return {};
     }
 
     if (parsed.players && !Array.isArray(parsed.players)) {
       localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-      return {
-        players: [],
-        numberOfCourts: 4,
-        assignments: [],
-        collapsedSteps: new Set(),
-        manualCourt: null,
-      };
+      return {};
     }
 
     if (parsed.assignments && !Array.isArray(parsed.assignments)) {
       localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-      return {
-        players: [],
-        numberOfCourts: 4,
-        assignments: [],
-        collapsedSteps: new Set(),
-        manualCourt: null,
-      };
+      return {};
     }
 
     return {
@@ -104,13 +80,7 @@ export const loadAppState = (): {
     console.warn('Failed to load app state from localStorage:', error);
     localStorage.removeItem(STORAGE_KEYS.APP_STATE);
     localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
-    return {
-      players: [],
-      numberOfCourts: 4,
-      assignments: [],
-      collapsedSteps: new Set(),
-      manualCourt: null,
-    };
+    return {};
   }
 };
 
