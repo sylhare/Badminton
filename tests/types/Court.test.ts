@@ -144,8 +144,8 @@ describe('Court Interface', () => {
       courtNumber: 9,
       players: mockPlayers,
       teams: {
-        team1: [mockPlayers[0]], // singles player
-        team2: [mockPlayers[1], mockPlayers[2], mockPlayers[3]], // 3 players (unusual but valid)
+        team1: [mockPlayers[0]],
+        team2: [mockPlayers[1], mockPlayers[2], mockPlayers[3]],
       },
       winner: 2,
     };
@@ -207,7 +207,7 @@ describe('Court Interface', () => {
       const court: Court = {
         courtNumber: 12,
         players: mockPlayers.slice(0, 2),
-        winner: 1, // This is technically valid but logically inconsistent
+        winner: 1,
       };
 
       expect(court.winner).toBe(1);

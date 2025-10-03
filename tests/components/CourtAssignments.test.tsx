@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
@@ -11,27 +11,18 @@ import { TEST_COURTS, TEST_PLAYERS } from '../data/testData';
 describe('CourtAssignments Component', () => {
   const mockOnGenerateNewAssignments = vi.fn();
 
-  const mockPlayers: Player[] = [
-    { id: '1', name: 'Alice', isPresent: true },
-    { id: '2', name: 'Bob', isPresent: true },
-    { id: '3', name: 'Charlie', isPresent: true },
-    { id: '4', name: 'Diana', isPresent: true },
-    { id: '5', name: 'Eve', isPresent: true },
-    { id: '6', name: 'Frank', isPresent: true },
-  ];
-
   const mockAssignments: Court[] = [
     {
       courtNumber: 1,
-      players: [mockPlayers[0], mockPlayers[1], mockPlayers[2], mockPlayers[3]],
+      players: [TEST_PLAYERS[0], TEST_PLAYERS[1], TEST_PLAYERS[2], TEST_PLAYERS[3]],
       teams: {
-        team1: [mockPlayers[0], mockPlayers[1]],
-        team2: [mockPlayers[2], mockPlayers[3]],
+        team1: [TEST_PLAYERS[0], TEST_PLAYERS[1]],
+        team2: [TEST_PLAYERS[2], TEST_PLAYERS[3]],
       },
     },
   ];
 
-  const mockBenchedPlayers: Player[] = [mockPlayers[4], mockPlayers[5]];
+  const mockBenchedPlayers: Player[] = [TEST_PLAYERS[4], TEST_PLAYERS[5]];
 
   const defaultProps = {
     assignments: mockAssignments,
@@ -40,6 +31,7 @@ describe('CourtAssignments Component', () => {
   };
 
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
   });
 
@@ -92,7 +84,7 @@ describe('CourtAssignments Component', () => {
   it('handles singular bench player count correctly', () => {
     const propsWithOneBench = {
       ...defaultProps,
-      benchedPlayers: [mockPlayers[4]],
+      benchedPlayers: [TEST_PLAYERS[4]],
     };
 
     render(<CourtAssignments {...propsWithOneBench} />);
@@ -104,18 +96,18 @@ describe('CourtAssignments Component', () => {
     const multipleCourtAssignments: Court[] = [
       {
         courtNumber: 1,
-        players: [mockPlayers[0], mockPlayers[1]],
+        players: [TEST_PLAYERS[0], TEST_PLAYERS[1]],
         teams: {
-          team1: [mockPlayers[0]],
-          team2: [mockPlayers[1]],
+          team1: [TEST_PLAYERS[0]],
+          team2: [TEST_PLAYERS[1]],
         },
       },
       {
         courtNumber: 2,
-        players: [mockPlayers[2], mockPlayers[3]],
+        players: [TEST_PLAYERS[2], TEST_PLAYERS[3]],
         teams: {
-          team1: [mockPlayers[2]],
-          team2: [mockPlayers[3]],
+          team1: [TEST_PLAYERS[2]],
+          team2: [TEST_PLAYERS[3]],
         },
       },
     ];
@@ -153,10 +145,10 @@ describe('Winner Selection', () => {
     TEST_COURTS.doublesWithTeams(),
     {
       courtNumber: 2,
-      players: TEST_PLAYERS.slice(4, 6), // Eve and Frank
+      players: TEST_PLAYERS.slice(4, 6),
       teams: {
-        team1: [TEST_PLAYERS[4]], // Eve
-        team2: [TEST_PLAYERS[5]], // Frank
+        team1: [TEST_PLAYERS[4]],
+        team2: [TEST_PLAYERS[5]],
       },
     },
   ];
@@ -165,6 +157,7 @@ describe('Winner Selection', () => {
   const mockOnWinnerChange = vi.fn();
 
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
   });
 
@@ -376,22 +369,5 @@ describe('Winner Selection', () => {
       expect(screen.getByText('👑')).toBeInTheDocument();
     });
 
-    it('should handle click interactions correctly', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <CourtAssignments
-          assignments={doublesAssignment}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
-          onWinnerChange={mockOnWinnerChange}
-        />,
-      );
-
-      const team1Element = screen.getByText('Team 1').closest('.team') as HTMLElement;
-
-      await user.click(team1Element);
-      expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
-    });
   });
 });

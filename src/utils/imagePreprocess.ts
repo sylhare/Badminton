@@ -21,10 +21,10 @@ function deskew(cv: any, srcGray: any): any {
   lines.delete();
   edges.delete();
 
-  if (!count) return srcGray; // nothing detected, skip
+  if (!count) return srcGray;
 
   const angle = angleSum / count;
-  if (Math.abs(angle) < 0.5) return srcGray; // negligible
+  if (Math.abs(angle) < 0.5) return srcGray;
 
   const rotMat = cv.getRotationMatrix2D(
     new cv.Point(srcGray.cols / 2, srcGray.rows / 2),

@@ -6,6 +6,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import CourtSettings from './components/CourtSettings';
 import CourtAssignments from './components/CourtAssignments';
+import ManualCourtSelection from './components/ManualCourtSelection';
 import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
@@ -17,6 +18,10 @@ export interface Player {
   isPresent: boolean;
 }
 
+export interface ManualCourtSelection {
+  players: Player[];
+}
+
 export interface Court {
   courtNumber: number;
   players: Player[];
@@ -24,15 +29,16 @@ export interface Court {
     team1: Player[]
     team2: Player[]
   };
-  winner?: 1 | 2; // 1 for team1, 2 for team2
+  winner?: 1 | 2;
 }
 
 function App(): React.ReactElement {
   const loadedState = loadAppState();
-  const [players, setPlayers] = useState<Player[]>(loadedState.players || []);
-  const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts || 4);
-  const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments || []);
-  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps || new Set());
+  const [players, setPlayers] = useState<Player[]>(loadedState.players ?? []);
+  const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
+  const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
+  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
+  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
 
   const isInitialLoad = useRef(true);
 
@@ -55,14 +61,15 @@ function App(): React.ReactElement {
   useEffect(() => {
     if (isInitialLoad.current) return;
 
-    saveAppState({
-      players,
-      numberOfCourts,
-      assignments,
-      collapsedSteps,
-    });
+      saveAppState({
+        players,
+        numberOfCourts,
+        assignments,
+        collapsedSteps,
+        manualCourt: manualCourtSelection,
+      });
     CourtAssignmentEngine.saveState();
-  }, [players, numberOfCourts, assignments, collapsedSteps]);
+    }, [players, numberOfCourts, assignments, collapsedSteps]);
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
     const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
@@ -113,6 +120,7 @@ function App(): React.ReactElement {
     setPlayers([]);
     setAssignments([]);
     setCollapsedSteps(new Set());
+    setManualCourtSelection(null);
     CourtAssignmentEngine.resetHistory();
     setTimeout(() => clearAllStoredState(), 0);
   };
@@ -132,9 +140,17 @@ function App(): React.ReactElement {
   const generateAssignments = () => {
     recordCurrentWins();
     CourtAssignmentEngine.clearCurrentSession();
-    const courts = generateCourtAssignments(players, numberOfCourts);
+    const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
+    const courts = generateCourtAssignments(players, numberOfCourts, manualCourtSelection || undefined);
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
+    setManualCourtSelection(null);
+    courts.forEach(court => {
+      if (court.courtNumber === 1 && hadManualSelection) {
+        (court as any).wasManuallyAssigned = true;
+      }
+    });
+    setAssignments(courts);
   };
 
   const handleWinnerChange = (courtNumber: number, winner: 1 | 2 | undefined) => {
@@ -197,11 +213,17 @@ function App(): React.ReactElement {
         {assignments.length > 0 && (
           <div className={`step ${collapsedSteps.has(4) ? 'collapsed' : ''}`}>
             <h2 onClick={() => toggleStep(4)}>Court Assignments</h2>
+            <ManualCourtSelection
+              players={players}
+              onSelectionChange={setManualCourtSelection}
+              currentSelection={manualCourtSelection}
+            />
             <CourtAssignments
               assignments={assignments}
               benchedPlayers={getBenchedPlayers(assignments, players)}
               onGenerateNewAssignments={generateAssignments}
               onWinnerChange={handleWinnerChange}
+              hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
             />
           </div>
         )}

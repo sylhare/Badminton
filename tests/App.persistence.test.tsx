@@ -38,7 +38,7 @@ describe('App Persistence Integration', () => {
       expect(screen.getByText('Diana')).toBeInTheDocument();
 
       const checkboxes = screen.getAllByRole('checkbox');
-      await user.click(checkboxes[1]); // Toggle Bob as absent
+      await user.click(checkboxes[1]);
 
       unmount();
 
@@ -50,14 +50,14 @@ describe('App Persistence Integration', () => {
       expect(screen.getByText('Diana')).toBeInTheDocument();
 
       const restoredCheckboxes = screen.getAllByRole('checkbox');
-      expect(restoredCheckboxes[0]).toBeChecked(); // Alice should be present
-      expect(restoredCheckboxes[1]).not.toBeChecked(); // Bob should be absent
-      expect(restoredCheckboxes[2]).toBeChecked(); // Charlie should be present
-      expect(restoredCheckboxes[3]).toBeChecked(); // Diana should be present
+      expect(restoredCheckboxes[0]).toBeChecked();
+      expect(restoredCheckboxes[1]).not.toBeChecked();
+      expect(restoredCheckboxes[2]).toBeChecked();
+      expect(restoredCheckboxes[3]).toBeChecked();
 
-      expect(screen.getByText('3')).toBeInTheDocument(); // Present count
-      expect(screen.getByText('1')).toBeInTheDocument(); // Absent count
-      expect(screen.getByText('4')).toBeInTheDocument(); // Total count
+      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText('4')).toBeInTheDocument();
     });
 
     it.skip('should persist court settings across app reload', async () => {
@@ -110,7 +110,7 @@ describe('App Persistence Integration', () => {
       const winnerRadios = screen.queryAllByRole('radio');
       if (winnerRadios.length > 0) {
         await act(async () => {
-          await user.click(winnerRadios[0]); // Click first winner radio
+          await user.click(winnerRadios[0]);
         });
       }
 

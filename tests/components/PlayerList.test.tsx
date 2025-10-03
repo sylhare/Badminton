@@ -50,9 +50,9 @@ describe('PlayerList Component', () => {
       />,
     );
 
-    expect(screen.getByText('2')).toBeInTheDocument(); // Present count
-    expect(screen.getByText('1')).toBeInTheDocument(); // Absent count
-    expect(screen.getByText('3')).toBeInTheDocument(); // Total count
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 
   it('calls onPlayerToggle when checkbox is clicked', async () => {
