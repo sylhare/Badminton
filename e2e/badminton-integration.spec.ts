@@ -173,4 +173,60 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
     await expect(page.locator('.player-list')).toHaveCount(0);
     await expect(page.getByTestId('player-stats')).toHaveCount(0);
   });
+
+  test('App resilience after session data loss', async ({ page }) => {
+    const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+    await page.goto(targetUrl);
+
+    const bulkTextarea = page.getByTestId('bulk-input');
+    await bulkTextarea.fill('Alice\nBob\nCharlie\nDiana');
+    await page.getByTestId('add-bulk-button').click();
+
+    await expect(page.getByTestId('stats-total-count')).toHaveText('4');
+
+    const generateButton = page.getByTestId('generate-assignments-button');
+    await generateButton.click();
+
+    await expect(page.locator('[data-testid^="court-"]')).toHaveCount(1);
+
+    const firstTeam = page.locator('.team-clickable').first();
+    await firstTeam.click();
+    await page.waitForTimeout(300);
+
+    await expect(page.locator('.crown')).toHaveCount(1); // Only one crown per team
+
+    const generateNewButton = page.getByTestId('generate-new-assignments-button');
+    await generateNewButton.click();
+
+    const leaderboard = page.locator('h2').filter({ hasText: 'Leaderboard' });
+    await expect(leaderboard).toBeVisible();
+
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
+
+    await page.reload();
+
+    await expect(page).toHaveTitle(/Badminton/);
+    await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
+
+    await expect(page.getByTestId('player-stats')).toHaveCount(0);
+    await expect(page.locator('.player-list')).toHaveCount(0);
+
+    const singlePlayerInput = page.getByTestId('single-player-input');
+    await singlePlayerInput.fill('New Player');
+    await page.getByTestId('add-single-button').click();
+
+    await expect(page.getByTestId('stats-total-count')).toHaveText('1');
+    await expect(page.getByTestId('stats-present-count')).toHaveText('1');
+
+    await singlePlayerInput.fill('Second Player');
+    await page.getByTestId('add-single-button').click();
+
+    const newGenerateButton = page.getByTestId('generate-assignments-button');
+    await expect(newGenerateButton).toBeVisible();
+    await newGenerateButton.click();
+
+    await expect(page.locator('[data-testid^="court-"]')).toHaveCount(1);
+  });
 });
