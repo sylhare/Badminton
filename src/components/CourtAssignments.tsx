@@ -12,6 +12,7 @@ interface CourtAssignmentsProps {
   benchedPlayers: Player[];
   onGenerateNewAssignments: () => void;
   onWinnerChange?: (courtNumber: number, winner: 1 | 2 | undefined) => void;
+  hasManualCourtSelection?: boolean;
 }
 
 const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
@@ -19,6 +20,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   benchedPlayers,
   onGenerateNewAssignments,
   onWinnerChange,
+  hasManualCourtSelection = false,
 }) => {
   const { trackCourtAction } = useAnalytics();
   const handleTeamClick = (courtNumber: number, teamNumber: number) => {
@@ -136,11 +138,25 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
   const renderCourt = (court: Court) => {
     const { teams } = court;
+    const isManualCourt = (court as any).wasManuallyAssigned || (hasManualCourtSelection && court.courtNumber === 1);
+
+    const renderCourtHeader = (matchType?: string) => (
+      <div className="court-header">
+        <h3>
+          Court {court.courtNumber}{matchType ? ` - ${matchType}` : ''}
+          {isManualCourt && (
+            <span className="manual-court-icon" title="Manually assigned court">
+              ⚙️
+            </span>
+          )}
+        </h3>
+      </div>
+    );
 
     if (!teams) {
       return (
         <div key={court.courtNumber} className="court-card" data-testid={`court-${court.courtNumber}`}>
-          <div className="court-header">Court {court.courtNumber}</div>
+          {renderCourtHeader()}
           <div className="singles-match">
             <div>Players on court:</div>
             <TeamPlayerList players={court.players} />
@@ -155,7 +171,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     if (isSingles) {
       return (
         <div key={court.courtNumber} className="court-card" data-testid={`court-${court.courtNumber}`}>
-          <div className="court-header">Court {court.courtNumber} - Singles</div>
+          {renderCourtHeader('Singles')}
           {renderSinglesMatch(court)}
         </div>
       );
@@ -164,7 +180,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     if (isDoubles) {
       return (
         <div key={court.courtNumber} className="court-card" data-testid={`court-${court.courtNumber}`}>
-          <div className="court-header">Court {court.courtNumber} - Doubles</div>
+          {renderCourtHeader('Doubles')}
           {renderDoublesMatch(court)}
         </div>
       );
@@ -172,7 +188,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
     return (
       <div key={court.courtNumber} className="court-card" data-testid={`court-${court.courtNumber}`}>
-        <div className="court-header">Court {court.courtNumber}</div>
+        {renderCourtHeader()}
         {renderGenericCourt(court)}
       </div>
     );
