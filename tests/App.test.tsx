@@ -85,8 +85,8 @@ describe('App', () => {
       });
 
       const playerItems = screen.getAllByRole('checkbox');
-      const aliceCheckbox = playerItems[0]; // First player (Alice)
-      const bobCheckbox = playerItems[1];   // Second player (Bob)
+      const aliceCheckbox = playerItems[0];
+      const bobCheckbox = playerItems[1];
       await act(async () => {
         await user.click(aliceCheckbox);
         await user.click(bobCheckbox);
@@ -159,7 +159,7 @@ describe('App', () => {
 
       it('updates stats when toggling a single player off', async () => {
         const checkboxes = screen.getAllByRole('checkbox');
-        await user.click(checkboxes[0]); // Toggle off Alice
+        await user.click(checkboxes[0]);
 
         expect(screen.getByText('Alice')).toBeInTheDocument();
         expect(checkboxes[0]).not.toBeChecked();
@@ -172,9 +172,9 @@ describe('App', () => {
       it('keeps all players visible when all are toggled off', async () => {
         const checkboxes = screen.getAllByRole('checkbox');
 
-        await user.click(checkboxes[0]); // Alice
-        await user.click(checkboxes[1]); // Bob
-        await user.click(checkboxes[2]); // Charlie
+        await user.click(checkboxes[0]);
+        await user.click(checkboxes[1]);
+        await user.click(checkboxes[2]);
 
         expect(screen.getByText('Alice')).toBeInTheDocument();
         expect(screen.getByText('Bob')).toBeInTheDocument();
@@ -221,8 +221,8 @@ describe('App', () => {
 
       it('hides court settings when all players are toggled off', async () => {
         const checkboxes = screen.getAllByRole('checkbox');
-        await user.click(checkboxes[0]); // Alice
-        await user.click(checkboxes[1]); // Bob
+        await user.click(checkboxes[0]);
+        await user.click(checkboxes[1]);
 
         expect(screen.getByText('Step 2: Manage Players')).toBeInTheDocument();
         expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -233,8 +233,8 @@ describe('App', () => {
       it('shows court settings again when at least one player is toggled on', async () => {
         const checkboxes = screen.getAllByRole('checkbox');
 
-        await user.click(checkboxes[0]); // Alice
-        await user.click(checkboxes[1]); // Bob
+        await user.click(checkboxes[0]);
+        await user.click(checkboxes[1]);
 
         await user.click(checkboxes[0]);
 
@@ -252,7 +252,7 @@ describe('App', () => {
 
       it('keeps toggled-off players in the list', async () => {
         const checkboxes = screen.getAllByRole('checkbox');
-        await user.click(checkboxes[0]); // Toggle off Alice
+        await user.click(checkboxes[0]);
 
         expect(screen.getByText('Alice')).toBeInTheDocument();
         expect(checkboxes[0]).not.toBeChecked();
@@ -260,7 +260,7 @@ describe('App', () => {
 
       it('removes deleted players completely from the list', async () => {
         const removeButtons = screen.getAllByTitle('Delete player permanently');
-        await user.click(removeButtons[1]); // Delete Bob
+        await user.click(removeButtons[1]);
 
         expect(screen.queryByText('Bob')).not.toBeInTheDocument();
         expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -269,7 +269,7 @@ describe('App', () => {
 
       it('updates player counts and UI elements after removal', async () => {
         const removeButtons = screen.getAllByTitle('Delete player permanently');
-        await user.click(removeButtons[1]); // Delete Bob
+        await user.click(removeButtons[1]);
 
         expect(screen.getAllByRole('checkbox')).toHaveLength(2);
         expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(2);

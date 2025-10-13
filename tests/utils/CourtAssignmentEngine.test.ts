@@ -5,6 +5,7 @@ import {
   generateCourtAssignments,
   getBenchedPlayers,
 } from '../../src/utils/CourtAssignmentEngine';
+import type { ManualCourtSelection } from '../../src/components/ManualCourtSelection';
 import type { Court, Player } from '../../src/App';
 
 const testResetHistory = (): void => CourtAssignmentEngine.resetHistory();
@@ -49,8 +50,8 @@ describe('CourtAssignment Engine – core behaviour', () => {
   });
 
   it('assigns everyone when capacity not exceeded', () => {
-    const players = mockPlayers(8); // two courts worth
-    const assignments = generateCourtAssignments(players, 4); // capacity 16
+    const players = mockPlayers(8);
+    const assignments = generateCourtAssignments(players, 4);
     const benched = getBenchedPlayers(assignments, players);
 
     expect(benched.length).toBe(0);
@@ -59,7 +60,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
   });
 
   it('never places 3 players on a court', () => {
-    const players = mockPlayers(14); // capacity 16
+    const players = mockPlayers(14);
     const assignments = generateCourtAssignments(players, 4);
     assignments.forEach(court => {
       expect([2, 4]).toContain(court.players.length);
@@ -67,7 +68,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
   });
 
   it('benched players rotate fairly (no repeats until everyone benched)', () => {
-    const players = mockPlayers(12); // capacity 8, so 4 bench each round
+    const players = mockPlayers(12);
     const numberOfCourts = 2;
     const rounds = 4;
     const benchHistory: Record<string, number> = {};
@@ -88,7 +89,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
   });
 
   it('statistical check: teammate pairs are reasonably balanced over many rounds', () => {
-    const players = mockPlayers(8);       // 2 courts of doubles each round
+    const players = mockPlayers(8);
     const numberOfCourts = 2;
     const rounds = 100;
 
@@ -131,7 +132,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
     it('should record wins for winning team players', () => {
       const players = mockPlayers(4);
       const courts: Court[] = [
-        createMockCourt(1, players, 1), // team1 wins
+        createMockCourt(1, players, 1),
       ];
 
       CourtAssignmentEngine.recordWins(courts);
@@ -147,7 +148,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
     it('should record wins for team2 when they win', () => {
       const players = mockPlayers(4);
       const courts: Court[] = [
-        createMockCourt(1, players, 2), // team2 wins
+        createMockCourt(1, players, 2),
       ];
 
       CourtAssignmentEngine.recordWins(courts);
@@ -163,7 +164,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
     it('should not record wins when no winner is set', () => {
       const players = mockPlayers(4);
       const courts: Court[] = [
-        createMockCourt(1, players), // no winner
+        createMockCourt(1, players),
       ];
 
       CourtAssignmentEngine.recordWins(courts);
@@ -175,8 +176,8 @@ describe('CourtAssignment Engine – core behaviour', () => {
     it('should accumulate wins across multiple courts', () => {
       const players = mockPlayers(8);
       const courts: Court[] = [
-        createMockCourt(1, players.slice(0, 4), 1), // P0, P1 win
-        createMockCourt(2, players.slice(4, 8), 2), // P6, P7 win
+        createMockCourt(1, players.slice(0, 4), 1),
+        createMockCourt(2, players.slice(4, 8), 2),
       ];
 
       CourtAssignmentEngine.recordWins(courts);
@@ -218,7 +219,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
         {
           courtNumber: 1,
           players,
-          winner: 1, // winner set but no teams structure
+          winner: 1,
         },
       ];
 
@@ -287,7 +288,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
         team1: [players[0], players[1]],
         team2: [players[2], players[3]],
       },
-      winner: 1, // team1 wins
+      winner: 1,
     };
 
     for (let i = 0; i < 50; i++) {
@@ -380,6 +381,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
       localStorage.setItem('badminton-court-engine-state', 'invalid-json');
 
       expect(() => CourtAssignmentEngine.loadState()).not.toThrow();
+
       const winCounts = CourtAssignmentEngine.getWinCounts();
       expect(winCounts.size).toBe(0);
     });
@@ -392,7 +394,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
         const courtsWithWinners: Court[] = assignments.map((court, index) => ({
           ...court,
-          winner: ((round + index) % 2 + 1) as 1 | 2, // Alternate winners
+          winner: ((round + index) % 2 + 1) as 1 | 2,
         }));
         CourtAssignmentEngine.recordWins(courtsWithWinners);
       }
@@ -670,7 +672,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             team1: [players[0], players[1]],
             team2: [players[2], players[3]],
           },
-          winner: 1, // Team 1 wins
+          winner: 1,
         },
       ];
 
@@ -695,7 +697,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             team1: [players[0], players[1]],
             team2: [players[2], players[3]],
           },
-          winner: 1, // Team 1 wins
+          winner: 1,
         },
         {
           courtNumber: 2,
@@ -704,7 +706,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             team1: [players[4], players[5]],
             team2: [players[6], players[7]],
           },
-          winner: 2, // Team 2 wins
+          winner: 2,
         },
       ];
 
@@ -786,7 +788,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
             team1: [players[0], players[1]],
             team2: [players[2], players[3]],
           },
-          winner: 1, // Team 1 wins
+          winner: 1,
         },
       ];
 
@@ -795,10 +797,10 @@ describe('CourtAssignment Engine – core behaviour', () => {
           courtNumber: 2,
           players: players,
           teams: {
-            team1: [players[0], players[2]], // Player 0 is in winning team again
+            team1: [players[0], players[2]],
             team2: [players[1], players[3]],
           },
-          winner: 1, // Team 1 wins again
+          winner: 1,
         },
       ];
 
@@ -815,6 +817,223 @@ describe('CourtAssignment Engine – core behaviour', () => {
       expect(winCounts.get(players[2].id)).toBe(1);
 
       expect(winCounts.get(players[3].id) || 0).toBe(0);
+    });
+  });
+
+  describe('Manual Court Selection', () => {
+    beforeEach(() => {
+      testResetHistory();
+    });
+
+    it('creates manual court with 2 players for singles', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+
+      const manualCourt = assignments[0];
+      expect(manualCourt.courtNumber).toBe(1);
+      expect(manualCourt.players).toEqual([players[0], players[1]]);
+      expect(manualCourt.teams).toEqual({
+        team1: [players[0]],
+        team2: [players[1]],
+      });
+    });
+
+    it('creates manual court with 3 players for singles with one waiting', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1], players[2]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+
+      const manualCourt = assignments[0];
+      expect(manualCourt.courtNumber).toBe(1);
+      expect(manualCourt.players).toEqual([players[0], players[1], players[2]]);
+      expect(manualCourt.teams).toEqual({
+        team1: [players[0]],
+        team2: [players[1]],
+      });
+    });
+
+    it('creates manual court with 4 players for doubles', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1], players[2], players[3]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+
+      const manualCourt = assignments[0];
+      expect(manualCourt.courtNumber).toBe(1);
+      expect(manualCourt.players).toEqual([players[0], players[1], players[2], players[3]]);
+      expect(manualCourt.teams).toBeDefined();
+      expect(manualCourt.teams!.team1).toHaveLength(2);
+      expect(manualCourt.teams!.team2).toHaveLength(2);
+    });
+
+    it('excludes manually selected players from automatic assignment', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1], players[2], players[3]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+
+      const autoCourt = assignments[1];
+      const autoPlayerIds = autoCourt.players.map(p => p.id);
+
+      manualSelection.players.forEach(manualPlayer => {
+        expect(autoPlayerIds).not.toContain(manualPlayer.id);
+      });
+    });
+
+    it('assigns remaining players to courts starting from court 2', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+      expect(assignments[0].courtNumber).toBe(1);
+      expect(assignments[1].courtNumber).toBe(2);
+    });
+
+    it('works with only one remaining court available', () => {
+      const players = mockPlayers(6);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+      expect(assignments[0].courtNumber).toBe(1);
+      expect(assignments[1].courtNumber).toBe(2);
+      expect(assignments[1].players).toHaveLength(4);
+    });
+
+    it('ignores manual selection with only 1 player', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+      expect(assignments[0].courtNumber).toBe(1);
+      expect(assignments[1].courtNumber).toBe(2);
+
+      const allAssignedPlayers = assignments.flatMap(court => court.players);
+      expect(allAssignedPlayers).toHaveLength(8);
+    });
+
+    it('ignores manual selection with more than 4 players', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1], players[2], players[3], players[4]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+      expect(assignments[0].courtNumber).toBe(1);
+      expect(assignments[1].courtNumber).toBe(2);
+    });
+
+    it('filters out absent players from manual selection', () => {
+      const players = mockPlayers(8);
+      players[1].isPresent = false;
+
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1], players[2]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+
+      const manualCourt = assignments[0];
+      expect(manualCourt.players).toHaveLength(2);
+      expect(manualCourt.players).toEqual([players[0], players[2]]);
+      expect(manualCourt.players.map(p => p.id)).not.toContain(players[1].id);
+    });
+
+    it('works with empty manual selection', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(assignments).toHaveLength(2);
+      expect(assignments[0].courtNumber).toBe(1);
+      expect(assignments[1].courtNumber).toBe(2);
+    });
+
+    it('works with null manual selection', () => {
+      const players = mockPlayers(8);
+
+      const assignments = generateCourtAssignments(players, 2, undefined);
+
+      expect(assignments).toHaveLength(2);
+      expect(assignments[0].courtNumber).toBe(1);
+      expect(assignments[1].courtNumber).toBe(2);
+    });
+
+    it('properly handles benching with manual selection', () => {
+      const players = mockPlayers(10);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1], players[2], players[3]],
+      };
+
+      const assignments = generateCourtAssignments(players, 2, manualSelection);
+      const benched = getBenchedPlayers(assignments, players);
+
+      expect(assignments).toHaveLength(2);
+      expect(benched).toHaveLength(2);
+
+      const benchedIds = benched.map(p => p.id);
+      manualSelection.players.forEach(player => {
+        expect(benchedIds).not.toContain(player.id);
+      });
+    });
+
+    it('maintains court assignment history with manual selection', () => {
+      const players = mockPlayers(8);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[0], players[1], players[2], players[3]],
+      };
+
+      const courts1 = generateCourtAssignments(players, 2, manualSelection);
+
+      const mockCourtsWithWinners = courts1.map(court => ({
+        ...court,
+        winner: 1 as const,
+      }));
+      CourtAssignmentEngine.recordWins(mockCourtsWithWinners);
+
+      const courts2 = generateCourtAssignments(players, 2, manualSelection);
+
+      expect(courts2).toHaveLength(2);
+
+      const winCounts = CourtAssignmentEngine.getWinCounts();
+      expect(winCounts.size).toBeGreaterThan(0);
     });
   });
 });
