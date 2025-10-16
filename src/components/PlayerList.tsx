@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Trash, ArrowClockwise } from '@phosphor-icons/react';
 
 import { Player } from '../App';
 
@@ -9,6 +10,7 @@ interface PlayerListProps {
   onPlayerToggle: (playerId: string) => void;
   onRemovePlayer: (playerId: string) => void;
   onClearAllPlayers: () => void;
+  onResetAlgorithm: () => void;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({
@@ -16,8 +18,10 @@ const PlayerList: React.FC<PlayerListProps> = ({
   onPlayerToggle,
   onRemovePlayer,
   onClearAllPlayers,
+  onResetAlgorithm,
 }) => {
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showResetAlgorithmModal, setShowResetAlgorithmModal] = useState(false);
 
   const presentCount = players.filter(p => p.isPresent).length;
   const totalCount = players.length;
@@ -25,6 +29,11 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const handleClearAll = () => {
     onClearAllPlayers();
     setShowClearModal(false);
+  };
+
+  const handleResetAlgorithm = () => {
+    onResetAlgorithm();
+    setShowResetAlgorithmModal(false);
   };
 
   return (
@@ -77,18 +86,26 @@ const PlayerList: React.FC<PlayerListProps> = ({
       </div>
 
       {totalCount > 0 && (
-        <button
-          onClick={() => setShowClearModal(true)}
-          className="clear-all-button"
-          data-testid="clear-all-button"
-          title="Remove all players and reset scores"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z" />
-            <path d="M9 8V17H11V8H9ZM13 8V17H15V8H13Z" />
-          </svg>
-          Clear All Players
-        </button>
+        <div className="player-actions">
+          <button
+            onClick={() => setShowResetAlgorithmModal(true)}
+            className="reset-algorithm-button"
+            data-testid="reset-algorithm-button"
+            title="Reset who played with who history (keeps all players)"
+          >
+            <ArrowClockwise size={16} />
+            Reset Algorithm
+          </button>
+          <button
+            onClick={() => setShowClearModal(true)}
+            className="clear-all-button"
+            data-testid="clear-all-button"
+            title="Remove all players and reset scores"
+          >
+            <Trash size={16} />
+            Clear All Players
+          </button>
+        </div>
       )}
 
       <ConfirmModal
@@ -100,6 +117,17 @@ const PlayerList: React.FC<PlayerListProps> = ({
         onConfirm={handleClearAll}
         onCancel={() => setShowClearModal(false)}
         isDestructive={true}
+      />
+
+      <ConfirmModal
+        isOpen={showResetAlgorithmModal}
+        title="Reset Algorithm"
+        message="Are you sure you want to reset the algorithm's memory? This will clear all records of who played with who, bench counts, and win/loss history. Players will remain but pairing preferences will be reset."
+        confirmText="Reset Algorithm"
+        cancelText="Cancel"
+        onConfirm={handleResetAlgorithm}
+        onCancel={() => setShowResetAlgorithmModal(false)}
+        isDestructive={false}
       />
     </div>
   );
