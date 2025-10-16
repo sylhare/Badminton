@@ -125,6 +125,10 @@ function App(): React.ReactElement {
     setTimeout(() => clearAllStoredState(), 0);
   };
 
+  const handleResetAlgorithm = () => {
+    CourtAssignmentEngine.resetHistory();
+  };
+
   const toggleStep = (stepNumber: number) => {
     setCollapsedSteps(prev => {
       const next = new Set(prev);
@@ -194,6 +198,7 @@ function App(): React.ReactElement {
               onPlayerToggle={handlePlayerToggle}
               onRemovePlayer={handleRemovePlayer}
               onClearAllPlayers={handleClearAllPlayers}
+              onResetAlgorithm={handleResetAlgorithm}
             />
           </div>
         )}
