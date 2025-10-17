@@ -127,6 +127,7 @@ function App(): React.ReactElement {
 
   const handleResetAlgorithm = () => {
     CourtAssignmentEngine.resetHistory();
+    CourtAssignmentEngine.saveState();
   };
 
   const toggleStep = (stepNumber: number) => {

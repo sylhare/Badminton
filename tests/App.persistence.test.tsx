@@ -291,4 +291,157 @@ describe('App Persistence Integration', () => {
       expect(setItemSpy).toHaveBeenCalled();
     });
   });
+
+  describe('Reset Algorithm persistence', () => {
+    it('should persist reset algorithm state across app reload', async () => {
+      const { unmount } = render(<App />);
+
+      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      await act(async () => {
+        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
+        await user.click(screen.getByText('Add All Players'));
+      });
+
+      await act(async () => {
+        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+      const mockCourts = [{
+        courtNumber: 1,
+        players: [
+          { id: 'alice', name: 'Alice', isPresent: true },
+          { id: 'bob', name: 'Bob', isPresent: true },
+          { id: 'charlie', name: 'Charlie', isPresent: true },
+          { id: 'diana', name: 'Diana', isPresent: true },
+        ],
+        teams: {
+          team1: [
+            { id: 'alice', name: 'Alice', isPresent: true },
+            { id: 'bob', name: 'Bob', isPresent: true },
+          ],
+          team2: [
+            { id: 'charlie', name: 'Charlie', isPresent: true },
+            { id: 'diana', name: 'Diana', isPresent: true },
+          ],
+        },
+        winner: 1 as 1 | 2,
+      }];
+
+      CourtAssignmentEngine.recordWins(mockCourts);
+
+      const winCountsBeforeReset = CourtAssignmentEngine.getWinCounts();
+      expect(winCountsBeforeReset.size).toBeGreaterThan(0);
+
+      const resetButton = screen.getByTestId('reset-algorithm-button');
+      await act(async () => {
+        await user.click(resetButton);
+      });
+
+      const confirmButton = screen.getByTestId('confirm-modal-confirm');
+      await act(async () => {
+        await user.click(confirmButton);
+      });
+
+      expect(screen.getByTestId('stats-present-count')).toHaveTextContent('4');
+      const playerElements = screen.getAllByText(/Alice|Bob|Charlie|Diana/);
+      expect(playerElements.length).toBeGreaterThanOrEqual(4);
+
+      const winCountsAfterReset = CourtAssignmentEngine.getWinCounts();
+      expect(winCountsAfterReset.size).toBe(0);
+
+      unmount();
+      render(<App />);
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(screen.getByTestId('stats-present-count')).toHaveTextContent('4');
+      const restoredPlayerElements = screen.getAllByText(/Alice|Bob|Charlie|Diana/);
+      expect(restoredPlayerElements.length).toBeGreaterThanOrEqual(4);
+
+      const restoredWinCounts = CourtAssignmentEngine.getWinCounts();
+      expect(restoredWinCounts.size).toBe(0);
+    });
+
+    it('should save algorithm reset state immediately when reset button is clicked', async () => {
+      render(<App />);
+
+      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      await act(async () => {
+        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
+        await user.click(screen.getByText('Add All Players'));
+      });
+      const mockCourts = [{
+        courtNumber: 1,
+        players: [
+          { id: 'alice', name: 'Alice', isPresent: true },
+          { id: 'bob', name: 'Bob', isPresent: true },
+        ],
+        teams: {
+          team1: [{ id: 'alice', name: 'Alice', isPresent: true }],
+          team2: [{ id: 'bob', name: 'Bob', isPresent: true }],
+        },
+        winner: 1 as 1 | 2,
+      }];
+
+      CourtAssignmentEngine.recordWins(mockCourts);
+      expect(CourtAssignmentEngine.getWinCounts().size).toBeGreaterThan(0);
+
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+
+      const resetButton = screen.getByTestId('reset-algorithm-button');
+      await act(async () => {
+        await user.click(resetButton);
+      });
+
+      const confirmButton = screen.getByTestId('confirm-modal-confirm');
+      await act(async () => {
+        await user.click(confirmButton);
+      });
+
+      expect(setItemSpy).toHaveBeenCalledWith(
+        'badminton-court-engine-state',
+        expect.any(String)
+      );
+
+      const lastEngineCall = setItemSpy.mock.calls.find(call => 
+        call[0] === 'badminton-court-engine-state'
+      );
+      expect(lastEngineCall).toBeTruthy();
+
+      const savedEngineState = JSON.parse(lastEngineCall![1]);
+      expect(savedEngineState.winCountMap).toEqual({});
+      expect(savedEngineState.teammateCountMap).toEqual({});
+      expect(savedEngineState.opponentCountMap).toEqual({});
+
+      setItemSpy.mockRestore();
+    });
+
+    it('should handle reset algorithm when no algorithm state exists', async () => {
+      render(<App />);
+
+      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      await act(async () => {
+        await user.type(bulkInput, 'Alice\nBob');
+        await user.click(screen.getByText('Add All Players'));
+      });
+
+      expect(CourtAssignmentEngine.getWinCounts().size).toBe(0);
+
+      const resetButton = screen.getByTestId('reset-algorithm-button');
+      await act(async () => {
+        await user.click(resetButton);
+      });
+
+      const confirmButton = screen.getByTestId('confirm-modal-confirm');
+      await act(async () => {
+        await user.click(confirmButton);
+      });
+
+      expect(screen.getByTestId('stats-present-count')).toHaveTextContent('2');
+      const finalPlayerElements = screen.getAllByText(/Alice|Bob/);
+      expect(finalPlayerElements.length).toBeGreaterThanOrEqual(2);
+      expect(CourtAssignmentEngine.getWinCounts().size).toBe(0);
+    });
+  });
 });
