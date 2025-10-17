@@ -401,11 +401,11 @@ describe('App Persistence Integration', () => {
 
       expect(setItemSpy).toHaveBeenCalledWith(
         'badminton-court-engine-state',
-        expect.any(String)
+        expect.any(String),
       );
 
-      const lastEngineCall = setItemSpy.mock.calls.find(call => 
-        call[0] === 'badminton-court-engine-state'
+      const lastEngineCall = setItemSpy.mock.calls.find(call =>
+        call[0] === 'badminton-court-engine-state',
       );
       expect(lastEngineCall).toBeTruthy();
 
