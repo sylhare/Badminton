@@ -1456,3 +1456,256 @@ h1 {
     background: #f7fafc;
 }
 
+/* Floating Action Button Styles */
+.floating-action-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 1000;
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-action-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.floating-action-btn:active {
+    transform: scale(0.95);
+}
+
+.fab-icon {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Mobile Drawer Styles */
+.mobile-drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1001;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.mobile-drawer {
+    width: 100%;
+    max-width: 100%;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 0;
+    border-bottom: 1px solid #e2e8f0;
+    background: white;
+    position: sticky;
+    top: 0;
+}
+
+.drawer-header h3 {
+    margin: 0;
+    color: #2d3748;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #718096;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: #f7fafc;
+    color: #2d3748;
+}
+
+.drawer-content {
+    padding: 24px;
+}
+
+.drawer-section {
+    margin-bottom: 32px;
+}
+
+.drawer-section:last-child {
+    margin-bottom: 0;
+}
+
+.drawer-section h4 {
+    margin: 0 0 16px 0;
+    color: #4a5568;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.step-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+    text-align: left;
+}
+
+.step-button:hover {
+    background: #e2e8f0;
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+}
+
+.step-icon {
+    font-size: 1.25rem;
+}
+
+.step-title {
+    color: #2d3748;
+    font-weight: 500;
+}
+
+.actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+    text-align: left;
+}
+
+.action-button:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+}
+
+.action-button.destructive {
+    border-color: #feb2b2;
+}
+
+.action-button.destructive:hover {
+    border-color: #fc8181;
+    background: #fed7d7;
+}
+
+.action-icon {
+    font-size: 1.25rem;
+}
+
+.action-label {
+    color: #2d3748;
+    font-weight: 500;
+}
+
+.action-button.destructive .action-label {
+    color: #c53030;
+}
+
+/* Responsive Styles */
+@media (max-width: 767px) {
+    .desktop-steps { 
+        display: none; 
+    }
+    
+    .mobile-steps { 
+        display: block; 
+    }
+    
+    .floating-action-btn { 
+        display: flex; 
+    }
+}
+
+@media (min-width: 768px) {
+    .desktop-steps { 
+        display: block; 
+    }
+    
+    .mobile-steps { 
+        display: none; 
+    }
+    
+    .floating-action-btn { 
+        display: none; 
+    }
+    
+    .mobile-drawer-overlay {
+        display: none;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+    }
+    to { 
+        opacity: 1; 
+    }
+}
+
+@keyframes slideUp {
+    from { 
+        transform: translateY(100%); 
+    }
+    to { 
+        transform: translateY(0); 
+    }
+}
+
