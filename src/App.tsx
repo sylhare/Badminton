@@ -128,15 +128,18 @@ function App(): React.ReactElement {
     CourtAssignmentEngine.clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
     const courts = generateCourtAssignments(players, numberOfCourts, manualCourtSelection || undefined);
+
+    if (hadManualSelection) {
+      courts.forEach(court => {
+        if (court.courtNumber === 1) {
+          court.wasManuallyAssigned = true;
+        }
+      });
+    }
+
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
     setManualCourtSelection(null);
-    courts.forEach(court => {
-      if (court.courtNumber === 1 && hadManualSelection) {
-        (court as any).wasManuallyAssigned = true;
-      }
-    });
-    setAssignments(courts);
   };
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {

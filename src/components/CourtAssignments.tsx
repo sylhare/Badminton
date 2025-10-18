@@ -196,12 +196,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
   return (
     <div>
-      {onWinnerChange && (
-        <div className="winner-instructions">
-          💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the winning
-          team. Click again to remove the winner.
-        </div>
-      )}
       <div className="courts-grid">
         {assignments.map(renderCourt)}
       </div>
@@ -229,6 +223,13 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           🎲 Generate New Assignments
         </button>
       </div>
+
+      {onWinnerChange && (
+        <div className="winner-instructions">
+          💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the winning
+          team. Click again to remove the winner.
+        </div>
+      )}
     </div>
   );
 };
