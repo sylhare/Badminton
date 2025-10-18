@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { Player } from '../App';
+import type { Player } from '../types';
 
 interface LeaderboardProps {
   players: Player[];

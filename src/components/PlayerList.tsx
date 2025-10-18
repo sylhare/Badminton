@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Trash, ArrowClockwise } from '@phosphor-icons/react';
 
-import { Player } from '../App';
+import type { Player } from '../types';
 
 import ConfirmModal from './ConfirmModal';
 

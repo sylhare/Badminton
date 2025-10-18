@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Court, Player } from '../App';
+import type { Court, Player, WinnerSelection } from '../types';
 import { triggerConfetti } from '../utils/confetti';
 import { useAnalytics } from '../hooks/useAnalytics';
 
@@ -11,7 +11,7 @@ interface CourtAssignmentsProps {
   assignments: Court[];
   benchedPlayers: Player[];
   onGenerateNewAssignments: () => void;
-  onWinnerChange?: (courtNumber: number, winner: 1 | 2 | undefined) => void;
+  onWinnerChange?: (courtNumber: number, winner: WinnerSelection) => void;
   hasManualCourtSelection?: boolean;
 }
 

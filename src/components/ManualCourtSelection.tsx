@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 
-import type { Player } from '../App';
-
-export interface ManualCourtSelection {
-  players: Player[];
-}
+import type { Player, ManualCourtSelection } from '../types';
 
 interface ManualCourtSelectionProps {
   players: Player[];
