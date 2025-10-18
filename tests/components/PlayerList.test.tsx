@@ -12,6 +12,7 @@ describe('PlayerList Component', () => {
   const mockToggle = vi.fn();
   const mockRemove = vi.fn();
   const mockClearAll = vi.fn();
+  const mockResetAlgorithm = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,6 +27,7 @@ describe('PlayerList Component', () => {
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
         onClearAllPlayers={mockClearAll}
+        onResetAlgorithm={mockResetAlgorithm}
       />,
     );
 
@@ -47,6 +49,7 @@ describe('PlayerList Component', () => {
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
         onClearAllPlayers={mockClearAll}
+        onResetAlgorithm={mockResetAlgorithm}
       />,
     );
 
@@ -64,6 +67,7 @@ describe('PlayerList Component', () => {
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
         onClearAllPlayers={mockClearAll}
+        onResetAlgorithm={mockResetAlgorithm}
       />,
     );
 
@@ -85,6 +89,7 @@ describe('PlayerList Component', () => {
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
         onClearAllPlayers={mockClearAll}
+        onResetAlgorithm={mockResetAlgorithm}
       />,
     );
 
@@ -110,6 +115,7 @@ describe('PlayerList Component', () => {
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
         onClearAllPlayers={mockClearAll}
+        onResetAlgorithm={mockResetAlgorithm}
       />,
     );
 
@@ -132,6 +138,7 @@ describe('PlayerList Component', () => {
         onPlayerToggle={mockToggle}
         onRemovePlayer={mockRemove}
         onClearAllPlayers={mockClearAll}
+        onResetAlgorithm={mockResetAlgorithm}
       />,
     );
 
@@ -151,6 +158,7 @@ describe('PlayerList Component', () => {
           onPlayerToggle={mockToggle}
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
         />,
       );
 
@@ -164,6 +172,7 @@ describe('PlayerList Component', () => {
           onPlayerToggle={mockToggle}
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
         />,
       );
 
@@ -179,6 +188,7 @@ describe('PlayerList Component', () => {
           onPlayerToggle={mockToggle}
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
         />,
       );
 
@@ -200,6 +210,7 @@ describe('PlayerList Component', () => {
           onPlayerToggle={mockToggle}
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
         />,
       );
 
@@ -223,6 +234,7 @@ describe('PlayerList Component', () => {
           onPlayerToggle={mockToggle}
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
         />,
       );
 
@@ -246,6 +258,7 @@ describe('PlayerList Component', () => {
           onPlayerToggle={mockToggle}
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
         />,
       );
 
@@ -270,11 +283,98 @@ describe('PlayerList Component', () => {
           onPlayerToggle={mockToggle}
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
         />,
       );
 
       const clearButton = screen.getByRole('button', { name: /clear all players/i });
       expect(clearButton).toHaveAttribute('title', 'Remove all players and reset scores');
+    });
+  });
+
+  describe('Reset Algorithm functionality', () => {
+    it('shows Reset Algorithm button when players exist', () => {
+      const players = createMockPlayers(2);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      expect(screen.getByTestId('reset-algorithm-button')).toBeInTheDocument();
+      expect(screen.getByText('Reset Algorithm')).toBeInTheDocument();
+    });
+
+    it('has proper tooltip on reset algorithm button', () => {
+      const players = createMockPlayers(1);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const resetButton = screen.getByTestId('reset-algorithm-button');
+      expect(resetButton).toHaveAttribute('title', 'Reset who played with who history (keeps all players)');
+    });
+
+    it('calls onResetAlgorithm when Reset Algorithm is confirmed', async () => {
+      const players = createMockPlayers(2);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const resetButton = screen.getByTestId('reset-algorithm-button');
+      await user.click(resetButton);
+
+      // Check that the confirmation modal appears
+      expect(screen.getByRole('heading', { name: 'Reset Algorithm' })).toBeInTheDocument();
+      expect(screen.getByText(/reset the algorithm's memory/)).toBeInTheDocument();
+
+      // Click confirm
+      const confirmButton = screen.getByTestId('confirm-modal-confirm');
+      await user.click(confirmButton);
+
+      expect(mockResetAlgorithm).toHaveBeenCalledOnce();
+    });
+
+    it('does not call onResetAlgorithm when Reset Algorithm is canceled', async () => {
+      const players = createMockPlayers(2);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const resetButton = screen.getByTestId('reset-algorithm-button');
+      await user.click(resetButton);
+
+      // Click cancel
+      const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+      await user.click(cancelButton);
+
+      expect(mockResetAlgorithm).not.toHaveBeenCalled();
     });
   });
 });

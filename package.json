@@ -19,6 +19,7 @@
     "remove-comments": "node script/remove_comments.cjs"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@techstark/opencv-js": "^4.11.0-release.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
