@@ -1,20 +1,4 @@
-import type { Player, Court, ManualCourtSelection } from '../App';
-
-interface AppState {
-  players: Player[];
-  numberOfCourts: number;
-  assignments: Court[];
-  collapsedSteps: number[];
-  manualCourt: ManualCourtSelection | null;
-}
-
-interface CourtEngineState {
-  benchCountMap: Record<string, number>;
-  teammateCountMap: Record<string, number>;
-  opponentCountMap: Record<string, number>;
-  winCountMap: Record<string, number>;
-  lossCountMap: Record<string, number>;
-}
+import type { Player, Court, ManualCourtSelection, AppState, CourtEngineState } from '../types';
 
 const STORAGE_KEYS = {
   APP_STATE: 'badminton-app-state',

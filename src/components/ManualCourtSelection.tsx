@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 
-import type { Player } from '../App';
-
-export interface ManualCourtSelection {
-  players: Player[];
-}
+import type { Player, ManualCourtSelection } from '../types';
 
 interface ManualCourtSelectionProps {
   players: Player[];
@@ -75,7 +71,7 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
         onClick={() => setIsExpanded(!isExpanded)}
         data-testid="manual-court-header"
       >
-        <h3>⚙️ Manual Court Assignment (Optional)</h3>
+        <h3>⚙️ Manual Court 1 Assignment (Optional)</h3>
         <div className="manual-court-toggle">
           {isExpanded ? '▼' : '▶'}
         </div>

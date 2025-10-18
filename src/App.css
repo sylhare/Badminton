@@ -774,6 +774,42 @@ h1 {
     cursor: not-allowed;
 }
 
+.player-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.reset-algorithm-button {
+    background: #3182ce;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reset-algorithm-button:hover {
+    background: #2c5aa0;
+}
+
+.reset-algorithm-button:disabled {
+    background: #cbd5e0;
+    color: #a0aec0;
+    cursor: not-allowed;
+}
+
+.clear-all-button {
+    margin-top: 0;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 10px;

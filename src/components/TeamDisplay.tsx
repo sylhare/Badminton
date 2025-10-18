@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Player } from '../App';
+import type { Player } from '../types';
 import { triggerConfetti } from '../utils/confetti';
 
 import TeamPlayerList from './TeamPlayerList';

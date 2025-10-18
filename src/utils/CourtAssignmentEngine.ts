@@ -1,4 +1,4 @@
-import type { Court, Player } from '../App';
+import type { Court, Player, ManualCourtSelection } from '../types';
 
 import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 
@@ -352,10 +352,6 @@ export class CourtAssignmentEngine {
     this._assignments = CourtAssignmentEngine.generate(this.players, this.numberOfCourts);
     return this._assignments;
   }
-}
-
-export interface ManualCourtSelection {
-  players: Player[];
 }
 
 export const generateCourtAssignments = (players: Player[], courts: number, manualCourt?: ManualCourtSelection): Court[] =>

@@ -27,7 +27,7 @@ describe('ManualCourtSelection Component', () => {
       );
 
       expect(screen.getByTestId('manual-court-header')).toBeInTheDocument();
-      expect(screen.getByText('⚙️ Manual Court Assignment (Optional)')).toBeInTheDocument();
+      expect(screen.getByText('⚙️ Manual Court 1 Assignment (Optional)')).toBeInTheDocument();
     });
 
     it('does not render when fewer than 2 present players', () => {

@@ -65,14 +65,14 @@ describe('App', () => {
       await act(async () => {
         await user.click(screen.getByText('🎲 Generate Random Assignments'));
       });
-      expect(screen.getByText(/Court.*1/)).toBeInTheDocument();
-      expect(screen.getByText(/Court.*2/)).toBeInTheDocument();
+      expect(screen.getByTestId('court-1')).toBeInTheDocument();
+      expect(screen.getByTestId('court-2')).toBeInTheDocument();
 
       await act(async () => {
         await user.click(screen.getByText('🎲 Generate New Assignments'));
       });
-      expect(screen.getByText(/Court.*1/)).toBeInTheDocument();
-      expect(screen.getByText(/Court.*2/)).toBeInTheDocument();
+      expect(screen.getByTestId('court-1')).toBeInTheDocument();
+      expect(screen.getByTestId('court-2')).toBeInTheDocument();
     });
 
     it('preserves player present/absent status across regenerations', async () => {
@@ -120,9 +120,9 @@ describe('App', () => {
         await user.click(screen.getByText('🎲 Generate Random Assignments'));
       });
 
-      expect(screen.getByText(/Court.*1/)).toBeInTheDocument();
-      expect(screen.getByText(/Court.*2/)).toBeInTheDocument();
-      expect(screen.queryByText(/Court.*3/)).not.toBeInTheDocument();
+      expect(screen.getByTestId('court-1')).toBeInTheDocument();
+      expect(screen.getByTestId('court-2')).toBeInTheDocument();
+      expect(screen.queryByTestId('court-3')).not.toBeInTheDocument();
 
       expect(screen.getByText('🪑 Bench (1 player)')).toBeInTheDocument();
 
