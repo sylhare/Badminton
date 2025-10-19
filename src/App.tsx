@@ -11,26 +11,7 @@ import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { saveAppState, loadAppState, clearAllStoredState } from './utils/storageUtils';
-
-export interface Player {
-  id: string;
-  name: string;
-  isPresent: boolean;
-}
-
-export interface ManualCourtSelection {
-  players: Player[];
-}
-
-export interface Court {
-  courtNumber: number;
-  players: Player[];
-  teams?: {
-    team1: Player[]
-    team2: Player[]
-  };
-  winner?: 1 | 2;
-}
+import type { Player, Court, ManualCourtSelection as ManualCourtSelectionType, WinnerSelection } from './types';
 
 function App(): React.ReactElement {
   const loadedState = loadAppState();
@@ -38,7 +19,7 @@ function App(): React.ReactElement {
   const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
-  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
+  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelectionType | null>(loadedState.manualCourt ?? null);
 
   const isInitialLoad = useRef(true);
 
@@ -125,6 +106,11 @@ function App(): React.ReactElement {
     setTimeout(() => clearAllStoredState(), 0);
   };
 
+  const handleResetAlgorithm = () => {
+    CourtAssignmentEngine.resetHistory();
+    CourtAssignmentEngine.saveState();
+  };
+
   const toggleStep = (stepNumber: number) => {
     setCollapsedSteps(prev => {
       const next = new Set(prev);
@@ -142,18 +128,21 @@ function App(): React.ReactElement {
     CourtAssignmentEngine.clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
     const courts = generateCourtAssignments(players, numberOfCourts, manualCourtSelection || undefined);
+
+    if (hadManualSelection) {
+      courts.forEach(court => {
+        if (court.courtNumber === 1) {
+          court.wasManuallyAssigned = true;
+        }
+      });
+    }
+
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
     setManualCourtSelection(null);
-    courts.forEach(court => {
-      if (court.courtNumber === 1 && hadManualSelection) {
-        (court as any).wasManuallyAssigned = true;
-      }
-    });
-    setAssignments(courts);
   };
 
-  const handleWinnerChange = (courtNumber: number, winner: 1 | 2 | undefined) => {
+  const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
     setAssignments(prevAssignments =>
       prevAssignments.map(court =>
         court.courtNumber === courtNumber
@@ -194,6 +183,7 @@ function App(): React.ReactElement {
               onPlayerToggle={handlePlayerToggle}
               onRemovePlayer={handleRemovePlayer}
               onClearAllPlayers={handleClearAllPlayers}
+              onResetAlgorithm={handleResetAlgorithm}
             />
           </div>
         )}
