@@ -448,6 +448,66 @@ describe('CourtAssignment Engine – core behaviour', () => {
       expect(parsed).toHaveProperty('lossCountMap');
     });
 
+    it('should save state automatically when resetHistory is called via handleResetAlgorithm pattern', () => {
+      const players = mockPlayers(6);
+      const assignments = generateCourtAssignments(players, 2);
+
+      const courtsWithWinners: Court[] = assignments.map((court, index) => ({
+        ...court,
+        winner: (index % 2 + 1) as 1 | 2,
+      }));
+      CourtAssignmentEngine.recordWins(courtsWithWinners);
+
+      generateCourtAssignments(players, 2);
+
+      const winCountsBeforeReset = CourtAssignmentEngine.getWinCounts();
+      expect(winCountsBeforeReset.size).toBeGreaterThan(0);
+
+      CourtAssignmentEngine.resetHistory();
+      CourtAssignmentEngine.saveState();
+
+      const winCountsAfterReset = CourtAssignmentEngine.getWinCounts();
+      expect(winCountsAfterReset.size).toBe(0);
+
+      const savedState = localStorage.getItem('badminton-court-engine-state');
+      expect(savedState).toBeTruthy();
+
+      const parsedState = JSON.parse(savedState!);
+      expect(parsedState.winCountMap).toEqual({});
+      expect(parsedState.teammateCountMap).toEqual({});
+      expect(parsedState.opponentCountMap).toEqual({});
+      expect(parsedState.benchCountMap).toEqual({});
+    });
+
+    it('should persist reset state across engine reload', () => {
+      const players = mockPlayers(4);
+      const assignments = generateCourtAssignments(players, 1);
+
+      const courtsWithWinners: Court[] = assignments.map(court => ({
+        ...court,
+        winner: 1 as 1 | 2,
+      }));
+      CourtAssignmentEngine.recordWins(courtsWithWinners);
+
+      expect(CourtAssignmentEngine.getWinCounts().size).toBeGreaterThan(0);
+
+      CourtAssignmentEngine.resetHistory();
+      CourtAssignmentEngine.saveState();
+
+      const newAssignments = generateCourtAssignments(players, 1);
+      const newCourtsWithWinners: Court[] = newAssignments.map(court => ({
+        ...court,
+        winner: 2 as 1 | 2,
+      }));
+      CourtAssignmentEngine.recordWins(newCourtsWithWinners);
+      expect(CourtAssignmentEngine.getWinCounts().size).toBeGreaterThan(0);
+
+      CourtAssignmentEngine.loadState();
+
+      const restoredWinCounts = CourtAssignmentEngine.getWinCounts();
+      expect(restoredWinCounts.size).toBe(0);
+    });
+
     describe('State preparation functionality', () => {
       it('should return state object with all required properties', () => {
         const state = CourtAssignmentEngine.prepareStateForSaving();
