@@ -7,14 +7,22 @@ declare global {
   }
 }
 
-interface AnalyticsEvent {
+export interface AnalyticsEvent {
   action: string;
   category: string;
   label?: string;
   value?: number;
 }
 
-export const useAnalytics = () => {
+export interface AnalyticsHook {
+  trackEvent: (eventData: AnalyticsEvent) => void;
+  trackPlayerAction: (action: string, details?: { method?: string; count?: number }) => void;
+  trackCourtAction: (action: string, details?: { courtCount?: number }) => void;
+  trackGameAction: (action: string, details?: { gameType?: string; courtNumber?: number }) => void;
+  trackUIAction: (action: string, details?: { section?: string }) => void;
+}
+
+export const useAnalytics = (): AnalyticsHook => {
   const trackEvent = useCallback((eventData: AnalyticsEvent) => {
     // Check if gtag is available (it might not be in development or if blocked)
     if (typeof window !== 'undefined' && window.gtag) {
