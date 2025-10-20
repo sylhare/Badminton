@@ -68,20 +68,14 @@ export const loadAppState = (): Partial<{
   }
 };
 
-export const saveCourtEngineState = (state: {
-  benchCountMap: Map<string, number>;
-  teammateCountMap: Map<string, number>;
-  opponentCountMap: Map<string, number>;
-  winCountMap: Map<string, number>;
-  lossCountMap: Map<string, number>;
-}): void => {
+export const saveCourtEngineState = (state: CourtEngineState): void => {
   try {
     const stateToSave: CourtEngineState = {
-      benchCountMap: Object.fromEntries(state.benchCountMap),
-      teammateCountMap: Object.fromEntries(state.teammateCountMap),
-      opponentCountMap: Object.fromEntries(state.opponentCountMap),
-      winCountMap: Object.fromEntries(state.winCountMap),
-      lossCountMap: Object.fromEntries(state.lossCountMap),
+      benchCountMap: state.benchCountMap,
+      teammateCountMap: state.teammateCountMap,
+      opponentCountMap: state.opponentCountMap,
+      winCountMap: state.winCountMap,
+      lossCountMap: state.lossCountMap,
     };
     localStorage.setItem(STORAGE_KEYS.COURT_ENGINE_STATE, JSON.stringify(stateToSave));
   } catch (error) {
