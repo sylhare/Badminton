@@ -94,11 +94,11 @@ describe('StorageUtils', () => {
 
   describe('saveCourtEngineState and loadCourtEngineState', () => {
     const mockCourtEngineState = {
-      benchCountMap: new Map([['player-1', 2], ['player-2', 1]]),
-      teammateCountMap: new Map([['player-1|player-2', 3]]),
-      opponentCountMap: new Map([['player-1|player-3', 2]]),
-      winCountMap: new Map([['player-1', 5], ['player-2', 3]]),
-      lossCountMap: new Map([['player-1', 2], ['player-2', 4]]),
+      benchCountMap: { 'player-1': 2, 'player-2': 1 },
+      teammateCountMap: { 'player-1|player-2': 3 },
+      opponentCountMap: { 'player-1|player-3': 2 },
+      winCountMap: { 'player-1': 5, 'player-2': 3 },
+      lossCountMap: { 'player-1': 2, 'player-2': 4 },
     };
 
     it('should save court engine state to localStorage', () => {

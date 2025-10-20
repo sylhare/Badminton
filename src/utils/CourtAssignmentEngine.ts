@@ -1,4 +1,4 @@
-import type { Court, Player, ManualCourtSelection } from '../types';
+import type { Court, Player, ManualCourtSelection, CourtEngineState } from '../types';
 
 import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 
@@ -28,13 +28,13 @@ export class CourtAssignmentEngine {
     this.recordedWinsMap.clear();
   }
 
-  static prepareStateForSaving() {
+  static prepareStateForSaving(): CourtEngineState {
     return {
-      benchCountMap: this.benchCountMap,
-      teammateCountMap: this.teammateCountMap,
-      opponentCountMap: this.opponentCountMap,
-      winCountMap: this.winCountMap,
-      lossCountMap: this.lossCountMap,
+      benchCountMap: Object.fromEntries(this.benchCountMap),
+      teammateCountMap: Object.fromEntries(this.teammateCountMap),
+      opponentCountMap: Object.fromEntries(this.opponentCountMap),
+      winCountMap: Object.fromEntries(this.winCountMap),
+      lossCountMap: Object.fromEntries(this.lossCountMap),
     };
   }
 
@@ -353,7 +353,6 @@ export class CourtAssignmentEngine {
     return this._assignments;
   }
 }
-
 export const generateCourtAssignments = (players: Player[], courts: number, manualCourt?: ManualCourtSelection): Court[] =>
   CourtAssignmentEngine.generate(players, courts, manualCourt);
 

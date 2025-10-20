@@ -24,11 +24,11 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
       'Grace Lee',
     ];
 
-    const bulkTextarea = page.getByTestId('bulk-input');
+    const bulkTextarea = page.getByTestId('bulk-input').and(page.locator(':visible')).first();
     await expect(bulkTextarea).toBeVisible();
 
     await bulkTextarea.fill(bulkPlayerNames.join('\n'));
-    await page.getByTestId('add-bulk-button').click();
+    await page.getByTestId('add-bulk-button').and(page.locator(':visible')).first().click();
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('7');
 
@@ -53,7 +53,7 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
 
     await expect(page.locator('h2').filter({ hasText: /Court Settings/ })).toBeVisible();
 
-    const generateButton = page.getByTestId('generate-assignments-button');
+    const generateButton = page.getByTestId('generate-assignments-button').and(page.locator(':visible')).first();
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
@@ -116,13 +116,13 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
   test('Manual court assignment functionality', async ({ page }) => {
     await page.goto('/');
 
-    const bulkTextarea = page.getByTestId('bulk-input');
+    const bulkTextarea = page.getByTestId('bulk-input').and(page.locator(':visible')).first();
     await bulkTextarea.fill('Alice Johnson\nBob Smith\nCharlie Davis\nDiana Wilson\nEmma Brown\nFrank Miller');
-    await page.getByTestId('add-bulk-button').click();
+    await page.getByTestId('add-bulk-button').and(page.locator(':visible')).first().click();
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('6');
 
-    const generateButton = page.getByTestId('generate-assignments-button');
+    const generateButton = page.getByTestId('generate-assignments-button').and(page.locator(':visible')).first();
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
@@ -159,13 +159,13 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
     const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
     await page.goto(targetUrl);
 
-    const bulkTextarea = page.getByTestId('bulk-input');
+    const bulkTextarea = page.getByTestId('bulk-input').and(page.locator(':visible')).first();
     await bulkTextarea.fill('Player 1\nPlayer 2\nPlayer 3');
-    await page.getByTestId('add-bulk-button').click();
+    await page.getByTestId('add-bulk-button').and(page.locator(':visible')).first().click();
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('3');
 
-    await page.getByTestId('clear-all-button').click();
+    await page.getByTestId('clear-all-button').and(page.locator(':visible')).first().click();
 
     await expect(page.getByTestId('confirm-modal')).toBeVisible();
     await page.getByTestId('confirm-modal-confirm').click();
@@ -178,13 +178,13 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
     const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
     await page.goto(targetUrl);
 
-    const bulkTextarea = page.getByTestId('bulk-input');
+    const bulkTextarea = page.getByTestId('bulk-input').and(page.locator(':visible')).first();
     await bulkTextarea.fill('Alice\nBob\nCharlie\nDiana');
-    await page.getByTestId('add-bulk-button').click();
+    await page.getByTestId('add-bulk-button').and(page.locator(':visible')).first().click();
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
 
-    const generateButton = page.getByTestId('generate-assignments-button');
+    const generateButton = page.getByTestId('generate-assignments-button').and(page.locator(':visible')).first();
     await generateButton.click();
 
     await expect(page.locator('[data-testid^="court-"]')).toHaveCount(1);
@@ -223,7 +223,7 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
     await singlePlayerInput.fill('Second Player');
     await page.getByTestId('add-single-button').click();
 
-    const newGenerateButton = page.getByTestId('generate-assignments-button');
+    const newGenerateButton = page.getByTestId('generate-assignments-button').and(page.locator(':visible')).first();
     await expect(newGenerateButton).toBeVisible();
     await newGenerateButton.click();
 

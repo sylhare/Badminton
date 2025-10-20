@@ -5,9 +5,9 @@ interface FloatingActionButtonProps {
   hasCollapsedSteps: boolean;
 }
 
-const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ 
-  onClick, 
-  hasCollapsedSteps 
+const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
+  onClick,
+  hasCollapsedSteps,
 }) => {
   if (!hasCollapsedSteps) {
     return null;

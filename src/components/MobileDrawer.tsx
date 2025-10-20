@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { StepDefinition } from '../hooks/useStepRegistry';
 
 interface MobileDrawerProps {
@@ -8,11 +9,11 @@ interface MobileDrawerProps {
   onStepClick: (stepId: number) => void;
 }
 
-const MobileDrawer: React.FC<MobileDrawerProps> = ({ 
-  isOpen, 
-  onClose, 
-  steps, 
-  onStepClick 
+const MobileDrawer: React.FC<MobileDrawerProps> = ({
+  isOpen,
+  onClose,
+  steps,
+  onStepClick,
 }) => {
   if (!isOpen) {
     return null;
@@ -31,20 +32,24 @@ const MobileDrawer: React.FC<MobileDrawerProps> = ({
     }
   };
 
+  const handleDrawerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <div className="mobile-drawer-overlay" onClick={handleBackdropClick}>
-      <div className="mobile-drawer">
+      <div className="mobile-drawer" onClick={handleDrawerClick}>
         <div className="drawer-header">
           <h3>Quick Access</h3>
-          <button 
-            className="close-btn" 
+          <button
+            className="close-btn"
             onClick={onClose}
             aria-label="Close drawer"
           >
             ✕
           </button>
         </div>
-        
+
         <div className="drawer-content">
           <div className="drawer-section">
             <h4>Collapsed Steps</h4>

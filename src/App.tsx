@@ -6,7 +6,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import CourtSettings from './components/CourtSettings';
 import CourtAssignments from './components/CourtAssignments';
-import ManualCourtSelection from './components/ManualCourtSelection';
+import ManualCourtSelectionComponent from './components/ManualCourtSelection';
 import Leaderboard from './components/Leaderboard';
 import FloatingActionButton from './components/FloatingActionButton';
 import MobileDrawer from './components/MobileDrawer';
@@ -14,7 +14,7 @@ import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } fr
 import { createPlayersFromNames } from './utils/playerUtils';
 import { saveAppState, loadAppState, clearAllStoredState } from './utils/storageUtils';
 import { useStepRegistry, StepCallbacks } from './hooks/useStepRegistry';
-import type { Player, Court, ManualCourtSelection as ManualCourtSelectionType, WinnerSelection } from './types';
+import type { Player, Court, ManualCourtSelection, WinnerSelection } from './types';
 
 function App(): React.ReactElement {
   const loadedState = loadAppState();
@@ -22,7 +22,7 @@ function App(): React.ReactElement {
   const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
-  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelectionType | null>(loadedState.manualCourt ?? null);
+  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
   const [showMobileDrawer, setShowMobileDrawer] = useState<boolean>(false);
 
   const isInitialLoad = useRef(true);
@@ -132,6 +132,11 @@ function App(): React.ReactElement {
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
     setManualCourtSelection(null);
+    courts.forEach(court => {
+      if (court.courtNumber === 1 && hadManualSelection) {
+        (court as any).wasManuallyAssigned = true;
+      }
+    });
   };
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
@@ -166,7 +171,7 @@ function App(): React.ReactElement {
     collapsedSteps,
     manualCourtSelection,
     benchedPlayers,
-    stepCallbacks
+    stepCallbacks,
   );
 
   const toggleStep = (stepNumber: number) => {
@@ -223,7 +228,7 @@ function App(): React.ReactElement {
       case 4:
         return (
           <>
-            <ManualCourtSelection
+            <ManualCourtSelectionComponent
               players={players}
               onSelectionChange={setManualCourtSelection}
               currentSelection={manualCourtSelection}
