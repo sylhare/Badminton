@@ -21,6 +21,7 @@ export interface Court {
 
 export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
+
 export interface AppState {
   players: Player[];
   numberOfCourts: number;

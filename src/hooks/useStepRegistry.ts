@@ -1,5 +1,6 @@
 import React from 'react';
-import { Player, Court, ManualCourtSelection } from '../App';
+
+import type { Player, Court, ManualCourtSelection } from '../types';
 
 export interface StepAction {
   label: string;
@@ -30,15 +31,20 @@ export interface StepCallbacks {
   setManualCourtSelection: (selection: ManualCourtSelection | null) => void;
 }
 
+export interface StepRegistryHook {
+  steps: StepDefinition[];
+  collapsedSteps: StepDefinition[];
+  hasCollapsedSteps: boolean;
+  toggleStep: (stepNumber: number, setCollapsedSteps: React.Dispatch<React.SetStateAction<Set<number>>>) => void;
+  getStepTitle: (stepNumber: number, baseTitle: string) => string;
+}
+
 export const useStepRegistry = (
   players: Player[],
-  numberOfCourts: number,
   assignments: Court[],
   collapsedSteps: Set<number>,
-  manualCourtSelection: ManualCourtSelection | null,
-  benchedPlayers: Player[],
-  callbacks: StepCallbacks
-) => {
+  callbacks: StepCallbacks,
+): StepRegistryHook => {
   const toggleStep = (stepNumber: number, setCollapsedSteps: React.Dispatch<React.SetStateAction<Set<number>>>) => {
     setCollapsedSteps(prev => {
       const next = new Set(prev);
@@ -51,61 +57,56 @@ export const useStepRegistry = (
     });
   };
 
-  const getStepTitle = (stepNumber: number, baseTitle: string) =>
-    collapsedSteps.has(stepNumber) ? baseTitle : `Step ${stepNumber}: ${baseTitle}`;
+  const getStepTitle = (stepNumber: number, baseTitle: string) => {
+    const steps = collapsedSteps instanceof Set ? collapsedSteps : new Set();
+    return steps.has(stepNumber) ? baseTitle : `Step ${stepNumber}: ${baseTitle}`;
+  };
 
   const steps: StepDefinition[] = [
-    // Step 1: Add Players
     {
       id: 1,
       baseTitle: 'Add Players',
       title: getStepTitle(1, 'Add Players'),
       isVisible: true,
-      isCollapsed: collapsedSteps.has(1),
+      isCollapsed: (collapsedSteps instanceof Set ? collapsedSteps : new Set()).has(1),
     },
-
-    // Step 2: Manage Players
     {
       id: 2,
       baseTitle: 'Manage Players',
       title: getStepTitle(2, 'Manage Players'),
       isVisible: players.length > 0,
-      isCollapsed: collapsedSteps.has(2),
+      isCollapsed: (collapsedSteps instanceof Set ? collapsedSteps : new Set()).has(2),
       actions: [
         {
-          label: "Clear All Players",
+          label: 'Clear All Players',
           icon: React.createElement('span', {}, '🗑️'),
           onClick: callbacks.handleClearAllPlayers,
           isDestructive: true,
         },
         {
-          label: "Reset Algorithm",
+          label: 'Reset Algorithm',
           icon: React.createElement('span', {}, '🔄'),
           onClick: callbacks.handleResetAlgorithm,
           isDestructive: false,
         },
       ],
     },
-
-    // Step 3: Court Settings  
     {
       id: 3,
       baseTitle: 'Court Settings',
       title: getStepTitle(3, 'Court Settings'),
       isVisible: players.some(p => p.isPresent),
-      isCollapsed: collapsedSteps.has(3),
+      isCollapsed: (collapsedSteps instanceof Set ? collapsedSteps : new Set()).has(3),
     },
-
-    // Step 4: Court Assignments
     {
       id: 4,
       baseTitle: 'Court Assignments',
       title: 'Court Assignments',
       isVisible: assignments.length > 0,
-      isCollapsed: collapsedSteps.has(4),
+      isCollapsed: (collapsedSteps instanceof Set ? collapsedSteps : new Set()).has(4),
       actions: [
         {
-          label: "Generate New Assignments",
+          label: 'Generate New Assignments',
           icon: React.createElement('span', {}, '🎲'),
           onClick: callbacks.generateAssignments,
           isDestructive: false,
