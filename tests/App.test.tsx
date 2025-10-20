@@ -50,7 +50,7 @@ describe('App', () => {
         await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
-      expect(screen.getAllByText('Court Assignments')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
       expect(screen.queryByText('Step 4')).not.toBeInTheDocument();
     });
 
@@ -93,7 +93,7 @@ describe('App', () => {
         await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
-      const courtAssignments = screen.getAllByText('Court Assignments')[0].parentElement;
+      const courtAssignments = screen.getAllByText('Step 4: Court Assignments')[0].parentElement;
       expect(courtAssignments).not.toHaveTextContent('Alice');
       expect(courtAssignments).not.toHaveTextContent('Bob');
       expect(courtAssignments).toHaveTextContent('Charlie');

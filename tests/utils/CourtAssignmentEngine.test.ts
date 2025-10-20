@@ -5,8 +5,7 @@ import {
   generateCourtAssignments,
   getBenchedPlayers,
 } from '../../src/utils/CourtAssignmentEngine';
-import type { ManualCourtSelection } from '../../src/components/ManualCourtSelection';
-import type { Court, Player } from '../../src/App';
+import type { ManualCourtSelection, Court, Player } from '../../src/types';
 
 const testResetHistory = (): void => CourtAssignmentEngine.resetHistory();
 
