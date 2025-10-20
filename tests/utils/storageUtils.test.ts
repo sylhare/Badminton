@@ -7,7 +7,7 @@ import {
   loadCourtEngineState,
   clearAllStoredState,
 } from '../../src/utils/storageUtils';
-import type { Player, Court } from '../../src/App';
+import type { Player, Court } from '../../src/types';
 
 describe('StorageUtils', () => {
   beforeEach(() => {

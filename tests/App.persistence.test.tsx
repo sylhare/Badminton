@@ -105,7 +105,7 @@ describe('App Persistence Integration', () => {
         await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
-      expect(screen.getAllByText('Court Assignments')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
 
       const winnerRadios = screen.queryAllByRole('radio');
       if (winnerRadios.length > 0) {
@@ -119,7 +119,7 @@ describe('App Persistence Integration', () => {
 
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      expect(screen.getAllByText('Court Assignments')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
 
       expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Bob').length).toBeGreaterThan(0);

@@ -32,7 +32,7 @@ describe('App Leaderboard Persistence', () => {
       render(<App />);
       await addPlayersAndGenerate(COMMON_PLAYERS.EIGHT);
 
-      expect(screen.getAllByText('Court Assignments')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
 
       const initialWinCounts = CourtAssignmentEngine.getWinCounts();
       expect(initialWinCounts.size).toBe(0);
