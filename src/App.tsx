@@ -6,12 +6,13 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import CourtSettings from './components/CourtSettings';
 import CourtAssignments from './components/CourtAssignments';
-import ManualCourtSelection from './components/ManualCourtSelection';
+import ManualCourtSelectionComponent from './components/ManualCourtSelection';
 import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { saveAppState, loadAppState, clearAllStoredState } from './utils/storageUtils';
-import type { Player, Court, ManualCourtSelection as ManualCourtSelectionType, WinnerSelection } from './types';
+import { useStepRegistry, StepCallbacks } from './hooks/useStepRegistry';
+import type { Player, Court, ManualCourtSelection, WinnerSelection } from './types';
 
 function App(): React.ReactElement {
   const loadedState = loadAppState();
@@ -19,7 +20,8 @@ function App(): React.ReactElement {
   const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
-  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelectionType | null>(loadedState.manualCourt ?? null);
+  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
+  const [showMobileDrawer, setShowMobileDrawer] = useState<boolean>(false);
 
   const isInitialLoad = useRef(true);
 
@@ -140,6 +142,11 @@ function App(): React.ReactElement {
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
     setManualCourtSelection(null);
+    courts.forEach(court => {
+      if (court.courtNumber === 1 && hadManualSelection) {
+        (court as any).wasManuallyAssigned = true;
+      }
+    });
   };
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
@@ -160,8 +167,36 @@ function App(): React.ReactElement {
       <div className="container">
         <h1>🏸 Badminton Court Manager</h1>
 
-        <div className={`step ${collapsedSteps.has(1) ? 'collapsed' : ''}`}>
-          <h2 onClick={() => toggleStep(1)}>{getStepTitle(1, 'Add Players')}</h2>
+  const { steps, hasCollapsedSteps, toggleStep: toggleStepFromRegistry } = useStepRegistry(
+    players,
+    numberOfCourts,
+    assignments,
+    collapsedSteps,
+    manualCourtSelection,
+    benchedPlayers,
+    stepCallbacks,
+  );
+
+  const toggleStep = (stepNumber: number) => {
+    toggleStepFromRegistry(stepNumber, setCollapsedSteps);
+  };
+
+  const handleOpenMobileDrawer = () => {
+    setShowMobileDrawer(true);
+  };
+
+  const handleCloseMobileDrawer = () => {
+    setShowMobileDrawer(false);
+  };
+
+  const handleStepClick = (stepId: number) => {
+    toggleStep(stepId);
+  };
+
+  const renderStepContent = (stepId: number) => {
+    switch (stepId) {
+      case 1:
+        return (
           <div className="add-players-options">
             <div className="add-option">
               <h3>From Image</h3>
@@ -173,37 +208,30 @@ function App(): React.ReactElement {
               <ManualPlayerEntry onPlayersAdded={handleManualPlayersAdded} />
             </div>
           </div>
-        </div>
-
-        {players.length > 0 && (
-          <div className={`step ${collapsedSteps.has(2) ? 'collapsed' : ''}`}>
-            <h2 onClick={() => toggleStep(2)}>{getStepTitle(2, 'Manage Players')}</h2>
-            <PlayerList
-              players={players}
-              onPlayerToggle={handlePlayerToggle}
-              onRemovePlayer={handleRemovePlayer}
-              onClearAllPlayers={handleClearAllPlayers}
-              onResetAlgorithm={handleResetAlgorithm}
-            />
-          </div>
-        )}
-
-        {players.some(p => p.isPresent) && (
-          <div className={`step ${collapsedSteps.has(3) ? 'collapsed' : ''}`}>
-            <h2 onClick={() => toggleStep(3)}>{getStepTitle(3, 'Court Settings')}</h2>
-            <CourtSettings
-              numberOfCourts={numberOfCourts}
-              onNumberOfCourtsChange={setNumberOfCourts}
-              onGenerateAssignments={generateAssignments}
-              hasPlayers={players.some(p => p.isPresent)}
-            />
-          </div>
-        )}
-
-        {assignments.length > 0 && (
-          <div className={`step ${collapsedSteps.has(4) ? 'collapsed' : ''}`}>
-            <h2 onClick={() => toggleStep(4)}>Court Assignments</h2>
-            <ManualCourtSelection
+        );
+      case 2:
+        return (
+          <PlayerList
+            players={players}
+            onPlayerToggle={handlePlayerToggle}
+            onRemovePlayer={handleRemovePlayer}
+            onClearAllPlayers={handleClearAllPlayers}
+            onResetAlgorithm={handleResetAlgorithm}
+          />
+        );
+      case 3:
+        return (
+          <CourtSettings
+            numberOfCourts={numberOfCourts}
+            onNumberOfCourtsChange={setNumberOfCourts}
+            onGenerateAssignments={generateAssignments}
+            hasPlayers={players.some(p => p.isPresent)}
+          />
+        );
+      case 4:
+        return (
+          <>
+            <ManualCourtSelectionComponent
               players={players}
               onSelectionChange={setManualCourtSelection}
               currentSelection={manualCourtSelection}
