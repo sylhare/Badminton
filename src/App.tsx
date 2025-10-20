@@ -166,11 +166,8 @@ function App(): React.ReactElement {
 
   const { steps, hasCollapsedSteps, toggleStep: toggleStepFromRegistry } = useStepRegistry(
     players,
-    numberOfCourts,
     assignments,
     collapsedSteps,
-    manualCourtSelection,
-    benchedPlayers,
     stepCallbacks,
   );
 

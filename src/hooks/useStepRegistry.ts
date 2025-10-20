@@ -101,7 +101,7 @@ export const useStepRegistry = (
     {
       id: 4,
       baseTitle: 'Court Assignments',
-      title: 'Court Assignments',
+      title: getStepTitle(4, 'Court Assignments'),
       isVisible: assignments.length > 0,
       isCollapsed: (collapsedSteps instanceof Set ? collapsedSteps : new Set()).has(4),
       actions: [
