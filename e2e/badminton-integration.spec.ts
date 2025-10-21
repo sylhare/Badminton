@@ -33,6 +33,7 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
     await expect(page.getByTestId('stats-present-count').first()).toHaveText('7');
 
     const addPlayersHeader = page.locator('h2').filter({ hasText: 'Add Players' });
+    await expect(addPlayersHeader).toBeVisible();
     await addPlayersHeader.click();
 
     const singlePlayerInput = page.getByTestId('single-player-input').and(page.locator(':visible')).first();
@@ -83,6 +84,11 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
 
     const leaderboard = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboard).toBeVisible();
+
+    const managePlayersHeader = page.locator('h2').filter({ hasText: 'Manage Players' });
+    if (await managePlayersHeader.count() > 0) {
+      await managePlayersHeader.click();
+    }
 
     await expect(page.getByTestId('stats-present-count').first()).toHaveText('8');
   });
