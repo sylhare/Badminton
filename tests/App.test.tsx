@@ -93,18 +93,18 @@ describe('App', () => {
         await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
-      const courtAssignments = screen.getAllByText('Step 4: Court Assignments')[0].parentElement;
-      expect(courtAssignments).not.toHaveTextContent('Alice');
-      expect(courtAssignments).not.toHaveTextContent('Bob');
-      expect(courtAssignments).toHaveTextContent('Charlie');
-      expect(courtAssignments).toHaveTextContent('Diana');
+      const courtAssignmentsSection = screen.getByText('Step 4: Court Assignments').closest('.step');
+      expect(courtAssignmentsSection).not.toHaveTextContent('Alice');
+      expect(courtAssignmentsSection).not.toHaveTextContent('Bob');
+      expect(courtAssignmentsSection).toHaveTextContent('Charlie');
+      expect(courtAssignmentsSection).toHaveTextContent('Diana');
 
       await act(async () => {
         await user.click(screen.getAllByText('🎲 Generate New Assignments')[0]);
       });
 
-      expect(courtAssignments).not.toHaveTextContent('Alice');
-      expect(courtAssignments).not.toHaveTextContent('Bob');
+      expect(courtAssignmentsSection).not.toHaveTextContent('Alice');
+      expect(courtAssignmentsSection).not.toHaveTextContent('Bob');
     });
 
     it('properly benches single remaining players instead of assigning them to courts', async () => {
@@ -151,7 +151,7 @@ describe('App', () => {
         expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('3');
 
         const checkboxes = screen.getAllByRole('checkbox');
-        expect(checkboxes).toHaveLength(6); // 3 players × 2 views (desktop + mobile)
+        expect(checkboxes).toHaveLength(3); // 3 players
         checkboxes.forEach(checkbox => {
           expect(checkbox).toBeChecked();
         });
@@ -271,8 +271,8 @@ describe('App', () => {
         const removeButtons = screen.getAllByTitle('Delete player permanently');
         await user.click(removeButtons[1]);
 
-        expect(screen.getAllByRole('checkbox')).toHaveLength(4); // 2 players x 2 views (desktop + mobile)
-        expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(4); // 2 players × 2 views (desktop + mobile)
+        expect(screen.getAllByRole('checkbox')).toHaveLength(2); // 2 players
+        expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(2); // 2 players
         expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('2');
         expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('2');
       });

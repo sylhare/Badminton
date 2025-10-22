@@ -337,7 +337,6 @@ describe('useStepRegistry Hook', () => {
     });
   });
 
-
   describe('Edge Cases', () => {
     it('should handle all steps collapsed', () => {
       const { result } = renderHook(() =>
