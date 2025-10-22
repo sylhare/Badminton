@@ -131,11 +131,6 @@ function App(): React.ReactElement {
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
     setManualCourtSelection(null);
-    courts.forEach(court => {
-      if (court.courtNumber === 1 && hadManualSelection) {
-        (court as any).wasManuallyAssigned = true;
-      }
-    });
   };
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
