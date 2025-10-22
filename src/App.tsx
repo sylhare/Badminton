@@ -21,7 +21,6 @@ function App(): React.ReactElement {
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
-  const [showMobileDrawer, setShowMobileDrawer] = useState<boolean>(false);
 
   const isInitialLoad = useRef(true);
 
@@ -52,7 +51,7 @@ function App(): React.ReactElement {
         manualCourt: manualCourtSelection,
       });
     CourtAssignmentEngine.saveState();
-    }, [players, numberOfCourts, assignments, collapsedSteps]);
+    }, [players, numberOfCourts, assignments, collapsedSteps, manualCourtSelection]);
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
     const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
@@ -60,6 +59,7 @@ function App(): React.ReactElement {
     setCollapsedSteps(prev => {
       const next = new Set(prev);
       next.add(1);
+      next.delete(2);
       return next;
     });
   };
@@ -67,13 +67,14 @@ function App(): React.ReactElement {
   const handleManualPlayersAdded = (newNames: string[]) => {
     const newPlayers = createPlayersFromNames(newNames, 'manual');
     setPlayers(prev => [...prev, ...newPlayers]);
-    if (newNames.length > 1) {
-      setCollapsedSteps(prev => {
-        const next = new Set(prev);
+    setCollapsedSteps(prev => {
+      const next = new Set(prev);
+      if (newNames.length > 1) {
         next.add(1);
-        return next;
-      });
-    }
+      }
+      next.delete(2);
+      return next;
+    });
   };
 
   const handlePlayerToggle = (playerId: string) => {
@@ -113,18 +114,6 @@ function App(): React.ReactElement {
     CourtAssignmentEngine.saveState();
   };
 
-  const toggleStep = (stepNumber: number) => {
-    setCollapsedSteps(prev => {
-      const next = new Set(prev);
-      if (next.has(stepNumber)) {
-        next.delete(stepNumber);
-      } else {
-        next.add(stepNumber);
-      }
-      return next;
-    });
-  };
-
   const generateAssignments = () => {
     recordCurrentWins();
     CourtAssignmentEngine.clearCurrentSession();
@@ -159,35 +148,28 @@ function App(): React.ReactElement {
     );
   };
 
-  const getStepTitle = (stepNumber: number, baseTitle: string) =>
-    collapsedSteps.has(stepNumber) ? baseTitle : `Step ${stepNumber}: ${baseTitle}`;
+  const stepCallbacks: StepCallbacks = {
+    handlePlayersExtracted,
+    handleManualPlayersAdded,
+    handlePlayerToggle,
+    handleRemovePlayer,
+    handleClearAllPlayers,
+    handleResetAlgorithm,
+    generateAssignments,
+    handleWinnerChange,
+    setNumberOfCourts,
+    setManualCourtSelection,
+  };
 
-  return (
-    <div className="app">
-      <div className="container">
-        <h1>🏸 Badminton Court Manager</h1>
-
-  const { steps, hasCollapsedSteps, toggleStep: toggleStepFromRegistry } = useStepRegistry(
+  const { steps, toggleStep: toggleStepFromRegistry } = useStepRegistry(
     players,
     assignments,
     collapsedSteps,
     stepCallbacks,
   );
 
-  const toggleStep = (stepNumber: number) => {
+  const handleToggleStep = (stepNumber: number) => {
     toggleStepFromRegistry(stepNumber, setCollapsedSteps);
-  };
-
-  const handleOpenMobileDrawer = () => {
-    setShowMobileDrawer(true);
-  };
-
-  const handleCloseMobileDrawer = () => {
-    setShowMobileDrawer(false);
-  };
-
-  const handleStepClick = (stepId: number) => {
-    toggleStep(stepId);
   };
 
   const renderStepContent = (stepId: number) => {
@@ -240,8 +222,26 @@ function App(): React.ReactElement {
               onWinnerChange={handleWinnerChange}
               hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
             />
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="app">
+      <div className="container">
+        <h1>🏸 Badminton Court Manager</h1>
+
+        {steps.map(step => (
+          <div key={step.id} className="step">
+            <div className="step-header" onClick={() => handleToggleStep(step.id)}>
+              <h2>{step.title}</h2>
+            </div>
+            {!step.isCollapsed && renderStepContent(step.id)}
           </div>
-        )}
+        ))}
 
         <Leaderboard players={players} winCounts={CourtAssignmentEngine.getWinCounts()} />
       </div>
