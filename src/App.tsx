@@ -230,7 +230,7 @@ function App(): React.ReactElement {
         <h1>🏸 Badminton Court Manager</h1>
 
         {steps.map(step => (
-          <div key={step.id} className="step">
+          <div key={step.id} className={`step${step.isCollapsed ? ' collapsed' : ''}`}>
             <div className="step-header" onClick={() => handleToggleStep(step.id)}>
               <h2>{step.title}</h2>
             </div>
