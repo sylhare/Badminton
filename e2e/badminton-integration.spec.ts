@@ -32,11 +32,8 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('7');
 
-    const addPlayersHeader = page.locator('h2').filter({ hasText: 'Add Players' });
-    await addPlayersHeader.click();
-
     const singlePlayerInput = page.getByTestId('single-player-input');
-
+    await expect(singlePlayerInput).toBeVisible();
     await singlePlayerInput.fill('Henry Garcia');
     await page.getByTestId('add-single-button').click();
 
@@ -49,6 +46,8 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
     await firstRemoveButton.click();
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('8');
+    
+    await expect(page.getByTestId('stats-present-count')).toBeVisible();
     await expect(page.getByTestId('stats-present-count')).toHaveText('8');
 
     await expect(page.locator('h2').filter({ hasText: /Court Settings/ })).toBeVisible();
@@ -84,6 +83,7 @@ test.describe('Badminton Court Manager - Integration Tests', () => {
     const leaderboard = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboard).toBeVisible();
 
+    await expect(page.getByTestId('stats-present-count')).toBeVisible();
     await expect(page.getByTestId('stats-present-count')).toHaveText('8');
   });
 
