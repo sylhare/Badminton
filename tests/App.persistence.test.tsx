@@ -26,16 +26,16 @@ describe('App Persistence Integration', () => {
 
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
-      expect(screen.getByText('Alice')).toBeInTheDocument();
-      expect(screen.getByText('Bob')).toBeInTheDocument();
-      expect(screen.getByText('Charlie')).toBeInTheDocument();
-      expect(screen.getByText('Diana')).toBeInTheDocument();
+      expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Diana')[0]).toBeInTheDocument();
 
       const checkboxes = screen.getAllByRole('checkbox');
       await user.click(checkboxes[1]);
@@ -44,10 +44,10 @@ describe('App Persistence Integration', () => {
 
       render(<App />);
 
-      expect(screen.getByText('Alice')).toBeInTheDocument();
-      expect(screen.getByText('Bob')).toBeInTheDocument();
-      expect(screen.getByText('Charlie')).toBeInTheDocument();
-      expect(screen.getByText('Diana')).toBeInTheDocument();
+      expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Diana')[0]).toBeInTheDocument();
 
       const restoredCheckboxes = screen.getAllByRole('checkbox');
       expect(restoredCheckboxes[0]).toBeChecked();
@@ -55,19 +55,19 @@ describe('App Persistence Integration', () => {
       expect(restoredCheckboxes[2]).toBeChecked();
       expect(restoredCheckboxes[3]).toBeChecked();
 
-      expect(screen.getByText('3')).toBeInTheDocument();
-      expect(screen.getByText('1')).toBeInTheDocument();
-      expect(screen.getByText('4')).toBeInTheDocument();
+      expect(screen.getAllByText('3')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('1')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('4')[0]).toBeInTheDocument();
     });
 
     it.skip('should persist court settings across app reload', async () => {
 
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       const courtInput = screen.getByLabelText('Number of Courts:');
@@ -95,17 +95,17 @@ describe('App Persistence Integration', () => {
 
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank\nGrace\nHank');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       await act(async () => {
-        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
-      expect(screen.getByText('Court Assignments')).toBeInTheDocument();
+      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
 
       const winnerRadios = screen.queryAllByRole('radio');
       if (winnerRadios.length > 0) {
@@ -119,7 +119,7 @@ describe('App Persistence Integration', () => {
 
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      expect(screen.getByText('Court Assignments')).toBeInTheDocument();
+      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
 
       expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Bob').length).toBeGreaterThan(0);
@@ -129,10 +129,10 @@ describe('App Persistence Integration', () => {
 
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       const addPlayersHeader = screen.getByText('Add Players');
@@ -161,22 +161,26 @@ describe('App Persistence Integration', () => {
     it('should clear all data including localStorage when clear all is confirmed', async () => {
       render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       await act(async () => {
-        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
       expect(localStorage.getItem('badminton-app-state')).toBeTruthy();
 
-      const clearButton = screen.getByRole('button', { name: /clear all players/i });
+      // Expand the Manage Players step to access the clear button
+      const managePlayersHeader = screen.getAllByText('Manage Players')[0];
+      await user.click(managePlayersHeader);
+
+      const clearButton = screen.getAllByTestId('clear-all-button')[0];
       await user.click(clearButton);
 
-      const confirmButton = screen.getByRole('button', { name: 'Clear All' });
+      const confirmButton = screen.getAllByRole('button', { name: 'Clear All' })[0];
       await user.click(confirmButton);
 
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -190,26 +194,26 @@ describe('App Persistence Integration', () => {
 
       expect(screen.queryByText('Step 2')).not.toBeInTheDocument();
       expect(screen.queryByText('Step 3')).not.toBeInTheDocument();
-      expect(screen.getByPlaceholderText(/John Doe, Jane Smith/)).toBeInTheDocument();
+      expect(screen.getAllByTestId('bulk-input')[0]).toBeInTheDocument();
     });
 
     it('should not clear data when clear all is cancelled', async () => {
       render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
-      const clearButton = screen.getByRole('button', { name: /clear all players/i });
+      const clearButton = screen.getAllByTestId('clear-all-button')[0];
       await user.click(clearButton);
 
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       await user.click(cancelButton);
 
-      expect(screen.getByText('Alice')).toBeInTheDocument();
-      expect(screen.getByText('Bob')).toBeInTheDocument();
+      expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
+      expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
 
       expect(localStorage.getItem('badminton-app-state')).toBeTruthy();
     });
@@ -223,7 +227,7 @@ describe('App Persistence Integration', () => {
 
       expect(() => render(<App />)).not.toThrow();
 
-      expect(screen.getByPlaceholderText(/John Doe, Jane Smith/)).toBeInTheDocument();
+      expect(screen.getAllByTestId('bulk-input')[0]).toBeInTheDocument();
       expect(screen.queryByText('Step 2')).not.toBeInTheDocument();
     });
 
@@ -235,13 +239,13 @@ describe('App Persistence Integration', () => {
 
       render(<App />);
 
-      const singleInput = screen.getByPlaceholderText('Enter player name...');
+      const singleInput = screen.getAllByTestId('single-player-input')[0];
       await act(async () => {
         await user.type(singleInput, 'Alice');
-        await user.click(screen.getByRole('button', { name: /add player/i }));
+        await user.click(screen.getAllByTestId('add-single-button')[0]);
       });
 
-      expect(screen.getByText('Alice')).toBeInTheDocument();
+      expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
     });
   });
 
@@ -277,8 +281,8 @@ describe('App Persistence Integration', () => {
 
       render(<App />);
 
-      const singleInput = screen.getByPlaceholderText('Enter player name...');
-      const addButton = screen.getByRole('button', { name: /add player/i });
+      const singleInput = screen.getAllByTestId('single-player-input')[0];
+      const addButton = screen.getAllByTestId('add-single-button')[0];
 
       for (const name of ['Alice', 'Bob', 'Charlie']) {
         await act(async () => {
@@ -296,14 +300,14 @@ describe('App Persistence Integration', () => {
     it('should persist reset algorithm state across app reload', async () => {
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       await act(async () => {
-        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -333,17 +337,21 @@ describe('App Persistence Integration', () => {
       const winCountsBeforeReset = CourtAssignmentEngine.getWinCounts();
       expect(winCountsBeforeReset.size).toBeGreaterThan(0);
 
-      const resetButton = screen.getByTestId('reset-algorithm-button');
+      // Expand the Manage Players step to access the reset button
+      const managePlayersHeader = screen.getAllByText('Manage Players')[0];
+      await user.click(managePlayersHeader);
+
+      const resetButton = screen.getAllByTestId('reset-algorithm-button')[0];
       await act(async () => {
         await user.click(resetButton);
       });
 
-      const confirmButton = screen.getByTestId('confirm-modal-confirm');
+      const confirmButton = screen.getAllByTestId('confirm-modal-confirm')[0];
       await act(async () => {
         await user.click(confirmButton);
       });
 
-      expect(screen.getByTestId('stats-present-count')).toHaveTextContent('4');
+      expect(screen.getAllByTestId('stats-present-count')[0]).toHaveTextContent('4');
       const playerElements = screen.getAllByText(/Alice|Bob|Charlie|Diana/);
       expect(playerElements.length).toBeGreaterThanOrEqual(4);
 
@@ -355,7 +363,7 @@ describe('App Persistence Integration', () => {
 
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      expect(screen.getByTestId('stats-present-count')).toHaveTextContent('4');
+      expect(screen.getAllByTestId('stats-present-count')[0]).toHaveTextContent('4');
       const restoredPlayerElements = screen.getAllByText(/Alice|Bob|Charlie|Diana/);
       expect(restoredPlayerElements.length).toBeGreaterThanOrEqual(4);
 
@@ -366,10 +374,10 @@ describe('App Persistence Integration', () => {
     it('should save algorithm reset state immediately when reset button is clicked', async () => {
       render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
       const mockCourts = [{
         courtNumber: 1,
@@ -389,12 +397,12 @@ describe('App Persistence Integration', () => {
 
       const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
 
-      const resetButton = screen.getByTestId('reset-algorithm-button');
+      const resetButton = screen.getAllByTestId('reset-algorithm-button')[0];
       await act(async () => {
         await user.click(resetButton);
       });
 
-      const confirmButton = screen.getByTestId('confirm-modal-confirm');
+      const confirmButton = screen.getAllByTestId('confirm-modal-confirm')[0];
       await act(async () => {
         await user.click(confirmButton);
       });
@@ -420,25 +428,25 @@ describe('App Persistence Integration', () => {
     it('should handle reset algorithm when no algorithm state exists', async () => {
       render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       expect(CourtAssignmentEngine.getWinCounts().size).toBe(0);
 
-      const resetButton = screen.getByTestId('reset-algorithm-button');
+      const resetButton = screen.getAllByTestId('reset-algorithm-button')[0];
       await act(async () => {
         await user.click(resetButton);
       });
 
-      const confirmButton = screen.getByTestId('confirm-modal-confirm');
+      const confirmButton = screen.getAllByTestId('confirm-modal-confirm')[0];
       await act(async () => {
         await user.click(confirmButton);
       });
 
-      expect(screen.getByTestId('stats-present-count')).toHaveTextContent('2');
+      expect(screen.getAllByTestId('stats-present-count')[0]).toHaveTextContent('2');
       const finalPlayerElements = screen.getAllByText(/Alice|Bob/);
       expect(finalPlayerElements.length).toBeGreaterThanOrEqual(2);
       expect(CourtAssignmentEngine.getWinCounts().size).toBe(0);

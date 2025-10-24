@@ -13,14 +13,14 @@ describe('App Leaderboard Persistence', () => {
   const user = userEvent.setup();
 
   const addPlayersAndGenerate = async (playerNames: string) => {
-    const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+    const bulkInput = screen.getAllByTestId('bulk-input')[0];
     await act(async () => {
       await user.type(bulkInput, playerNames);
-      await user.click(screen.getByText('Add All Players'));
+      await user.click(screen.getAllByTestId('add-bulk-button')[0]);
     });
 
     await act(async () => {
-      await user.click(screen.getByText('🎲 Generate Random Assignments'));
+      await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
     });
   };
 
@@ -32,7 +32,7 @@ describe('App Leaderboard Persistence', () => {
       render(<App />);
       await addPlayersAndGenerate(COMMON_PLAYERS.EIGHT);
 
-      expect(screen.getByText('Court Assignments')).toBeInTheDocument();
+      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
 
       const initialWinCounts = CourtAssignmentEngine.getWinCounts();
       expect(initialWinCounts.size).toBe(0);
@@ -69,14 +69,14 @@ describe('App Leaderboard Persistence', () => {
 
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       await act(async () => {
-        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -136,8 +136,8 @@ describe('App Leaderboard Persistence', () => {
 
       const { unmount } = render(<App />);
 
-      const singleInput = screen.getByPlaceholderText('Enter player name...');
-      const addButton = screen.getByRole('button', { name: /add player/i });
+      const singleInput = screen.getAllByTestId('single-player-input')[0];
+      const addButton = screen.getAllByTestId('add-single-button')[0];
 
       for (const player of mockPlayers.map(p => p.name)) {
         await act(async () => {
@@ -148,7 +148,7 @@ describe('App Leaderboard Persistence', () => {
       }
 
       await act(async () => {
-        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
       const winnerRadios = screen.queryAllByRole('radio');
@@ -184,14 +184,14 @@ describe('App Leaderboard Persistence', () => {
     it('should handle changing winners without duplicate counting', async () => {
       render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       await act(async () => {
-        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
       const winnerRadios = screen.queryAllByRole('radio');
@@ -218,14 +218,14 @@ describe('App Leaderboard Persistence', () => {
     it('should handle changing winner on same court without duplicate counting in session', async () => {
       render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       await act(async () => {
-        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
       const courtElements = screen.getAllByText(/Court \d+/);
@@ -280,14 +280,14 @@ describe('App Leaderboard Persistence', () => {
     it.skip('should show leaderboard with historical data on refresh even without current players', async () => {
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getByPlaceholderText(/John Doe, Jane Smith/);
+      const bulkInput = screen.getAllByTestId('bulk-input')[0];
       await act(async () => {
         await user.type(bulkInput, 'Alice\nBob\nCharlie\nDave');
-        await user.click(screen.getByText('Add All Players'));
+        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
       await act(async () => {
-        await user.click(screen.getByText('🎲 Generate Random Assignments'));
+        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
       const team1Element = screen.getByText('Team 1');
