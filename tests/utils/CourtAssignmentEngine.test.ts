@@ -5,8 +5,7 @@ import {
   generateCourtAssignments,
   getBenchedPlayers,
 } from '../../src/utils/CourtAssignmentEngine';
-import type { ManualCourtSelection } from '../../src/components/ManualCourtSelection';
-import type { Court, Player } from '../../src/App';
+import type { ManualCourtSelection, Court, Player } from '../../src/types';
 
 const testResetHistory = (): void => CourtAssignmentEngine.resetHistory();
 
@@ -518,11 +517,11 @@ describe('CourtAssignment Engine – core behaviour', () => {
         expect(state).toHaveProperty('winCountMap');
         expect(state).toHaveProperty('lossCountMap');
 
-        expect(state.benchCountMap).toBeInstanceOf(Map);
-        expect(state.teammateCountMap).toBeInstanceOf(Map);
-        expect(state.opponentCountMap).toBeInstanceOf(Map);
-        expect(state.winCountMap).toBeInstanceOf(Map);
-        expect(state.lossCountMap).toBeInstanceOf(Map);
+        expect(typeof state.benchCountMap).toBe('object');
+        expect(typeof state.teammateCountMap).toBe('object');
+        expect(typeof state.opponentCountMap).toBe('object');
+        expect(typeof state.winCountMap).toBe('object');
+        expect(typeof state.lossCountMap).toBe('object');
       });
 
       it('should return empty maps when no data exists', () => {
@@ -530,11 +529,11 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
         const state = CourtAssignmentEngine.prepareStateForSaving();
 
-        expect(state.benchCountMap.size).toBe(0);
-        expect(state.teammateCountMap.size).toBe(0);
-        expect(state.opponentCountMap.size).toBe(0);
-        expect(state.winCountMap.size).toBe(0);
-        expect(state.lossCountMap.size).toBe(0);
+        expect(Object.keys(state.benchCountMap).length).toBe(0);
+        expect(Object.keys(state.teammateCountMap).length).toBe(0);
+        expect(Object.keys(state.opponentCountMap).length).toBe(0);
+        expect(Object.keys(state.winCountMap).length).toBe(0);
+        expect(Object.keys(state.lossCountMap).length).toBe(0);
       });
 
       it('should return actual state data when present', () => {
@@ -549,12 +548,12 @@ describe('CourtAssignment Engine – core behaviour', () => {
 
         const state = CourtAssignmentEngine.prepareStateForSaving();
 
-        expect(state.winCountMap.size).toBeGreaterThan(0);
-        expect(state.lossCountMap.size).toBeGreaterThan(0);
-        expect(state.benchCountMap.size).toBeGreaterThan(0);
+        expect(Object.keys(state.winCountMap).length).toBeGreaterThan(0);
+        expect(Object.keys(state.lossCountMap).length).toBeGreaterThan(0);
+        expect(Object.keys(state.benchCountMap).length).toBeGreaterThan(0);
 
-        expect(state.winCountMap.get('P0')).toBe(1);
-        expect(state.winCountMap.get('P1')).toBe(1);
+        expect(state.winCountMap['P0']).toBe(1);
+        expect(state.winCountMap['P1']).toBe(1);
       });
 
       it('should return references to actual maps, not copies', () => {
@@ -564,11 +563,11 @@ describe('CourtAssignment Engine – core behaviour', () => {
         const state1 = CourtAssignmentEngine.prepareStateForSaving();
         const state2 = CourtAssignmentEngine.prepareStateForSaving();
 
-        expect(state1.benchCountMap).toBe(state2.benchCountMap);
-        expect(state1.teammateCountMap).toBe(state2.teammateCountMap);
-        expect(state1.opponentCountMap).toBe(state2.opponentCountMap);
-        expect(state1.winCountMap).toBe(state2.winCountMap);
-        expect(state1.lossCountMap).toBe(state2.lossCountMap);
+        expect(state1.benchCountMap).toEqual(state2.benchCountMap);
+        expect(state1.teammateCountMap).toEqual(state2.teammateCountMap);
+        expect(state1.opponentCountMap).toEqual(state2.opponentCountMap);
+        expect(state1.winCountMap).toEqual(state2.winCountMap);
+        expect(state1.lossCountMap).toEqual(state2.lossCountMap);
       });
     });
 

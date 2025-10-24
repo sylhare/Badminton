@@ -32,6 +32,7 @@ h1 {
 .step h2 {
     color: #4a5568;
     margin-bottom: 20px;
+    padding-left: 2px;
     font-size: 1.5rem;
     display: flex;
     align-items: center;
@@ -39,19 +40,26 @@ h1 {
     cursor: pointer;
 }
 
-.step.collapsed > *:not(h2) {
+.step.collapsed > *:not(.step-header) {
     display: none;
 }
 
 .step.collapsed {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     padding: 8px 15px;
-    margin: 0 10px 20px 0;
+    margin: 0 0 20px 0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.step.collapsed:hover {
+    background-color: #f7fafc;
 }
 
 .step.collapsed h2 {
     margin-bottom: 0;
+    cursor: pointer;
 }
 
 .upload-area {
@@ -820,6 +828,13 @@ h1 {
 
     .app {
         padding: 15px;
+    }
+
+    .modal-content {
+        min-width: 280px;
+        max-width: 400px;
+        width: 85%;
+        margin: 0 20px;
     }
 
     .single-player-input, .bulk-input {

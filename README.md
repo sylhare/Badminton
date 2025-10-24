@@ -52,15 +52,15 @@ A React TypeScript application that helps organize badminton players into court 
 
 The court-assignment engine aims to give everyone a fun, varied and fair session.  It does this by turning each candidate set of courts into a *cost* and repeatedly searching for the lowest-cost layout.  The cost function is made up of the rules below – lower cost means “more desirable”.
 
-1. **Bench rotation fairness** – players with fewer previous bench stints are prioritised for court time.
-2. **Minimise repeated team-mates** – two players who have already been on the same side several times incur a penalty when teamed up again.
-3. **Minimise repeated opponents** – the same logic applies to players facing each other across the net.
-4. **Result balancing**  
-   • The more *wins* a player already has, the less desirable it is to partner them with another high-win player.  
-   • Likewise, the more *losses* a player has, the less desirable it is to partner them with another high-loss player.  
-   • After teams are formed the engine penalises a court where one team has a much higher total number of wins (or losses) than the other – discouraging “winners vs. losers” mismatches.
-5. **No 3-player courts** – a court will always host either 2 (singles) or 4 (doubles) players.
-6. **Best team split** – for every group of 4 players the engine evaluates all three possible 2-player combinations and keeps the one with the lowest cost.
+1. **Bench rotation fairness** – players who have sat out more often get priority to play next, ensuring everyone gets equal court time.
+2. **Partner variety** – players who have already been teammates many times are less likely to be paired again, so everyone plays with different partners.
+3. **Opponent variety** – players who have faced each other frequently are less likely to be opponents again, giving variety in who you play against.
+4. **Balanced matches**  
+   • Players with many wins avoid being paired together (preventing "super teams").  
+   • Players with many losses avoid being paired together (preventing weak teams).  
+   • When two teams face each other, their skill levels are matched so games stay competitive (avoiding mismatches like strong winners vs. weak losers).
+5. **Proper game formats** – courts always have either singles (2 players) or doubles (4 players), never 3 players.
+6. **Optimal team pairings** – for each doubles match, the system tries all possible team combinations and picks the fairest pairing.
 
 These rules are layered on top of the basic constraints:
 
@@ -68,7 +68,7 @@ These rules are layered on top of the basic constraints:
 * **Singles fallback** – courts of 2 players are allowed when numbers are odd.
 * **Bench** – any surplus players are rotated to the bench.
 
-Because the optimiser is stochastic there is always an element of randomness, but over time the history-based penalties push the system towards an even distribution of partners, opponents **and** results.
+Because the system's optimiser is [stochastic](https://en.wikipedia.org/wiki/Stochastic), there is always an element of randomness, but over time the history-based penalties push the system towards an even distribution of partners, opponents and results.
 
 ## Get Started
 
