@@ -49,10 +49,17 @@ h1 {
     align-items: center;
     padding: 8px 15px;
     margin: 0 0 20px 0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.step.collapsed:hover {
+    background-color: #f7fafc;
 }
 
 .step.collapsed h2 {
     margin-bottom: 0;
+    cursor: pointer;
 }
 
 .upload-area {
