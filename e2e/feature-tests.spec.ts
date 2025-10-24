@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import { goToApp, addSinglePlayer, addBulkPlayers } from './helpers';
 
 test.describe('Feature Tests', () => {
