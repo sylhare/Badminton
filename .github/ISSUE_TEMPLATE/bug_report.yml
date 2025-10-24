@@ -1,0 +1,27 @@
+name: 🐛 Bug Report
+description: Something isn't working
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Just tell us what went wrong.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug in your own words
+      placeholder: When I tried to..., this happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Anything else?
+      description: Screenshots, browser/device info, or any other details (optional)
+      placeholder: I'm using Chrome on mobile...
+    validations:
+      required: false
+
