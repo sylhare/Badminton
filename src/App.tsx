@@ -26,9 +26,7 @@ function App(): React.ReactElement {
 
   useEffect(() => {
     CourtAssignmentEngine.loadState();
-    setTimeout(() => {
-      isInitialLoad.current = false;
-    }, 0);
+    isInitialLoad.current = false;
   }, []);
 
   useEffect(() => {
@@ -163,7 +161,13 @@ function App(): React.ReactElement {
     stepCallbacks,
   );
 
-  const handleToggleStep = (stepNumber: number) => {
+  const handleToggleStep = (stepNumber: number, event?: React.MouseEvent) => {
+    if (event?.target !== event?.currentTarget) {
+      // Only toggle if clicking directly on the header area, not on children
+      const target = event?.target as HTMLElement;
+      const isHeaderClick = target.closest('.step-header') !== null;
+      if (!isHeaderClick) return;
+    }
     toggleStepFromRegistry(stepNumber, setCollapsedSteps);
   };
 
@@ -230,8 +234,12 @@ function App(): React.ReactElement {
         <h1>🏸 Badminton Court Manager</h1>
 
         {steps.map(step => (
-          <div key={step.id} className={`step${step.isCollapsed ? ' collapsed' : ''}`}>
-            <div className="step-header" onClick={() => handleToggleStep(step.id)}>
+          <div
+            key={step.id}
+            className={`step${step.isCollapsed ? ' collapsed' : ''}`}
+            onClick={(e) => handleToggleStep(step.id, e)}
+          >
+            <div className="step-header">
               <h2>{step.title}</h2>
             </div>
             {!step.isCollapsed && renderStepContent(step.id)}
