@@ -60,7 +60,7 @@ describe('App Persistence Integration', () => {
       expect(screen.getAllByText('4')[0]).toBeInTheDocument();
     });
 
-    it.skip('should persist court settings across app reload', async () => {
+    it('should persist court settings across app reload', async () => {
 
       const { unmount } = render(<App />);
 
@@ -70,17 +70,16 @@ describe('App Persistence Integration', () => {
         await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
-      const courtInput = screen.getByLabelText('Number of Courts:');
-      await act(async () => {
-        await user.clear(courtInput);
-        await user.type(courtInput, '6');
-      });
+      const courtInput = screen.getByLabelText('Number of Courts:') as HTMLInputElement;
 
       await act(async () => {
-        courtInput.blur();
+        await user.tripleClick(courtInput);
+        await user.keyboard('6');
       });
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      expect(courtInput).toHaveValue(6);
 
       unmount();
       render(<App />);
@@ -125,7 +124,7 @@ describe('App Persistence Integration', () => {
       expect(screen.getAllByText('Bob').length).toBeGreaterThan(0);
     });
 
-    it.skip('should preserve collapsed/expanded step states', async () => {
+    it('should preserve collapsed/expanded step states', async () => {
 
       const { unmount } = render(<App />);
 
@@ -135,15 +134,15 @@ describe('App Persistence Integration', () => {
         await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
-      const addPlayersHeader = screen.getByText('Add Players');
-      await act(async () => {
-        await user.click(addPlayersHeader);
-      });
-
+      // Step 1 should be automatically collapsed after adding players
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      let step = document.querySelector('.step.collapsed');
-      expect(step).toBeTruthy();
+      const collapsedStep = document.querySelector('.step.collapsed');
+      expect(collapsedStep).toBeTruthy();
+
+      // Verify it's specifically Step 1 that's collapsed (shows "Add Players" without "Step 1:")
+      const addPlayersText = screen.getByText('Add Players');
+      expect(addPlayersText).toBeInTheDocument();
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -152,8 +151,8 @@ describe('App Persistence Integration', () => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const collapsedStep = document.querySelector('.step.collapsed');
-      expect(collapsedStep).toBeTruthy();
+      const restoredCollapsedStep = document.querySelector('.step.collapsed');
+      expect(restoredCollapsedStep).toBeTruthy();
     });
   });
 
