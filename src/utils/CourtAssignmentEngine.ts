@@ -83,6 +83,18 @@ export class CourtAssignmentEngine {
     });
   }
 
+  /**
+   * Reverses the win record for a specific court when the winner is removed.
+   * @param courtNumber - The court number to reverse the win for
+   */
+  static reverseWinForCourt(courtNumber: number): void {
+    const previousRecord = this.recordedWinsMap.get(courtNumber);
+    if (previousRecord) {
+      this.reversePreviousWinRecord(previousRecord);
+      this.recordedWinsMap.delete(courtNumber);
+    }
+  }
+
   static recordWins(courts: Court[]): void {
     courts.forEach(court => {
       if (court.winner && court.teams) {

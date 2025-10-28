@@ -82,6 +82,59 @@ test.describe('Feature Tests', () => {
     await expect(page.getByTestId('player-stats')).toHaveCount(0);
   });
 
+  test('Leaderboard updates in real-time when changing winners', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+    await addBulkPlayers(page, players);
+
+    await expect(page.getByTestId('stats-total-count')).toHaveText('4');
+
+    const generateButton = page.getByTestId('generate-assignments-button');
+    await generateButton.click();
+
+    await expect(page.locator('[data-testid^="court-"]')).toHaveCount(1);
+
+    const leaderboardBefore = page.locator('h2').filter({ hasText: 'Leaderboard' });
+    await expect(leaderboardBefore).not.toBeVisible();
+
+    const firstTeam = page.locator('.team-clickable').first();
+    await firstTeam.click();
+    await page.waitForTimeout(200);
+
+    await expect(page.locator('.crown')).toHaveCount(1);
+
+    const leaderboardAfterFirstClick = page.locator('h2').filter({ hasText: 'Leaderboard' });
+    await expect(leaderboardAfterFirstClick).toBeVisible();
+
+    const leaderboardRows = page.locator('.leaderboard-table tbody tr');
+    await expect(leaderboardRows).toHaveCount(2);
+
+    const firstRowWins = leaderboardRows.first().locator('td').nth(2);
+    await expect(firstRowWins).toHaveText('1');
+
+    const secondTeam = page.locator('.team-clickable').last();
+    await secondTeam.click();
+    await page.waitForTimeout(200);
+
+    await expect(page.locator('.crown')).toHaveCount(1);
+
+    const leaderboardAfterSecondClick = page.locator('h2').filter({ hasText: 'Leaderboard' });
+    await expect(leaderboardAfterSecondClick).toBeVisible();
+
+    const updatedLeaderboardRows = page.locator('.leaderboard-table tbody tr');
+    await expect(updatedLeaderboardRows).toHaveCount(2);
+
+    const firstRowWinsAfterSwitch = updatedLeaderboardRows.first().locator('td').nth(2);
+    await expect(firstRowWinsAfterSwitch).toHaveText('1');
+
+    await secondTeam.click();
+    await page.waitForTimeout(200);
+
+    await expect(page.locator('.crown')).toHaveCount(0);
+
+    const leaderboardAfterRemoval = page.locator('h2').filter({ hasText: 'Leaderboard' });
+    await expect(leaderboardAfterRemoval).not.toBeVisible();
+  });
+
   test('App resilience after session data loss', async ({ page }) => {
     const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
     await addBulkPlayers(page, players);
