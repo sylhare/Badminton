@@ -1,7 +1,7 @@
 import React from 'react';
 import { vi } from 'vitest';
 
-import { Player } from '../../src/App';
+import { Player } from '../../src/types';
 
 export function createMockPlayer(overrides: Partial<Player> = {}): Player {
   return {

@@ -1,4 +1,4 @@
-import type { Court, Player } from '../../src/App';
+import type { Court, Player } from '../../src/types';
 
 export const TEST_PLAYERS: Player[] = [
   { id: '1', name: 'Alice', isPresent: true },
