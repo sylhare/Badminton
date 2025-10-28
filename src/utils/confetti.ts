@@ -16,7 +16,7 @@ interface ConfettiParticle {
   curliness: number;
 }
 
-export class ConfettiEffect {
+class ConfettiEffect {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private particles: ConfettiParticle[] = [];

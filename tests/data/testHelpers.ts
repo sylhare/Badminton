@@ -1,7 +1,7 @@
 import { expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 
-import { Player } from '../../src/App';
+import type { Player } from '../../src/types';
 
 export function expectPlayersToBeRendered(players: Player[]): void {
   players.forEach(player => {
