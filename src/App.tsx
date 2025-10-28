@@ -21,13 +21,19 @@ function App(): React.ReactElement {
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
-  const [_winCountsVersion, setWinCountsVersion] = useState<number>(0);
+  const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
 
   const isInitialLoad = useRef(true);
 
   useEffect(() => {
     CourtAssignmentEngine.loadState();
     isInitialLoad.current = false;
+
+    const unsubscribe = CourtAssignmentEngine.onStateChange(() => {
+      setEngineStateVersion(prev => prev + 1);
+    });
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -97,13 +103,11 @@ function App(): React.ReactElement {
     setManualCourtSelection(null);
     CourtAssignmentEngine.resetHistory();
     setTimeout(() => clearAllStoredState(), 0);
-    setWinCountsVersion(prev => prev + 1);
   };
 
   const handleResetAlgorithm = () => {
     CourtAssignmentEngine.resetHistory();
     CourtAssignmentEngine.saveState();
-    setWinCountsVersion(prev => prev + 1);
   };
 
   const generateAssignments = () => {
@@ -123,30 +127,12 @@ function App(): React.ReactElement {
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
     setManualCourtSelection(null);
-    setWinCountsVersion(prev => prev + 1);
   };
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
-    setAssignments(prevAssignments => {
-      const court = prevAssignments.find(c => c.courtNumber === courtNumber);
-      if (!court) return prevAssignments;
-
-      if (court.winner && court.winner !== winner) {
-        CourtAssignmentEngine.reverseWinForCourt(courtNumber);
-      }
-
-      const updatedAssignments = prevAssignments.map(c =>
-        c.courtNumber === courtNumber ? { ...c, winner } : c,
-      );
-
-      if (winner && court.teams) {
-        CourtAssignmentEngine.recordWins([{ ...court, winner }]);
-      }
-
-      setWinCountsVersion(prev => prev + 1);
-
-      return updatedAssignments;
-    });
+    setAssignments(prevAssignments =>
+      CourtAssignmentEngine.updateWinner(courtNumber, winner, prevAssignments),
+    );
   };
 
   const stepCallbacks: StepCallbacks = {

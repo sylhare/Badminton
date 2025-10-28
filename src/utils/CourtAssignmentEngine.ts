@@ -10,9 +10,20 @@ export class CourtAssignmentEngine {
   private static lossCountMap: Map<string, number> = new Map();
   private static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
   private static readonly MAX_ATTEMPTS = 300;
-  private _assignments: Court[] = [];
+  private static stateChangeListeners: Array<() => void> = [];
 
-  constructor(private players: Player[], private numberOfCourts: number) {
+  static onStateChange(listener: () => void): () => void {
+    this.stateChangeListeners.push(listener);
+    return () => {
+      const index = this.stateChangeListeners.indexOf(listener);
+      if (index > -1) {
+        this.stateChangeListeners.splice(index, 1);
+      }
+    };
+  }
+
+  private static notifyStateChange(): void {
+    this.stateChangeListeners.forEach(listener => listener());
   }
 
   static resetHistory(): void {
@@ -22,6 +33,7 @@ export class CourtAssignmentEngine {
     this.winCountMap.clear();
     this.lossCountMap.clear();
     this.recordedWinsMap.clear();
+    this.notifyStateChange();
   }
 
   static clearCurrentSession(): void {
@@ -92,10 +104,47 @@ export class CourtAssignmentEngine {
     if (previousRecord) {
       this.reversePreviousWinRecord(previousRecord);
       this.recordedWinsMap.delete(courtNumber);
+      this.notifyStateChange();
     }
   }
 
+  /**
+   * Updates the winner for a specific court, handling the reversal of previous wins if needed.
+   * Returns the updated court assignments array.
+   * @param courtNumber - The court number to update
+   * @param winner - The new winner selection (1, 2, or undefined)
+   * @param currentAssignments - The current court assignments
+   * @returns The updated court assignments array
+   */
+  static updateWinner(
+    courtNumber: number,
+    winner: 1 | 2 | undefined,
+    currentAssignments: Court[],
+  ): Court[] {
+    const court = currentAssignments.find(c => c.courtNumber === courtNumber);
+    if (!court) return currentAssignments;
+
+    // If there was a previous winner and it's different from the new winner, reverse it
+    if (court.winner && court.winner !== winner) {
+      this.reverseWinForCourt(courtNumber);
+    }
+
+    // Update the assignments with the new winner
+    const updatedAssignments = currentAssignments.map(c =>
+      c.courtNumber === courtNumber ? { ...c, winner } : c,
+    );
+
+    // Record the new win if there is one
+    if (winner && court.teams) {
+      this.recordWins([{ ...court, winner }]);
+    }
+
+    this.notifyStateChange();
+    return updatedAssignments;
+  }
+
   static recordWins(courts: Court[]): void {
+    let stateChanged = false;
     courts.forEach(court => {
       if (court.winner && court.teams) {
         const courtNumber = court.courtNumber;
@@ -108,6 +157,7 @@ export class CourtAssignmentEngine {
 
         if (previousRecord && this.shouldReversePreviousRecord(previousRecord, court.winner, winningPlayerIds)) {
           this.reversePreviousWinRecord(previousRecord);
+          stateChanged = true;
         } else if (previousRecord) {
           return;
         }
@@ -124,8 +174,12 @@ export class CourtAssignmentEngine {
           winningPlayers: winningPlayerIds,
           losingPlayers: losingPlayerIds,
         });
+        stateChanged = true;
       }
     });
+    if (stateChanged) {
+      this.notifyStateChange();
+    }
   }
 
   static getWinCounts(): Map<string, number> {
@@ -359,12 +413,8 @@ export class CourtAssignmentEngine {
 
     return { courts, cost: totalCost };
   }
-
-  generate(): Court[] {
-    this._assignments = CourtAssignmentEngine.generate(this.players, this.numberOfCourts);
-    return this._assignments;
-  }
 }
+
 export const generateCourtAssignments = (players: Player[], courts: number, manualCourt?: ManualCourtSelection): Court[] =>
   CourtAssignmentEngine.generate(players, courts, manualCourt);
 
