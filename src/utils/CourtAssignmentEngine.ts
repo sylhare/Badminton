@@ -60,6 +60,8 @@ export class CourtAssignmentEngine {
   private static lossCountMap: Map<string, number> = new Map();
   /** Tracks recorded match outcomes for the current session (court number → match result) */
   private static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
+  /** Cache for memoizing cost evaluations during generate() to avoid redundant calculations */
+  private static costCache: Map<string, number> = new Map();
   /** Maximum number of random configurations to try (Monte Carlo iterations) */
   private static readonly MAX_ATTEMPTS = 300;
   /** Observer pattern listeners for state change notifications */
@@ -288,6 +290,7 @@ export class CourtAssignmentEngine {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
+    this.costCache.clear();
     const compatibilityMatrix = this.buildCompatibilityMatrix(presentPlayers);
 
     let manualCourtResult: Court | null = null;
@@ -357,6 +360,24 @@ export class CourtAssignmentEngine {
   /** Creates a consistent pairwise key for two player IDs (order-independent). */
   private static pairKey(a: string, b: string): string {
     return a < b ? `${a}|${b}` : `${b}|${a}`;
+  }
+
+  /**
+   * Generates a cache key for a court configuration based on player IDs.
+   * The key is order-independent (same players = same key regardless of team arrangement).
+   * 
+   * @param court - Court configuration to generate key for
+   * @returns Canonical cache key string
+   */
+  private static getCourtCacheKey(court: Court): string {
+    if (!court.teams) return '';
+    
+    const allPlayerIds = [
+      ...court.teams.team1.map(p => p.id),
+      ...court.teams.team2.map(p => p.id),
+    ].sort();
+    
+    return allPlayerIds.join('|');
   }
 
   /**
@@ -431,6 +452,8 @@ export class CourtAssignmentEngine {
    * Evaluates the cost (penalty) of a court assignment configuration.
    * Lower cost indicates better fairness and balance. Core function of the greedy evaluation.
    * 
+   * Uses cost memoization: checks cache before calculating to avoid redundant work.
+   * 
    * ## Cost Components:
    * - Teammate repetition: Sum of times each pair has been teammates before
    * - Opponent repetition: Sum of times each pair has faced each other before
@@ -443,6 +466,12 @@ export class CourtAssignmentEngine {
    * @returns Cost value (lower is better, 0 is ideal)
    */
   private static evaluateCourtCost(court: Court, compatibilityMatrix?: Map<string, { teammate: number; opponent: number }>): number {
+    const cacheKey = this.getCourtCacheKey(court);
+    
+    if (cacheKey && this.costCache.has(cacheKey)) {
+      return this.costCache.get(cacheKey)!;
+    }
+    
     let cost = 0;
 
     if (court.teams) {
@@ -510,6 +539,10 @@ export class CourtAssignmentEngine {
       const team1LossSum = court.teams.team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
       const team2LossSum = court.teams.team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
       cost += Math.abs(team1LossSum - team2LossSum);
+    }
+
+    if (cacheKey) {
+      this.costCache.set(cacheKey, cost);
     }
 
     return cost;
