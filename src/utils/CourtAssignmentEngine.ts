@@ -4,41 +4,41 @@ import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 
 /**
  * CourtAssignmentEngine - Badminton Court Assignment and Player Management System
- * 
+ *
  * @pattern Monte Carlo Greedy Search
- * 
+ *
  * @description
  * This class implements a court assignment algorithm using a Monte Carlo approach combined
  * with greedy cost evaluation. The algorithm generates fair and balanced badminton court
  * assignments while considering historical data to maximize variety and fairness.
- * 
+ *
  * ## Algorithm Overview:
  * 1. **Monte Carlo Sampling**: Generates multiple random candidate assignments (default: 300 attempts)
  * 2. **Greedy Selection**: Evaluates each candidate using a multi-factor cost function
  * 3. **Best Selection**: Returns the assignment with the lowest cost (best fairness metrics)
- * 
+ *
  * ## Cost Function Components:
  * - **Teammate History**: Penalizes players who have been teammates too often
  * - **Opponent History**: Penalizes players who have faced each other too often
  * - **Skill Balance**: Ensures teams are balanced based on win/loss records
  * - **Skill Pairing**: Avoids pairing high-win or high-loss players together
- * 
+ *
  * ## Time Complexity:
  * - generate(): O(MAX_ATTEMPTS × N log N) ≈ O(300N log N) where N = number of players
  * - Each attempt: O(N log N) for shuffling + O(C) for court assignments
  * - chooseBestTeamSplit(): O(1) - evaluates 3 fixed team split configurations
  * - evaluateCourtCost(): O(1) - constant time for small teams (2-4 players)
- * 
+ *
  * ## Space Complexity:
  * - O(N²) for pairwise relationship maps (teammate/opponent tracking)
  * - O(N) for player statistics (wins/losses/benches)
  * - O(C) for court assignments where C = number of courts
- * 
+ *
  * ## State Management:
  * - Uses static properties for global state persistence across sessions
  * - Implements Observer pattern for reactive state updates
  * - Supports localStorage persistence via saveState()/loadState()
- * 
+ *
  * ## Historical Tracking:
  * - benchCountMap: Tracks how many times each player has been benched
  * - teammateCountMap: Tracks pairwise teammate frequency (key: "playerId1|playerId2")
@@ -70,7 +70,7 @@ export class CourtAssignmentEngine {
   /**
    * Subscribes to state changes in the engine (Observer pattern).
    * Returns an unsubscribe function to remove the listener.
-   * 
+   *
    * @param listener - Callback function invoked when engine state changes
    */
   static onStateChange(listener: () => void): () => void {
@@ -91,7 +91,7 @@ export class CourtAssignmentEngine {
   /**
    * Resets all historical data including wins, losses, benches, and matchup history.
    * Use this to start fresh with no historical bias.
-   * 
+   *
    * @fires notifyStateChange
    */
   static resetHistory(): void {
@@ -167,7 +167,7 @@ export class CourtAssignmentEngine {
   /**
    * Reverses the win record for a specific court when the winner is changed or removed.
    * Decrements win/loss counts for the previously recorded match outcome.
-   * 
+   *
    * @param courtNumber - The court number to reverse the win for
    * @fires notifyStateChange
    */
@@ -183,7 +183,7 @@ export class CourtAssignmentEngine {
   /**
    * Updates the winner for a specific court, handling the reversal of previous wins if needed.
    * Automatically manages win/loss counts when winner changes.
-   * 
+   *
    * @param courtNumber - The court number to update
    * @param winner - The new winner selection (1 = team1, 2 = team2, undefined = clear winner)
    * @param currentAssignments - The current court assignments
@@ -218,7 +218,7 @@ export class CourtAssignmentEngine {
    * Records match outcomes for one or more courts.
    * Increments win/loss counts for players and stores the match result.
    * Handles reversals if the same court is recorded with different outcome.
-   * 
+   *
    * @param courts - Array of courts with winner information
    * @fires notifyStateChange - If any state changes occurred
    */
@@ -268,7 +268,7 @@ export class CourtAssignmentEngine {
 
   /**
    * Generates optimal court assignments using Monte Carlo Greedy Search algorithm.
-   * 
+   *
    * ## Algorithm Steps:
    * 1. Filter present players and handle manual court selection if provided
    * 2. Calculate required bench spots to ensure even player distribution
@@ -277,12 +277,12 @@ export class CourtAssignmentEngine {
    * 5. Evaluate each candidate using multi-factor cost function
    * 6. Select and return the assignment with lowest cost (best fairness)
    * 7. Update historical tracking (bench/teammate/opponent counts)
-   * 
+   *
    * @param players - Array of all players (present and absent)
    * @param numberOfCourts - Number of courts available
    * @param manualSelection - Optional manual court selection for specific players
    * @returns Array of court assignments with teams and players
-   * 
+   *
    * @complexity Time: O(MAX_ATTEMPTS × N log N) ≈ O(300N log N)
    * @complexity Space: O(N² + C) for relationship tracking and court assignments
    */
@@ -365,61 +365,61 @@ export class CourtAssignmentEngine {
   /**
    * Generates a cache key for a court configuration based on player IDs.
    * The key is order-independent (same players = same key regardless of team arrangement).
-   * 
+   *
    * @param court - Court configuration to generate key for
    * @returns Canonical cache key string
    */
   private static getCourtCacheKey(court: Court): string {
     if (!court.teams) return '';
-    
+
     const allPlayerIds = [
       ...court.teams.team1.map(p => p.id),
       ...court.teams.team2.map(p => p.id),
     ].sort();
-    
+
     return allPlayerIds.join('|');
   }
 
   /**
    * Builds a precomputed compatibility matrix for all player pairs.
    * This optimization reduces redundant Map lookups during cost evaluation from O(4-6 lookups) to O(1 lookup).
-   * 
+   *
    * The matrix stores pairwise data:
    * - Historical teammate frequency
    * - Historical opponent frequency
    * - Win-based skill pairing penalty (for teammates only)
    * - Loss-based skill pairing penalty (for teammates only)
-   * 
+   *
    * @param players - Array of players to build compatibility matrix for
    * @returns Map with pairwise keys to objects containing teammate and opponent costs with skill penalties
-   * 
+   *
    * @complexity Time: O(N²) where N = number of players
    * @complexity Space: O(N²) for the compatibility matrix
    */
   private static buildCompatibilityMatrix(players: Player[]): Map<string, { teammate: number; opponent: number }> {
     const matrix = new Map<string, { teammate: number; opponent: number }>();
-    
+
     for (let i = 0; i < players.length; i++) {
       for (let j = i + 1; j < players.length; j++) {
         const key = this.pairKey(players[i].id, players[j].id);
-        
+
         const teammateCost = this.teammateCountMap.get(key) ?? 0;
         const opponentCost = this.opponentCountMap.get(key) ?? 0;
-        
+
         const wins1 = this.winCountMap.get(players[i].id) ?? 0;
         const wins2 = this.winCountMap.get(players[j].id) ?? 0;
         const losses1 = this.lossCountMap.get(players[i].id) ?? 0;
         const losses2 = this.lossCountMap.get(players[j].id) ?? 0;
-        
+
         const skillPenalty = wins1 * wins2 + losses1 * losses2;
-        
+
         matrix.set(key, {
           teammate: teammateCost + skillPenalty,
           opponent: opponentCost,
         });
       }
     }
-    
+
     return matrix;
   }
 
@@ -431,7 +431,7 @@ export class CourtAssignmentEngine {
   /**
    * Selects players to be benched based on historical bench counts.
    * Players with fewer historical bench counts are prioritized for benching (fairness).
-   * 
+   *
    * @param players - Available players
    * @param benchSpots - Number of players that need to be benched
    */
@@ -451,27 +451,27 @@ export class CourtAssignmentEngine {
   /**
    * Evaluates the cost (penalty) of a court assignment configuration.
    * Lower cost indicates better fairness and balance. Core function of the greedy evaluation.
-   * 
+   *
    * Uses cost memoization: checks cache before calculating to avoid redundant work.
-   * 
+   *
    * ## Cost Components:
    * - Teammate repetition: Sum of times each pair has been teammates before
    * - Opponent repetition: Sum of times each pair has faced each other before
    * - Skill pairing penalty: Discourages pairing high-win or high-loss players together
    * - Team balance: Absolute difference in total wins between teams
    * - Loss balance: Absolute difference in total losses between teams
-   * 
+   *
    * @param court - Court configuration to evaluate
    * @param compatibilityMatrix - Optional precomputed pairwise costs for optimization
    * @returns Cost value (lower is better, 0 is ideal)
    */
   private static evaluateCourtCost(court: Court, compatibilityMatrix?: Map<string, { teammate: number; opponent: number }>): number {
     const cacheKey = this.getCourtCacheKey(court);
-    
+
     if (cacheKey && this.costCache.has(cacheKey)) {
       return this.costCache.get(cacheKey)!;
     }
-    
+
     let cost = 0;
 
     if (court.teams) {
@@ -551,12 +551,12 @@ export class CourtAssignmentEngine {
   /**
    * Determines the optimal team split for 4 players on a court.
    * Evaluates all 3 possible team configurations and selects the one with lowest cost.
-   * 
+   *
    * Possible splits:
    * - [0,1] vs [2,3]
    * - [0,2] vs [1,3]
    * - [0,3] vs [1,2]
-   * 
+   *
    * @param players - Array of exactly 4 players to split into teams
    * @param compatibilityMatrix - Optional precomputed pairwise costs for optimization
    * @returns Object containing the optimal team configuration and its cost
@@ -587,7 +587,7 @@ export class CourtAssignmentEngine {
   /**
    * Creates a manual court with user-specified players.
    * Handles 2, 3, or 4 player configurations and automatically determines team splits for 4 players.
-   * 
+   *
    * @param players - Array of 2-4 players for the manual court
    * @param courtNumber - Court number to assign
    * @param compatibilityMatrix - Optional precomputed pairwise costs for optimization
@@ -620,7 +620,7 @@ export class CourtAssignmentEngine {
   /**
    * Generates a single random candidate assignment for Monte Carlo sampling.
    * Shuffles players randomly and distributes them across courts, evaluating the total cost.
-   * 
+   *
    * @param onCourtPlayers - Players available to be assigned to courts
    * @param numberOfCourts - Number of courts to fill
    * @param startCourtNum - Starting court number (default: 1)
