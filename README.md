@@ -16,12 +16,36 @@ A React TypeScript application that helps organize badminton players into court 
 
 ## How It Works
 
+### Get started
+
 1. **Add Players**: 
    - **From Image**: Take a photo or upload an image of your player list for automatic OCR extraction
    - **Manual Entry**: Add players one by one or paste multiple names (comma or line separated)
 2. **Manage Players**: Check/uncheck players who are present, remove players as needed
 3. **Set Courts**: Configure the number of available courts
 4. **Generate Assignments**: Click to randomly assign players to courts
+
+### 🧮 Algorithm Rules & Fairness
+
+The court-assignment engine aims to give everyone a fun, varied and fair session.  It does this by turning each candidate set of courts into a *cost* and repeatedly searching for the lowest-cost layout.  The cost function is made up of the rules below – lower cost means “more desirable”.
+
+1. **Bench rotation fairness** – players who have sat out more often get priority to play next, ensuring everyone gets equal court time.
+2. **Partner variety** – players who have already been teammates many times are less likely to be paired again, so everyone plays with different partners.
+3. **Opponent variety** – players who have faced each other frequently are less likely to be opponents again, giving variety in who you play against.
+4. **Balanced matches**  
+   • Players with many wins avoid being paired together (preventing "super teams").  
+   • Players with many losses avoid being paired together (preventing weak teams).  
+   • When two teams face each other, their skill levels are matched so games stay competitive (avoiding mismatches like strong winners vs. weak losers).
+5. **Proper game formats** – courts always have either singles (2 players) or doubles (4 players), never 3 players.
+6. **Optimal team pairings** – for each doubles match, the system tries all possible team combinations and picks the fairest pairing.
+
+These rules are layered on top of the basic constraints:
+
+* **Doubles preferred** – courts of 4 players are created whenever possible.
+* **Singles fallback** – courts of 2 players are allowed when numbers are odd.
+* **Bench** – any surplus players are rotated to the bench.
+
+Because the system's optimiser is [stochastic](https://en.wikipedia.org/wiki/Stochastic), there is always an element of randomness, but over time the history-based penalties push the system towards an even distribution of partners, opponents and results.
 
 ### Usage Tips
 
@@ -48,29 +72,7 @@ A React TypeScript application that helps organize badminton players into court 
 - Click "Generate Random Assignments" to create new team combinations
 - Click "Generate New Assignments" to shuffle players again
 
-### 🧮 Algorithm Rules & Fairness
-
-The court-assignment engine aims to give everyone a fun, varied and fair session.  It does this by turning each candidate set of courts into a *cost* and repeatedly searching for the lowest-cost layout.  The cost function is made up of the rules below – lower cost means “more desirable”.
-
-1. **Bench rotation fairness** – players who have sat out more often get priority to play next, ensuring everyone gets equal court time.
-2. **Partner variety** – players who have already been teammates many times are less likely to be paired again, so everyone plays with different partners.
-3. **Opponent variety** – players who have faced each other frequently are less likely to be opponents again, giving variety in who you play against.
-4. **Balanced matches**  
-   • Players with many wins avoid being paired together (preventing "super teams").  
-   • Players with many losses avoid being paired together (preventing weak teams).  
-   • When two teams face each other, their skill levels are matched so games stay competitive (avoiding mismatches like strong winners vs. weak losers).
-5. **Proper game formats** – courts always have either singles (2 players) or doubles (4 players), never 3 players.
-6. **Optimal team pairings** – for each doubles match, the system tries all possible team combinations and picks the fairest pairing.
-
-These rules are layered on top of the basic constraints:
-
-* **Doubles preferred** – courts of 4 players are created whenever possible.
-* **Singles fallback** – courts of 2 players are allowed when numbers are odd.
-* **Bench** – any surplus players are rotated to the bench.
-
-Because the system's optimiser is [stochastic](https://en.wikipedia.org/wiki/Stochastic), there is always an element of randomness, but over time the history-based penalties push the system towards an even distribution of partners, opponents and results.
-
-## Get Started
+## Development setup
 
 ### Installation
 
@@ -84,11 +86,10 @@ npm install
 npm run dev
 ```
 
-3. Open your browser and navigate to `http://localhost:5173`
+3. Open your browser and navigate to `http://localhost:5174`
 
-### Development
+### Contributing
 
-- `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint
 - `npm run test` - Run unit tests

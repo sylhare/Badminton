@@ -1,0 +1,27 @@
+name: ✨ Feature Request
+description: Suggest an idea
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea? We'd love to hear it!
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's your idea?
+      description: Describe what you'd like to see
+      placeholder: It would be great if...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Anything else?
+      description: More details, mockups, examples (optional)
+      placeholder: For example...
+    validations:
+      required: false
+

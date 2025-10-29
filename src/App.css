@@ -1471,3 +1471,27 @@ h1 {
     background: #f7fafc;
 }
 
+.app-footer {
+    max-width: 1200px;
+    margin: 20px auto 0;
+    padding: 20px;
+    text-align: center;
+    color: white;
+    font-size: 0.95rem;
+}
+
+.app-footer p {
+    margin: 0;
+}
+
+.app-footer a {
+    color: white;
+    text-decoration: underline;
+    font-weight: 500;
+    transition: opacity 0.2s ease;
+}
+
+.app-footer a:hover {
+    opacity: 0.8;
+}
+
