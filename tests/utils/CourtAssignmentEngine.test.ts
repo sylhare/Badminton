@@ -1093,4 +1093,183 @@ describe('CourtAssignment Engine – core behaviour', () => {
       expect(winCounts.size).toBeGreaterThan(0);
     });
   });
+
+  describe('Compatibility Matrix Optimization', () => {
+    beforeEach(() => {
+      testResetHistory();
+    });
+
+    const getBuildCompatibilityMatrix = () => CourtAssignmentEngine['buildCompatibilityMatrix'];
+    const getEvaluateCourtCost = () => CourtAssignmentEngine['evaluateCourtCost'];
+
+    it('should build compatibility matrix with correct structure', () => {
+      const players = mockPlayers(4);
+      const buildMatrix = getBuildCompatibilityMatrix();
+      const matrix = buildMatrix.call(CourtAssignmentEngine, players);
+
+      expect(matrix.size).toBe(6);
+
+      const expectedKeys = [
+        'P0|P1', 'P0|P2', 'P0|P3',
+        'P1|P2', 'P1|P3',
+        'P2|P3',
+      ];
+
+      expectedKeys.forEach(key => {
+        expect(matrix.has(key)).toBe(true);
+        const pairCost = matrix.get(key);
+        expect(pairCost).toBeDefined();
+        expect(typeof pairCost?.teammate).toBe('number');
+        expect(typeof pairCost?.opponent).toBe('number');
+      });
+    });
+
+    it('should include all cost components in compatibility matrix', () => {
+      const players = mockPlayers(4);
+      
+      CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 3);
+      CourtAssignmentEngine['opponentCountMap'].set('P0|P2', 2);
+      CourtAssignmentEngine['winCountMap'].set('P0', 5);
+      CourtAssignmentEngine['winCountMap'].set('P1', 4);
+      CourtAssignmentEngine['lossCountMap'].set('P0', 2);
+      CourtAssignmentEngine['lossCountMap'].set('P1', 3);
+
+      const buildMatrix = getBuildCompatibilityMatrix();
+      const matrix = buildMatrix.call(CourtAssignmentEngine, players);
+
+      const p0p1Cost = matrix.get('P0|P1');
+      expect(p0p1Cost?.teammate).toBe(3 + (5 * 4) + (2 * 3));
+      expect(p0p1Cost?.opponent).toBe(0);
+
+      const p0p2Cost = matrix.get('P0|P2');
+      expect(p0p2Cost?.teammate).toBe(0 + (5 * 0) + (2 * 0));
+      expect(p0p2Cost?.opponent).toBe(2);
+    });
+
+    it('should produce identical results with and without compatibility matrix', () => {
+      const players = mockPlayers(8);
+      
+      CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 2);
+      CourtAssignmentEngine['opponentCountMap'].set('P2|P3', 1);
+      CourtAssignmentEngine['winCountMap'].set('P0', 3);
+      CourtAssignmentEngine['winCountMap'].set('P4', 5);
+      CourtAssignmentEngine['lossCountMap'].set('P1', 2);
+      CourtAssignmentEngine['lossCountMap'].set('P5', 4);
+
+      const court = createMockCourt(1, players.slice(0, 4));
+      
+      const evaluateCost = getEvaluateCourtCost();
+      const costWithoutMatrix = evaluateCost.call(CourtAssignmentEngine, court);
+      
+      const buildMatrix = getBuildCompatibilityMatrix();
+      const matrix = buildMatrix.call(CourtAssignmentEngine, players);
+      const costWithMatrix = evaluateCost.call(CourtAssignmentEngine, court, matrix);
+
+      expect(costWithMatrix).toBe(costWithoutMatrix);
+    });
+
+    it('should handle empty compatibility matrix gracefully', () => {
+      const players = mockPlayers(4);
+      const court = createMockCourt(1, players);
+      
+      const evaluateCost = getEvaluateCourtCost();
+      const emptyMatrix = new Map<string, { teammate: number; opponent: number }>();
+      
+      const cost = evaluateCost.call(CourtAssignmentEngine, court, emptyMatrix);
+      expect(typeof cost).toBe('number');
+      expect(cost).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should use compatibility matrix in generate() method', () => {
+      const players = mockPlayers(12);
+      
+      CourtAssignmentEngine['winCountMap'].set('P0', 10);
+      CourtAssignmentEngine['lossCountMap'].set('P1', 8);
+      
+      const result = generateCourtAssignments(players, 3);
+      
+      expect(result).toHaveLength(3);
+      expect(result.every(c => c.players.length >= 2)).toBe(true);
+    });
+
+    it('should calculate pairwise costs correctly for all pairs', () => {
+      const players = mockPlayers(3);
+      
+      CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 1);
+      CourtAssignmentEngine['opponentCountMap'].set('P1|P2', 2);
+      CourtAssignmentEngine['winCountMap'].set('P0', 3);
+      CourtAssignmentEngine['winCountMap'].set('P2', 4);
+      CourtAssignmentEngine['lossCountMap'].set('P0', 1);
+      CourtAssignmentEngine['lossCountMap'].set('P2', 2);
+
+      const buildMatrix = getBuildCompatibilityMatrix();
+      const matrix = buildMatrix.call(CourtAssignmentEngine, players);
+
+      expect(matrix.get('P0|P1')?.teammate).toBe(1 + (3 * 0) + (1 * 0));
+      expect(matrix.get('P0|P1')?.opponent).toBe(0);
+      
+      expect(matrix.get('P1|P2')?.teammate).toBe(0 + (0 * 4) + (0 * 2));
+      expect(matrix.get('P1|P2')?.opponent).toBe(2);
+      
+      expect(matrix.get('P0|P2')?.teammate).toBe(0 + (3 * 4) + (1 * 2));
+      expect(matrix.get('P0|P2')?.opponent).toBe(0);
+    });
+
+    it('should maintain consistency across multiple generate() calls', () => {
+      const players = mockPlayers(8);
+      
+      CourtAssignmentEngine['winCountMap'].set('P0', 5);
+      CourtAssignmentEngine['lossCountMap'].set('P1', 3);
+
+      const result1 = generateCourtAssignments(players, 2);
+      const result2 = generateCourtAssignments(players, 2);
+
+      expect(result1).toHaveLength(2);
+      expect(result2).toHaveLength(2);
+      expect(result1.every(c => c.teams !== undefined)).toBe(true);
+      expect(result2.every(c => c.teams !== undefined)).toBe(true);
+    });
+
+    it('should handle manual court selection with compatibility matrix', () => {
+      const players = mockPlayers(12);
+      const manualSelection: ManualCourtSelection = {
+        players: players.slice(0, 4),
+      };
+
+      CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 2);
+      
+      const result = generateCourtAssignments(players, 3, manualSelection);
+      
+      expect(result).toHaveLength(3);
+      expect(result[0].players.length).toBe(4);
+    });
+
+    it('should produce non-negative costs from compatibility matrix', () => {
+      const players = mockPlayers(6);
+      
+      const buildMatrix = getBuildCompatibilityMatrix();
+      const matrix = buildMatrix.call(CourtAssignmentEngine, players);
+
+      matrix.forEach((pairCost, key) => {
+        expect(pairCost.teammate).toBeGreaterThanOrEqual(0);
+        expect(pairCost.opponent).toBeGreaterThanOrEqual(0);
+        expect(key).toMatch(/^P\d+\|P\d+$/);
+      });
+    });
+
+    it('should correctly separate teammate and opponent costs', () => {
+      const players = mockPlayers(4);
+      
+      const p0p1Key = 'P0|P1';
+      CourtAssignmentEngine['teammateCountMap'].set(p0p1Key, 5);
+      CourtAssignmentEngine['opponentCountMap'].set(p0p1Key, 3);
+
+      const buildMatrix = getBuildCompatibilityMatrix();
+      const matrix = buildMatrix.call(CourtAssignmentEngine, players);
+
+      const pairCost = matrix.get(p0p1Key);
+      expect(pairCost?.teammate).toBe(5 + 0);
+      expect(pairCost?.opponent).toBe(3);
+    });
+  });
 });
