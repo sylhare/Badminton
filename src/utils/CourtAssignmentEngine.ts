@@ -288,6 +288,8 @@ export class CourtAssignmentEngine {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
+    const compatibilityMatrix = this.buildCompatibilityMatrix(presentPlayers);
+
     let manualCourtResult: Court | null = null;
     let remainingPlayers = presentPlayers;
     let remainingCourts = numberOfCourts;
@@ -295,7 +297,7 @@ export class CourtAssignmentEngine {
     if (manualSelection && manualSelection.players.length > 0) {
       const manualPlayers = manualSelection.players.filter(p => p.isPresent);
       if (manualPlayers.length >= 2 && manualPlayers.length <= 4) {
-        manualCourtResult = this.createManualCourt(manualPlayers, 1);
+        manualCourtResult = this.createManualCourt(manualPlayers, 1, compatibilityMatrix);
         remainingPlayers = presentPlayers.filter(p => !manualPlayers.some(mp => mp.id === p.id));
         remainingCourts = numberOfCourts - 1;
       }
@@ -311,7 +313,7 @@ export class CourtAssignmentEngine {
 
     let best: { courts: Court[]; cost: number } | null = null;
     for (let i = 0; i < this.MAX_ATTEMPTS; i++) {
-      const cand = this.generateCandidate(onCourtPlayers, remainingCourts, manualCourtResult ? 2 : 1);
+      const cand = this.generateCandidate(onCourtPlayers, remainingCourts, manualCourtResult ? 2 : 1, compatibilityMatrix);
       if (!best || cand.cost < best.cost) best = cand;
     }
 
@@ -357,6 +359,49 @@ export class CourtAssignmentEngine {
     return a < b ? `${a}|${b}` : `${b}|${a}`;
   }
 
+  /**
+   * Builds a precomputed compatibility matrix for all player pairs.
+   * This optimization reduces redundant Map lookups during cost evaluation from O(4-6 lookups) to O(1 lookup).
+   * 
+   * The matrix stores pairwise data:
+   * - Historical teammate frequency
+   * - Historical opponent frequency
+   * - Win-based skill pairing penalty (for teammates only)
+   * - Loss-based skill pairing penalty (for teammates only)
+   * 
+   * @param players - Array of players to build compatibility matrix for
+   * @returns Map with pairwise keys to objects containing teammate and opponent costs with skill penalties
+   * 
+   * @complexity Time: O(N²) where N = number of players
+   * @complexity Space: O(N²) for the compatibility matrix
+   */
+  private static buildCompatibilityMatrix(players: Player[]): Map<string, { teammate: number; opponent: number }> {
+    const matrix = new Map<string, { teammate: number; opponent: number }>();
+    
+    for (let i = 0; i < players.length; i++) {
+      for (let j = i + 1; j < players.length; j++) {
+        const key = this.pairKey(players[i].id, players[j].id);
+        
+        const teammateCost = this.teammateCountMap.get(key) ?? 0;
+        const opponentCost = this.opponentCountMap.get(key) ?? 0;
+        
+        const wins1 = this.winCountMap.get(players[i].id) ?? 0;
+        const wins2 = this.winCountMap.get(players[j].id) ?? 0;
+        const losses1 = this.lossCountMap.get(players[i].id) ?? 0;
+        const losses2 = this.lossCountMap.get(players[j].id) ?? 0;
+        
+        const skillPenalty = wins1 * wins2 + losses1 * losses2;
+        
+        matrix.set(key, {
+          teammate: teammateCost + skillPenalty,
+          opponent: opponentCost,
+        });
+      }
+    }
+    
+    return matrix;
+  }
+
   /** Increments a counter in a Map, initializing to 0 if key doesn't exist. */
   private static incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
     map.set(key, (map.get(key) ?? 0) + inc);
@@ -394,47 +439,69 @@ export class CourtAssignmentEngine {
    * - Loss balance: Absolute difference in total losses between teams
    * 
    * @param court - Court configuration to evaluate
+   * @param compatibilityMatrix - Optional precomputed pairwise costs for optimization
    * @returns Cost value (lower is better, 0 is ideal)
    */
-  private static evaluateCourtCost(court: Court): number {
+  private static evaluateCourtCost(court: Court, compatibilityMatrix?: Map<string, { teammate: number; opponent: number }>): number {
     let cost = 0;
 
-    const addTeamPairs = (team: Player[]): void => {
-      for (let i = 0; i < team.length; i++) {
-        for (let j = i + 1; j < team.length; j++) {
-          cost += this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0;
-        }
-      }
-    };
-
     if (court.teams) {
-      addTeamPairs(court.teams.team1);
-      addTeamPairs(court.teams.team2);
-
-      court.teams.team1.forEach(a => {
-        court.teams!.team2.forEach(b => {
-          cost += this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
-        });
-      });
-
-      const addSkillPairPenalty = (team: Player[]): void => {
-        for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            const p1 = team[i];
-            const p2 = team[j];
-            const wins1 = this.winCountMap.get(p1.id) ?? 0;
-            const wins2 = this.winCountMap.get(p2.id) ?? 0;
-            const losses1 = this.lossCountMap.get(p1.id) ?? 0;
-            const losses2 = this.lossCountMap.get(p2.id) ?? 0;
-
-            cost += wins1 * wins2;
-            cost += losses1 * losses2;
+      if (compatibilityMatrix) {
+        const addTeamPairsOptimized = (team: Player[]): void => {
+          for (let i = 0; i < team.length; i++) {
+            for (let j = i + 1; j < team.length; j++) {
+              const pairCost = compatibilityMatrix.get(this.pairKey(team[i].id, team[j].id));
+              cost += pairCost?.teammate ?? 0;
+            }
           }
-        }
-      };
+        };
 
-      addSkillPairPenalty(court.teams.team1);
-      addSkillPairPenalty(court.teams.team2);
+        addTeamPairsOptimized(court.teams.team1);
+        addTeamPairsOptimized(court.teams.team2);
+
+        court.teams.team1.forEach(a => {
+          court.teams!.team2.forEach(b => {
+            const pairCost = compatibilityMatrix.get(this.pairKey(a.id, b.id));
+            cost += pairCost?.opponent ?? 0;
+          });
+        });
+      } else {
+        const addTeamPairs = (team: Player[]): void => {
+          for (let i = 0; i < team.length; i++) {
+            for (let j = i + 1; j < team.length; j++) {
+              cost += this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0;
+            }
+          }
+        };
+
+        addTeamPairs(court.teams.team1);
+        addTeamPairs(court.teams.team2);
+
+        court.teams.team1.forEach(a => {
+          court.teams!.team2.forEach(b => {
+            cost += this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
+          });
+        });
+
+        const addSkillPairPenalty = (team: Player[]): void => {
+          for (let i = 0; i < team.length; i++) {
+            for (let j = i + 1; j < team.length; j++) {
+              const p1 = team[i];
+              const p2 = team[j];
+              const wins1 = this.winCountMap.get(p1.id) ?? 0;
+              const wins2 = this.winCountMap.get(p2.id) ?? 0;
+              const losses1 = this.lossCountMap.get(p1.id) ?? 0;
+              const losses2 = this.lossCountMap.get(p2.id) ?? 0;
+
+              cost += wins1 * wins2;
+              cost += losses1 * losses2;
+            }
+          }
+        };
+
+        addSkillPairPenalty(court.teams.team1);
+        addSkillPairPenalty(court.teams.team2);
+      }
 
       const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
       const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
@@ -458,9 +525,10 @@ export class CourtAssignmentEngine {
    * - [0,3] vs [1,2]
    * 
    * @param players - Array of exactly 4 players to split into teams
+   * @param compatibilityMatrix - Optional precomputed pairwise costs for optimization
    * @returns Object containing the optimal team configuration and its cost
    */
-  private static chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
+  private static chooseBestTeamSplit(players: Player[], compatibilityMatrix?: Map<string, { teammate: number; opponent: number }>): { teams: Court['teams']; cost: number } {
     const splits: Array<[[number, number], [number, number]]> = [
       [[0, 1], [2, 3]],
       [[0, 2], [1, 3]],
@@ -473,7 +541,7 @@ export class CourtAssignmentEngine {
     splits.forEach(split => {
       const team1 = [players[split[0][0]], players[split[0][1]]];
       const team2 = [players[split[1][0]], players[split[1][1]]];
-      const cost = this.evaluateCourtCost({ courtNumber: -1, players, teams: { team1, team2 } });
+      const cost = this.evaluateCourtCost({ courtNumber: -1, players, teams: { team1, team2 } }, compatibilityMatrix);
       if (cost < bestCost) {
         bestCost = cost;
         bestTeams = { team1, team2 };
@@ -489,16 +557,17 @@ export class CourtAssignmentEngine {
    * 
    * @param players - Array of 2-4 players for the manual court
    * @param courtNumber - Court number to assign
+   * @param compatibilityMatrix - Optional precomputed pairwise costs for optimization
    * @returns Court object with players and optimal team configuration
    */
-  private static createManualCourt(players: Player[], courtNumber: number): Court {
+  private static createManualCourt(players: Player[], courtNumber: number, compatibilityMatrix?: Map<string, { teammate: number; opponent: number }>): Court {
     const court: Court = {
       courtNumber,
       players: [...players],
     };
 
     if (players.length === 4) {
-      const res = this.chooseBestTeamSplit(players);
+      const res = this.chooseBestTeamSplit(players, compatibilityMatrix);
       court.teams = res.teams;
     } else if (players.length === 2) {
       court.teams = {
@@ -522,8 +591,9 @@ export class CourtAssignmentEngine {
    * @param onCourtPlayers - Players available to be assigned to courts
    * @param numberOfCourts - Number of courts to fill
    * @param startCourtNum - Starting court number (default: 1)
+   * @param compatibilityMatrix - Optional precomputed pairwise costs for optimization
    */
-  private static generateCandidate(onCourtPlayers: Player[], numberOfCourts: number, startCourtNum: number = 1) {
+  private static generateCandidate(onCourtPlayers: Player[], numberOfCourts: number, startCourtNum: number = 1, compatibilityMatrix?: Map<string, { teammate: number; opponent: number }>) {
     const courts: Court[] = [];
     const playersCopy = [...onCourtPlayers].sort(() => Math.random() - 0.5);
 
@@ -546,12 +616,12 @@ export class CourtAssignmentEngine {
       let cost = 0;
 
       if (courtPlayers.length === 4) {
-        const res = this.chooseBestTeamSplit(courtPlayers);
+        const res = this.chooseBestTeamSplit(courtPlayers, compatibilityMatrix);
         teams = res.teams;
         cost = res.cost;
       } else {
         teams = { team1: [courtPlayers[0]], team2: [courtPlayers[1]] };
-        cost = this.evaluateCourtCost({ courtNumber: -1, players: courtPlayers, teams });
+        cost = this.evaluateCourtCost({ courtNumber: -1, players: courtPlayers, teams }, compatibilityMatrix);
       }
 
       totalCost += cost;
