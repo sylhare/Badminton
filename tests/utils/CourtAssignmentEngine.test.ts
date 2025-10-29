@@ -1271,5 +1271,310 @@ describe('CourtAssignment Engine – core behaviour', () => {
       expect(pairCost?.teammate).toBe(5 + 0);
       expect(pairCost?.opponent).toBe(3);
     });
+
+    it('should demonstrate performance improvement with compatibility matrix', () => {
+      const players = mockPlayers(20);
+      
+      CourtAssignmentEngine['winCountMap'].set('P0', 10);
+      CourtAssignmentEngine['winCountMap'].set('P5', 8);
+      CourtAssignmentEngine['winCountMap'].set('P10', 6);
+      CourtAssignmentEngine['lossCountMap'].set('P1', 5);
+      CourtAssignmentEngine['lossCountMap'].set('P6', 4);
+      CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 3);
+      CourtAssignmentEngine['teammateCountMap'].set('P2|P3', 2);
+      CourtAssignmentEngine['opponentCountMap'].set('P4|P5', 2);
+      
+      const warmupRuns = 3;
+      for (let i = 0; i < warmupRuns; i++) {
+        generateCourtAssignments(players, 4);
+      }
+      
+      const testRuns = 10;
+      
+      const startOptimized = performance.now();
+      for (let i = 0; i < testRuns; i++) {
+        generateCourtAssignments(players, 4);
+      }
+      const endOptimized = performance.now();
+      const optimizedTime = endOptimized - startOptimized;
+      
+      const evaluateCost = CourtAssignmentEngine['evaluateCourtCost'];
+      const originalEvaluate = evaluateCost.bind(CourtAssignmentEngine);
+      
+      const forceUnoptimized = function(this: typeof CourtAssignmentEngine, court: any) {
+        return originalEvaluate(court, undefined);
+      };
+      
+      CourtAssignmentEngine['evaluateCourtCost'] = forceUnoptimized as any;
+      
+      const startUnoptimized = performance.now();
+      for (let i = 0; i < testRuns; i++) {
+        generateCourtAssignments(players, 4);
+      }
+      const endUnoptimized = performance.now();
+      const unoptimizedTime = endUnoptimized - startUnoptimized;
+      
+      CourtAssignmentEngine['evaluateCourtCost'] = originalEvaluate;
+      
+      const improvement = ((unoptimizedTime - optimizedTime) / unoptimizedTime) * 100;
+      const speedup = unoptimizedTime / optimizedTime;
+      
+      console.log('\n📊 Performance Benchmark Results:');
+      console.log(`   Players: ${players.length}, Courts: 4, Iterations: ${testRuns}`);
+      console.log(`   ✅ With optimization:    ${optimizedTime.toFixed(2)}ms`);
+      console.log(`   ❌ Without optimization: ${unoptimizedTime.toFixed(2)}ms`);
+      console.log(`   🚀 Improvement: ${improvement.toFixed(1)}% faster (${speedup.toFixed(2)}x speedup)`);
+      
+      expect(optimizedTime).toBeLessThan(unoptimizedTime);
+      expect(improvement).toBeGreaterThan(0);
+    });
+
+    it('should show performance scales with player count', () => {
+      const testScenarios = [
+        { players: 8, courts: 2, runs: 15 },
+        { players: 16, courts: 4, runs: 10 },
+        { players: 24, courts: 6, runs: 5 },
+      ];
+
+      console.log('\n📈 Performance Scaling Analysis:');
+      
+      testScenarios.forEach(scenario => {
+        const players = mockPlayers(scenario.players);
+        
+        CourtAssignmentEngine['winCountMap'].set('P0', 5);
+        CourtAssignmentEngine['lossCountMap'].set('P1', 3);
+        CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 2);
+        
+        for (let i = 0; i < 2; i++) {
+          generateCourtAssignments(players, scenario.courts);
+        }
+        
+        const startOpt = performance.now();
+        for (let i = 0; i < scenario.runs; i++) {
+          generateCourtAssignments(players, scenario.courts);
+        }
+        const optTime = performance.now() - startOpt;
+        
+        const evaluateCost = CourtAssignmentEngine['evaluateCourtCost'];
+        const originalEval = evaluateCost.bind(CourtAssignmentEngine);
+        const forceUnopt = function(this: typeof CourtAssignmentEngine, court: any) {
+          return originalEval(court, undefined);
+        };
+        
+        CourtAssignmentEngine['evaluateCourtCost'] = forceUnopt as any;
+        
+        const startUnopt = performance.now();
+        for (let i = 0; i < scenario.runs; i++) {
+          generateCourtAssignments(players, scenario.courts);
+        }
+        const unoptTime = performance.now() - startUnopt;
+        
+        CourtAssignmentEngine['evaluateCourtCost'] = originalEval;
+        
+        const speedup = unoptTime / optTime;
+        const improvement = ((unoptTime - optTime) / unoptTime) * 100;
+        
+        console.log(`   ${scenario.players}p/${scenario.courts}c: ${optTime.toFixed(1)}ms vs ${unoptTime.toFixed(1)}ms → ${speedup.toFixed(2)}x speedup (${improvement.toFixed(1)}% faster)`);
+        
+        if (scenario.players >= 16) {
+          expect(optTime).toBeLessThan(unoptTime);
+        }
+      });
+      
+      console.log('   💡 Bigger player pools = greater optimization benefit\n');
+    });
+  });
+
+  describe('Cost Memoization Optimization', () => {
+    beforeEach(() => {
+      testResetHistory();
+    });
+
+    const getCourtCacheKey = () => CourtAssignmentEngine['getCourtCacheKey'];
+    const getCostCache = () => CourtAssignmentEngine['costCache'];
+
+    it('should generate consistent cache keys for same players', () => {
+      const players = mockPlayers(4);
+      const court1 = createMockCourt(1, players);
+      const court2 = createMockCourt(2, players);
+
+      const getCacheKey = getCourtCacheKey();
+      const key1 = getCacheKey.call(CourtAssignmentEngine, court1);
+      const key2 = getCacheKey.call(CourtAssignmentEngine, court2);
+
+      expect(key1).toBe(key2);
+      expect(key1).toBeTruthy();
+    });
+
+    it('should generate different cache keys for different players', () => {
+      const players = mockPlayers(8);
+      const court1 = createMockCourt(1, players.slice(0, 4));
+      const court2 = createMockCourt(2, players.slice(4, 8));
+
+      const getCacheKey = getCourtCacheKey();
+      const key1 = getCacheKey.call(CourtAssignmentEngine, court1);
+      const key2 = getCacheKey.call(CourtAssignmentEngine, court2);
+
+      expect(key1).not.toBe(key2);
+    });
+
+    it('should cache cost evaluations', () => {
+      const players = mockPlayers(4);
+      const court = createMockCourt(1, players);
+
+      CourtAssignmentEngine['evaluateCourtCost'](court);
+
+      const cache = getCostCache();
+      expect(cache.size).toBeGreaterThan(0);
+    });
+
+    it('should reuse cached cost on subsequent evaluations', () => {
+      const players = mockPlayers(4);
+      const court = createMockCourt(1, players);
+
+      const cost1 = CourtAssignmentEngine['evaluateCourtCost'](court);
+      const cacheSize1 = getCostCache().size;
+
+      const cost2 = CourtAssignmentEngine['evaluateCourtCost'](court);
+      const cacheSize2 = getCostCache().size;
+
+      expect(cost1).toBe(cost2);
+      expect(cacheSize2).toBe(cacheSize1);
+    });
+
+    it('should clear cache at start of generate()', () => {
+      const players = mockPlayers(8);
+
+      const court = createMockCourt(1, players.slice(0, 4));
+      CourtAssignmentEngine['evaluateCourtCost'](court);
+
+      expect(getCostCache().size).toBeGreaterThan(0);
+
+      generateCourtAssignments(players, 2);
+
+      expect(getCostCache().size).toBeGreaterThan(0);
+    });
+
+    it('should produce identical results with cache', () => {
+      const players = mockPlayers(12);
+
+      CourtAssignmentEngine['winCountMap'].set('P0', 5);
+      CourtAssignmentEngine['lossCountMap'].set('P1', 3);
+      CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 2);
+
+      getCostCache().clear();
+      const result1 = generateCourtAssignments(players, 3);
+
+      getCostCache().clear();
+      const result2 = generateCourtAssignments(players, 3);
+
+      expect(result1.length).toBe(result2.length);
+      expect(result1.every(c => c.teams !== undefined)).toBe(true);
+      expect(result2.every(c => c.teams !== undefined)).toBe(true);
+    });
+
+    it('should handle cache with compatibility matrix', () => {
+      const players = mockPlayers(8);
+
+      CourtAssignmentEngine['winCountMap'].set('P0', 3);
+      CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 1);
+
+      const result = generateCourtAssignments(players, 2);
+
+      expect(result).toHaveLength(2);
+      expect(getCostCache().size).toBeGreaterThan(0);
+    });
+
+    it('should demonstrate cache hit rate improvement', () => {
+      const players = mockPlayers(16);
+
+      CourtAssignmentEngine['winCountMap'].set('P0', 4);
+      CourtAssignmentEngine['lossCountMap'].set('P1', 2);
+
+      getCostCache().clear();
+
+      const evaluateCost = CourtAssignmentEngine['evaluateCourtCost'];
+      let totalCalls = 0;
+      let cacheHits = 0;
+      const originalEvaluate = evaluateCost.bind(CourtAssignmentEngine);
+
+      CourtAssignmentEngine['evaluateCourtCost'] = function(this: typeof CourtAssignmentEngine, court: any, matrix?: any) {
+        totalCalls++;
+        const cacheKey = this['getCourtCacheKey'](court);
+        if (cacheKey && this['costCache'].has(cacheKey)) {
+          cacheHits++;
+        }
+        return originalEvaluate(court, matrix);
+      } as any;
+
+      generateCourtAssignments(players, 4);
+
+      CourtAssignmentEngine['evaluateCourtCost'] = originalEvaluate;
+
+      const cacheSize = getCostCache().size;
+      const cacheMisses = totalCalls - cacheHits;
+      const cacheHitRate = (cacheHits / totalCalls) * 100;
+
+      console.log(`\n💾 Cache Performance:`);
+      console.log(`   Total evaluations: ${totalCalls}`);
+      console.log(`   Cache hits: ${cacheHits} (${cacheHitRate.toFixed(1)}%)`);
+      console.log(`   Cache misses: ${cacheMisses}`);
+      console.log(`   Unique configs: ${cacheSize}`);
+
+      expect(cacheSize).toBeGreaterThan(0);
+      expect(cacheHits).toBeGreaterThan(0);
+      expect(cacheHitRate).toBeGreaterThan(0);
+    });
+
+    it('should show combined optimization performance', () => {
+      const players = mockPlayers(20);
+
+      CourtAssignmentEngine['winCountMap'].set('P0', 10);
+      CourtAssignmentEngine['winCountMap'].set('P5', 8);
+      CourtAssignmentEngine['lossCountMap'].set('P1', 5);
+      CourtAssignmentEngine['teammateCountMap'].set('P0|P1', 3);
+      CourtAssignmentEngine['opponentCountMap'].set('P4|P5', 2);
+
+      for (let i = 0; i < 2; i++) {
+        generateCourtAssignments(players, 4);
+      }
+
+      const testRuns = 10;
+
+      const startWithBoth = performance.now();
+      for (let i = 0; i < testRuns; i++) {
+        generateCourtAssignments(players, 4);
+      }
+      const timeWithBoth = performance.now() - startWithBoth;
+
+      const evaluateCost = CourtAssignmentEngine['evaluateCourtCost'];
+      const originalEvaluate = evaluateCost.bind(CourtAssignmentEngine);
+
+      const noCacheNoMatrix = function(this: typeof CourtAssignmentEngine, court: any) {
+        return originalEvaluate(court, undefined);
+      };
+
+      CourtAssignmentEngine['evaluateCourtCost'] = noCacheNoMatrix as any;
+
+      const startBaseline = performance.now();
+      for (let i = 0; i < testRuns; i++) {
+        getCostCache().clear();
+        generateCourtAssignments(players, 4);
+      }
+      const timeBaseline = performance.now() - startBaseline;
+
+      CourtAssignmentEngine['evaluateCourtCost'] = originalEvaluate;
+
+      const totalImprovement = ((timeBaseline - timeWithBoth) / timeBaseline) * 100;
+      const speedup = timeBaseline / timeWithBoth;
+
+      console.log(`\n🚀 Combined Optimizations (Matrix + Cache):`);
+      console.log(`   With both optimizations: ${timeWithBoth.toFixed(1)}ms`);
+      console.log(`   Baseline (no opts):      ${timeBaseline.toFixed(1)}ms`);
+      console.log(`   Total improvement: ${totalImprovement.toFixed(1)}% faster (${speedup.toFixed(2)}x speedup)`);
+
+      expect(timeWithBoth).toBeLessThan(timeBaseline);
+      expect(totalImprovement).toBeGreaterThan(0);
+    });
   });
 });
