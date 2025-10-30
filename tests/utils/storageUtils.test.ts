@@ -59,7 +59,6 @@ describe('StorageUtils', () => {
     });
 
     it('should load app state from localStorage', () => {
-
       saveAppState(mockAppState);
 
       const loaded = loadAppState();
@@ -116,7 +115,6 @@ describe('StorageUtils', () => {
     });
 
     it('should load court engine state from localStorage', () => {
-
       saveCourtEngineState(mockCourtEngineState);
 
       const loaded = loadCourtEngineState();
@@ -151,7 +149,6 @@ describe('StorageUtils', () => {
 
   describe('clearAllStoredState', () => {
     it('should remove all stored state from localStorage', () => {
-
       localStorage.setItem('badminton-app-state', '{"test": "data"}');
       localStorage.setItem('badminton-court-engine-state', '{"test": "data"}');
       localStorage.setItem('other-data', 'should remain');
