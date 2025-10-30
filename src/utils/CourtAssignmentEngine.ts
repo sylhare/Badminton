@@ -385,7 +385,6 @@ export class CourtAssignmentEngine {
     return allPlayerIds.join('|');
   }
 
-
   /** Increments a counter in a Map, initializing to 0 if key doesn't exist. */
   private static incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
     map.set(key, (map.get(key) ?? 0) + inc);

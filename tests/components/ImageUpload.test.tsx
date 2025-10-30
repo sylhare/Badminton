@@ -105,7 +105,6 @@ describe('ImageUpload Component', () => {
   });
 
   it('shows processing message during OCR', async () => {
-
     mockUseImageOcr.mockReturnValue({ isProcessing: true, progress: 0.3, processImage: vi.fn() });
 
     render(<ImageUpload onPlayersExtracted={mockOnPlayersExtracted} />);
