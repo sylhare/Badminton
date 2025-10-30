@@ -18,15 +18,26 @@ if (typeof HTMLCanvasElement !== 'undefined') {
   });
 }
 
-if (typeof window !== 'undefined') {
+// Mock requestAnimationFrame and cancelAnimationFrame (only in browser environment)
+// Use writable and configurable properties so vi.useFakeTimers() can override them
+if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'undefined') {
   Object.defineProperty(window, 'requestAnimationFrame', {
+    writable: true,
+    configurable: true,
     value: vi.fn((cb) => setTimeout(cb, 16)),
   });
+}
 
+if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'undefined') {
   Object.defineProperty(window, 'cancelAnimationFrame', {
+    writable: true,
+    configurable: true,
     value: vi.fn((id) => clearTimeout(id)),
   });
+}
 
+// Mock window dimensions for canvas sizing
+if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'innerWidth', {
     writable: true,
     configurable: true,
