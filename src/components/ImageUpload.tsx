@@ -3,6 +3,7 @@ import React, { useRef } from 'react';
 import { useImageOcr } from '../hooks/useImageOcr';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { getFirstFile, isImageFile } from '../utils/fileUtils';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 interface ImageUploadProps {
   onPlayersExtracted: (players: string[]) => void;
@@ -11,15 +12,21 @@ interface ImageUploadProps {
 const ImageUpload: React.FC<ImageUploadProps> = ({ onPlayersExtracted }) => {
   const { isProcessing, progress, processImage } = useImageOcr({ onPlayersExtracted });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { trackPlayerAction } = useAnalytics();
+
+  const handleImageUpload = (file: File) => {
+    trackPlayerAction('upload_image', { method: 'image-upload' });
+    processImage(file);
+  };
 
   const { isDragOver, handleDrop, handleDragOver, handleDragLeave } = useDragAndDrop({
-    onFileDropped: processImage,
+    onFileDropped: handleImageUpload,
   });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = getFirstFile(event.target.files);
     if (isImageFile(file)) {
-      processImage(file);
+      handleImageUpload(file);
     }
   };
 
