@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import './App.css';
-import ImageUpload from './components/ImageUpload';
 import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import CourtSettings from './components/CourtSettings';
@@ -169,17 +168,10 @@ function App(): React.ReactElement {
     switch (stepId) {
       case 1:
         return (
-          <div className="add-players-options">
-            <div className="add-option">
-              <h3>From Image</h3>
-              <ImageUpload onPlayersExtracted={handlePlayersExtracted} />
-            </div>
-            <div className="add-option-divider">OR</div>
-            <div className="add-option">
-              <h3>Manual Entry</h3>
-              <ManualPlayerEntry onPlayersAdded={handleManualPlayersAdded} />
-            </div>
-          </div>
+          <ManualPlayerEntry 
+            onPlayersAdded={handleManualPlayersAdded} 
+            onPlayersExtracted={handlePlayersExtracted}
+          />
         );
       case 2:
         return (
