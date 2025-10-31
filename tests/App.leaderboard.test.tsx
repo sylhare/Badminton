@@ -94,7 +94,6 @@ describe('App Leaderboard Persistence', () => {
 
   describe('Leaderboard persistence across app reload', () => {
     it('should persist leaderboard data when app is remounted', async () => {
-
       const { unmount } = render(<App />);
 
       const bulkInput = screen.getAllByTestId('bulk-input')[0];
@@ -154,7 +153,6 @@ describe('App Leaderboard Persistence', () => {
     });
 
     it('should maintain correct win counts for specific players', async () => {
-
       const mockPlayers = [
         { id: 'alice', name: 'Alice', isPresent: true },
         { id: 'bob', name: 'Bob', isPresent: true },

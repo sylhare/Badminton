@@ -23,7 +23,6 @@ describe('App Persistence Integration', () => {
 
   describe('State persistence across app reload', () => {
     it('should persist and restore players when app is remounted', async () => {
-
       const { unmount } = render(<App />);
 
       const bulkInput = screen.getAllByTestId('bulk-input')[0];
@@ -61,7 +60,6 @@ describe('App Persistence Integration', () => {
     });
 
     it('should persist court settings across app reload', async () => {
-
       const { unmount } = render(<App />);
 
       const bulkInput = screen.getAllByTestId('bulk-input')[0];
@@ -91,7 +89,6 @@ describe('App Persistence Integration', () => {
     });
 
     it('should persist court assignments and winner data across app reload', async () => {
-
       const { unmount } = render(<App />);
 
       const bulkInput = screen.getAllByTestId('bulk-input')[0];
@@ -125,7 +122,6 @@ describe('App Persistence Integration', () => {
     });
 
     it('should preserve collapsed/expanded step states', async () => {
-
       const { unmount } = render(<App />);
 
       const bulkInput = screen.getAllByTestId('bulk-input')[0];
@@ -220,7 +216,6 @@ describe('App Persistence Integration', () => {
 
   describe('Error handling in persistence', () => {
     it('should handle localStorage load errors gracefully', () => {
-
       localStorage.setItem('badminton-app-state', 'invalid-json');
       localStorage.setItem('badminton-court-engine-state', 'invalid-json');
 
@@ -231,7 +226,6 @@ describe('App Persistence Integration', () => {
     });
 
     it('should handle localStorage save errors gracefully', async () => {
-
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
@@ -250,7 +244,6 @@ describe('App Persistence Integration', () => {
 
   describe('Performance and efficiency', () => {
     it('should not save state unnecessarily on initial load', () => {
-
       localStorage.setItem('badminton-app-state', JSON.stringify({
         players: [],
         numberOfCourts: 4,

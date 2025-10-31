@@ -117,7 +117,6 @@ describe('Court Interface', () => {
   });
 
   it('should maintain type safety for winner field', () => {
-
     const validWinners: (1 | 2 | undefined)[] = [1, 2, undefined];
 
     validWinners.forEach((winner) => {
