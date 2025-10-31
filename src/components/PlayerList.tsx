@@ -4,6 +4,7 @@ import { Trash, ArrowClockwise } from '@phosphor-icons/react';
 import type { Player } from '../types';
 
 import ConfirmModal from './ConfirmModal';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 interface PlayerListProps {
   players: Player[];
@@ -22,18 +23,34 @@ const PlayerList: React.FC<PlayerListProps> = ({
 }) => {
   const [showClearModal, setShowClearModal] = useState(false);
   const [showResetAlgorithmModal, setShowResetAlgorithmModal] = useState(false);
+  const { trackPlayerAction, trackGameAction } = useAnalytics();
 
   const presentCount = players.filter(p => p.isPresent).length;
   const totalCount = players.length;
 
   const handleClearAll = () => {
+    trackPlayerAction('clear_all_players', { count: players.length });
     onClearAllPlayers();
     setShowClearModal(false);
   };
 
   const handleResetAlgorithm = () => {
+    trackGameAction('reset_algorithm');
     onResetAlgorithm();
     setShowResetAlgorithmModal(false);
+  };
+
+  const handlePlayerToggle = (playerId: string) => {
+    const player = players.find(p => p.id === playerId);
+    if (player) {
+      trackPlayerAction('toggle_player', { method: player.isPresent ? 'set-absent' : 'set-present' });
+    }
+    onPlayerToggle(playerId);
+  };
+
+  const handleRemovePlayer = (playerId: string) => {
+    trackPlayerAction('remove_player');
+    onRemovePlayer(playerId);
   };
 
   return (
@@ -63,7 +80,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
               <input
                 type="checkbox"
                 checked={player.isPresent}
-                onChange={() => onPlayerToggle(player.id)}
+                onChange={() => handlePlayerToggle(player.id)}
                 className="player-checkbox"
                 data-testid={`player-checkbox-${player.id}`}
                 title={player.isPresent ? 'Uncheck to exclude from games' : 'Check to include in games'}
@@ -71,7 +88,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
               <span className="player-name" data-testid={`player-name-${player.id}`}>{player.name}</span>
             </div>
             <button
-              onClick={() => onRemovePlayer(player.id)}
+              onClick={() => handleRemovePlayer(player.id)}
               className="remove-button"
               data-testid={`remove-player-${player.id}`}
               title="Delete player permanently"
