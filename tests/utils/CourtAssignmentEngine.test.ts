@@ -117,9 +117,7 @@ describe('CourtAssignment Engine – core behaviour', () => {
     const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
 
     expect(min).toBeGreaterThan(0);
-
     expect(max / min).toBeLessThanOrEqual(2);
-
     expect(max).toBeLessThanOrEqual(avg * 1.5);
   });
 

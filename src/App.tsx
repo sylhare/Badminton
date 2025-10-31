@@ -21,22 +21,20 @@ function App(): React.ReactElement {
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
+  const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
 
   const isInitialLoad = useRef(true);
 
   useEffect(() => {
     CourtAssignmentEngine.loadState();
     isInitialLoad.current = false;
+
+    const unsubscribe = CourtAssignmentEngine.onStateChange(() => {
+      setEngineStateVersion(prev => prev + 1);
+    });
+
+    return unsubscribe;
   }, []);
-
-  useEffect(() => {
-    if (isInitialLoad.current) return;
-
-    const assignmentsWithWinners = assignments.filter(court => court.winner);
-    if (assignmentsWithWinners.length > 0) {
-      CourtAssignmentEngine.recordWins(assignmentsWithWinners);
-    }
-  }, [assignments]);
 
   useEffect(() => {
     if (isInitialLoad.current) return;
@@ -133,11 +131,7 @@ function App(): React.ReactElement {
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
     setAssignments(prevAssignments =>
-      prevAssignments.map(court =>
-        court.courtNumber === courtNumber
-          ? { ...court, winner }
-          : court,
-      ),
+      CourtAssignmentEngine.updateWinner(courtNumber, winner, prevAssignments),
     );
   };
 

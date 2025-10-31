@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Court, Player } from '../../src/App';
+import type { Court, Player } from '../../src/types';
 
 describe('Court Interface', () => {
   const mockPlayers: Player[] = [
