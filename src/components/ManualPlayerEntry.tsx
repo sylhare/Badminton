@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 import { validatePlayerNames } from '../utils/playerUtils';
-
+import { useAnalytics } from '../hooks/useAnalytics';
 import ImageUpload from './ImageUpload';
 
 interface ManualPlayerEntryProps {
@@ -13,6 +13,7 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded, o
   const [playerText, setPlayerText] = useState('');
   const [singlePlayerName, setSinglePlayerName] = useState('');
   const [isImageUploadExpanded, setIsImageUploadExpanded] = useState(false);
+  const { trackPlayerAction } = useAnalytics();
 
   const handleSubmit = (playerNames: string[], resetState: () => void) => {
     const validNames = validatePlayerNames(playerNames);
@@ -27,6 +28,8 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded, o
     e.stopPropagation();
     if (playerText.trim()) {
       const players = playerText.split(/[\n,]+/);
+      const validNames = validatePlayerNames(players);
+      trackPlayerAction('add_players', { method: 'manual-bulk', count: validNames.length });
       handleSubmit(players, () => setPlayerText(''));
     }
   };
@@ -35,6 +38,7 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded, o
     e.preventDefault();
     e.stopPropagation();
     if (singlePlayerName.trim()) {
+      trackPlayerAction('add_player', { method: 'manual-single', count: 1 });
       handleSubmit([singlePlayerName], () => setSinglePlayerName(''));
     }
   };
