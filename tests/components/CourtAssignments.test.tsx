@@ -5,7 +5,7 @@ import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
 import CourtAssignments from '../../src/components/CourtAssignments';
-import { Court, Player } from '../../src/App';
+import { Court, Player } from '../../src/types';
 import { TEST_COURTS, TEST_PLAYERS } from '../data/testData';
 
 describe('CourtAssignments Component', () => {

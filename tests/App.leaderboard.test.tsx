@@ -48,7 +48,7 @@ describe('App Leaderboard Persistence', () => {
       expect(totalWins).toBeGreaterThan(0);
     });
 
-    it.skip('should show leaderboard when players have wins', async () => {
+    it('should show leaderboard when players have wins', async () => {
       render(<App />);
       await addPlayersAndGenerate(COMMON_PLAYERS.FOUR);
 
@@ -61,6 +61,34 @@ describe('App Leaderboard Persistence', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
+    });
+
+    it('should update leaderboard immediately when removing a winner', async () => {
+      render(<App />);
+      await addPlayersAndGenerate(COMMON_PLAYERS.FOUR);
+
+      const team1Elements = screen.getAllByText('Team 1');
+
+      await act(async () => {
+        await user.click(team1Elements[0]);
+      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
+      const winCountsAfterSelection = CourtAssignmentEngine.getWinCounts();
+      const totalWinsAfterSelection = Array.from(winCountsAfterSelection.values()).reduce((sum, wins) => sum + wins, 0);
+      expect(totalWinsAfterSelection).toBeGreaterThan(0);
+
+      await act(async () => {
+        await user.click(team1Elements[0]);
+      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const winCountsAfterRemoval = CourtAssignmentEngine.getWinCounts();
+      const totalWinsAfterRemoval = Array.from(winCountsAfterRemoval.values()).reduce((sum, wins) => sum + wins, 0);
+      expect(totalWinsAfterRemoval).toBe(0);
+
+      expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
     });
   });
 
@@ -277,7 +305,7 @@ describe('App Leaderboard Persistence', () => {
       expect(winCounts.size).toBe(0);
     });
 
-    it.skip('should show leaderboard with historical data on refresh even without current players', async () => {
+    it('should show leaderboard with historical data on refresh even without current players', async () => {
       const { unmount } = render(<App />);
 
       const bulkInput = screen.getAllByTestId('bulk-input')[0];

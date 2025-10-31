@@ -2,12 +2,9 @@ import { createWorker } from 'tesseract.js';
 
 import { preprocessImage } from './imagePreprocess';
 
-export interface OcrOptions {
-
+interface OcrOptions {
   workerPath?: string;
-
   onProgress?: (progress: number) => void;
-
   preprocess?: boolean;
 }
 

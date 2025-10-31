@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import Leaderboard from '../../src/components/Leaderboard';
-import type { Player } from '../../src/App';
+import type { Player } from '../../src/types';
 import { TEST_PLAYERS } from '../data/testData';
 
 describe('Leaderboard Component', () => {
