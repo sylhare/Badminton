@@ -86,3 +86,6 @@ eng.traineddata
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Vitest
+/coverage/
