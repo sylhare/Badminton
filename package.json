@@ -45,7 +45,7 @@
     "jsdom": "^26.1.0",
     "playwright": "^1.55.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.39.0",
+    "typescript-eslint": "^8.46.2",
     "vite": "^7.1.1",
     "vitest": "^3.2.4"
   },
