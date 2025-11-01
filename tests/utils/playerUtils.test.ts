@@ -5,7 +5,9 @@ import { createPlayersFromNames, validatePlayerNames } from '../../src/utils/pla
 describe('Player Utils', () => {
   describe('createPlayersFromNames', () => {
     beforeEach(() => {
-      vi.useFakeTimers();
+      vi.useFakeTimers({
+        shouldAdvanceTime: false,
+      });
       vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z'));
     });
 
