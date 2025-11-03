@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import ManualPlayerEntry from '../../src/components/ManualPlayerEntry';
 
 vi.mock('../../src/components/ImageUpload', () => ({
-  default: ({ onPlayersExtracted }: { onPlayersExtracted: (players: string[]) => void }) => (
+  default: () => (
     <div data-testid="mock-image-upload">Mock Image Upload</div>
   ),
 }));
@@ -41,7 +41,7 @@ describe('ManualPlayerEntry Component', () => {
     render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} onPlayersExtracted={mockOnPlayersExtracted} />);
 
     const toggleButton = screen.getByTestId('image-upload-toggle');
-    
+
     expect(screen.queryByTestId('mock-image-upload')).not.toBeInTheDocument();
 
     await act(async () => await user.click(toggleButton));

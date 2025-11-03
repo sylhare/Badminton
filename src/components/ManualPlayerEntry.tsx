@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { validatePlayerNames } from '../utils/playerUtils';
+
 import ImageUpload from './ImageUpload';
 
 interface ManualPlayerEntryProps {
@@ -41,8 +42,8 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded, o
   return (
     <div className="manual-entry-container">
       <div className="image-upload-collapsible">
-        <div 
-          className="collapsible-header" 
+        <div
+          className="collapsible-header"
           onClick={() => setIsImageUploadExpanded(!isImageUploadExpanded)}
           data-testid="image-upload-toggle"
         >
