@@ -168,8 +168,8 @@ function App(): React.ReactElement {
     switch (stepId) {
       case 1:
         return (
-          <ManualPlayerEntry 
-            onPlayersAdded={handleManualPlayersAdded} 
+          <ManualPlayerEntry
+            onPlayersAdded={handleManualPlayersAdded}
             onPlayersExtracted={handlePlayersExtracted}
           />
         );
