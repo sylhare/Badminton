@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Trash, ArrowClockwise } from '@phosphor-icons/react';
 
 import type { Player } from '../types';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 import ConfirmModal from './ConfirmModal';
-import { useAnalytics } from '../hooks/useAnalytics';
 
 interface PlayerListProps {
   players: Player[];
