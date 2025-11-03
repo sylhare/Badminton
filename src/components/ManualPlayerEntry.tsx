@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import { validatePlayerNames } from '../utils/playerUtils';
 import { useAnalytics } from '../hooks/useAnalytics';
+
 import ImageUpload from './ImageUpload';
 
 interface ManualPlayerEntryProps {
@@ -10,10 +11,10 @@ interface ManualPlayerEntryProps {
 }
 
 const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded, onPlayersExtracted }) => {
+  const { trackPlayerAction } = useAnalytics();
   const [playerText, setPlayerText] = useState('');
   const [singlePlayerName, setSinglePlayerName] = useState('');
   const [isImageUploadExpanded, setIsImageUploadExpanded] = useState(false);
-  const { trackPlayerAction } = useAnalytics();
 
   const handleSubmit = (playerNames: string[], resetState: () => void) => {
     const validNames = validatePlayerNames(playerNames);
