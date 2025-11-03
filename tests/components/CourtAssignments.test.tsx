@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
@@ -67,7 +67,10 @@ describe('CourtAssignments Component', () => {
     const button = screen.getByRole('button', { name: /generate new assignments/i });
     await user.click(button);
 
-    expect(mockOnGenerateNewAssignments).toHaveBeenCalledTimes(1);
+    // Wait for the delayed callback (200ms timeout in the component)
+    await waitFor(() => {
+      expect(mockOnGenerateNewAssignments).toHaveBeenCalledTimes(1);
+    }, { timeout: 500 });
   });
 
   it('does not render bench section when no benched players', () => {
@@ -133,7 +136,10 @@ describe('CourtAssignments Component', () => {
     const button = screen.getByRole('button', { name: /generate new assignments/i });
     await user.click(button);
 
-    expect(mockOnGenerateNewAssignments).toHaveBeenCalledTimes(1);
+    // Wait for the delayed callback (200ms timeout in the component)
+    await waitFor(() => {
+      expect(mockOnGenerateNewAssignments).toHaveBeenCalledTimes(1);
+    }, { timeout: 500 });
 
   });
 });
