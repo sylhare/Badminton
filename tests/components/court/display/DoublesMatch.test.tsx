@@ -16,7 +16,7 @@ describe('DoublesMatch', () => {
       <DoublesMatch
         team1Players={team1Players}
         team2Players={team2Players}
-      />
+      />,
     );
 
     expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('DoublesMatch', () => {
       <DoublesMatch
         team1Players={team1Players}
         team2Players={team2Players}
-      />
+      />,
     );
 
     expect(screen.getByText('VS')).toBeInTheDocument();
@@ -42,7 +42,7 @@ describe('DoublesMatch', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         winner={1}
-      />
+      />,
     );
 
     const team1Container = container.querySelector('[data-testid="team-1"]');
@@ -55,7 +55,7 @@ describe('DoublesMatch', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         winner={2}
-      />
+      />,
     );
 
     const team2Container = container.querySelector('[data-testid="team-2"]');
@@ -72,7 +72,7 @@ describe('DoublesMatch', () => {
         team2Players={team2Players}
         isClickable={true}
         onTeamClick={mockOnTeamClick}
-      />
+      />,
     );
 
     const team1Container = container.querySelector('[data-testid="team-1"]');
@@ -88,7 +88,7 @@ describe('DoublesMatch', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         isAnimating={true}
-      />
+      />,
     );
 
     const teamsContainer = container.querySelector('.teams');
@@ -101,7 +101,7 @@ describe('DoublesMatch', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         isAnimating={false}
-      />
+      />,
     );
 
     const teamsContainer = container.querySelector('.teams');
@@ -114,7 +114,7 @@ describe('DoublesMatch', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         isClickable={true}
-      />
+      />,
     );
 
     const team1Container = container.querySelector('[data-testid="team-1"]');
@@ -127,7 +127,7 @@ describe('DoublesMatch', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         isClickable={false}
-      />
+      />,
     );
 
     const team1Container = container.querySelector('[data-testid="team-1"]');

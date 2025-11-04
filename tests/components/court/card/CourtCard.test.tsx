@@ -17,7 +17,7 @@ describe('CourtCard', () => {
 
     it('renders court without teams', () => {
       render(<CourtCard court={courtWithoutTeams} />);
-      
+
       expect(screen.getByText(/Court 1/)).toBeInTheDocument();
       expect(screen.getByText('Players on court:')).toBeInTheDocument();
       expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -26,9 +26,9 @@ describe('CourtCard', () => {
 
     it('applies animating-shake class when isAnimating is true', () => {
       const { container } = render(
-        <CourtCard court={courtWithoutTeams} isAnimating={true} />
+        <CourtCard court={courtWithoutTeams} isAnimating={true} />,
       );
-      
+
       const courtCard = container.querySelector('.court-card');
       expect(courtCard).toHaveClass('animating-shake');
     });
@@ -46,7 +46,7 @@ describe('CourtCard', () => {
 
     it('renders singles match correctly', () => {
       render(<CourtCard court={singlesCourt} />);
-      
+
       expect(screen.getByText(/Court 2 - Singles/)).toBeInTheDocument();
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.getByText('Bob')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('CourtCard', () => {
         <CourtCard
           court={singlesCourt}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const aliceContainer = screen.getByText('Alice').closest('.singles-player');
@@ -107,7 +107,7 @@ describe('CourtCard', () => {
 
     it('renders doubles match correctly', () => {
       render(<CourtCard court={doublesCourt} />);
-      
+
       expect(screen.getByText(/Court 3 - Doubles/)).toBeInTheDocument();
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.getByText('Bob')).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe('CourtCard', () => {
         <CourtCard
           court={doublesCourt}
           onWinnerChange={mockOnWinnerChange}
-        />
+        />,
       );
 
       const team1 = container.querySelector('[data-testid="team-1"]');
@@ -156,7 +156,7 @@ describe('CourtCard', () => {
 
     it('renders generic court with mixed team sizes', () => {
       render(<CourtCard court={genericCourt} />);
-      
+
       expect(screen.getByText(/Court 4/)).toBeInTheDocument();
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.getByText('Bob')).toBeInTheDocument();
@@ -166,7 +166,7 @@ describe('CourtCard', () => {
 
     it('displays manual court icon when isManualCourt is true', () => {
       render(<CourtCard court={genericCourt} isManualCourt={true} />);
-      
+
       const icon = screen.getByTitle('Manually assigned court');
       expect(icon).toBeInTheDocument();
     });
@@ -184,18 +184,18 @@ describe('CourtCard', () => {
 
     it('applies animating-shake class to court card when isAnimating is true', () => {
       const { container } = render(
-        <CourtCard court={testCourt} isAnimating={true} />
+        <CourtCard court={testCourt} isAnimating={true} />,
       );
-      
+
       const courtCard = container.querySelector('.court-card');
       expect(courtCard).toHaveClass('animating-shake');
     });
 
     it('does not apply animating-shake class when isAnimating is false', () => {
       const { container } = render(
-        <CourtCard court={testCourt} isAnimating={false} />
+        <CourtCard court={testCourt} isAnimating={false} />,
       );
-      
+
       const courtCard = container.querySelector('.court-card');
       expect(courtCard).not.toHaveClass('animating-shake');
     });

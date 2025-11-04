@@ -29,7 +29,7 @@ describe('NoTeamsDisplay', () => {
   it('renders empty list when no players', () => {
     const { container } = render(<NoTeamsDisplay players={[]} />);
     expect(screen.getByText('Players on court:')).toBeInTheDocument();
-    
+
     // TeamPlayerList should still render but be empty
     const playerList = container.querySelector('.team-player-list');
     expect(playerList?.children.length || 0).toBe(0);
@@ -37,7 +37,7 @@ describe('NoTeamsDisplay', () => {
 
   it('applies animating-blur class when isAnimating is true', () => {
     const { container } = render(
-      <NoTeamsDisplay players={[TEST_PLAYERS[0]]} isAnimating={true} />
+      <NoTeamsDisplay players={[TEST_PLAYERS[0]]} isAnimating={true} />,
     );
 
     const blurredElements = container.querySelectorAll('.animating-blur');
@@ -46,7 +46,7 @@ describe('NoTeamsDisplay', () => {
 
   it('does not apply animating-blur class when isAnimating is false', () => {
     const { container } = render(
-      <NoTeamsDisplay players={[TEST_PLAYERS[0]]} isAnimating={false} />
+      <NoTeamsDisplay players={[TEST_PLAYERS[0]]} isAnimating={false} />,
     );
 
     const blurredElements = container.querySelectorAll('.animating-blur');
@@ -55,7 +55,7 @@ describe('NoTeamsDisplay', () => {
 
   it('applies animating-blur to both text containers when animating', () => {
     const { container } = render(
-      <NoTeamsDisplay players={[TEST_PLAYERS[0]]} isAnimating={true} />
+      <NoTeamsDisplay players={[TEST_PLAYERS[0]]} isAnimating={true} />,
     );
 
     const blurredElements = container.querySelectorAll('.animating-blur');

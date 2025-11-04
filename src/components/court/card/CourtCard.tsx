@@ -1,9 +1,9 @@
 import React from 'react';
 
 import type { Court } from '../../../types';
+import { SinglesMatch, DoublesMatch, GenericCourtDisplay, NoTeamsDisplay } from '../display';
 
 import CourtHeader from './CourtHeader';
-import { SinglesMatch, DoublesMatch, GenericCourtDisplay, NoTeamsDisplay } from '../display';
 
 interface CourtCardProps {
   court: Court;

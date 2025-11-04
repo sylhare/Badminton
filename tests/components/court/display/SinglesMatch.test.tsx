@@ -16,7 +16,7 @@ describe('SinglesMatch', () => {
       <SinglesMatch
         team1Player={team1Player}
         team2Player={team2Player}
-      />
+      />,
     );
 
     expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('SinglesMatch', () => {
         team1Player={team1Player}
         team2Player={team2Player}
         winner={1}
-      />
+      />,
     );
 
     const aliceContainer = screen.getByText('Alice').closest('.singles-player');
@@ -44,7 +44,7 @@ describe('SinglesMatch', () => {
         team1Player={team1Player}
         team2Player={team2Player}
         winner={2}
-      />
+      />,
     );
 
     const bobContainer = screen.getByText('Bob').closest('.singles-player');
@@ -59,7 +59,7 @@ describe('SinglesMatch', () => {
         team1Player={team1Player}
         team2Player={team2Player}
         waitingPlayer={waitingPlayer}
-      />
+      />,
     );
 
     expect(screen.getByText(/Waiting: Charlie/)).toBeInTheDocument();
@@ -70,7 +70,7 @@ describe('SinglesMatch', () => {
       <SinglesMatch
         team1Player={team1Player}
         team2Player={team2Player}
-      />
+      />,
     );
 
     expect(screen.queryByText(/Waiting:/)).not.toBeInTheDocument();
@@ -82,7 +82,7 @@ describe('SinglesMatch', () => {
         team1Player={team1Player}
         team2Player={team2Player}
         isClickable={true}
-      />
+      />,
     );
 
     const aliceContainer = screen.getByText('Alice').closest('.singles-player');
@@ -99,7 +99,7 @@ describe('SinglesMatch', () => {
         team2Player={team2Player}
         isClickable={true}
         onPlayerClick={mockOnPlayerClick}
-      />
+      />,
     );
 
     const aliceContainer = screen.getByText('Alice').closest('.singles-player');
@@ -115,7 +115,7 @@ describe('SinglesMatch', () => {
         team1Player={team1Player}
         team2Player={team2Player}
         isAnimating={true}
-      />
+      />,
     );
 
     const singlesPlayers = document.querySelector('.singles-players');
@@ -128,7 +128,7 @@ describe('SinglesMatch', () => {
         team1Player={team1Player}
         team2Player={team2Player}
         isAnimating={false}
-      />
+      />,
     );
 
     const singlesPlayers = document.querySelector('.singles-players');
