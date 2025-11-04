@@ -2,7 +2,6 @@ import React from 'react';
 
 import type { Player } from '../../../types';
 import { triggerConfetti } from '../../../utils/confetti';
-
 import TeamPlayerList from '../team/TeamPlayerList';
 
 interface TeamDisplayProps {

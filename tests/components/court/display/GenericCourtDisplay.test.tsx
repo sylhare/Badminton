@@ -16,7 +16,7 @@ describe('GenericCourtDisplay', () => {
       <GenericCourtDisplay
         team1Players={team1Players}
         team2Players={[]}
-      />
+      />,
     );
 
     expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -28,7 +28,7 @@ describe('GenericCourtDisplay', () => {
       <GenericCourtDisplay
         team1Players={team1Players}
         team2Players={team2Players}
-      />
+      />,
     );
 
     expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -42,7 +42,7 @@ describe('GenericCourtDisplay', () => {
       <GenericCourtDisplay
         team1Players={team1Players}
         team2Players={[]}
-      />
+      />,
     );
 
     expect(screen.queryByText('VS')).not.toBeInTheDocument();
@@ -53,7 +53,7 @@ describe('GenericCourtDisplay', () => {
       <GenericCourtDisplay
         team1Players={team1Players}
         team2Players={[]}
-      />
+      />,
     );
 
     expect(container.querySelector('[data-testid="team-2"]')).not.toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('GenericCourtDisplay', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         winner={1}
-      />
+      />,
     );
 
     const team1Container = container.querySelector('[data-testid="team-1"]');
@@ -78,7 +78,7 @@ describe('GenericCourtDisplay', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         winner={2}
-      />
+      />,
     );
 
     const team2Container = container.querySelector('[data-testid="team-2"]');
@@ -95,7 +95,7 @@ describe('GenericCourtDisplay', () => {
         team2Players={team2Players}
         isClickable={true}
         onTeamClick={mockOnTeamClick}
-      />
+      />,
     );
 
     const team2Container = container.querySelector('[data-testid="team-2"]');
@@ -111,7 +111,7 @@ describe('GenericCourtDisplay', () => {
         team1Players={team1Players}
         team2Players={team2Players}
         isAnimating={true}
-      />
+      />,
     );
 
     const teamsContainer = container.querySelector('.teams');
@@ -126,7 +126,7 @@ describe('GenericCourtDisplay', () => {
       <GenericCourtDisplay
         team1Players={singlePlayer}
         team2Players={triplePlayers}
-      />
+      />,
     );
 
     expect(screen.getByText('Alice')).toBeInTheDocument();
