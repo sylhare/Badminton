@@ -4,7 +4,7 @@ import type { Court, Player, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
 
 import { CourtCard } from './card';
-import TeamPlayerList from './team/TeamPlayerList';
+import { TeamPlayerList } from './team';
 
 interface CourtAssignmentsProps {
   assignments: Court[];
@@ -68,7 +68,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
       </div>
 
       {benchedPlayers.length > 0 && (
-        <div className="bench-section">
+        <div className={`bench-section ${isAnimating ? 'animating-blur' : ''}`}>
           <div className="bench-header">
             🪑 Bench ({benchedPlayers.length} player{benchedPlayers.length !== 1 ? 's' : ''})
           </div>
