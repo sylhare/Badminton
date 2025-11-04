@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 
 import { validatePlayerNames } from '../utils/playerUtils';
 
+import ImageUpload from './ImageUpload';
+
 interface ManualPlayerEntryProps {
   onPlayersAdded: (players: string[]) => void;
+  onPlayersExtracted: (players: string[]) => void;
 }
 
-const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded }) => {
+const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded, onPlayersExtracted }) => {
   const [playerText, setPlayerText] = useState('');
   const [singlePlayerName, setSinglePlayerName] = useState('');
+  const [isImageUploadExpanded, setIsImageUploadExpanded] = useState(false);
 
   const handleSubmit = (playerNames: string[], resetState: () => void) => {
     const validNames = validatePlayerNames(playerNames);
@@ -37,6 +41,22 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
 
   return (
     <div className="manual-entry-container">
+      <div className="image-upload-collapsible">
+        <div
+          className="collapsible-header"
+          onClick={() => setIsImageUploadExpanded(!isImageUploadExpanded)}
+          data-testid="image-upload-toggle"
+        >
+          <span>📸 Add users with a picture</span>
+          <span className="toggle-icon">{isImageUploadExpanded ? '−' : '+'}</span>
+        </div>
+        {isImageUploadExpanded && (
+          <div className="collapsible-content">
+            <ImageUpload onPlayersExtracted={onPlayersExtracted} />
+          </div>
+        )}
+      </div>
+
       <div className="manual-entry-section">
         <h3>✍️ Add Single Player</h3>
         <form onSubmit={handleSingleAdd} className="single-player-form">
