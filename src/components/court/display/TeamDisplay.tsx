@@ -1,9 +1,9 @@
 import React from 'react';
 
-import type { Player } from '../types';
-import { triggerConfetti } from '../utils/confetti';
+import type { Player } from '../../../types';
+import { triggerConfetti } from '../../../utils/confetti';
 
-import TeamPlayerList from './TeamPlayerList';
+import TeamPlayerList from '../team/TeamPlayerList';
 
 interface TeamDisplayProps {
   teamNumber: number;
@@ -38,6 +38,7 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({
       <div
         className={`team ${isClickable ? 'team-clickable' : ''} ${isWinner ? 'team-winner' : ''}`}
         onClick={handleClick}
+        data-testid={`team-${teamNumber}`}
       >
         <div className="team-label">
           Team {teamNumber}

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 
-import type { Court, Player, WinnerSelection } from '../types';
-import { useAnalytics } from '../hooks/useAnalytics';
+import type { Court, Player, WinnerSelection } from '../../types';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
-import CourtCard from './CourtCard';
-import TeamPlayerList from './TeamPlayerList';
+import { CourtCard } from './card';
+import TeamPlayerList from './team/TeamPlayerList';
 
 interface CourtAssignmentsProps {
   assignments: Court[];
@@ -29,11 +29,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     setIsButtonShaking(true);
     setIsAnimating(true);
     trackCourtAction('regenerate_assignments', { courtCount: assignments.length });
-    
+
     setTimeout(() => {
       setIsButtonShaking(false);
       onGenerateNewAssignments();
-      
+
       setTimeout(() => {
         setIsAnimating(false);
       }, 400);

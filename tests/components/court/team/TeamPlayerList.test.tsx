@@ -3,9 +3,9 @@ import { describe, it } from 'vitest';
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import TeamPlayerList from '../../src/components/TeamPlayerList';
-import { MOCK_PLAYERS } from '../data/testFactories';
-import { expectEmptyRender, expectPlayersInOrder, expectPlayersToBeRendered } from '../data/testHelpers';
+import { TeamPlayerList } from '../../../../src/components/court/team';
+import { MOCK_PLAYERS } from '../../../data/testFactories';
+import { expectEmptyRender, expectPlayersInOrder, expectPlayersToBeRendered } from '../../../data/testHelpers';
 
 describe('TeamPlayerList Component', () => {
   it('should render all players', () => {
