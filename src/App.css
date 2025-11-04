@@ -452,7 +452,7 @@ h1 {
 }
 
 .court-card.animating-shake {
-    animation: courtShake 0.6s ease-in-out;
+    animation: courtShake 0.4s ease-in-out;
 }
 
 @keyframes courtShake {
@@ -468,7 +468,7 @@ h1 {
 }
 
 .animating-blur {
-    animation: blurEffect 0.6s ease-in-out;
+    animation: blurEffect 0.4s ease-in-out;
 }
 
 @keyframes blurEffect {
