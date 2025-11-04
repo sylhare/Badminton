@@ -281,6 +281,57 @@ h1 {
     gap: 25px;
 }
 
+.image-upload-collapsible {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 1rem;
+}
+
+.collapsible-header:hover {
+    background-color: #f7fafc;
+}
+
+.toggle-icon {
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    font-weight: bold;
+    line-height: 0.8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collapsible-content {
+    padding: 20px;
+    border-top: 1px solid #e2e8f0;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .manual-entry-section {
     background: #f8fafc;
     border-radius: 10px;
