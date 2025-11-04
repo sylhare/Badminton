@@ -4,9 +4,9 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
-import CourtAssignments from '../../src/components/CourtAssignments';
-import { Court, Player } from '../../src/types';
-import { TEST_COURTS, TEST_PLAYERS } from '../data/testData';
+import { CourtAssignments } from '../../../src/components/court';
+import { Court, Player } from '../../../src/types';
+import { TEST_COURTS, TEST_PLAYERS } from '../../data/testData';
 
 describe('CourtAssignments Component', () => {
   const mockOnGenerateNewAssignments = vi.fn();

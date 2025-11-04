@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { useAnalytics } from '../hooks/useAnalytics';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 interface CourtSettingsProps {
   numberOfCourts: number;
