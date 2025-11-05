@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { Player } from '../types';
+import type { Player } from '../../../types';
 
 interface TeamPlayerListProps {
   players: Player[];
