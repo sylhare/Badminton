@@ -470,6 +470,22 @@ h1 {
     cursor: not-allowed;
 }
 
+.button-shake {
+    animation: shake 0.2s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-5px) rotate(-2deg);
+    }
+    75% {
+        transform: translateX(5px) rotate(2deg);
+    }
+}
+
 .courts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -483,6 +499,38 @@ h1 {
     padding: 20px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     border: 2px solid #e2e8f0;
+    transition: transform 0.3s ease;
+}
+
+.court-card.animating-shake {
+    animation: courtShake 0.4s ease-in-out;
+}
+
+@keyframes courtShake {
+    0%, 100% {
+        transform: translateX(0) rotate(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-3px) rotate(-0.5deg);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(3px) rotate(0.5deg);
+    }
+}
+
+.animating-blur {
+    animation: blurEffect 0.4s ease-in-out;
+}
+
+@keyframes blurEffect {
+    0%, 100% {
+        filter: blur(0px);
+        opacity: 1;
+    }
+    50% {
+        filter: blur(4px);
+        opacity: 0.7;
+    }
 }
 
 .court-header {

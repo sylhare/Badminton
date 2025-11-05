@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
-import CourtSettings from '../../src/components/CourtSettings';
+import { CourtSettings } from '../../../src/components/court';
 
 describe('CourtSettings Component', () => {
   const mockOnNumberOfCourtsChange = vi.fn();
