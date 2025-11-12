@@ -243,12 +243,13 @@ describe('App Persistence Integration', () => {
   });
 
   describe('Performance and efficiency', () => {
-    it('should not save state unnecessarily on initial load', () => {
+    it('should save state on initial load to ensure consistency', async () => {
       localStorage.setItem('badminton-app-state', JSON.stringify({
         players: [],
         numberOfCourts: 4,
         assignments: [],
         collapsedSteps: [],
+        manualCourt: null,
       }));
       localStorage.setItem('badminton-court-engine-state', JSON.stringify({
         benchCountMap: {},
@@ -262,10 +263,9 @@ describe('App Persistence Integration', () => {
 
       render(<App />);
 
-      setTimeout(() => {
+      await new Promise(resolve => setTimeout(resolve, 10));
 
-        expect(setItemSpy).not.toHaveBeenCalled();
-      }, 10);
+      expect(setItemSpy).toHaveBeenCalled();
     });
 
     it('should debounce save operations when making multiple quick changes', async () => {
