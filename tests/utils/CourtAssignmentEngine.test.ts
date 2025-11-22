@@ -87,6 +87,35 @@ describe('CourtAssignment Engine – core behaviour', () => {
     expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
   });
 
+  it('singles matches rotate fairly (no one plays singles twice until everyone has played singles once)', () => {
+    const players = mockPlayers(10);
+    const numberOfCourts = 3;
+    const rounds = 10;
+    const singlesHistory: Record<string, number> = {};
+    players.forEach(p => (singlesHistory[p.id] = 0));
+
+    for (let r = 0; r < rounds; r++) {
+      const assignments = generateCourtAssignments(players, numberOfCourts);
+
+      assignments.forEach(court => {
+        if (court.players.length === 2) {
+          court.players.forEach(p => {
+            singlesHistory[p.id] += 1;
+          });
+        }
+      });
+    }
+
+    Object.values(singlesHistory).forEach(count => {
+      expect(count).toBeGreaterThan(0);
+    });
+
+    const counts = Object.values(singlesHistory);
+    const max = Math.max(...counts);
+    const min = Math.min(...counts);
+    expect(max - min).toBeLessThanOrEqual(1);
+  });
+
   it('statistical check: teammate pairs are reasonably balanced over many rounds', () => {
     const players = mockPlayers(8);
     const numberOfCourts = 2;

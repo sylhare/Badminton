@@ -32,6 +32,7 @@ export interface AppState {
 
 export interface CourtEngineState {
   benchCountMap: Record<string, number>;
+  singleCountMap: Record<string, number>;
   teammateCountMap: Record<string, number>;
   opponentCountMap: Record<string, number>;
   winCountMap: Record<string, number>;
