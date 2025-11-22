@@ -72,6 +72,7 @@ export const saveCourtEngineState = (state: CourtEngineState): void => {
   try {
     const stateToSave: CourtEngineState = {
       benchCountMap: state.benchCountMap,
+      singleCountMap: state.singleCountMap,
       teammateCountMap: state.teammateCountMap,
       opponentCountMap: state.opponentCountMap,
       winCountMap: state.winCountMap,

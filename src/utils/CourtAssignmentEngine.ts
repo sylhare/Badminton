@@ -18,6 +18,7 @@ import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
  * 3. **Best Selection**: Returns the assignment with the lowest cost (best fairness metrics)
  *
  * ## Cost Function Components:
+ * - **Singles Rotation**: Strongly penalizes singles match repetition (no player plays singles twice before all have played once)
  * - **Teammate History**: Penalizes players who have been teammates too often
  * - **Opponent History**: Penalizes players who have faced each other too often
  * - **Skill Balance**: Ensures teams are balanced based on win/loss records
@@ -46,6 +47,7 @@ import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
  *
  * ## Historical Tracking:
  * - benchCountMap: Tracks how many times each player has been benched
+ * - singleCountMap: Tracks how many times each player has played singles matches
  * - teammateCountMap: Tracks pairwise teammate frequency (key: "playerId1|playerId2")
  * - opponentCountMap: Tracks pairwise opponent frequency (key: "playerId1|playerId2")
  * - winCountMap: Tracks total wins per player
@@ -56,6 +58,8 @@ import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 export class CourtAssignmentEngine {
   /** Tracks how many times each player has been benched across all sessions */
   private static benchCountMap: Map<string, number> = new Map();
+  /** Tracks how many times each player has played singles matches across all sessions */
+  private static singleCountMap: Map<string, number> = new Map();
   /** Tracks pairwise teammate frequency to encourage variety */
   private static teammateCountMap: Map<string, number> = new Map();
   /** Tracks pairwise opponent frequency to encourage variety */
@@ -95,13 +99,14 @@ export class CourtAssignmentEngine {
   }
 
   /**
-   * Resets all historical data including wins, losses, benches, and matchup history.
+   * Resets all historical data including wins, losses, benches, singles, and matchup history.
    * Use this to start fresh with no historical bias.
    *
    * @fires notifyStateChange
    */
   static resetHistory(): void {
     this.benchCountMap.clear();
+    this.singleCountMap.clear();
     this.teammateCountMap.clear();
     this.opponentCountMap.clear();
     this.winCountMap.clear();
@@ -118,6 +123,7 @@ export class CourtAssignmentEngine {
   static prepareStateForSaving(): CourtEngineState {
     return {
       benchCountMap: Object.fromEntries(this.benchCountMap),
+      singleCountMap: Object.fromEntries(this.singleCountMap),
       teammateCountMap: Object.fromEntries(this.teammateCountMap),
       opponentCountMap: Object.fromEntries(this.opponentCountMap),
       winCountMap: Object.fromEntries(this.winCountMap),
@@ -134,6 +140,9 @@ export class CourtAssignmentEngine {
 
     if (state.benchCountMap) {
       this.benchCountMap = new Map(Object.entries(state.benchCountMap));
+    }
+    if (state.singleCountMap) {
+      this.singleCountMap = new Map(Object.entries(state.singleCountMap));
     }
     if (state.teammateCountMap) {
       this.teammateCountMap = new Map(Object.entries(state.teammateCountMap));
@@ -335,6 +344,10 @@ export class CourtAssignmentEngine {
     finalCourts.forEach(court => {
       if (!court.teams) return;
 
+      if (court.players.length === 2) {
+        court.players.forEach(p => this.incrementMapCount(this.singleCountMap, p.id));
+      }
+
       const addTeamPairs = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
@@ -417,6 +430,7 @@ export class CourtAssignmentEngine {
    * Uses cost memoization: checks cache before calculating to avoid redundant work.
    *
    * ## Cost Components:
+   * - Singles repetition: High penalty for players who have played singles matches before
    * - Teammate repetition: Sum of times each pair has been teammates before
    * - Opponent repetition: Sum of times each pair has faced each other before
    * - Skill pairing penalty: Discourages pairing high-win or high-loss players together
@@ -434,6 +448,12 @@ export class CourtAssignmentEngine {
     }
 
     let cost = 0;
+
+    if (court.players.length === 2 && court.teams) {
+      const player1SinglesCount = this.singleCountMap.get(court.players[0].id) ?? 0;
+      const player2SinglesCount = this.singleCountMap.get(court.players[1].id) ?? 0;
+      cost += (player1SinglesCount + player2SinglesCount) * 100;
+    }
 
     if (court.teams) {
       const addTeamPairs = (team: Player[]): void => {
