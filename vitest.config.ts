@@ -8,6 +8,17 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './tests/setup.ts',
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: false,
+        minThreads: 1,
+        maxThreads: 4,
+        useAtomics: true,
+      },
+    },
+    fileParallelism: true,
+    isolate: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
