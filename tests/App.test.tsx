@@ -84,12 +84,12 @@ describe('App', () => {
         await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
-      const playerItems = screen.getAllByRole('checkbox');
-      const aliceCheckbox = playerItems[0];
-      const bobCheckbox = playerItems[1];
+      const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
+      const aliceToggle = toggleButtons[0];
+      const bobToggle = toggleButtons[1];
       await act(async () => {
-        await user.click(aliceCheckbox);
-        await user.click(bobCheckbox);
+        await user.click(aliceToggle);
+        await user.click(bobToggle);
         await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
@@ -142,7 +142,7 @@ describe('App', () => {
         await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
-      it('adds all players correctly with initial checked state', async () => {
+      it('adds all players correctly with initial present state', async () => {
         expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
         expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
         expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
@@ -150,19 +150,19 @@ describe('App', () => {
         expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('3');
         expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('3');
 
-        const checkboxes = screen.getAllByRole('checkbox');
-        expect(checkboxes).toHaveLength(3); // 3 players
-        checkboxes.forEach(checkbox => {
-          expect(checkbox).toBeChecked();
+        const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
+        expect(toggleButtons).toHaveLength(3); // 3 players
+        toggleButtons.forEach(button => {
+          expect(button).toHaveClass('present');
         });
       });
 
       it('updates stats when toggling a single player off', async () => {
-        const checkboxes = screen.getAllByRole('checkbox');
-        await user.click(checkboxes[0]);
+        const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
+        await user.click(toggleButtons[0]);
 
         expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
-        expect(checkboxes[0]).not.toBeChecked();
+        expect(toggleButtons[0]).toHaveClass('absent');
 
         expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('2');
         expect(screen.getAllByText('Absent')[0].previousElementSibling).toHaveTextContent('1');
@@ -170,18 +170,18 @@ describe('App', () => {
       });
 
       it('keeps all players visible when all are toggled off', async () => {
-        const checkboxes = screen.getAllByRole('checkbox');
+        const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
 
-        await user.click(checkboxes[0]);
-        await user.click(checkboxes[1]);
-        await user.click(checkboxes[2]);
+        await user.click(toggleButtons[0]);
+        await user.click(toggleButtons[1]);
+        await user.click(toggleButtons[2]);
 
         expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
         expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
         expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
 
-        checkboxes.forEach(checkbox => {
-          expect(checkbox).not.toBeChecked();
+        toggleButtons.forEach(button => {
+          expect(button).toHaveClass('absent');
         });
 
         expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('0');
@@ -190,16 +190,16 @@ describe('App', () => {
       });
 
       it('updates stats when toggling a player back on', async () => {
-        const checkboxes = screen.getAllByRole('checkbox');
+        const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
 
-        await user.click(checkboxes[0]);
-        await user.click(checkboxes[1]);
-        await user.click(checkboxes[2]);
+        await user.click(toggleButtons[0]);
+        await user.click(toggleButtons[1]);
+        await user.click(toggleButtons[2]);
 
-        await user.click(checkboxes[0]);
+        await user.click(toggleButtons[0]);
 
         expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
-        expect(checkboxes[0]).toBeChecked();
+        expect(toggleButtons[0]).toHaveClass('present');
 
         expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('1');
         expect(screen.getAllByText('Absent')[0].previousElementSibling).toHaveTextContent('2');
@@ -220,9 +220,9 @@ describe('App', () => {
       });
 
       it('hides court settings when all players are toggled off', async () => {
-        const checkboxes = screen.getAllByRole('checkbox');
-        await user.click(checkboxes[0]);
-        await user.click(checkboxes[1]);
+        const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
+        await user.click(toggleButtons[0]);
+        await user.click(toggleButtons[1]);
 
         expect(screen.getAllByText('Step 2: Manage Players')[0]).toBeInTheDocument();
         expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
@@ -231,12 +231,12 @@ describe('App', () => {
       });
 
       it('shows court settings again when at least one player is toggled on', async () => {
-        const checkboxes = screen.getAllByRole('checkbox');
+        const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
 
-        await user.click(checkboxes[0]);
-        await user.click(checkboxes[1]);
+        await user.click(toggleButtons[0]);
+        await user.click(toggleButtons[1]);
 
-        await user.click(checkboxes[0]);
+        await user.click(toggleButtons[0]);
 
         expect(screen.getAllByText('Step 3: Court Settings')[0]).toBeInTheDocument();
       });
@@ -251,11 +251,11 @@ describe('App', () => {
       });
 
       it('keeps toggled-off players in the list', async () => {
-        const checkboxes = screen.getAllByRole('checkbox');
-        await user.click(checkboxes[0]);
+        const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
+        await user.click(toggleButtons[0]);
 
         expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
-        expect(checkboxes[0]).not.toBeChecked();
+        expect(toggleButtons[0]).toHaveClass('absent');
       });
 
       it('removes deleted players completely from the list', async () => {
@@ -271,7 +271,7 @@ describe('App', () => {
         const removeButtons = screen.getAllByTitle('Delete player permanently');
         await user.click(removeButtons[1]);
 
-        expect(screen.getAllByRole('checkbox')).toHaveLength(2); // 2 players
+        expect(screen.getAllByTestId(/^toggle-presence-/)).toHaveLength(2); // 2 players
         expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(2); // 2 players
         expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('2');
         expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('2');
