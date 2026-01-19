@@ -58,7 +58,7 @@ describe('PlayerList Component', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
-  it('calls onPlayerToggle when checkbox is clicked', async () => {
+  it('calls onPlayerToggle when toggle presence button is clicked', async () => {
     const players = createMockPlayers(1);
 
     render(
@@ -71,13 +71,13 @@ describe('PlayerList Component', () => {
       />,
     );
 
-    const checkbox = screen.getByRole('checkbox');
-    await user.click(checkbox);
+    const toggleButton = screen.getByTestId('toggle-presence-player-0');
+    await user.click(toggleButton);
 
     expect(mockToggle).toHaveBeenCalledWith('player-0');
   });
 
-  it('shows checkboxes in correct state based on isPresent', () => {
+  it('shows toggle buttons with correct styling based on isPresent', () => {
     const players = [
       { id: '1', name: 'Present Player', isPresent: true },
       { id: '2', name: 'Absent Player', isPresent: false },
@@ -93,12 +93,14 @@ describe('PlayerList Component', () => {
       />,
     );
 
-    const checkboxes = screen.getAllByRole('checkbox');
-    expect(checkboxes).toHaveLength(2);
+    const presentToggle = screen.getByTestId('toggle-presence-1');
+    const absentToggle = screen.getByTestId('toggle-presence-2');
 
-    expect(checkboxes[0]).toBeChecked();
+    expect(presentToggle).toHaveClass('present');
+    expect(presentToggle).toHaveAttribute('title', 'Mark as absent');
 
-    expect(checkboxes[1]).not.toBeChecked();
+    expect(absentToggle).toHaveClass('absent');
+    expect(absentToggle).toHaveAttribute('title', 'Mark as present');
   });
 
   it('maintains all players in the list regardless of isPresent status', () => {
@@ -124,7 +126,7 @@ describe('PlayerList Component', () => {
     expect(screen.getByText('Player C')).toBeInTheDocument();
     expect(screen.getByText('Player D')).toBeInTheDocument();
 
-    expect(screen.getAllByRole('checkbox')).toHaveLength(4);
+    expect(screen.getAllByTestId(/^toggle-presence-/)).toHaveLength(4);
 
     expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(4);
   });
