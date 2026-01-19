@@ -16,13 +16,13 @@ test.describe('Feature Tests', () => {
     await expect(page.getByTestId('stats-present-count')).toHaveText('2');
     await expect(page.getByTestId('stats-absent-count')).toHaveText('0');
 
-    const firstCheckbox = page.locator('[data-testid^="player-checkbox-"]').first();
-    await firstCheckbox.uncheck();
+    const firstToggleButton = page.locator('[data-testid^="toggle-presence-"]').first();
+    await firstToggleButton.click();
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('1');
     await expect(page.getByTestId('stats-absent-count')).toHaveText('1');
 
-    await firstCheckbox.check();
+    await firstToggleButton.click();
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('2');
     await expect(page.getByTestId('stats-absent-count')).toHaveText('0');
