@@ -36,8 +36,8 @@ describe('App Persistence Integration', () => {
       expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
       expect(screen.getAllByText('Diana')[0]).toBeInTheDocument();
 
-      const checkboxes = screen.getAllByRole('checkbox');
-      await user.click(checkboxes[1]);
+      const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
+      await user.click(toggleButtons[1]);
 
       unmount();
 
@@ -48,11 +48,11 @@ describe('App Persistence Integration', () => {
       expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
       expect(screen.getAllByText('Diana')[0]).toBeInTheDocument();
 
-      const restoredCheckboxes = screen.getAllByRole('checkbox');
-      expect(restoredCheckboxes[0]).toBeChecked();
-      expect(restoredCheckboxes[1]).not.toBeChecked();
-      expect(restoredCheckboxes[2]).toBeChecked();
-      expect(restoredCheckboxes[3]).toBeChecked();
+      const restoredToggleButtons = screen.getAllByTestId(/^toggle-presence-/);
+      expect(restoredToggleButtons[0]).toHaveClass('present');
+      expect(restoredToggleButtons[1]).toHaveClass('absent');
+      expect(restoredToggleButtons[2]).toHaveClass('present');
+      expect(restoredToggleButtons[3]).toHaveClass('present');
 
       expect(screen.getAllByText('3')[0]).toBeInTheDocument();
       expect(screen.getAllByText('1')[0]).toBeInTheDocument();
