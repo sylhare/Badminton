@@ -16,12 +16,3 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: additional
-    attributes:
-      label: Anything else?
-      description: More details, mockups, examples (optional)
-      placeholder: For example...
-    validations:
-      required: false
-
