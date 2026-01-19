@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash, ArrowClockwise } from '@phosphor-icons/react';
+import { Trash, ArrowClockwise, SignIn, SignOut } from '@phosphor-icons/react';
 
 import type { Player } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -76,25 +76,26 @@ const PlayerList: React.FC<PlayerListProps> = ({
             key={player.id}
             className={`player-item ${!player.isPresent ? 'absent' : ''}`}
           >
-            <div className="player-toggle-section">
-              <input
-                type="checkbox"
-                checked={player.isPresent}
-                onChange={() => handlePlayerToggle(player.id)}
-                className="player-checkbox"
-                data-testid={`player-checkbox-${player.id}`}
-                title={player.isPresent ? 'Uncheck to exclude from games' : 'Check to include in games'}
-              />
-              <span className="player-name" data-testid={`player-name-${player.id}`}>{player.name}</span>
+            <span className="player-name" data-testid={`player-name-${player.id}`}>{player.name}</span>
+            <div className="player-action-buttons">
+              <button
+                onClick={() => handlePlayerToggle(player.id)}
+                className={`toggle-presence-button ${player.isPresent ? 'present' : 'absent'}`}
+                data-testid={`toggle-presence-${player.id}`}
+                title={player.isPresent ? 'Mark as absent' : 'Mark as present'}
+                aria-label={player.isPresent ? 'Mark as absent' : 'Mark as present'}
+              >
+                {player.isPresent ? <SignOut size={14} weight="bold" /> : <SignIn size={14} weight="bold" />}
+              </button>
+              <button
+                onClick={() => handleRemovePlayer(player.id)}
+                className="remove-button"
+                data-testid={`remove-player-${player.id}`}
+                title="Delete player permanently"
+              >
+                <Trash size={14} />
+              </button>
             </div>
-            <button
-              onClick={() => handleRemovePlayer(player.id)}
-              className="remove-button"
-              data-testid={`remove-player-${player.id}`}
-              title="Delete player permanently"
-            >
-              <Trash size={14} />
-            </button>
           </div>
         ))}
       </div>
