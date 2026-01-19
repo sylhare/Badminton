@@ -59,8 +59,8 @@ export async function removeFirstPlayer(page: Page): Promise<void> {
 }
 
 export async function toggleFirstPlayer(page: Page): Promise<void> {
-  const firstPlayerCheckbox = page.locator('[data-testid^="player-checkbox-"]').first();
-  await firstPlayerCheckbox.click();
+  const firstToggleButton = page.locator('[data-testid^="toggle-presence-"]').first();
+  await firstToggleButton.click();
 }
 
 // Court management helpers
