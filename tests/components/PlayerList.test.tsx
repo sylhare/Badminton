@@ -294,6 +294,174 @@ describe('PlayerList Component', () => {
     });
   });
 
+  describe('Bench counts and force bench functionality', () => {
+    const mockToggleForceBench = vi.fn();
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('shows bench counts for present players', () => {
+      const players = createMockPlayers(2);
+      const benchCounts = new Map([['player-0', 5], ['player-1', 3]]);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          benchCounts={benchCounts}
+        />,
+      );
+
+      const benchCountLabels = screen.getAllByText(/Bench count:/);
+      expect(benchCountLabels).toHaveLength(2);
+      expect(benchCountLabels[0].querySelector('strong')?.textContent).toBe('5');
+      expect(benchCountLabels[1].querySelector('strong')?.textContent).toBe('3');
+    });
+
+    it('shows 0 bench count when player has no bench history', () => {
+      const players = createMockPlayers(1);
+      const benchCounts = new Map<string, number>();
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          benchCounts={benchCounts}
+        />,
+      );
+
+      const benchCountLabel = screen.getByText(/Bench count:/);
+      expect(benchCountLabel).toBeInTheDocument();
+      expect(benchCountLabel.querySelector('strong')?.textContent).toBe('0');
+    });
+
+    it('shows bench next toggle for present players', () => {
+      const players = createMockPlayers(2);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          onToggleForceBench={mockToggleForceBench}
+        />,
+      );
+
+      expect(screen.getAllByText('Bench next')).toHaveLength(2);
+    });
+
+    it('does not show bench info for absent players', () => {
+      const players = [
+        { id: 'present-1', name: 'Present Player', isPresent: true },
+        { id: 'absent-1', name: 'Absent Player', isPresent: false },
+      ];
+      const benchCounts = new Map([['present-1', 2], ['absent-1', 3]]);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          benchCounts={benchCounts}
+        />,
+      );
+
+      expect(screen.getAllByText(/Bench count:/)).toHaveLength(1);
+      expect(screen.getAllByText('Bench next')).toHaveLength(1);
+    });
+
+    it('calls onToggleForceBench when toggle is clicked', async () => {
+      const players = createMockPlayers(1);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          onToggleForceBench={mockToggleForceBench}
+        />,
+      );
+
+      const checkbox = screen.getByTestId('force-bench-player-0');
+      await user.click(checkbox);
+
+      expect(mockToggleForceBench).toHaveBeenCalledWith('player-0');
+    });
+
+    it('shows force bench toggle as checked when player is force-benched', () => {
+      const players = createMockPlayers(2);
+      const forceBenchPlayerIds = new Set(['player-0']);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          forceBenchPlayerIds={forceBenchPlayerIds}
+          onToggleForceBench={mockToggleForceBench}
+        />,
+      );
+
+      const checkbox0 = screen.getByTestId('force-bench-player-0') as HTMLInputElement;
+      const checkbox1 = screen.getByTestId('force-bench-player-1') as HTMLInputElement;
+
+      expect(checkbox0.checked).toBe(true);
+      expect(checkbox1.checked).toBe(false);
+    });
+
+    it('shows active toggle switch styling when force-benched', () => {
+      const players = createMockPlayers(1);
+      const forceBenchPlayerIds = new Set(['player-0']);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          forceBenchPlayerIds={forceBenchPlayerIds}
+          onToggleForceBench={mockToggleForceBench}
+        />,
+      );
+
+      const toggleSwitch = document.querySelector('.toggle-switch');
+      expect(toggleSwitch).toHaveClass('active');
+    });
+
+    it('always adds with-bench-info class to player items', () => {
+      const players = createMockPlayers(1);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const playerItem = document.querySelector('.player-item');
+      expect(playerItem).toHaveClass('with-bench-info');
+    });
+  });
+
   describe('Reset Algorithm functionality', () => {
     it('shows Reset Algorithm button when players exist', () => {
       const players = createMockPlayers(2);

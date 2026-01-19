@@ -12,6 +12,9 @@ interface PlayerListProps {
   onRemovePlayer: (playerId: string) => void;
   onClearAllPlayers: () => void;
   onResetAlgorithm: () => void;
+  benchCounts?: Map<string, number>;
+  forceBenchPlayerIds?: Set<string>;
+  onToggleForceBench?: (playerId: string) => void;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({
@@ -20,6 +23,9 @@ const PlayerList: React.FC<PlayerListProps> = ({
   onRemovePlayer,
   onClearAllPlayers,
   onResetAlgorithm,
+  benchCounts,
+  forceBenchPlayerIds,
+  onToggleForceBench,
 }) => {
   const [showClearModal, setShowClearModal] = useState(false);
   const [showResetAlgorithmModal, setShowResetAlgorithmModal] = useState(false);
@@ -71,33 +77,57 @@ const PlayerList: React.FC<PlayerListProps> = ({
       </div>
 
       <div className="player-list">
-        {players.map(player => (
-          <div
-            key={player.id}
-            className={`player-item ${!player.isPresent ? 'absent' : ''}`}
-          >
-            <span className="player-name" data-testid={`player-name-${player.id}`}>{player.name}</span>
-            <div className="player-action-buttons">
-              <button
-                onClick={() => handlePlayerToggle(player.id)}
-                className={`toggle-presence-button ${player.isPresent ? 'present' : 'absent'}`}
-                data-testid={`toggle-presence-${player.id}`}
-                title={player.isPresent ? 'Mark as absent' : 'Mark as present'}
-                aria-label={player.isPresent ? 'Mark as absent' : 'Mark as present'}
-              >
-                {player.isPresent ? <SignOut size={14} weight="bold" /> : <SignIn size={14} weight="bold" />}
-              </button>
-              <button
-                onClick={() => handleRemovePlayer(player.id)}
-                className="remove-button"
-                data-testid={`remove-player-${player.id}`}
-                title="Delete player permanently"
-              >
-                <Trash size={14} />
-              </button>
+        {players.map(player => {
+          const benchCount = benchCounts?.get(player.id) ?? 0;
+          const isForceBenched = forceBenchPlayerIds?.has(player.id) ?? false;
+
+          return (
+            <div
+              key={player.id}
+              className={`player-item ${!player.isPresent ? 'absent' : ''} with-bench-info`}
+            >
+              <div className="player-main-row">
+                <span className="player-name" data-testid={`player-name-${player.id}`}>{player.name}</span>
+                <div className="player-action-buttons">
+                  <button
+                    onClick={() => handlePlayerToggle(player.id)}
+                    className={`toggle-presence-button ${player.isPresent ? 'present' : 'absent'}`}
+                    data-testid={`toggle-presence-${player.id}`}
+                    title={player.isPresent ? 'Mark as absent' : 'Mark as present'}
+                    aria-label={player.isPresent ? 'Mark as absent' : 'Mark as present'}
+                  >
+                    {player.isPresent ? <SignOut size={14} weight="bold" /> : <SignIn size={14} weight="bold" />}
+                  </button>
+                  <button
+                    onClick={() => handleRemovePlayer(player.id)}
+                    className="remove-button"
+                    data-testid={`remove-player-${player.id}`}
+                    title="Delete player permanently"
+                  >
+                    <Trash size={14} />
+                  </button>
+                </div>
+              </div>
+              {player.isPresent && (
+                <div className="player-bench-row">
+                  <span className="bench-count-label">
+                    🪑 Bench count: <strong>{benchCount}</strong>
+                  </span>
+                  <label className="bench-next-toggle">
+                    <span>Bench next</span>
+                    <input
+                      type="checkbox"
+                      checked={isForceBenched}
+                      onChange={() => onToggleForceBench?.(player.id)}
+                      data-testid={`force-bench-${player.id}`}
+                    />
+                    <span className={`toggle-switch ${isForceBenched ? 'active' : ''}`}></span>
+                  </label>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {totalCount > 0 && (
