@@ -20,8 +20,10 @@ function App(): React.ReactElement {
   const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
+  const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
 
   const isInitialLoad = useRef(true);
+  const step2Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     CourtAssignmentEngine.loadState();
@@ -112,7 +114,12 @@ function App(): React.ReactElement {
     recordCurrentWins();
     CourtAssignmentEngine.clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
-    const courts = generateCourtAssignments(players, numberOfCourts, manualCourtSelection || undefined);
+    const courts = generateCourtAssignments(
+      players,
+      numberOfCourts,
+      manualCourtSelection || undefined,
+      forceBenchPlayerIds.size > 0 ? forceBenchPlayerIds : undefined,
+    );
 
     if (hadManualSelection) {
       courts.forEach(court => {
@@ -125,12 +132,36 @@ function App(): React.ReactElement {
     setAssignments(courts);
     setCollapsedSteps(new Set([1, 2, 3]));
     setManualCourtSelection(null);
+    setForceBenchPlayerIds(new Set());
   };
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
     setAssignments(prevAssignments =>
       CourtAssignmentEngine.updateWinner(courtNumber, winner, prevAssignments),
     );
+  };
+
+  const handleToggleForceBench = (playerId: string) => {
+    setForceBenchPlayerIds(prev => {
+      const next = new Set(prev);
+      if (next.has(playerId)) {
+        next.delete(playerId);
+      } else {
+        next.add(playerId);
+      }
+      return next;
+    });
+  };
+
+  const handleViewBenchCounts = () => {
+    setCollapsedSteps(prev => {
+      const next = new Set(prev);
+      next.delete(2);
+      return next;
+    });
+    setTimeout(() => {
+      step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const stepCallbacks: StepCallbacks = {
@@ -180,6 +211,9 @@ function App(): React.ReactElement {
             onRemovePlayer={handleRemovePlayer}
             onClearAllPlayers={handleClearAllPlayers}
             onResetAlgorithm={handleResetAlgorithm}
+            benchCounts={CourtAssignmentEngine.getBenchCounts()}
+            forceBenchPlayerIds={forceBenchPlayerIds}
+            onToggleForceBench={handleToggleForceBench}
           />
         );
       case 3:
@@ -205,6 +239,7 @@ function App(): React.ReactElement {
               onGenerateNewAssignments={generateAssignments}
               onWinnerChange={handleWinnerChange}
               hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
+              onViewBenchCounts={handleViewBenchCounts}
             />
           </>
         );
@@ -221,6 +256,7 @@ function App(): React.ReactElement {
         {steps.map(step => (
           <div
             key={step.id}
+            ref={step.id === 2 ? step2Ref : undefined}
             className={`step${step.isCollapsed ? ' collapsed' : ''}`}
             onClick={(e) => handleToggleStep(step.id, e)}
           >
