@@ -95,6 +95,57 @@ describe('CourtAssignments Component', () => {
     expect(screen.getByText('🪑 Bench (1 player)')).toBeInTheDocument();
   });
 
+  describe('View bench counts button', () => {
+    it('shows view bench counts button when players are benched and onViewBenchCounts is provided', () => {
+      const mockOnViewBenchCounts = vi.fn();
+
+      render(
+        <CourtAssignments
+          {...defaultProps}
+          onViewBenchCounts={mockOnViewBenchCounts}
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: /view bench counts/i })).toBeInTheDocument();
+    });
+
+    it('does not show view bench counts button when onViewBenchCounts is not provided', () => {
+      render(<CourtAssignments {...defaultProps} />);
+
+      expect(screen.queryByRole('button', { name: /view bench counts/i })).not.toBeInTheDocument();
+    });
+
+    it('does not show view bench counts button when no players are benched', () => {
+      const mockOnViewBenchCounts = vi.fn();
+      const propsWithoutBench = {
+        ...defaultProps,
+        benchedPlayers: [],
+        onViewBenchCounts: mockOnViewBenchCounts,
+      };
+
+      render(<CourtAssignments {...propsWithoutBench} />);
+
+      expect(screen.queryByRole('button', { name: /view bench counts/i })).not.toBeInTheDocument();
+    });
+
+    it('calls onViewBenchCounts when button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockOnViewBenchCounts = vi.fn();
+
+      render(
+        <CourtAssignments
+          {...defaultProps}
+          onViewBenchCounts={mockOnViewBenchCounts}
+        />,
+      );
+
+      const button = screen.getByRole('button', { name: /view bench counts/i });
+      await user.click(button);
+
+      expect(mockOnViewBenchCounts).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('renders multiple courts correctly', () => {
     const multipleCourtAssignments: Court[] = [
       {
