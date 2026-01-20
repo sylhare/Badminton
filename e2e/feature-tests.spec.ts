@@ -182,4 +182,101 @@ test.describe('Feature Tests', () => {
 
     await expect(page.locator('[data-testid^="court-"]')).toHaveCount(1);
   });
+
+  test('Force bench players and verify bench count updates', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack'];
+    await addBulkPlayers(page, players);
+
+    await expect(page.getByTestId('stats-total-count')).toHaveText('10');
+
+    const courtInput = page.locator('#courts');
+    await expect(courtInput).toBeVisible();
+    await courtInput.fill('2');
+
+    const generateButton = page.getByTestId('generate-assignments-button');
+    await generateButton.click();
+
+    await expect(page.locator('[data-testid^="court-"]')).toHaveCount(2);
+
+    const benchSection = page.locator('.bench-section');
+    await expect(benchSection).toBeVisible();
+    await expect(benchSection.locator('.bench-header')).toContainText('Bench (2 players)');
+
+    const initialBenchedPlayers = await benchSection.locator('.bench-player').allTextContents();
+    expect(initialBenchedPlayers.length).toBe(2);
+
+    const viewBenchCountsButton = page.getByTestId('view-bench-counts-button');
+    await expect(viewBenchCountsButton).toBeVisible();
+    await viewBenchCountsButton.click();
+
+    await page.waitForTimeout(300);
+
+    const playerBenchRows = page.locator('.player-bench-row');
+    await expect(playerBenchRows.first()).toBeVisible();
+
+    for (const benchedPlayer of initialBenchedPlayers) {
+      const playerItem = page.locator('.player-item').filter({ hasText: benchedPlayer.trim() });
+      const benchCount = playerItem.locator('.bench-count-label strong');
+      await expect(benchCount).toHaveText('1');
+    }
+
+    const aliceItem = page.locator('.player-item').filter({ hasText: 'Alice' });
+    const bobItem = page.locator('.player-item').filter({ hasText: 'Bob' });
+
+    const aliceInitialBenchCount = parseInt(await aliceItem.locator('.bench-count-label strong').textContent() || '0');
+    const bobInitialBenchCount = parseInt(await bobItem.locator('.bench-count-label strong').textContent() || '0');
+
+    const aliceBenchToggle = aliceItem.locator('.bench-next-toggle');
+    const bobBenchToggle = bobItem.locator('.bench-next-toggle');
+
+    await aliceBenchToggle.click();
+    await bobBenchToggle.click();
+
+    await expect(aliceItem.locator('.toggle-switch')).toHaveClass(/active/);
+    await expect(bobItem.locator('.toggle-switch')).toHaveClass(/active/);
+
+    const generateNewButton = page.getByTestId('generate-new-assignments-button');
+    await generateNewButton.click();
+    await page.waitForTimeout(500);
+
+    const newBenchSection = page.locator('.bench-section');
+    await expect(newBenchSection).toBeVisible();
+
+    const newBenchedPlayers = await newBenchSection.locator('.bench-player').allTextContents();
+    expect(newBenchedPlayers).toContain('Alice');
+    expect(newBenchedPlayers).toContain('Bob');
+
+    await viewBenchCountsButton.click();
+    await page.waitForTimeout(300);
+
+    const aliceItemAfter = page.locator('.player-item').filter({ hasText: 'Alice' });
+    const bobItemAfter = page.locator('.player-item').filter({ hasText: 'Bob' });
+    const aliceBenchCount = aliceItemAfter.locator('.bench-count-label strong');
+    const bobBenchCount = bobItemAfter.locator('.bench-count-label strong');
+
+    await expect(aliceBenchCount).toHaveText((aliceInitialBenchCount + 1).toString());
+    await expect(bobBenchCount).toHaveText((bobInitialBenchCount + 1).toString());
+
+    await expect(aliceItemAfter.locator('.toggle-switch')).not.toHaveClass(/active/);
+    await expect(bobItemAfter.locator('.toggle-switch')).not.toHaveClass(/active/);
+  });
+
+  test('Bench counts are always visible in Manage Players', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+    await addBulkPlayers(page, players);
+
+    const managePlayersStep = page.locator('.step').filter({ hasText: 'Manage Players' });
+    await managePlayersStep.click();
+    await page.waitForTimeout(200);
+
+    const playerBenchRows = page.locator('.player-bench-row');
+    await expect(playerBenchRows.first()).toBeVisible();
+
+    const aliceItem = page.locator('.player-item').filter({ hasText: 'Alice' });
+    const benchCount = aliceItem.locator('.bench-count-label strong');
+    await expect(benchCount).toHaveText('0');
+
+    const benchToggle = aliceItem.locator('.bench-next-toggle');
+    await expect(benchToggle).toBeVisible();
+  });
 });
