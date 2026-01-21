@@ -581,7 +581,7 @@ describe('PlayerList Component', () => {
 
       const bobSmithElements = screen.getAllByText(/Bob Smith/);
       expect(bobSmithElements).toHaveLength(2);
-      
+
       const aliceElements = screen.getAllByText(/Alice Johnson/);
       expect(aliceElements).toHaveLength(1);
     });
