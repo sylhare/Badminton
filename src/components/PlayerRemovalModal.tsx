@@ -23,8 +23,8 @@ const PlayerRemovalModal: React.FC<PlayerRemovalModalProps> = ({
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Remove Player</h3>
-          <button 
-            className="modal-close" 
+          <button
+            className="modal-close"
             onClick={onCancel}
             data-testid="player-removal-modal-close"
             aria-label="Close"

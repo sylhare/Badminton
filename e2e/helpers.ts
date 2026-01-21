@@ -56,6 +56,7 @@ export async function verifyPlayerStats(page: Page, present: number, total: numb
 export async function removeFirstPlayer(page: Page): Promise<void> {
   const firstRemoveButton = page.locator('[data-testid^="remove-player-"]').first();
   await firstRemoveButton.click();
+  await page.getByTestId('player-removal-modal-remove').click();
 }
 
 export async function toggleFirstPlayer(page: Page): Promise<void> {
