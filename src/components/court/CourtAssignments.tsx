@@ -12,6 +12,7 @@ interface CourtAssignmentsProps {
   onGenerateNewAssignments: () => void;
   onWinnerChange?: (courtNumber: number, winner: WinnerSelection) => void;
   hasManualCourtSelection?: boolean;
+  onViewBenchCounts?: () => void;
 }
 
 const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
@@ -20,6 +21,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   onGenerateNewAssignments,
   onWinnerChange,
   hasManualCourtSelection = false,
+  onViewBenchCounts,
 }) => {
   const { trackCourtAction } = useAnalytics();
   const [isAnimating, setIsAnimating] = useState(false);
@@ -75,6 +77,15 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           <div className="bench-players">
             <TeamPlayerList players={benchedPlayers} className="bench-player" />
           </div>
+          {onViewBenchCounts && (
+            <button
+              onClick={onViewBenchCounts}
+              className="view-bench-counts-button"
+              data-testid="view-bench-counts-button"
+            >
+              View bench counts &amp; manage
+            </button>
+          )}
         </div>
       )}
 

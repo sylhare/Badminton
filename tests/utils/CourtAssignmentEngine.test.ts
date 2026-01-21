@@ -1125,6 +1125,187 @@ describe('CourtAssignment Engine – core behaviour', () => {
     });
   });
 
+  describe('Bench counts functionality', () => {
+    beforeEach(() => {
+      testResetHistory();
+    });
+
+    it('should return empty bench counts when no games played', () => {
+      const benchCounts = CourtAssignmentEngine.getBenchCounts();
+      expect(benchCounts.size).toBe(0);
+    });
+
+    it('should track bench counts after generating assignments', () => {
+      const players = mockPlayers(10);
+      generateCourtAssignments(players, 2);
+
+      const benchCounts = CourtAssignmentEngine.getBenchCounts();
+      expect(benchCounts.size).toBeGreaterThan(0);
+
+      let totalBenchCount = 0;
+      for (const count of benchCounts.values()) {
+        totalBenchCount += count;
+      }
+      expect(totalBenchCount).toBe(2);
+    });
+
+    it('should accumulate bench counts across multiple rounds', () => {
+      const players = mockPlayers(10);
+
+      generateCourtAssignments(players, 2);
+      generateCourtAssignments(players, 2);
+      generateCourtAssignments(players, 2);
+
+      const benchCounts = CourtAssignmentEngine.getBenchCounts();
+
+      let totalBenchCount = 0;
+      for (const count of benchCounts.values()) {
+        totalBenchCount += count;
+      }
+      expect(totalBenchCount).toBe(6);
+    });
+
+    it('should return copy of bench counts map to prevent external modification', () => {
+      const players = mockPlayers(10);
+      generateCourtAssignments(players, 2);
+
+      const benchCounts1 = CourtAssignmentEngine.getBenchCounts();
+      const benchCounts2 = CourtAssignmentEngine.getBenchCounts();
+
+      expect(benchCounts1).not.toBe(benchCounts2);
+
+      benchCounts1.set('fake-id', 999);
+      expect(benchCounts2.get('fake-id')).toBeUndefined();
+    });
+
+    it('should reset bench counts when history is reset', () => {
+      const players = mockPlayers(10);
+      generateCourtAssignments(players, 2);
+
+      let benchCounts = CourtAssignmentEngine.getBenchCounts();
+      expect(benchCounts.size).toBeGreaterThan(0);
+
+      testResetHistory();
+      benchCounts = CourtAssignmentEngine.getBenchCounts();
+      expect(benchCounts.size).toBe(0);
+    });
+  });
+
+  describe('Force bench functionality', () => {
+    beforeEach(() => {
+      testResetHistory();
+    });
+
+    it('should force-bench specified players', () => {
+      const players = mockPlayers(10);
+      const forceBenchIds = new Set(['P0', 'P1']);
+
+      const assignments = generateCourtAssignments(players, 2, undefined, forceBenchIds);
+      const benched = getBenchedPlayers(assignments, players);
+
+      const benchedIds = benched.map(p => p.id);
+      expect(benchedIds).toContain('P0');
+      expect(benchedIds).toContain('P1');
+    });
+
+    it('should bench exactly 2 players when force-benching 2 with 2 courts and 10 players', () => {
+      const players = mockPlayers(10);
+      const forceBenchIds = new Set(['P0', 'P1']);
+
+      const assignments = generateCourtAssignments(players, 2, undefined, forceBenchIds);
+      const benched = getBenchedPlayers(assignments, players);
+
+      expect(benched.length).toBe(2);
+    });
+
+    it('should bench more than needed if more players are force-benched', () => {
+      const players = mockPlayers(10);
+      const forceBenchIds = new Set(['P0', 'P1', 'P2', 'P3']);
+
+      const assignments = generateCourtAssignments(players, 2, undefined, forceBenchIds);
+      const benched = getBenchedPlayers(assignments, players);
+
+      expect(benched.length).toBe(4);
+      const benchedIds = benched.map(p => p.id);
+      expect(benchedIds).toContain('P0');
+      expect(benchedIds).toContain('P1');
+      expect(benchedIds).toContain('P2');
+      expect(benchedIds).toContain('P3');
+    });
+
+    it('should fill remaining bench spots with algorithm selection when not enough force-benched', () => {
+      const players = mockPlayers(10);
+      const forceBenchIds = new Set(['P0']);
+
+      const assignments = generateCourtAssignments(players, 2, undefined, forceBenchIds);
+      const benched = getBenchedPlayers(assignments, players);
+
+      expect(benched.length).toBe(2);
+      const benchedIds = benched.map(p => p.id);
+      expect(benchedIds).toContain('P0');
+    });
+
+    it('should only force-bench present players', () => {
+      const players = mockPlayers(10);
+      players[0].isPresent = false;
+      const forceBenchIds = new Set(['P0', 'P1']);
+
+      const assignments = generateCourtAssignments(players, 2, undefined, forceBenchIds);
+      const benched = getBenchedPlayers(assignments, players);
+
+      const benchedIds = benched.map(p => p.id);
+      expect(benchedIds).not.toContain('P0');
+      expect(benchedIds).toContain('P1');
+    });
+
+    it('should work with manual court selection', () => {
+      const players = mockPlayers(12);
+      const manualSelection: ManualCourtSelection = {
+        players: [players[10], players[11]],
+      };
+      const forceBenchIds = new Set(['P0', 'P1']);
+
+      const assignments = generateCourtAssignments(players, 3, manualSelection, forceBenchIds);
+      const benched = getBenchedPlayers(assignments, players);
+
+      const benchedIds = benched.map(p => p.id);
+      expect(benchedIds).toContain('P0');
+      expect(benchedIds).toContain('P1');
+      expect(benchedIds).not.toContain('P10');
+      expect(benchedIds).not.toContain('P11');
+    });
+
+    it('should update bench counts for force-benched players', () => {
+      const players = mockPlayers(10);
+      const forceBenchIds = new Set(['P0', 'P1']);
+
+      generateCourtAssignments(players, 2, undefined, forceBenchIds);
+
+      const benchCounts = CourtAssignmentEngine.getBenchCounts();
+      expect(benchCounts.get('P0')).toBe(1);
+      expect(benchCounts.get('P1')).toBe(1);
+    });
+
+    it('should handle empty force bench set', () => {
+      const players = mockPlayers(10);
+      const forceBenchIds = new Set<string>();
+
+      const assignments = generateCourtAssignments(players, 2, undefined, forceBenchIds);
+      const benched = getBenchedPlayers(assignments, players);
+
+      expect(benched.length).toBe(2);
+    });
+
+    it('should handle undefined force bench parameter', () => {
+      const players = mockPlayers(10);
+
+      const assignments = generateCourtAssignments(players, 2, undefined, undefined);
+      const benched = getBenchedPlayers(assignments, players);
+
+      expect(benched.length).toBe(2);
+    });
+  });
+
   describe('Cost Memoization', () => {
     beforeEach(() => {
       testResetHistory();

@@ -281,13 +281,18 @@ export class CourtAssignmentEngine {
     return new Map(this.winCountMap);
   }
 
+  /** Gets a copy of the current bench counts map. */
+  static getBenchCounts(): Map<string, number> {
+    return new Map(this.benchCountMap);
+  }
+
   /**
    * Generates optimal court assignments using Monte Carlo Greedy Search algorithm.
    *
    * ## Algorithm Steps:
    * 1. Filter present players and handle manual court selection if provided
    * 2. Calculate required bench spots to ensure even player distribution
-   * 3. Select benched players fairly based on historical bench counts
+   * 3. Select benched players fairly based on historical bench counts (respecting force-benched players)
    * 4. Generate MAX_ATTEMPTS (300) random candidate assignments
    * 5. Evaluate each candidate using multi-factor cost function
    * 6. Select and return the assignment with lowest cost (best fairness)
@@ -296,12 +301,13 @@ export class CourtAssignmentEngine {
    * @param players - Array of all players (present and absent)
    * @param numberOfCourts - Number of courts available
    * @param manualSelection - Optional manual court selection for specific players
+   * @param forceBenchPlayerIds - Optional set of player IDs to force-bench this round
    * @returns Array of court assignments with teams and players
    *
    * @complexity Time: O(MAX_ATTEMPTS × N log N) ≈ O(300N log N)
    * @complexity Space: O(N² + C) for relationship tracking and court assignments
    */
-  static generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
+  static generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
@@ -325,7 +331,15 @@ export class CourtAssignmentEngine {
     if ((remainingPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
     benchSpots = Math.min(benchSpots, remainingPlayers.length);
 
-    const benchedPlayers = this.selectBenchedPlayers(remainingPlayers, benchSpots);
+    const forceBenchedPlayers = forceBenchPlayerIds
+      ? remainingPlayers.filter(p => forceBenchPlayerIds.has(p.id))
+      : [];
+
+    const additionalBenchSpots = Math.max(0, benchSpots - forceBenchedPlayers.length);
+    const playersForAlgorithmBench = remainingPlayers.filter(p => !forceBenchPlayerIds?.has(p.id));
+    const algorithmBenchedPlayers = this.selectBenchedPlayers(playersForAlgorithmBench, additionalBenchSpots);
+
+    const benchedPlayers = [...forceBenchedPlayers, ...algorithmBenchedPlayers];
     const onCourtPlayers = remainingPlayers.filter(p => !benchedPlayers.includes(p));
 
     let best: { courts: Court[]; cost: number } | null = null;
@@ -623,8 +637,8 @@ export class CourtAssignmentEngine {
 }
 
 /** Wrapper function for generating court assignments. */
-export const generateCourtAssignments = (players: Player[], courts: number, manualCourt?: ManualCourtSelection): Court[] =>
-  CourtAssignmentEngine.generate(players, courts, manualCourt);
+export const generateCourtAssignments = (players: Player[], courts: number, manualCourt?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): Court[] =>
+  CourtAssignmentEngine.generate(players, courts, manualCourt, forceBenchPlayerIds);
 
 /** Wrapper function for getting benched players. */
 export const getBenchedPlayers = (assignments: Court[], players: Player[]): Player[] =>
