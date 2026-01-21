@@ -131,7 +131,7 @@ describe('PlayerList Component', () => {
     expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(4);
   });
 
-  it('calls onRemovePlayer when remove button is clicked', async () => {
+  it('opens removal modal when remove button is clicked', async () => {
     const players = createMockPlayers(1);
 
     render(
@@ -147,7 +147,10 @@ describe('PlayerList Component', () => {
     const removeButton = screen.getByTitle('Delete player permanently');
     await user.click(removeButton);
 
-    expect(mockRemove).toHaveBeenCalledWith('player-0');
+    expect(screen.getByTestId('player-removal-modal')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Remove Player' })).toBeInTheDocument();
+    const playerNameElements = screen.getAllByText(/Player 1/);
+    expect(playerNameElements).toHaveLength(2);
   });
 
   describe('Clear All Players Functionality', () => {
@@ -462,6 +465,128 @@ describe('PlayerList Component', () => {
     });
   });
 
+  describe('Player Removal Modal functionality', () => {
+    it('calls onRemovePlayer when confirm remove is clicked', async () => {
+      const players = createMockPlayers(1);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const removeButton = screen.getByTitle('Delete player permanently');
+      await user.click(removeButton);
+
+      const confirmRemoveButton = screen.getByTestId('player-removal-modal-remove');
+      await user.click(confirmRemoveButton);
+
+      expect(mockRemove).toHaveBeenCalledWith('player-0');
+      expect(screen.queryByTestId('player-removal-modal')).not.toBeInTheDocument();
+    });
+
+    it('calls onPlayerToggle when mark as absent is clicked', async () => {
+      const players = [{ id: 'test-1', name: 'Test Player', isPresent: true }];
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const removeButton = screen.getByTestId('remove-player-test-1');
+      await user.click(removeButton);
+
+      const absentButton = screen.getByTestId('player-removal-modal-absent');
+      await user.click(absentButton);
+
+      expect(mockToggle).toHaveBeenCalledWith('test-1');
+      expect(mockRemove).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('player-removal-modal')).not.toBeInTheDocument();
+    });
+
+    it('closes modal when X button is clicked', async () => {
+      const players = createMockPlayers(1);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const removeButton = screen.getByTitle('Delete player permanently');
+      await user.click(removeButton);
+
+      const closeButton = screen.getByTestId('player-removal-modal-close');
+      await user.click(closeButton);
+
+      expect(mockRemove).not.toHaveBeenCalled();
+      expect(mockToggle).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('player-removal-modal')).not.toBeInTheDocument();
+    });
+
+    it('closes modal when clicking on overlay', async () => {
+      const players = createMockPlayers(1);
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const removeButton = screen.getByTitle('Delete player permanently');
+      await user.click(removeButton);
+
+      const overlay = screen.getByTestId('player-removal-modal');
+      await user.click(overlay);
+
+      expect(mockRemove).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('player-removal-modal')).not.toBeInTheDocument();
+    });
+
+    it('shows correct player name in modal', async () => {
+      const players = [
+        { id: '1', name: 'Alice Johnson', isPresent: true },
+        { id: '2', name: 'Bob Smith', isPresent: true },
+      ];
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+        />,
+      );
+
+      const removeButton = screen.getByTestId('remove-player-2');
+      await user.click(removeButton);
+
+      const bobSmithElements = screen.getAllByText(/Bob Smith/);
+      expect(bobSmithElements).toHaveLength(2);
+      
+      const aliceElements = screen.getAllByText(/Alice Johnson/);
+      expect(aliceElements).toHaveLength(1);
+    });
+  });
+
   describe('Reset Algorithm functionality', () => {
     it('shows Reset Algorithm button when players exist', () => {
       const players = createMockPlayers(2);
@@ -513,11 +638,9 @@ describe('PlayerList Component', () => {
       const resetButton = screen.getByTestId('reset-algorithm-button');
       await user.click(resetButton);
 
-      // Check that the confirmation modal appears
       expect(screen.getByRole('heading', { name: 'Reset Algorithm' })).toBeInTheDocument();
       expect(screen.getByText(/reset the algorithm's memory/)).toBeInTheDocument();
 
-      // Click confirm
       const confirmButton = screen.getByTestId('confirm-modal-confirm');
       await user.click(confirmButton);
 
@@ -540,7 +663,6 @@ describe('PlayerList Component', () => {
       const resetButton = screen.getByTestId('reset-algorithm-button');
       await user.click(resetButton);
 
-      // Click cancel
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       await user.click(cancelButton);
 

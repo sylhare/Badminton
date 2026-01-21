@@ -981,6 +981,30 @@ h1 {
     background: #e53e3e;
 }
 
+.button-absent {
+    background: #3182ce;
+    color: white;
+}
+
+.button-absent:hover {
+    background: #2c5aa0;
+}
+
+.player-removal-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.player-removal-actions .button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+    min-width: 140px;
+}
+
 .clear-all-button {
     background: #f56565;
     color: white;
