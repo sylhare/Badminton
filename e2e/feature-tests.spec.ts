@@ -67,6 +67,83 @@ test.describe('Feature Tests', () => {
     await page.waitForTimeout(500);
   });
 
+  test.describe('Player removal modal', () => {
+    test('confirm removal', async ({ page }) => {
+      await addSinglePlayer(page, 'Test Player 1');
+      await addSinglePlayer(page, 'Test Player 2');
+
+      await expect(page.getByTestId('stats-total-count')).toHaveText('2');
+
+      const firstRemoveButton = page.locator('[data-testid^="remove-player-"]').first();
+      await firstRemoveButton.click();
+
+      const modal = page.getByTestId('player-removal-modal');
+      await expect(modal).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Remove Player' })).toBeVisible();
+      await expect(modal.getByText(/Test Player 1/)).toBeVisible();
+
+      await page.getByTestId('player-removal-modal-remove').click();
+
+      await expect(page.getByTestId('player-removal-modal')).not.toBeVisible();
+      await expect(page.getByTestId('stats-total-count')).toHaveText('1');
+    });
+
+    test('mark as absent', async ({ page }) => {
+      await addSinglePlayer(page, 'Test Player 1');
+      await addSinglePlayer(page, 'Test Player 2');
+
+      await expect(page.getByTestId('stats-total-count')).toHaveText('2');
+      await expect(page.getByTestId('stats-present-count')).toHaveText('2');
+
+      const firstRemoveButton = page.locator('[data-testid^="remove-player-"]').first();
+      await firstRemoveButton.click();
+
+      await expect(page.getByTestId('player-removal-modal')).toBeVisible();
+
+      await page.getByTestId('player-removal-modal-absent').click();
+
+      await expect(page.getByTestId('player-removal-modal')).not.toBeVisible();
+      await expect(page.getByTestId('stats-total-count')).toHaveText('2');
+      await expect(page.getByTestId('stats-present-count')).toHaveText('1');
+      await expect(page.getByTestId('stats-absent-count')).toHaveText('1');
+    });
+
+    test('cancel with X button', async ({ page }) => {
+      await addSinglePlayer(page, 'Test Player 1');
+      await addSinglePlayer(page, 'Test Player 2');
+
+      await expect(page.getByTestId('stats-total-count')).toHaveText('2');
+
+      const firstRemoveButton = page.locator('[data-testid^="remove-player-"]').first();
+      await firstRemoveButton.click();
+
+      await expect(page.getByTestId('player-removal-modal')).toBeVisible();
+
+      await page.getByTestId('player-removal-modal-close').click();
+
+      await expect(page.getByTestId('player-removal-modal')).not.toBeVisible();
+      await expect(page.getByTestId('stats-total-count')).toHaveText('2');
+      await expect(page.getByTestId('stats-present-count')).toHaveText('2');
+    });
+
+    test('cancel by clicking overlay', async ({ page }) => {
+      await addSinglePlayer(page, 'Test Player 1');
+
+      await expect(page.getByTestId('stats-total-count')).toHaveText('1');
+
+      const removeButton = page.locator('[data-testid^="remove-player-"]').first();
+      await removeButton.click();
+
+      await expect(page.getByTestId('player-removal-modal')).toBeVisible();
+
+      const overlay = page.getByTestId('player-removal-modal');
+      await overlay.click({ position: { x: 10, y: 10 } });
+
+      await expect(page.getByTestId('player-removal-modal')).not.toBeVisible();
+      await expect(page.getByTestId('stats-total-count')).toHaveText('1');
+    });
+  });
+
   test('Clear all players functionality', async ({ page }) => {
     const players = ['Player 1', 'Player 2', 'Player 3'];
     await addBulkPlayers(page, players);
