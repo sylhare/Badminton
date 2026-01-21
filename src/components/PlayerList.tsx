@@ -5,6 +5,7 @@ import type { Player } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 
 import ConfirmModal from './ConfirmModal';
+import PlayerRemovalModal from './PlayerRemovalModal';
 
 interface PlayerListProps {
   players: Player[];
@@ -29,6 +30,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
 }) => {
   const [showClearModal, setShowClearModal] = useState(false);
   const [showResetAlgorithmModal, setShowResetAlgorithmModal] = useState(false);
+  const [playerToRemove, setPlayerToRemove] = useState<Player | null>(null);
   const { trackPlayerAction, trackGameAction } = useAnalytics();
 
   const presentCount = players.filter(p => p.isPresent).length;
@@ -54,9 +56,28 @@ const PlayerList: React.FC<PlayerListProps> = ({
     onPlayerToggle(playerId);
   };
 
-  const handleRemovePlayer = (playerId: string) => {
-    trackPlayerAction('remove_player');
-    onRemovePlayer(playerId);
+  const handleRemoveClick = (player: Player) => {
+    setPlayerToRemove(player);
+  };
+
+  const handleConfirmRemove = () => {
+    if (playerToRemove) {
+      trackPlayerAction('remove_player');
+      onRemovePlayer(playerToRemove.id);
+      setPlayerToRemove(null);
+    }
+  };
+
+  const handleMarkAbsent = () => {
+    if (playerToRemove) {
+      trackPlayerAction('toggle_player', { method: 'set-absent' });
+      onPlayerToggle(playerToRemove.id);
+      setPlayerToRemove(null);
+    }
+  };
+
+  const handleCancelRemoval = () => {
+    setPlayerToRemove(null);
   };
 
   return (
@@ -99,7 +120,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
                     {player.isPresent ? <SignOut size={14} weight="bold" /> : <SignIn size={14} weight="bold" />}
                   </button>
                   <button
-                    onClick={() => handleRemovePlayer(player.id)}
+                    onClick={() => handleRemoveClick(player)}
                     className="remove-button"
                     data-testid={`remove-player-${player.id}`}
                     title="Delete player permanently"
@@ -173,6 +194,14 @@ const PlayerList: React.FC<PlayerListProps> = ({
         onConfirm={handleResetAlgorithm}
         onCancel={() => setShowResetAlgorithmModal(false)}
         isDestructive={false}
+      />
+
+      <PlayerRemovalModal
+        isOpen={playerToRemove !== null}
+        playerName={playerToRemove?.name ?? ''}
+        onRemove={handleConfirmRemove}
+        onMarkAbsent={handleMarkAbsent}
+        onCancel={handleCancelRemoval}
       />
     </div>
   );

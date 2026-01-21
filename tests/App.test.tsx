@@ -262,6 +262,8 @@ describe('App', () => {
         const removeButtons = screen.getAllByTitle('Delete player permanently');
         await user.click(removeButtons[1]);
 
+        await user.click(screen.getByTestId('player-removal-modal-remove'));
+
         expect(screen.queryByText('Bob')).not.toBeInTheDocument();
         expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
         expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
@@ -270,6 +272,8 @@ describe('App', () => {
       it('updates player counts and UI elements after removal', async () => {
         const removeButtons = screen.getAllByTitle('Delete player permanently');
         await user.click(removeButtons[1]);
+
+        await user.click(screen.getByTestId('player-removal-modal-remove'));
 
         expect(screen.getAllByTestId(/^toggle-presence-/)).toHaveLength(2); // 2 players
         expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(2); // 2 players
