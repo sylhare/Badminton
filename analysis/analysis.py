@@ -65,7 +65,8 @@ def _(Path, os):
 @app.cell
 def _():
     import matplotlib.pyplot as plt
-    return (plt,)
+    import numpy as np
+    return np, plt
 
 
 @app.cell(hide_code=True)
@@ -353,15 +354,22 @@ def _(mo, stats):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ## Repeat-Count Distribution: Algorithm vs Random Baseline
+    ## Repetition Analysis: Algorithm vs Random Baseline
 
-    This section compares **how many repeat teammate pairs (with different opponents)** occur
-    per run between the algorithm and a **random baseline**. The random baseline simulates
-    a naive scheduler that randomly selects 16 players each round, randomly shuffles them
-    into groups of 4, and randomly assigns team pairings within each group—with no optimization
-    to prevent repeat teammates. Both charts share the same x-axis limits so the frequency
-    shapes are directly comparable.
+    This section analyzes **teammate repetition** across simulations, comparing the algorithm
+    against a **random baseline** (a naive scheduler that randomly selects 16 players per round,
+    shuffles them into groups of 4, and assigns pairings—with no optimization to avoid repeats).
+
+    We examine two complementary metrics:
+    - **Repeat-Count**: *How many* repeat teammate pairs occur per run (0, 1, 2, 3, ...)
+    - **Any-Repeat**: *Did at least one* repeat occur? (binary yes/no)
     """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("### Repeat-Count Distribution")
     return
 
 
@@ -449,6 +457,44 @@ def _(baseline, mo, summary):
 
 @app.cell(hide_code=True)
 def _(mo):
+    mo.md("### Any-Repeat Distribution")
+    return
+
+
+@app.cell
+def _(pl, summary):
+    repeat_any_distribution = (
+        summary.group_by("repeatAnyPair")
+        .agg(pl.len().alias("runs"))
+        .with_columns((pl.col("runs") / pl.col("runs").sum()).alias("fraction"))
+    )
+    return (repeat_any_distribution,)
+
+
+@app.cell
+def _(mo, repeat_any_distribution):
+    mo.ui.table(repeat_any_distribution)
+    return
+
+
+@app.cell(hide_code=True)
+def _(baseline, mo, summary):
+    _algo_any = summary.get_column("repeatAnyPair").sum() / summary.height * 100
+    _baseline_any = baseline.get_column("repeatAnyPair").sum() / baseline.height * 100
+
+    mo.md(
+        f"""
+    The algorithm produces **at least one repeat** in **{_algo_any:.1f}%** of runs, compared to
+    **{_baseline_any:.1f}%** for the random baseline. While the random baseline almost always
+    produces repeats ({_baseline_any:.0f}%+ of runs), the algorithm keeps nearly half of all
+    runs completely repeat-free—a significant improvement in fairness and variety.
+    """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
     mo.md("""
     ## Most Frequent Repeat Pairs
     List teammate pairs that reoccurred most often across simulations.
@@ -472,28 +518,65 @@ def _(mo, pair_frequency):
     return
 
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ## Any-Repeat Distribution
-    Share how often any teammate repeat occurs in a run.
-    """)
-    return
-
-
 @app.cell
-def _(pl, summary):
-    repeat_any_distribution = (
-        summary.group_by("repeatAnyPair")
-        .agg(pl.len().alias("runs"))
-        .with_columns((pl.col("runs") / pl.col("runs").sum()).alias("fraction"))
+def _(config, io, mo, np, pair_events, pl, plt):
+    # Build a matrix of repeat counts between all player pairs
+    _num_players = config["numPlayers"]
+    _players = [f"P{i + 1}" for i in range(_num_players)]
+
+    # Create a frequency matrix
+    _matrix = np.zeros((_num_players, _num_players))
+
+    # Aggregate repeat events by pairId
+    _pair_counts = (
+        pair_events.group_by("pairId")
+        .agg(pl.len().alias("count"))
+        .to_dicts()
     )
-    return (repeat_any_distribution,)
 
+    for _row in _pair_counts:
+        _pair_id = _row["pairId"]
+        _count = _row["count"]
+        _parts = _pair_id.split("|")
+        _p1_idx = int(_parts[0][1:]) - 1  # "P1" -> 0
+        _p2_idx = int(_parts[1][1:]) - 1  # "P2" -> 1
+        _matrix[_p1_idx, _p2_idx] = _count
+        _matrix[_p2_idx, _p1_idx] = _count  # symmetric
 
-@app.cell
-def _(mo, repeat_any_distribution):
-    mo.ui.table(repeat_any_distribution)
+    # Create the heatmap
+    _fig, _ax = plt.subplots(figsize=(10, 8))
+
+    # Use a diverging colormap with white for zero
+    _cmap = plt.cm.YlOrRd
+    _cmap.set_under("white")
+
+    _im = _ax.imshow(_matrix, cmap=_cmap, vmin=0.1, aspect="equal")
+
+    # Add colorbar
+    _cbar = _fig.colorbar(_im, ax=_ax, shrink=0.8)
+    _cbar.set_label("Repeat events", rotation=270, labelpad=15)
+
+    # Set ticks and labels
+    _ax.set_xticks(range(_num_players))
+    _ax.set_yticks(range(_num_players))
+    _ax.set_xticklabels(_players, rotation=45, ha="right", fontsize=9)
+    _ax.set_yticklabels(_players, fontsize=9)
+
+    _ax.set_xlabel("Player")
+    _ax.set_ylabel("Player")
+    _ax.set_title("Repeat Pair Heatmap: Player Correlation Hot Spots")
+
+    # Add grid lines
+    _ax.set_xticks(np.arange(-0.5, _num_players, 1), minor=True)
+    _ax.set_yticks(np.arange(-0.5, _num_players, 1), minor=True)
+    _ax.grid(which="minor", color="white", linestyle="-", linewidth=0.5)
+    _ax.tick_params(which="minor", size=0)
+
+    _fig.tight_layout()
+    _buffer = io.BytesIO()
+    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
+    _buffer.seek(0)
+    mo.image(_buffer.getvalue())
     return
 
 
@@ -509,45 +592,75 @@ def _(mo):
 
 
 @app.cell
-def _(io, mo, plt, stats):
+def _(io, mo, np, plt, stats):
     _rows = stats.to_dicts()
     _by_label = {row["label"]: row for row in _rows}
     _algo = _by_label.get("algorithm")
     _baseline_row = _by_label.get("random_baseline")
 
+    _output = None
     if not _algo or not _baseline_row:
-        mo.md("Missing stats rows; rerun the stats cell to render the delta plot.")
+        _output = mo.md("Missing stats rows; rerun the stats cell to render the delta plot.")
     else:
+        # Create a side-by-side comparison with improvement arrows
+        _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+        # Left panel: Side-by-side bar chart
         _metrics = [
-            ("p_any_repeat", "Any repeat"),
-            ("p_repeat_diff_opponent", "Repeat w/ different opponents"),
-            ("p_repeat_same_opponent", "Repeat w/ same opponents"),
+            ("p_any_repeat", "Any repeat\npairs"),
+            ("p_repeat_diff_opponent", "Repeat w/\ndiff opponents"),
         ]
         _labels = [label for _, label in _metrics]
-        _deltas = [
-            _algo[key] - _baseline_row[key]
-            for key, _ in _metrics
+        _algo_values = [_algo[key] for key, _ in _metrics]
+        _baseline_values = [_baseline_row[key] for key, _ in _metrics]
+
+        _x = np.arange(len(_labels))
+        _width = 0.35
+
+        _bars1 = _ax1.bar(_x - _width / 2, _baseline_values, _width, label="Random Baseline", color="#E45756", alpha=0.8)
+        _bars2 = _ax1.bar(_x + _width / 2, _algo_values, _width, label="Algorithm", color="#4C78A8", alpha=0.8)
+
+        _ax1.set_ylabel("Probability", fontsize=11)
+        _ax1.set_title("Algorithm vs Random Baseline", fontsize=12, fontweight="bold")
+        _ax1.set_xticks(_x)
+        _ax1.set_xticklabels(_labels, fontsize=10)
+        _ax1.legend(loc="upper right")
+        _ax1.set_ylim(0, 1.1)
+
+        # Add value labels on bars
+        for _bar in _bars1:
+            _ax1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.02,
+                      f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=9, color="#E45756")
+        for _bar in _bars2:
+            _ax1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.02,
+                      f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=9, color="#4C78A8")
+
+        # Right panel: Improvement waterfall
+        _improvements = [
+            (_baseline_values[i] - _algo_values[i]) / _baseline_values[i] * 100
+            if _baseline_values[i] > 0 else 0
+            for i in range(len(_metrics))
         ]
+        _colors = ["#54A24B" if imp > 0 else "#E45756" for imp in _improvements]
 
-        _fig, _ax = plt.subplots(figsize=(7, 4))
-        _bars = _ax.bar(_labels, _deltas, color="#4C78A8")
-        _ax.axhline(0, color="#666666", linewidth=1)
-        _ax.set_ylabel("Algorithm minus baseline")
+        _bars3 = _ax2.barh(_labels, _improvements, color=_colors, alpha=0.8)
+        _ax2.set_xlabel("Improvement (%)", fontsize=11)
+        _ax2.set_title("Algorithm Improvement Over Random", fontsize=12, fontweight="bold")
+        _ax2.axvline(0, color="#666666", linewidth=1)
+        _ax2.set_xlim(-20, 60)
 
-        for _bar, _value in zip(_bars, _deltas):
-            _ax.text(
-                _bar.get_x() + _bar.get_width() / 2,
-                _value,
-                f"{_value:+.2%}",
-                ha="center",
-                va="bottom" if _value >= 0 else "top",
-            )
+        for _i, (_bar, _imp) in enumerate(zip(_bars3, _improvements)):
+            _ax2.text(_bar.get_width() + 2, _bar.get_y() + _bar.get_height() / 2,
+                      f"{_imp:.1f}%", ha="left", va="center", fontsize=10, fontweight="bold")
 
         _fig.tight_layout()
         _buffer = io.BytesIO()
         _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
         _buffer.seek(0)
-        mo.image(_buffer.getvalue())
+        plt.close(_fig)
+        _output = mo.image(_buffer.getvalue())
+
+    _output
     return
 
 
