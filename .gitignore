@@ -89,3 +89,9 @@ eng.traineddata
 
 # Vitest
 /coverage/
+**/.mplconfig
+**/.state
+**/__marimo__
+**/.tmp
+**/__pycache__
+**/**.egg-info
