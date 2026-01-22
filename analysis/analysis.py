@@ -692,5 +692,300 @@ def _(mo, stats):
     return
 
 
+# =============================================================================
+# MULTI-BATCH ANALYSIS SECTION
+# =============================================================================
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ---
+
+    # Multi-Batch Analysis
+
+    This section analyzes **consistency and patterns** across multiple independent simulation batches.
+    Each batch runs the same configuration but with different random seeds, allowing us to study:
+
+    - **Divergence**: How much do metrics vary between batches?
+    - **Pair Patterns**: Are the same player pairs consistently problematic?
+    - **Ensemble Performance**: What's the average algorithm improvement across all batches?
+    """)
+    return
+
+
+@app.cell
+def _(Path, config, pl):
+    # Load all batch data if available
+    _data_dir = Path(__file__).parent / "data"
+    _batch_ids = config.get("batchIds", [])
+
+    batch_summaries = {}
+    batch_pair_events = {}
+
+    if _batch_ids:
+        for _bid in _batch_ids:
+            _summary_file = _data_dir / f"summary_batch{_bid}.csv"
+            _events_file = _data_dir / f"pair_events_batch{_bid}.csv"
+            if _summary_file.exists():
+                batch_summaries[_bid] = pl.read_csv(_summary_file)
+            if _events_file.exists():
+                batch_pair_events[_bid] = pl.read_csv(_events_file)
+
+    has_batches = len(batch_summaries) > 1
+    return batch_pair_events, batch_summaries, has_batches
+
+
+@app.cell(hide_code=True)
+def _(has_batches, mo):
+    mo.stop(not has_batches)
+    mo.md("## Batch Performance Overview")
+    return
+
+
+@app.cell
+def _(batch_summaries, has_batches, mo, pl):
+    mo.stop(not has_batches)
+
+    # Compute per-batch statistics
+    _batch_stats = []
+    for _bid, _df in batch_summaries.items():
+        _any_repeat = _df.get_column("repeatAnyPair").sum() / _df.height
+        _diff_opponent = _df.get_column("repeatPairDifferentOpponentsCount")
+        _batch_stats.append({
+            "batch": _bid,
+            "runs": _df.height,
+            "p_any_repeat": _any_repeat,
+            "avg_repeat_pairs": _diff_opponent.mean(),
+            "zero_repeat_pct": (_diff_opponent == 0).sum() / _diff_opponent.len(),
+        })
+
+    batch_stats_df = pl.DataFrame(_batch_stats)
+    mo.ui.table(batch_stats_df)
+    return (batch_stats_df,)
+
+
+@app.cell(hide_code=True)
+def _(batch_stats_df, has_batches, mo):
+    mo.stop(not has_batches)
+
+    _p_any = batch_stats_df.get_column("p_any_repeat")
+    _avg_pairs = batch_stats_df.get_column("avg_repeat_pairs")
+    _zero_pct = batch_stats_df.get_column("zero_repeat_pct")
+
+    mo.md(
+        f"""
+    ### Batch Divergence Summary
+
+    | Metric | Mean | Std Dev | Min | Max |
+    |--------|------|---------|-----|-----|
+    | Any-repeat rate | {_p_any.mean():.2%} | {_p_any.std():.2%} | {_p_any.min():.2%} | {_p_any.max():.2%} |
+    | Avg repeat pairs | {_avg_pairs.mean():.2f} | {_avg_pairs.std():.2f} | {_avg_pairs.min():.2f} | {_avg_pairs.max():.2f} |
+    | Zero-repeat rate | {_zero_pct.mean():.2%} | {_zero_pct.std():.2%} | {_zero_pct.min():.2%} | {_zero_pct.max():.2%} |
+
+    **Interpretation**: Low standard deviation indicates the algorithm performs consistently across batches.
+    """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(has_batches, mo):
+    mo.stop(not has_batches)
+    mo.md("## Repeat Pair Patterns Across Batches")
+    return
+
+
+@app.cell
+def _(batch_pair_events, has_batches, mo, pl):
+    mo.stop(not has_batches)
+
+    # Aggregate pair frequencies across all batches
+    _all_pairs = []
+    for _bid, _df in batch_pair_events.items():
+        _pair_counts = (
+            _df.group_by("pairId")
+            .agg(pl.len().alias("events"))
+            .with_columns(pl.lit(_bid).alias("batch"))
+        )
+        _all_pairs.append(_pair_counts)
+
+    all_pair_data = pl.concat(_all_pairs) if _all_pairs else pl.DataFrame()
+    return (all_pair_data,)
+
+
+@app.cell
+def _(all_pair_data, has_batches, io, mo, np, plt):
+    mo.stop(not has_batches)
+
+    # Pivot to get pair x batch matrix
+    _pivot = all_pair_data.pivot(
+        values="events",
+        index="pairId",
+        on="batch",
+        aggregate_function="first"
+    ).fill_null(0)
+
+    _pair_ids = _pivot.get_column("pairId").to_list()
+    _batch_cols = [c for c in _pivot.columns if c != "pairId"]
+    _matrix = _pivot.select(_batch_cols).to_numpy()
+
+    # Sort by total events across batches
+    _totals = _matrix.sum(axis=1)
+    _sorted_idx = np.argsort(_totals)[::-1][:20]  # Top 20 pairs
+
+    _fig, _ax = plt.subplots(figsize=(10, 8))
+
+    _top_matrix = _matrix[_sorted_idx]
+    _top_pairs = [_pair_ids[i] for i in _sorted_idx]
+
+    _im = _ax.imshow(_top_matrix, cmap="YlOrRd", aspect="auto")
+    _cbar = _fig.colorbar(_im, ax=_ax, shrink=0.8)
+    _cbar.set_label("Repeat events", rotation=270, labelpad=15)
+
+    _ax.set_yticks(range(len(_top_pairs)))
+    _ax.set_yticklabels(_top_pairs, fontsize=9)
+    _ax.set_xticks(range(len(_batch_cols)))
+    _ax.set_xticklabels([f"Batch {b}" for b in _batch_cols], fontsize=10)
+
+    _ax.set_xlabel("Batch")
+    _ax.set_ylabel("Player Pair")
+    _ax.set_title("Top 20 Repeat Pairs Across Batches")
+
+    _fig.tight_layout()
+    _buffer = io.BytesIO()
+    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
+    _buffer.seek(0)
+    plt.close(_fig)
+    mo.image(_buffer.getvalue())
+    return
+
+
+@app.cell(hide_code=True)
+def _(all_pair_data, has_batches, mo, pl):
+    mo.stop(not has_batches)
+
+    # Analyze consistency: which pairs appear in ALL batches vs only some?
+    _pair_batch_counts = (
+        all_pair_data.group_by("pairId")
+        .agg([
+            pl.n_unique("batch").alias("batches_appeared"),
+            pl.col("events").sum().alias("total_events"),
+            pl.col("events").mean().alias("avg_events_per_batch"),
+            pl.col("events").std().alias("std_events"),
+        ])
+        .sort("total_events", descending=True)
+    )
+
+    _num_batches = all_pair_data.get_column("batch").n_unique()
+    _consistent = (_pair_batch_counts.get_column("batches_appeared") == _num_batches).sum()
+    _total_pairs = _pair_batch_counts.height
+
+    mo.md(
+        f"""
+    ### Pair Consistency Analysis
+
+    - **Total unique pairs with repeats**: {_total_pairs}
+    - **Pairs appearing in ALL {_num_batches} batches**: {_consistent} ({_consistent/_total_pairs*100:.1f}%)
+    - **Pairs appearing in only some batches**: {_total_pairs - _consistent} ({(_total_pairs - _consistent)/_total_pairs*100:.1f}%)
+
+    **Interpretation**: If most problematic pairs appear consistently across batches, it suggests
+    a structural pattern in the algorithm. If pairs vary significantly, the repeats are more random.
+    """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(has_batches, mo):
+    mo.stop(not has_batches)
+    mo.md("## Ensemble Performance vs Baseline")
+    return
+
+
+@app.cell
+def _(batch_stats_df, baseline, has_batches, io, mo, np, plt):
+    mo.stop(not has_batches)
+
+    # Compute baseline stats
+    _baseline_any = baseline.get_column("repeatAnyPair").sum() / baseline.height
+    _baseline_avg = baseline.get_column("repeatPairDifferentOpponentsCount").mean()
+
+    _batch_any = batch_stats_df.get_column("p_any_repeat").to_list()
+    _batch_avg = batch_stats_df.get_column("avg_repeat_pairs").to_list()
+    _batch_ids = batch_stats_df.get_column("batch").to_list()
+
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Left: Any-repeat rate comparison
+    _x = np.arange(len(_batch_ids) + 1)
+    _colors = ["#4C78A8"] * len(_batch_ids) + ["#E45756"]
+    _values = _batch_any + [_baseline_any]
+    _labels = [f"Batch {b}" for b in _batch_ids] + ["Baseline"]
+
+    _bars1 = _ax1.bar(_x, _values, color=_colors)
+    _ax1.set_xticks(_x)
+    _ax1.set_xticklabels(_labels, rotation=45, ha="right")
+    _ax1.set_ylabel("Any-repeat rate")
+    _ax1.set_title("Any-Repeat Rate: Batches vs Baseline")
+    _ax1.axhline(np.mean(_batch_any), color="#4C78A8", linestyle="--", alpha=0.7, label=f"Batch avg: {np.mean(_batch_any):.1%}")
+    _ax1.legend()
+
+    for _bar in _bars1:
+        _ax1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.01,
+                  f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=8)
+
+    # Right: Avg repeat pairs comparison
+    _values2 = _batch_avg + [_baseline_avg]
+    _bars2 = _ax2.bar(_x, _values2, color=_colors)
+    _ax2.set_xticks(_x)
+    _ax2.set_xticklabels(_labels, rotation=45, ha="right")
+    _ax2.set_ylabel("Avg repeat pairs per run")
+    _ax2.set_title("Avg Repeat Pairs: Batches vs Baseline")
+    _ax2.axhline(np.mean(_batch_avg), color="#4C78A8", linestyle="--", alpha=0.7, label=f"Batch avg: {np.mean(_batch_avg):.2f}")
+    _ax2.legend()
+
+    for _bar in _bars2:
+        _ax2.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.05,
+                  f"{_bar.get_height():.2f}", ha="center", va="bottom", fontsize=8)
+
+    _fig.tight_layout()
+    _buffer = io.BytesIO()
+    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
+    _buffer.seek(0)
+    plt.close(_fig)
+    mo.image(_buffer.getvalue())
+    return
+
+
+@app.cell(hide_code=True)
+def _(batch_stats_df, baseline, has_batches, mo):
+    mo.stop(not has_batches)
+
+    _baseline_any = baseline.get_column("repeatAnyPair").sum() / baseline.height
+    _baseline_avg = baseline.get_column("repeatPairDifferentOpponentsCount").mean()
+
+    _batch_any_mean = batch_stats_df.get_column("p_any_repeat").mean()
+    _batch_avg_mean = batch_stats_df.get_column("avg_repeat_pairs").mean()
+
+    _improvement_any = (_baseline_any - _batch_any_mean) / _baseline_any * 100
+    _improvement_avg = (_baseline_avg - _batch_avg_mean) / _baseline_avg * 100
+
+    mo.md(
+        f"""
+    ### Ensemble Performance Summary
+
+    | Metric | Ensemble Avg | Baseline | Improvement |
+    |--------|--------------|----------|-------------|
+    | Any-repeat rate | {_batch_any_mean:.2%} | {_baseline_any:.2%} | **{_improvement_any:.1f}%** |
+    | Avg repeat pairs | {_batch_avg_mean:.2f} | {_baseline_avg:.2f} | **{_improvement_avg:.1f}%** |
+
+    **Conclusion**: Across {batch_stats_df.height} independent batches, the algorithm consistently
+    outperforms the random baseline by approximately **{(_improvement_any + _improvement_avg) / 2:.0f}%** on average.
+    """
+    )
+    return
+
+
 if __name__ == "__main__":
     app.run()
