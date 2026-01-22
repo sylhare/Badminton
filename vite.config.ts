@@ -7,4 +7,9 @@ export default defineConfig(({ command }) => ({
   optimizeDeps: {
     include: ['tesseract.js'],
   },
+  server: {
+    watch: {
+      ignored: ['**/analysis/**'],
+    },
+  },
 }));

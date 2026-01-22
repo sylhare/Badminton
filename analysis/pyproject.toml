@@ -1,0 +1,15 @@
+[project]
+name = "badminton-analysis"
+version = "0.1.0"
+description = "Analysis notebook dependencies for badminton simulations."
+requires-python = ">=3.11"
+dependencies = [
+  "marimo",
+  "polars",
+  "matplotlib",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
