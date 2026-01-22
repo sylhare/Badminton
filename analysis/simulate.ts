@@ -34,6 +34,8 @@ const RUNS = Number(process.env.SIM_RUNS ?? 5000);
 const ROUNDS = Number(process.env.SIM_ROUNDS ?? 2);
 const NUM_PLAYERS = Number(process.env.SIM_PLAYERS ?? 20);
 const NUM_COURTS = Number(process.env.SIM_COURTS ?? 4);
+const BATCH_ID = process.env.SIM_BATCH_ID ?? '';
+const NUM_BATCHES = Number(process.env.SIM_NUM_BATCHES ?? 1);
 
 const ensureDataDir = () => {
   mkdirSync(DATA_DIR, { recursive: true });
@@ -126,9 +128,7 @@ const toCsv = (rows: Array<Record<string, string | number | boolean>>): string =
   return lines.join('\n');
 };
 
-const runSimulation = () => {
-  ensureDataDir();
-
+const runSingleBatch = (batchId: string) => {
   const players = toPlayerList(NUM_PLAYERS);
   const summaries: SimulationSummary[] = [];
   const pairEvents: PairEvent[] = [];
@@ -157,17 +157,64 @@ const runSimulation = () => {
     });
   }
 
-  writeFileSync(resolve(DATA_DIR, 'summary.csv'), toCsv(summaries));
-  writeFileSync(resolve(DATA_DIR, 'pair_events.csv'), toCsv(pairEvents));
+  const suffix = batchId ? `_batch${batchId}` : '';
+  writeFileSync(resolve(DATA_DIR, `summary${suffix}.csv`), toCsv(summaries));
+  writeFileSync(resolve(DATA_DIR, `pair_events${suffix}.csv`), toCsv(pairEvents));
 
-  const config = {
-    runs: RUNS,
-    rounds: ROUNDS,
-    numPlayers: NUM_PLAYERS,
-    numCourts: NUM_COURTS,
-    timestamp: new Date().toISOString(),
-  };
-  writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
+  return { summaries, pairEvents };
+};
+
+const runSimulation = () => {
+  ensureDataDir();
+
+  // If running multiple batches, generate all of them
+  if (NUM_BATCHES > 1) {
+    const allBatchIds: string[] = [];
+    for (let batch = 1; batch <= NUM_BATCHES; batch++) {
+      console.log(`Running batch ${batch}/${NUM_BATCHES}...`);
+      runSingleBatch(String(batch));
+      allBatchIds.push(String(batch));
+    }
+
+    // Also run a single batch without suffix for backwards compatibility
+    runSingleBatch('');
+
+    const config = {
+      runs: RUNS,
+      rounds: ROUNDS,
+      numPlayers: NUM_PLAYERS,
+      numCourts: NUM_COURTS,
+      numBatches: NUM_BATCHES,
+      batchIds: allBatchIds,
+      timestamp: new Date().toISOString(),
+    };
+    writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
+  } else if (BATCH_ID) {
+    // Single batch with specific ID
+    runSingleBatch(BATCH_ID);
+
+    const config = {
+      runs: RUNS,
+      rounds: ROUNDS,
+      numPlayers: NUM_PLAYERS,
+      numCourts: NUM_COURTS,
+      batchId: BATCH_ID,
+      timestamp: new Date().toISOString(),
+    };
+    writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
+  } else {
+    // Default: single batch without ID
+    runSingleBatch('');
+
+    const config = {
+      runs: RUNS,
+      rounds: ROUNDS,
+      numPlayers: NUM_PLAYERS,
+      numCourts: NUM_COURTS,
+      timestamp: new Date().toISOString(),
+    };
+    writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
+  }
 };
 
 runSimulation();
