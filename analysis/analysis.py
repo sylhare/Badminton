@@ -58,11 +58,14 @@ def _(config, mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.stop(mo.app_meta().mode == "run")
-    mo.md("""
+    # Only show in edit mode - hidden in run mode
+    _output = None
+    if mo.app_meta().mode != "run":
+        _output = mo.md("""
     ## Plot Configuration
     Prepare matplotlib cache directories so charts render reliably inside marimo.
     """)
+    _output
     return
 
 
@@ -122,11 +125,14 @@ def _(mo, summary_metrics):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.stop(mo.app_meta().mode == "run")
-    mo.md("""
+    # Only show in edit mode - hidden in run mode
+    _output = None
+    if mo.app_meta().mode != "run":
+        _output = mo.md("""
     ## Statistical Helpers
     Build reusable functions for proportions and confidence intervals.
     """)
+    _output
     return
 
 
@@ -176,11 +182,14 @@ def _(math, pl):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.stop(mo.app_meta().mode == "run")
-    mo.md("""
+    # Only show in edit mode - hidden in run mode
+    _output = None
+    if mo.app_meta().mode != "run":
+        _output = mo.md("""
     ## Random Baseline
     Simulate a random scheduler under identical constraints for comparison.
     """)
+    _output
     return
 
 
@@ -227,9 +236,9 @@ def _(config, pl, random):
             repeat_diff = 0
             repeat_same = 0
 
-            for i in range(len(rounds) - 1):
-                current = rounds[i]
-                next_round = rounds[i + 1]
+            for _i in range(len(rounds) - 1):
+                current = rounds[_i]
+                next_round = rounds[_i + 1]
                 for pair_id, opponent_from in current.items():
                     opponent_to = next_round.get(pair_id)
                     if not opponent_to:
@@ -1065,23 +1074,25 @@ def _(config, math, mo):
 
     mo.md(
         f"""
-    ### Theoretical Configuration Space
+    ### What Does "Configuration Space" Mean?
 
-    **For a single round** ({_P} players on {_C} courts):
+    **The Question**: How many *different ways* can we set up one round of badminton?
 
-    | Step | Calculation | Count |
-    |------|-------------|-------|
-    | Select {_P} from {_N} players | C({_N},{_P}) | **{_select_players:,}** |
-    | Partition into {_C} courts of 4 | {_P}! / (4!^{_C} × {_C}!) | **{_partition_courts:,}** |
-    | Pair players on each court | 3^{_C} | **{_pair_all_courts:,}** |
-    | **Total per round** | | **{_configs_per_round:,}** |
+    Think of it like shuffling a deck of cards - there are many possible arrangements.
+    For our badminton setup:
 
-    **For {_R} rounds** (full simulation): **{_configs_per_round:,}^{_R}** ≈ 10^{int(math.log10(_configs_total)):,} unique configurations
+    | Step | What It Means | How Many Ways |
+    |------|---------------|---------------|
+    | **1. Pick who plays** | Choose {_P} players from {_N} to play this round | {_select_players:,} ways |
+    | **2. Assign to courts** | Split those {_P} into {_C} groups of 4 | {_partition_courts:,} ways |
+    | **3. Form teams** | On each court, decide who pairs with whom | {_pair_all_courts:,} ways |
+    | **Total** | All possible single-round setups | **~1 trillion** |
 
-    **Exploration with {_runs:,} runs**: Each run explores **{_explored_fraction:.2%}** of single-round configuration space.
-
-    > 💡 Even with 5000 runs, we only sample a tiny fraction of possible configurations.
-    > The algorithm's goal is to sample this space **intelligently** to minimize repeats.
+    **Why This Matters:**
+    - With **~1 trillion** possible setups per round, even {_runs:,} simulations explore only a tiny sample
+    - A **random** algorithm would pick configurations blindly
+    - Our **smart** algorithm tries to pick configurations that minimize repeat teammate pairs
+    - The fact that we see fewer repeats than random proves the algorithm is working!
     """
     )
     return
@@ -1091,9 +1102,11 @@ def _(config, math, mo):
 def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_events, pl, plt):
     """
     Compare all three algorithms: Old Algo, Baseline, and New Algo.
-    We analyze overlap at pair level: Are the same 2 players paired as teammates?
+    Figure 1: Heatmaps showing pair repetition patterns
+    Figure 2: Top 15 Repeat Pairs Distribution (bar chart)
     """
     _num_players = config["numPlayers"]
+    _runs = config["runs"]
 
     # Build pair frequency distributions for comparison
     def get_pair_distribution(events_df):
@@ -1129,30 +1142,57 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _new_vs_base_cos = cosine_sim(_new_algo_vec, _baseline_vec)
     _old_vs_new_cos = cosine_sim(_old_algo_vec, _new_algo_vec)
 
-    # Jaccard similarities (overlap of active pairs)
-    _old_active = set(p for p, v in _old_algo_dist.items() if v > 0)
-    _baseline_active = set(p for p, v in _baseline_dist.items() if v > 0)
-    _new_active = set(p for p, v in _new_algo_dist.items() if v > 0)
-
-    def jaccard(a, b):
-        return len(a & b) / len(a | b) if a | b else 0
-
-    _old_vs_base_jac = jaccard(_old_active, _baseline_active)
-    _new_vs_base_jac = jaccard(_new_active, _baseline_active)
-    _old_vs_new_jac = jaccard(_old_active, _new_active)
-
     # Calculate concentration metrics (top 10 pairs share)
     _old_top10 = sum(sorted(_old_algo_dist.values(), reverse=True)[:10]) if _old_algo_dist else 0
     _baseline_top10 = sum(sorted(_baseline_dist.values(), reverse=True)[:10]) if _baseline_dist else 0
     _new_top10 = sum(sorted(_new_algo_dist.values(), reverse=True)[:10]) if _new_algo_dist else 0
 
-    # Create visualization with 3 panels
-    _fig, (_ax1, _ax2, _ax3) = plt.subplots(1, 3, figsize=(18, 5))
-
-    # Left: Distribution comparison (top 25 pairs) - all three
-    _top_pairs = sorted(_all_pairs, key=lambda p: max(
+    # ===== FIGURE 1: Single Heatmap with 3 columns (Old, Baseline, New) =====
+    # Select top 25 pairs by maximum frequency across all algorithms
+    _top_pairs_for_heatmap = sorted(_all_pairs, key=lambda p: max(
         _old_algo_dist.get(p, 0), _baseline_dist.get(p, 0), _new_algo_dist.get(p, 0)
     ), reverse=True)[:25]
+
+    # Build a matrix: rows = pairs, columns = [Old, Baseline, New]
+    _heatmap_data = np.zeros((len(_top_pairs_for_heatmap), 3))
+    for i, pair in enumerate(_top_pairs_for_heatmap):
+        _heatmap_data[i, 0] = _old_algo_dist.get(pair, 0) * 100  # percentage
+        _heatmap_data[i, 1] = _baseline_dist.get(pair, 0) * 100
+        _heatmap_data[i, 2] = _new_algo_dist.get(pair, 0) * 100
+
+    _fig1, _ax1 = plt.subplots(figsize=(6, 10))
+
+    _im1 = _ax1.imshow(_heatmap_data, cmap="YlOrRd", aspect="auto")
+    _ax1.set_xticks([0, 1, 2])
+    _ax1.set_xticklabels(["Old Algo", "Baseline", "New Algo"], fontsize=10)
+    _ax1.set_yticks(range(len(_top_pairs_for_heatmap)))
+    _ax1.set_yticklabels(_top_pairs_for_heatmap, fontsize=8)
+    _ax1.set_xlabel("Algorithm")
+    _ax1.set_ylabel("Player Pair")
+    _ax1.set_title("Pair Repetition Comparison\n(Top 25 pairs by % of total repeats)")
+
+    # Add text annotations
+    for _i in range(len(_top_pairs_for_heatmap)):
+        for _j in range(3):
+            _val = _heatmap_data[_i, _j]
+            _color = "white" if _val > _heatmap_data.max() * 0.5 else "black"
+            _ax1.text(_j, _i, f"{_val:.1f}", ha="center", va="center", color=_color, fontsize=7)
+
+    _cbar = _fig1.colorbar(_im1, ax=_ax1, shrink=0.6)
+    _cbar.set_label("% of Total Repeat Events")
+
+    _fig1.tight_layout()
+    _buffer1 = io.BytesIO()
+    _fig1.savefig(_buffer1, format="png", dpi=150, bbox_inches="tight")
+    _buffer1.seek(0)
+    plt.close(_fig1)
+
+    # ===== FIGURE 2: Top 15 Repeat Pairs Distribution =====
+    _fig2, _ax4 = plt.subplots(figsize=(12, 4))
+
+    _top_pairs = sorted(_all_pairs, key=lambda p: max(
+        _old_algo_dist.get(p, 0), _baseline_dist.get(p, 0), _new_algo_dist.get(p, 0)
+    ), reverse=True)[:15]
     _x = np.arange(len(_top_pairs))
     _width = 0.25
 
@@ -1160,66 +1200,93 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _baseline_vals = [_baseline_dist.get(p, 0) * 100 for p in _top_pairs]
     _new_vals = [_new_algo_dist.get(p, 0) * 100 for p in _top_pairs]
 
-    _ax1.bar(_x - _width, _old_vals, _width, label="Old Algo", color="#4C78A8", alpha=0.8)
-    _ax1.bar(_x, _baseline_vals, _width, label="Baseline", color="#E45756", alpha=0.8)
-    _ax1.bar(_x + _width, _new_vals, _width, label="New Algo", color="#54A24B", alpha=0.8)
-    _ax1.set_xticks(_x)
-    _ax1.set_xticklabels(_top_pairs, rotation=45, ha="right", fontsize=6)
-    _ax1.set_xlabel("Player Pair")
-    _ax1.set_ylabel("% of Total Repeat Events")
-    _ax1.set_title("Top 25 Repeat Pairs Distribution")
-    _ax1.legend(fontsize=8)
+    _ax4.bar(_x - _width, _old_vals, _width, label="Old Algo", color="#4C78A8", alpha=0.8)
+    _ax4.bar(_x, _baseline_vals, _width, label="Baseline", color="#E45756", alpha=0.8)
+    _ax4.bar(_x + _width, _new_vals, _width, label="New Algo", color="#54A24B", alpha=0.8)
+    _ax4.set_xticks(_x)
+    _ax4.set_xticklabels(_top_pairs, rotation=45, ha="right", fontsize=8)
+    _ax4.set_xlabel("Player Pair")
+    _ax4.set_ylabel("% of Total Repeat Events")
+    _ax4.set_title("Top 15 Repeat Pairs Distribution")
+    _ax4.legend(fontsize=9, loc="upper right")
 
-    # Middle: Cosine Similarity comparisons
-    _cos_labels = ["Old vs\nBaseline", "New vs\nBaseline", "Old vs\nNew"]
-    _cos_values = [_old_vs_base_cos, _new_vs_base_cos, _old_vs_new_cos]
-    _cos_colors = ["#4C78A8", "#54A24B", "#F58518"]
+    _fig2.tight_layout()
+    _buffer2 = io.BytesIO()
+    _fig2.savefig(_buffer2, format="png", dpi=150, bbox_inches="tight")
+    _buffer2.seek(0)
+    plt.close(_fig2)
 
-    _bars2 = _ax2.bar(_cos_labels, _cos_values, color=_cos_colors, alpha=0.8)
-    _ax2.set_ylim(0, 1.1)
-    _ax2.set_ylabel("Cosine Similarity")
-    _ax2.set_title("Distribution Similarity\n(higher = more similar)")
-    _ax2.axhline(y=1.0, color="gray", linestyle="--", alpha=0.5)
-
-    for _bar, _val in zip(_bars2, _cos_values):
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.02,
-                  f"{_val:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
-
-    # Right: Top-10 Concentration comparison
-    _conc_labels = ["Old Algo", "Baseline", "New Algo"]
-    _conc_values = [_old_top10, _baseline_top10, _new_top10]
-    _conc_colors = ["#4C78A8", "#E45756", "#54A24B"]
-
-    _bars3 = _ax3.bar(_conc_labels, _conc_values, color=_conc_colors, alpha=0.8)
-    _ax3.set_ylim(0, max(_conc_values) * 1.3)
-    _ax3.set_ylabel("Top-10 Pairs Share")
-    _ax3.set_title("Repeat Concentration\n(lower = more evenly distributed)")
-
-    for _bar, _val in zip(_bars3, _conc_values):
-        _ax3.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.005,
-                  f"{_val:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
-
-    _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
-
-    # Store metrics for conclusion
+    # Store metrics for use in next cell
     diversity_metrics = {
         "old_vs_base_cos": _old_vs_base_cos,
         "new_vs_base_cos": _new_vs_base_cos,
         "old_vs_new_cos": _old_vs_new_cos,
-        "old_vs_base_jac": _old_vs_base_jac,
-        "new_vs_base_jac": _new_vs_base_jac,
-        "old_vs_new_jac": _old_vs_new_jac,
         "old_top10": _old_top10,
         "baseline_top10": _baseline_top10,
         "new_top10": _new_top10,
     }
 
-    mo.image(_buffer.getvalue())
+    # Display the charts
+    _display = mo.vstack([
+        mo.image(_buffer1.getvalue()),
+        mo.image(_buffer2.getvalue()),
+    ])
+    mo.output.replace(_display)
     return (diversity_metrics,)
+
+
+@app.cell
+def _(diversity_metrics, io, mo, np, plt):
+    """
+    Chart 2: Distribution Similarity + Repeat Concentration (side by side)
+    """
+    _old_vs_base_cos = diversity_metrics["old_vs_base_cos"]
+    _new_vs_base_cos = diversity_metrics["new_vs_base_cos"]
+    _old_vs_new_cos = diversity_metrics["old_vs_new_cos"]
+    _old_top10 = diversity_metrics["old_top10"]
+    _baseline_top10 = diversity_metrics["baseline_top10"]
+    _new_top10 = diversity_metrics["new_top10"]
+
+    # ===== FIGURE 2: Distribution Similarity + Concentration =====
+    _fig2, (_ax2, _ax3) = plt.subplots(1, 2, figsize=(12, 4))
+
+    # Left: Distribution Similarity (Cosine)
+    _cos_labels = ["Old vs\nBaseline", "New vs\nBaseline", "Old vs\nNew"]
+    _cos_values = [_old_vs_base_cos, _new_vs_base_cos, _old_vs_new_cos]
+    _cos_colors = ["#4C78A8", "#54A24B", "#F58518"]
+
+    _bars2 = _ax2.bar(_cos_labels, _cos_values, color=_cos_colors, alpha=0.8, width=0.6)
+    _ax2.set_ylim(0, 1.15)
+    _ax2.set_ylabel("Cosine Similarity", fontsize=11)
+    _ax2.set_title("Distribution Similarity\n(higher = patterns are more alike)", fontsize=11)
+    _ax2.axhline(y=1.0, color="gray", linestyle="--", alpha=0.5, label="Perfect match")
+
+    for _bar, _val in zip(_bars2, _cos_values):
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.02,
+                  f"{_val:.1%}", ha="center", va="bottom", fontsize=11, fontweight="bold")
+
+    # Right: Repeat Concentration (Top-10 Share)
+    _conc_labels = ["Old Algo", "Baseline", "New Algo"]
+    _conc_values = [_old_top10, _baseline_top10, _new_top10]
+    _conc_colors = ["#4C78A8", "#E45756", "#54A24B"]
+
+    _bars3 = _ax3.bar(_conc_labels, _conc_values, color=_conc_colors, alpha=0.8, width=0.6)
+    _ax3.set_ylim(0, max(_conc_values) * 1.4)
+    _ax3.set_ylabel("Top-10 Pairs Share", fontsize=11)
+    _ax3.set_title("Repeat Concentration\n(lower = repeats spread across more pairs)", fontsize=11)
+
+    for _bar, _val in zip(_bars3, _conc_values):
+        _ax3.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.003,
+                  f"{_val:.1%}", ha="center", va="bottom", fontsize=11, fontweight="bold")
+
+    _fig2.tight_layout()
+    _buffer2 = io.BytesIO()
+    _fig2.savefig(_buffer2, format="png", dpi=150, bbox_inches="tight")
+    _buffer2.seek(0)
+    plt.close(_fig2)
+
+    mo.output.replace(mo.image(_buffer2.getvalue()))
+    return
 
 
 @app.cell(hide_code=True)
