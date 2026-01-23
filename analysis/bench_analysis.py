@@ -25,17 +25,21 @@ def _():
 
 @app.cell
 def _(Path, os):
+    # Set up matplotlib directories before importing matplotlib
     _mpl_config_dir = Path(__file__).parent / ".mplconfig"
     _cache_dir = Path(__file__).parent / ".cache"
     _mpl_config_dir.mkdir(exist_ok=True)
     _cache_dir.mkdir(exist_ok=True)
     _ = os.environ.setdefault("MPLCONFIGDIR", str(_mpl_config_dir))
     _ = os.environ.setdefault("XDG_CACHE_HOME", str(_cache_dir))
-    return
+    mpl_configured = True
+    return (mpl_configured,)
 
 
 @app.cell
-def _():
+def _(mpl_configured):
+    # Import matplotlib after config is set
+    _ = mpl_configured  # Ensure config runs first
     import matplotlib.pyplot as plt
     import numpy as np
     return np, plt
@@ -44,7 +48,14 @@ def _():
 @app.cell
 def _(Path, json, pl):
     # Load bench analysis data (aggregated format)
-    data_dir = Path(__file__).parent / "data" / "bench_analysis"
+    # Use __file__ to get the script directory
+    _script_path = Path(__file__).resolve()
+    data_dir = _script_path.parent / "data" / "bench_analysis"
+    
+    # Debug output to server console
+    print(f"[DEBUG] Script path: {_script_path}")
+    print(f"[DEBUG] Data dir: {data_dir}")
+    print(f"[DEBUG] Data dir exists: {data_dir.exists()}")
 
     # Load config
     config_path = data_dir / "config.json"
@@ -80,6 +91,7 @@ def _(Path, json, pl):
             all_distributions.append(pl.read_csv(_dist_file))
 
     has_data = len(all_summaries) > 0
+    print(f"[DEBUG] Has data: {has_data}, Summaries: {len(all_summaries)}")
 
     if has_data:
         summaries = pl.concat(all_summaries, how="diagonal_relaxed")
@@ -94,9 +106,24 @@ def _(Path, json, pl):
 
 
 @app.cell(hide_code=True)
-def _(has_data, mo):
+def _(mo):
+    mo.md("""
+# Bench Analysis
+
+This notebook analyzes the **bench distribution algorithm** performance - specifically how many games players get to play between being benched.
+
+**Key Questions:**
+- How close does the algorithm get to the theoretical maximum games between benches?
+- How does it compare to random player selection?
+- Does it minimize "double benching" (consecutive rounds on the bench)?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(has_data, mo, summaries):
     mo.stop(not has_data, mo.md("""
-    # No Bench Analysis Data Found
+    ## No Data Found
 
     Please run the bench simulation first:
 
@@ -105,63 +132,58 @@ def _(has_data, mo):
     SIM_TYPE=bench npx tsx simulate.ts
     ```
 
-    This will generate data for 17-20 players with 4 courts over 10 games.
+    This will generate data for 17-20 players with 4 courts over 50 rounds.
     """))
-
-    return
-
-
-@app.cell(hide_code=True)
-def _():
+    
+    mo.md(f"**Data loaded:** {len(summaries)} player configurations (17-20 players)")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
     # Mathematical demonstration in expandable box
-    _proof=mo.md(r"""
-    ### Mathematical Derivation
+    _content = mo.md(r"""
+**Setup:**
+- $N$ = total number of players
+- $C$ = number of courts
+- $S = 4C$ = playing spots per round (4 players per court)
+- $B = N - S$ = players benched per round
 
-    **Setup:**
-    - $N$ = total number of players
-    - $C$ = number of courts
-    - $S = 4C$ = playing spots per round (4 players per court)
-    - $B = N - S$ = players benched per round
+**Constraint:** Each round, exactly $B$ players must sit out.
 
-    **Constraint:** Each round, exactly $B$ players must sit out.
+**Ideal Rotation Model:**
 
-    **Ideal Rotation Model:**
+In a perfectly fair rotation, we want to distribute bench time evenly. Consider a continuous model where players cycle through bench duty:
 
-    In a perfectly fair rotation, we want to distribute bench time evenly. Consider a continuous model where players cycle through bench duty:
+1. **Bench frequency:** Each player should bench once every $\frac{N}{B}$ rounds on average
+2. **Games between benches:** If a player benches in round $r$, their next bench should be around round $r + \frac{N}{B}$
+3. **Maximum consecutive games:** Between two bench periods, a player plays $\frac{N}{B} - 1$ games
 
-    1. **Bench frequency:** Each player should bench once every $\frac{N}{B}$ rounds on average
-    2. **Games between benches:** If a player benches in round $r$, their next bench should be around round $r + \frac{N}{B}$
-    3. **Maximum consecutive games:** Between two bench periods, a player plays $\frac{N}{B} - 1$ games
+**Formula:**
+$$\text{Theoretical Max Games} = \frac{N}{N - 4C} - 1 = \frac{4C}{N - 4C}$$
 
-    **Formula:**
-    $$\text{Theoretical Max Games} = \frac{N}{N - 4C} - 1 = \frac{4C}{N - 4C}$$
+Or equivalently:
+$$\text{Theoretical Max} = \frac{S}{B} = \frac{\text{Playing Spots}}{\text{Bench Spots}}$$
 
-    Or equivalently:
-    $$\text{Theoretical Max} = \frac{S}{B} = \frac{\text{Playing Spots}}{\text{Bench Spots}}$$
+**Examples with 4 courts (16 playing spots):**
 
-    **Examples with 4 courts (16 playing spots):**
+| Players (N) | Benched (B) | Theoretical Max | Interpretation |
+|-------------|-------------|-----------------|----------------|
+| 17 | 1 | 16.0 | 1 player benches, plays 16 games between |
+| 18 | 2 | 8.0 | 2 players bench, each plays ~8 games between |
+| 19 | 3 | 5.33 | 3 players bench, each plays ~5 games between |
+| 20 | 4 | 4.0 | 4 players bench, each plays ~4 games between |
 
-    | Players (N) | Benched (B) | Theoretical Max | Interpretation |
-    |-------------|-------------|-----------------|----------------|
-    | 17 | 1 | 16.0 | 1 player benches, plays 16 games between |
-    | 18 | 2 | 8.0 | 2 players bench, each plays ~8 games between |
-    | 19 | 3 | 5.33 | 3 players bench, each plays ~5 games between |
-    | 20 | 4 | 4.0 | 4 players bench, each plays ~4 games between |
+**Note:** The theoretical max is a continuous ideal. In practice:
+- With 17 players, only 1 benches per round, so they could theoretically play 16 consecutive games
+- With 20 players, 4 bench per round, creating more frequent rotation
 
-    **Note:** The theoretical max is a continuous ideal. In practice:
-    - With 17 players, only 1 benches per round, so they could theoretically play 16 consecutive games
-    - With 20 players, 4 bench per round, creating more frequent rotation
+**Why This Matters:**
 
-    **Why This Matters:**
-
-    The algorithm should aim to approach this theoretical maximum. If the observed average is significantly lower, it means players are being benched more frequently than necessary, reducing their playing time unfairly.
+The algorithm should aim to approach this theoretical maximum. If the observed average is significantly lower, it means players are being benched more frequently than necessary, reducing their playing time unfairly.
     """)
 
+    mo.accordion({"Theoretical Maximum: Games Between Bench Periods": _content})
     return
 
 
@@ -202,9 +224,11 @@ def _():
 @app.cell
 def _(has_data, mo, summaries):
     mo.stop(not has_data)
+    print("[DEBUG] algo_stats cell - creating algo_stats")
 
     # Data is already aggregated with theoreticalMax column
     algo_stats = summaries.sort("numPlayers")
+    print(f"[DEBUG] algo_stats created with {len(algo_stats)} rows")
     return (algo_stats,)
 
 
@@ -225,6 +249,7 @@ def _(has_data, mo):
 @app.cell
 def _(algo_stats, has_data, io, mo, np, plt):
     mo.stop(not has_data)
+    print("[DEBUG] Chart cell 1 - starting")
 
     _fig, _ax = plt.subplots(figsize=(10, 6))
 
@@ -268,6 +293,8 @@ def _(algo_stats, has_data, io, mo, np, plt):
     _buffer.seek(0)
     plt.close(_fig)
 
+    print(f"[DEBUG] Chart cell 1 - chart generated, size: {len(_buffer.getvalue())} bytes")
+    mo.image(_buffer.getvalue())
     return
 
 
@@ -413,7 +440,8 @@ def _(algo_stats, baseline_df, has_data, io, mo, np, plt, theoretical_values):
     _buffer.seek(0)
     plt.close(_fig)
 
-    return mo.image(_buffer.getvalue())
+    mo.image(_buffer.getvalue())
+    return
 
 
 @app.cell(hide_code=True)
@@ -521,7 +549,8 @@ def _(events_summary, gap_distributions, has_data, io, mo, np, pl, plt):
     _buffer.seek(0)
     plt.close(_fig)
 
-    return mo.image(_buffer.getvalue())
+    mo.image(_buffer.getvalue())
+    return
 
 
 @app.cell(hide_code=True)
@@ -532,44 +561,41 @@ def _():
 @app.cell(hide_code=True)
 def _(mo):
     _proof=mo.md(r"""
-    **Claim:** With perfect scheduling, zero double benches is theoretically achievable for 17-20 players on 4 courts.
+**Claim:** With perfect scheduling, zero double benches is theoretically achievable for 17-20 players on 4 courts.
 
-    **Proof:**
+**Proof:**
 
-    Let:
-    - \(n\) = number of players (17, 18, 19, or 20)
-    - \(s\) = playing spots = 4 courts × 4 players = 16
-    - \(b\) = players benched per round = \(n - s = n - 16\)
+Let:
+- $n$ = number of players (17, 18, 19, or 20)
+- $s$ = playing spots = 4 courts × 4 players = 16
+- $b$ = players benched per round = $n - s = n - 16$
 
-    **Key Insight:** To avoid a double bench, we need to ensure that no player who benched in round \(k\) also benches in round \(k+1\).
+**Key Insight:** To avoid a double bench, we need to ensure that no player who benched in round $k$ also benches in round $k+1$.
 
-    **Analysis:**
-    - In round \(k\), exactly \(b\) players are benched
-    - In round \(k+1\), we need to choose \(b\) players to bench
-    - Available players who did NOT bench in round \(k\) = \(n - b = 16\)
+**Analysis:**
+- In round $k$, exactly $b$ players are benched
+- In round $k+1$, we need to choose $b$ players to bench
+- Available players who did NOT bench in round $k$ = $n - b = 16$
 
-    **Condition for zero double benches:**
-    We can avoid double benching if the number of "safe" players (who didn't bench last round) ≥ number we need to bench:
+**Condition for zero double benches:**
+We can avoid double benching if the number of "safe" players (who didn't bench last round) ≥ number we need to bench:
 
-    $$
-    \begin{aligned}
-    n - b &\geq b \\
-    16 &\geq b
-    \end{aligned}
-    $$
+$n - b \geq b$, which simplifies to $16 \geq b$
 
-    **Verification for each case:**
-    | Players (n) | Benched/round (b) | Safe players (n-b) | b ≤ 16? |
-    |------------|-------------------|-------------------|---------|
-    | 17 | 1 | 16 | ✓ |
-    | 18 | 2 | 16 | ✓ |
-    | 19 | 3 | 16 | ✓ |
-    | 20 | 4 | 16 | ✓ |
+**Verification for each case:**
 
-    **Conclusion:** Since \(b \leq 16\) for all cases (17-20 players), we can always select \(b\) players to bench from the 16 players who played in the previous round. Therefore, **zero double benches is achievable** with optimal scheduling.
+| Players (n) | Benched/round (b) | Safe players (n-b) | b ≤ 16? |
+|-------------|-------------------|-------------------|---------|
+| 17 | 1 | 16 | Yes |
+| 18 | 2 | 16 | Yes |
+| 19 | 3 | 16 | Yes |
+| 20 | 4 | 16 | Yes |
 
-    **Note:** This is an upper bound - the actual algorithm may not achieve zero due to other constraints (partner variety, opponent balance, etc.).
+**Conclusion:** Since $b \leq 16$ for all cases (17-20 players), we can always select $b$ players to bench from the 16 players who played in the previous round. Therefore, **zero double benches is achievable** with optimal scheduling.
+
+**Note:** This is an upper bound - the actual algorithm may not achieve zero due to other constraints (partner variety, opponent balance, etc.).
     """)
+    mo.accordion({"Mathematical Proof: Zero Double Benches is Achievable": _proof}, lazy=True)
     return
 
 
@@ -652,7 +678,8 @@ def _(config, events_summary, has_data, io, mo, np, pl, plt, random):
     _buffer.seek(0)
     plt.close(_fig)
 
-    return mo.image(_buffer.getvalue())
+    mo.image(_buffer.getvalue())
+    return
 
 
 @app.cell(hide_code=True)
@@ -695,7 +722,7 @@ def _(config, events_summary, has_data, mo, pl, random):
         _reduction = ((_base_rate - _algo_rate) / _base_rate * 100) if _base_rate > 0 else 0
         _rows.append(f"| {_np} | {_base_rate:.2f}% | {_algo_rate:.2f}% | **{_reduction:+.1f}%** |")
 
-    return mo.md(f"""
+    mo.md(f"""
     ### Double Bench Summary
 
     | Players | Baseline Rate | Algorithm Rate | Reduction |
@@ -704,6 +731,7 @@ def _(config, events_summary, has_data, mo, pl, random):
 
     **Interpretation:** The algorithm significantly reduces the occurrence of consecutive benching compared to random selection.
     """)
+    return
 
 
 @app.cell(hide_code=True)
@@ -713,7 +741,7 @@ def _(events_summary, has_data, mo, pl):
     # Analyze variability using aggregated stats
     _rows = events_summary.sort("numPlayers").to_dicts()
 
-    return mo.md(f"""
+    mo.md(f"""
     ### Distribution Analysis: Bench Gap Variability
 
     The **standard deviation** measures how much bench gaps vary from the mean.
@@ -728,6 +756,7 @@ def _(events_summary, has_data, mo, pl):
 
     **Note:** CV (Coefficient of Variation) = std / mean × 100%. This measures relative variability.
     """)
+    return
 
 
 @app.cell(hide_code=True)
