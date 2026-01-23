@@ -3,5 +3,13 @@
   "rounds": 10,
   "numPlayers": 20,
   "numCourts": 4,
+  "numBatches": 5,
+  "batchIds": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
   "timestamp": "2026-01-22T19:17:38.314Z"
 }
