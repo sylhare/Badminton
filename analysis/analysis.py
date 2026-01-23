@@ -21,10 +21,20 @@ def _():
 @app.cell
 def _(Path, json, pl):
     data_dir = Path(__file__).parent / "data"
-    summary = pl.read_csv(data_dir / "summary.csv")
-    pair_events = pl.read_csv(data_dir / "pair_events.csv")
-    config = json.loads((data_dir / "config.json").read_text())
-    return config, pair_events, summary
+    
+    # Load OLD algorithm data (original)
+    old_algo_dir = data_dir / "old_algo"
+    summary = pl.read_csv(old_algo_dir / "summary.csv")
+    pair_events = pl.read_csv(old_algo_dir / "pair_events.csv")
+    config = json.loads((old_algo_dir / "config.json").read_text())
+    
+    # Load NEW algorithm data (updated shuffle)
+    new_algo_dir = data_dir / "new_algo"
+    new_algo_summary = pl.read_csv(new_algo_dir / "summary.csv")
+    new_algo_pair_events = pl.read_csv(new_algo_dir / "pair_events.csv")
+    new_algo_config = json.loads((new_algo_dir / "config.json").read_text())
+    
+    return config, new_algo_config, new_algo_pair_events, new_algo_summary, pair_events, summary
 
 
 @app.cell(hide_code=True)
@@ -32,8 +42,13 @@ def _(config, mo):
     mo.md(f"""
     # Court Assignment Repeat Analysis
 
-    **Configuration**
-    - Runs: {config['runs']} (independent simulations)
+    **Comparing Three Algorithms:**
+    - **Old Algorithm**: Original player pairing logic
+    - **Random Baseline**: No optimization (random pairs)
+    - **New Algorithm**: Updated shuffle for player pairs
+
+    **Configuration** (same for all)
+    - Runs: {config['runs']} per batch (5 batches each)
     - Rounds: {config['rounds']} (consecutive assignments per run)
     - Players: {config['numPlayers']} (total pool size)
     - Courts: {config['numCourts']} (matches per round)
@@ -262,18 +277,18 @@ def _(config, pl, random):
 
 
 @app.cell
-def _(baseline_pair_events, config, pair_events, pl):
+def _(baseline_pair_events, config, new_algo_pair_events, pair_events, pl):
     """
-    Compute normalized baseline pair frequencies.
+    Compute normalized pair frequencies for baseline and new algorithm.
     
-    The baseline is scaled so that its TOTAL events match the algorithm's total,
+    Both are scaled so their TOTAL events match the OLD algorithm's total,
     making comparisons about distribution patterns rather than total volume.
     """
     _runs_per_batch = config.get("runs", 5000)
     _num_batches = config.get("numBatches", 5)
     
-    # Calculate algorithm's average events per batch
-    _algo_events_per_batch = (
+    # Calculate OLD algorithm's average events per batch (reference)
+    _old_algo_events_per_batch = (
         pair_events.group_by("batch" if "batch" in pair_events.columns else pl.lit("1"))
         .agg(pl.len().alias("events"))
         .get_column("events")
@@ -288,25 +303,45 @@ def _(baseline_pair_events, config, pair_events, pl):
         .mean()
     ) if baseline_pair_events.height > 0 else 1
     
-    # Scaling factor to normalize baseline to algorithm's volume
-    _scale_factor = _algo_events_per_batch / _baseline_events_per_batch if _baseline_events_per_batch > 0 else 1
+    # Calculate NEW algorithm's average events per batch (raw)
+    _new_algo_events_per_batch = (
+        new_algo_pair_events.group_by("batch" if "batch" in new_algo_pair_events.columns else pl.lit("1"))
+        .agg(pl.len().alias("events"))
+        .get_column("events")
+        .mean()
+    ) if new_algo_pair_events.height > 0 else 1
+    
+    # Scaling factors to normalize to OLD algorithm's volume
+    _baseline_scale = _old_algo_events_per_batch / _baseline_events_per_batch if _baseline_events_per_batch > 0 else 1
+    _new_algo_scale = _old_algo_events_per_batch / _new_algo_events_per_batch if _new_algo_events_per_batch > 0 else 1
     
     # Calculate baseline pair frequencies (averaged across batches, then scaled)
     _baseline_pair_counts = (
         baseline_pair_events.group_by("pairId")
         .agg(pl.len().alias("raw_events"))
         .with_columns([
-            # Average per batch, then scale to match algorithm volume
-            (pl.col("raw_events") / _num_batches * _scale_factor).alias("events")
+            (pl.col("raw_events") / _num_batches * _baseline_scale).alias("events")
         ])
         .to_dicts()
     )
     
-    # Create normalized baseline dictionary (ready to use everywhere)
-    normalized_baseline_pairs = {r["pairId"]: r["events"] for r in _baseline_pair_counts}
-    baseline_scale_factor = _scale_factor
+    # Calculate NEW algorithm pair frequencies (averaged across batches, then scaled)
+    _new_algo_pair_counts = (
+        new_algo_pair_events.group_by("pairId")
+        .agg(pl.len().alias("raw_events"))
+        .with_columns([
+            (pl.col("raw_events") / _num_batches * _new_algo_scale).alias("events")
+        ])
+        .to_dicts()
+    )
     
-    return baseline_scale_factor, normalized_baseline_pairs
+    # Create normalized dictionaries (ready to use everywhere)
+    normalized_baseline_pairs = {r["pairId"]: r["events"] for r in _baseline_pair_counts}
+    normalized_new_algo_pairs = {r["pairId"]: r["events"] for r in _new_algo_pair_counts}
+    baseline_scale_factor = _baseline_scale
+    new_algo_scale_factor = _new_algo_scale
+    
+    return baseline_scale_factor, new_algo_scale_factor, normalized_baseline_pairs, normalized_new_algo_pairs
 
 
 @app.cell(hide_code=True)
@@ -869,24 +904,38 @@ def _(mo):
 
 @app.cell
 def _(Path, config, pl):
-    # Load all batch data if available
+    # Load all batch data for OLD and NEW algorithms
     _data_dir = Path(__file__).parent / "data"
     _batch_ids = config.get("batchIds", [])
 
+    # OLD algorithm batches
     batch_summaries = {}
     batch_pair_events = {}
-
-    if _batch_ids:
+    _old_dir = _data_dir / "old_algo"
+    if _batch_ids and _old_dir.exists():
         for _bid in _batch_ids:
-            _summary_file = _data_dir / f"summary_batch{_bid}.csv"
-            _events_file = _data_dir / f"pair_events_batch{_bid}.csv"
+            _summary_file = _old_dir / f"summary_batch{_bid}.csv"
+            _events_file = _old_dir / f"pair_events_batch{_bid}.csv"
             if _summary_file.exists():
                 batch_summaries[_bid] = pl.read_csv(_summary_file)
             if _events_file.exists():
                 batch_pair_events[_bid] = pl.read_csv(_events_file)
 
+    # NEW algorithm batches
+    new_algo_batch_summaries = {}
+    new_algo_batch_pair_events = {}
+    _new_dir = _data_dir / "new_algo"
+    if _batch_ids and _new_dir.exists():
+        for _bid in _batch_ids:
+            _summary_file = _new_dir / f"summary_batch{_bid}.csv"
+            _events_file = _new_dir / f"pair_events_batch{_bid}.csv"
+            if _summary_file.exists():
+                new_algo_batch_summaries[_bid] = pl.read_csv(_summary_file)
+            if _events_file.exists():
+                new_algo_batch_pair_events[_bid] = pl.read_csv(_events_file)
+
     has_batches = len(batch_summaries) > 1
-    return batch_pair_events, batch_summaries, has_batches
+    return batch_pair_events, batch_summaries, has_batches, new_algo_batch_pair_events, new_algo_batch_summaries
 
 
 @app.cell(hide_code=True)
@@ -897,15 +946,15 @@ def _(has_batches, mo):
 
 
 @app.cell
-def _(batch_summaries, has_batches, mo, pl):
+def _(batch_summaries, has_batches, mo, new_algo_batch_summaries, pl):
     mo.stop(not has_batches)
 
-    # Compute per-batch statistics
-    _batch_stats = []
+    # Compute per-batch statistics for OLD algorithm
+    _old_batch_stats = []
     for _bid, _df in batch_summaries.items():
         _any_repeat = _df.get_column("repeatAnyPair").sum() / _df.height
         _diff_opponent = _df.get_column("repeatPairDifferentOpponentsCount")
-        _batch_stats.append({
+        _old_batch_stats.append({
             "batch": _bid,
             "runs": _df.height,
             "p_any_repeat": _any_repeat,
@@ -913,9 +962,24 @@ def _(batch_summaries, has_batches, mo, pl):
             "zero_repeat_pct": (_diff_opponent == 0).sum() / _diff_opponent.len(),
         })
 
-    batch_stats_df = pl.DataFrame(_batch_stats)
-    mo.ui.table(batch_stats_df)
-    return (batch_stats_df,)
+    # Compute per-batch statistics for NEW algorithm
+    _new_batch_stats = []
+    for _bid, _df in new_algo_batch_summaries.items():
+        _any_repeat = _df.get_column("repeatAnyPair").sum() / _df.height
+        _diff_opponent = _df.get_column("repeatPairDifferentOpponentsCount")
+        _new_batch_stats.append({
+            "batch": _bid,
+            "runs": _df.height,
+            "p_any_repeat": _any_repeat,
+            "avg_repeat_pairs": _diff_opponent.mean(),
+            "zero_repeat_pct": (_diff_opponent == 0).sum() / _diff_opponent.len(),
+        })
+
+    batch_stats_df = pl.DataFrame(_old_batch_stats)
+    new_algo_batch_stats_df = pl.DataFrame(_new_batch_stats)
+    
+    mo.md("**Old Algorithm Batch Stats:**")
+    return batch_stats_df, new_algo_batch_stats_df
 
 
 @app.cell(hide_code=True)
@@ -968,10 +1032,10 @@ def _(batch_pair_events, has_batches, mo, pl):
 
 
 @app.cell
-def _(all_pair_data, has_batches, io, mo, normalized_baseline_pairs, np, plt):
+def _(all_pair_data, has_batches, io, mo, normalized_baseline_pairs, normalized_new_algo_pairs, np, plt):
     mo.stop(not has_batches)
 
-    # Pivot to get pair x batch matrix
+    # Pivot to get pair x batch matrix (OLD algorithm)
     _pivot = all_pair_data.pivot(
         values="events",
         index="pairId",
@@ -983,36 +1047,38 @@ def _(all_pair_data, has_batches, io, mo, normalized_baseline_pairs, np, plt):
     _batch_cols = [c for c in _pivot.columns if c != "pairId"]
     _matrix = _pivot.select(_batch_cols).to_numpy()
 
-    # Use pre-computed normalized baseline (scaled to match algorithm's event volume)
-    # No additional normalization needed - baseline is already scaled per batch
+    # Calculate OLD algo average per pair
+    _old_algo_avg = _matrix.mean(axis=1).reshape(-1, 1)
+    
+    # Get normalized baseline and new algo columns
     _baseline_col = np.array([normalized_baseline_pairs.get(pid, 0) for pid in _pair_ids]).reshape(-1, 1)
-    _full_matrix = np.hstack([_matrix, _baseline_col])
+    _new_algo_col = np.array([normalized_new_algo_pairs.get(pid, 0) for pid in _pair_ids]).reshape(-1, 1)
+    
+    # Build matrix: [Old Algo Avg, Baseline, New Algo Avg]
+    _comparison_matrix = np.hstack([_old_algo_avg, _baseline_col, _new_algo_col])
 
-    # Sort by total events across batches (excluding baseline)
-    _totals = _matrix.sum(axis=1)
+    # Sort by OLD algo average
+    _totals = _old_algo_avg.flatten()
     _sorted_idx = np.argsort(_totals)[::-1][:20]  # Top 20 pairs
 
-    _fig, _ax = plt.subplots(figsize=(12, 8))
+    _fig, _ax = plt.subplots(figsize=(10, 8))
 
-    _top_matrix = _full_matrix[_sorted_idx]
+    _top_matrix = _comparison_matrix[_sorted_idx]
     _top_pairs = [_pair_ids[i] for i in _sorted_idx]
 
     _im = _ax.imshow(_top_matrix, cmap="YlOrRd", aspect="auto")
     _cbar = _fig.colorbar(_im, ax=_ax, shrink=0.8)
-    _cbar.set_label("Repeat events (per batch)", rotation=270, labelpad=15)
+    _cbar.set_label("Repeat events (avg per batch)", rotation=270, labelpad=15)
 
     _ax.set_yticks(range(len(_top_pairs)))
     _ax.set_yticklabels(_top_pairs, fontsize=9)
-    _labels = [f"Batch {b}" for b in _batch_cols] + ["Baseline"]
+    _labels = ["Old Algo\n(avg)", "Baseline\n(norm)", "New Algo\n(avg)"]
     _ax.set_xticks(range(len(_labels)))
     _ax.set_xticklabels(_labels, fontsize=10)
 
-    # Add vertical line to separate batches from baseline
-    _ax.axvline(x=len(_batch_cols) - 0.5, color="black", linewidth=2, linestyle="--")
-
-    _ax.set_xlabel("Batch / Baseline")
+    _ax.set_xlabel("Algorithm")
     _ax.set_ylabel("Player Pair")
-    _ax.set_title("Top 20 Repeat Pairs: Batches vs Baseline\n(Baseline normalized to same total events as algorithm)")
+    _ax.set_title("Top 20 Repeat Pairs: Old Algo vs Baseline vs New Algo\n(All normalized to same total events)")
 
     _fig.tight_layout()
     _buffer = io.BytesIO()
@@ -1028,54 +1094,35 @@ def _(all_pair_data, has_batches, io, mo, normalized_baseline_pairs, np, plt):
 
 
 @app.cell
-def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, io, mo, normalized_baseline_pairs, np, pl, plt):
+def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, io, mo, normalized_baseline_pairs, normalized_new_algo_pairs, np, pl, plt):
     mo.stop(not has_batches)
 
-    # Compute correlation between batch average and normalized baseline
-    _batch_avg = batch_pair_matrix.mean(axis=1)
+    # Compute values for all three datasets
+    _old_algo_avg = batch_pair_matrix.mean(axis=1)
     _baseline_vals = np.array([normalized_baseline_pairs.get(pid, 0) for pid in batch_pair_ids])
+    _new_algo_vals = np.array([normalized_new_algo_pairs.get(pid, 0) for pid in batch_pair_ids])
 
-    # Only consider pairs that appear in at least one batch
-    _active_mask = _batch_avg > 0
-    _batch_active = _batch_avg[_active_mask]
-    _baseline_active = _baseline_vals[_active_mask]
-
-    # Correlation
-    _correlation = np.corrcoef(_batch_active, _baseline_active)[0, 1] if len(_batch_active) > 1 else 0
-
-    # Create scatter plot showing batch avg vs baseline
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
-
-    # Left: Scatter plot of batch avg vs baseline
-    _ax1.scatter(_batch_active, _baseline_active, alpha=0.6, c="#4C78A8", s=50)
-    _max_val = max(_batch_active.max(), _baseline_active.max()) * 1.1
-    _ax1.plot([0, _max_val], [0, _max_val], "k--", alpha=0.5, label="y=x (equal)")
-    _ax1.set_xlabel("Batch Average (events per batch)")
-    _ax1.set_ylabel("Baseline (normalized)")
-    _ax1.set_title(f"Batch vs Baseline Correlation\nr = {_correlation:.3f}")
-    _ax1.legend()
-
-    # Annotate top pairs
-    _top_idx = np.argsort(_batch_active)[-5:]
-    for _i in _top_idx:
-        _pid = [batch_pair_ids[j] for j, m in enumerate(_active_mask) if m][_i]
-        _ax1.annotate(_pid, (_batch_active[_i], _baseline_active[_i]), fontsize=8, alpha=0.8)
-
-    # Right: Bar chart comparing top 10 pairs across batches vs baseline
-    _top10_idx = np.argsort(_batch_avg)[::-1][:10]
+    # Bar chart comparing top 10 pairs across all three algorithms
+    _top10_idx = np.argsort(_old_algo_avg)[::-1][:10]
     _top10_pairs = [batch_pair_ids[i] for i in _top10_idx]
-    _top10_batch = _batch_avg[_top10_idx]
+    _top10_old = _old_algo_avg[_top10_idx]
     _top10_baseline = _baseline_vals[_top10_idx]
+    _top10_new = _new_algo_vals[_top10_idx]
+
+    _fig, _ax = plt.subplots(figsize=(14, 6))
 
     _x = np.arange(len(_top10_pairs))
-    _width = 0.35
-    _ax2.bar(_x - _width/2, _top10_batch, _width, label="Batches Avg", color="#4C78A8")
-    _ax2.bar(_x + _width/2, _top10_baseline, _width, label="Baseline", color="#E45756")
-    _ax2.set_xticks(_x)
-    _ax2.set_xticklabels(_top10_pairs, rotation=45, ha="right", fontsize=9)
-    _ax2.set_ylabel("Repeat events (per batch)")
-    _ax2.set_title("Top 10 Pairs: Batches vs Baseline")
-    _ax2.legend()
+    _width = 0.25
+    
+    _ax.bar(_x - _width, _top10_old, _width, label="Old Algo", color="#4C78A8")
+    _ax.bar(_x, _top10_baseline, _width, label="Baseline", color="#E45756")
+    _ax.bar(_x + _width, _top10_new, _width, label="New Algo", color="#54A24B")
+    
+    _ax.set_xticks(_x)
+    _ax.set_xticklabels(_top10_pairs, rotation=45, ha="right", fontsize=9)
+    _ax.set_ylabel("Repeat events (avg per batch)")
+    _ax.set_title("Top 10 Repeat Pairs: Old Algo vs Baseline vs New Algo")
+    _ax.legend()
 
     _fig.tight_layout()
     _buffer = io.BytesIO()
@@ -1083,9 +1130,8 @@ def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, io, mo, nor
     _buffer.seek(0)
     plt.close(_fig)
 
-    batch_baseline_correlation = _correlation
     mo.image(_buffer.getvalue())
-    return (batch_baseline_correlation,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -1201,62 +1247,53 @@ def _(has_batches, mo):
 
 
 @app.cell
-def _(batch_stats_df, baseline_batch_stats, has_batches, io, mo, np, plt):
+def _(batch_stats_df, baseline_batch_stats, has_batches, io, mo, new_algo_batch_stats_df, np, plt):
     mo.stop(not has_batches)
 
-    # Get algorithm batch stats
-    _algo_any = batch_stats_df.get_column("p_any_repeat").to_list()
-    _algo_avg = batch_stats_df.get_column("avg_repeat_pairs").to_list()
-    _algo_batch_ids = batch_stats_df.get_column("batch").to_list()
+    # Get OLD algorithm batch stats
+    _old_any = batch_stats_df.get_column("p_any_repeat").to_list()
+    _old_avg = batch_stats_df.get_column("avg_repeat_pairs").to_list()
 
-    # Get baseline batch stats (now also multi-batch)
+    # Get baseline batch stats
     _baseline_any = baseline_batch_stats.get_column("p_any_repeat").to_list()
     _baseline_avg = baseline_batch_stats.get_column("avg_repeat_pairs").to_list()
-    _baseline_batch_ids = baseline_batch_stats.get_column("batch").to_list()
+
+    # Get NEW algorithm batch stats
+    _new_any = new_algo_batch_stats_df.get_column("p_any_repeat").to_list()
+    _new_avg = new_algo_batch_stats_df.get_column("avg_repeat_pairs").to_list()
 
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
 
-    # Left: Any-repeat rate comparison (both multi-batch)
-    _num_batches = len(_algo_batch_ids)
-    _x = np.arange(_num_batches)
-    _width = 0.35
+    # Summary bar chart: Average across batches for all three
+    _labels = ["Old Algo", "Baseline", "New Algo"]
+    _x = np.arange(len(_labels))
+    _width = 0.6
 
-    _bars1a = _ax1.bar(_x - _width/2, _algo_any, _width, label="Algorithm", color="#4C78A8")
-    _bars1b = _ax1.bar(_x + _width/2, _baseline_any, _width, label="Baseline", color="#E45756")
-
+    # Left: Any-repeat rate comparison
+    _any_vals = [np.mean(_old_any), np.mean(_baseline_any), np.mean(_new_any)]
+    _colors = ["#4C78A8", "#E45756", "#54A24B"]
+    _bars1 = _ax1.bar(_x, _any_vals, _width, color=_colors)
     _ax1.set_xticks(_x)
-    _ax1.set_xticklabels([f"Batch {b}" for b in _algo_batch_ids], rotation=45, ha="right")
-    _ax1.set_ylabel("Any-repeat rate")
-    _ax1.set_title("Any-Repeat Rate: Algorithm vs Baseline (per batch)")
-    _ax1.axhline(np.mean(_algo_any), color="#4C78A8", linestyle="--", alpha=0.7, label=f"Algo avg: {np.mean(_algo_any):.1%}")
-    _ax1.axhline(np.mean(_baseline_any), color="#E45756", linestyle="--", alpha=0.7, label=f"Base avg: {np.mean(_baseline_any):.1%}")
-    _ax1.legend(loc="upper right", fontsize=8)
+    _ax1.set_xticklabels(_labels)
+    _ax1.set_ylabel("Any-repeat rate (avg across batches)")
+    _ax1.set_title("Any-Repeat Rate: All Algorithms")
+    _ax1.set_ylim(0, 1.1)
 
-    for _bar in _bars1a:
-        _ax1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.01,
-                  f"{_bar.get_height():.0%}", ha="center", va="bottom", fontsize=7, color="#4C78A8")
-    for _bar in _bars1b:
-        _ax1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.01,
-                  f"{_bar.get_height():.0%}", ha="center", va="bottom", fontsize=7, color="#E45756")
+    for _bar in _bars1:
+        _ax1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.02,
+                  f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
 
-    # Right: Avg repeat pairs comparison (both multi-batch)
-    _bars2a = _ax2.bar(_x - _width/2, _algo_avg, _width, label="Algorithm", color="#4C78A8")
-    _bars2b = _ax2.bar(_x + _width/2, _baseline_avg, _width, label="Baseline", color="#E45756")
-
+    # Right: Avg repeat pairs comparison
+    _avg_vals = [np.mean(_old_avg), np.mean(_baseline_avg), np.mean(_new_avg)]
+    _bars2 = _ax2.bar(_x, _avg_vals, _width, color=_colors)
     _ax2.set_xticks(_x)
-    _ax2.set_xticklabels([f"Batch {b}" for b in _algo_batch_ids], rotation=45, ha="right")
+    _ax2.set_xticklabels(_labels)
     _ax2.set_ylabel("Avg repeat pairs per run")
-    _ax2.set_title("Avg Repeat Pairs: Algorithm vs Baseline (per batch)")
-    _ax2.axhline(np.mean(_algo_avg), color="#4C78A8", linestyle="--", alpha=0.7, label=f"Algo avg: {np.mean(_algo_avg):.2f}")
-    _ax2.axhline(np.mean(_baseline_avg), color="#E45756", linestyle="--", alpha=0.7, label=f"Base avg: {np.mean(_baseline_avg):.2f}")
-    _ax2.legend(loc="upper right", fontsize=8)
+    _ax2.set_title("Avg Repeat Pairs: All Algorithms")
 
-    for _bar in _bars2a:
-        _ax2.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.03,
-                  f"{_bar.get_height():.2f}", ha="center", va="bottom", fontsize=7, color="#4C78A8")
-    for _bar in _bars2b:
-        _ax2.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.03,
-                  f"{_bar.get_height():.2f}", ha="center", va="bottom", fontsize=7, color="#E45756")
+    for _bar in _bars2:
+        _ax2.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.05,
+                  f"{_bar.get_height():.2f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
 
     _fig.tight_layout()
     _buffer = io.BytesIO()
@@ -1268,53 +1305,55 @@ def _(batch_stats_df, baseline_batch_stats, has_batches, io, mo, np, plt):
 
 
 @app.cell(hide_code=True)
-def _(batch_stats_df, baseline_batch_stats, has_batches, mo, np):
+def _(batch_stats_df, baseline_batch_stats, has_batches, mo, new_algo_batch_stats_df, np):
     mo.stop(not has_batches)
 
-    # Average across all baseline batches
+    # OLD algorithm stats
+    _old_any_mean = batch_stats_df.get_column("p_any_repeat").mean()
+    _old_avg_mean = batch_stats_df.get_column("avg_repeat_pairs").mean()
+    _old_any_std = batch_stats_df.get_column("p_any_repeat").std()
+    _old_avg_std = batch_stats_df.get_column("avg_repeat_pairs").std()
+
+    # Baseline stats
     _baseline_any_mean = baseline_batch_stats.get_column("p_any_repeat").mean()
     _baseline_avg_mean = baseline_batch_stats.get_column("avg_repeat_pairs").mean()
     _baseline_any_std = baseline_batch_stats.get_column("p_any_repeat").std()
     _baseline_avg_std = baseline_batch_stats.get_column("avg_repeat_pairs").std()
 
-    _batch_any_mean = batch_stats_df.get_column("p_any_repeat").mean()
-    _batch_avg_mean = batch_stats_df.get_column("avg_repeat_pairs").mean()
-    _batch_any_std = batch_stats_df.get_column("p_any_repeat").std()
-    _batch_avg_std = batch_stats_df.get_column("avg_repeat_pairs").std()
+    # NEW algorithm stats
+    _new_any_mean = new_algo_batch_stats_df.get_column("p_any_repeat").mean()
+    _new_avg_mean = new_algo_batch_stats_df.get_column("avg_repeat_pairs").mean()
+    _new_any_std = new_algo_batch_stats_df.get_column("p_any_repeat").std()
+    _new_avg_std = new_algo_batch_stats_df.get_column("avg_repeat_pairs").std()
 
-    _improvement_any = (_baseline_any_mean - _batch_any_mean) / _baseline_any_mean * 100
-    _improvement_avg = (_baseline_avg_mean - _batch_avg_mean) / _baseline_avg_mean * 100
+    # Improvements vs baseline
+    _old_improvement_any = (_baseline_any_mean - _old_any_mean) / _baseline_any_mean * 100
+    _old_improvement_avg = (_baseline_avg_mean - _old_avg_mean) / _baseline_avg_mean * 100
+    _new_improvement_any = (_baseline_any_mean - _new_any_mean) / _baseline_any_mean * 100
+    _new_improvement_avg = (_baseline_avg_mean - _new_avg_mean) / _baseline_avg_mean * 100
 
-    _num_baseline_batches = baseline_batch_stats.height
+    # New vs Old improvement
+    _new_vs_old_any = (_old_any_mean - _new_any_mean) / _old_any_mean * 100 if _old_any_mean > 0 else 0
+    _new_vs_old_avg = (_old_avg_mean - _new_avg_mean) / _old_avg_mean * 100 if _old_avg_mean > 0 else 0
 
     mo.md(
         f"""
-    ### Ensemble Performance Summary (Multi-Batch Averaged)
+    ### Ensemble Performance Summary (All Three Algorithms)
 
-    Both algorithm and baseline are averaged across **{batch_stats_df.height} independent batches** each.
+    All algorithms averaged across **{batch_stats_df.height} independent batches** each.
 
-    | Metric | Algorithm Avg ± Std | Baseline Avg ± Std | Improvement |
-    |--------|---------------------|--------------------| ------------|
-    | Any-repeat rate | {_batch_any_mean:.1%} ± {_batch_any_std:.1%} | {_baseline_any_mean:.1%} ± {_baseline_any_std:.1%} | **{_improvement_any:.1f}%** |
-    | Avg repeat pairs | {_batch_avg_mean:.2f} ± {_batch_avg_std:.2f} | {_baseline_avg_mean:.2f} ± {_baseline_avg_std:.2f} | **{_improvement_avg:.1f}%** |
+    | Metric | Old Algo | Baseline | New Algo | Old vs Base | New vs Base | New vs Old |
+    |--------|----------|----------|----------|-------------|-------------|------------|
+    | Any-repeat rate | {_old_any_mean:.1%} ± {_old_any_std:.1%} | {_baseline_any_mean:.1%} ± {_baseline_any_std:.1%} | {_new_any_mean:.1%} ± {_new_any_std:.1%} | **{_old_improvement_any:.1f}%** | **{_new_improvement_any:.1f}%** | {_new_vs_old_any:+.1f}% |
+    | Avg repeat pairs | {_old_avg_mean:.2f} ± {_old_avg_std:.2f} | {_baseline_avg_mean:.2f} ± {_baseline_avg_std:.2f} | {_new_avg_mean:.2f} ± {_new_avg_std:.2f} | **{_old_improvement_avg:.1f}%** | **{_new_improvement_avg:.1f}%** | {_new_vs_old_avg:+.1f}% |
 
-    **Conclusion**: With both algorithm and baseline averaged across {batch_stats_df.height} batches,
-    the algorithm consistently outperforms the random baseline by approximately **{(_improvement_any + _improvement_avg) / 2:.0f}%** on average.
-    The low standard deviation for both indicates stable, reproducible performance.
+    **Conclusions:**
 
-    ---
+    1. **Old Algorithm vs Baseline**: {_old_improvement_avg:.0f}% reduction in repeat pairs
+    2. **New Algorithm vs Baseline**: {_new_improvement_avg:.0f}% reduction in repeat pairs
+    3. **New vs Old Algorithm**: {_new_vs_old_avg:+.1f}% change in repeat pairs
 
-    **Understanding the Baseline Values:**
-
-    - **95% any-repeat rate**: Random selection creates at least one repeat teammate pair in ~95% of runs.
-      This is expected because with 20 players, 4 courts, and 10 rounds, random chance frequently
-      places the same two players together in consecutive rounds.
-
-    - **3.03 avg repeat pairs per run**: On average, random selection produces ~3 repeat pairs per run.
-      This establishes the "worst case" baseline that the algorithm aims to improve upon.
-
-    The algorithm reduces both metrics significantly: only ~55% of runs have any repeats (vs 95%),
-    and when repeats occur, there are only ~0.8 per run (vs 3.0)—a **73% reduction** in repeat pairs.
+    {'✅ **New algorithm is BETTER** than old algorithm!' if _new_vs_old_avg > 0 else '⚠️ **New algorithm is WORSE** than old algorithm!' if _new_vs_old_avg < 0 else '↔️ **New algorithm is EQUAL** to old algorithm.'}
     """
     )
     return

@@ -1,0 +1,9 @@
+simulationId,fromRound,toRound,pairId,opponentFrom,opponentTo,opponentChanged
+475,1,2,P17|P7,P13|P6,P11|P15,true
+758,1,2,P6|P8,P14|P2,P12|P19,true
+1279,1,2,P15|P20,P13|P3,P1|P16,true
+2580,1,2,P18|P6,P17|P5,P11|P8,true
+2830,1,2,P13|P6,P17|P7,P4|P5,true
+3410,1,2,P12|P15,P18|P7,P14|P8,true
+3585,1,2,P11|P3,P14|P2,P15|P8,true
+4569,1,2,P1|P14,P3|P7,P13|P6,true
