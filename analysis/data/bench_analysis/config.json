@@ -1,0 +1,9 @@
+{
+  "runs": 1000,
+  "rounds": 50,
+  "minPlayers": 17,
+  "maxPlayers": 20,
+  "numCourts": 4,
+  "numBatches": 5,
+  "timestamp": "2026-01-23T15:26:29.863Z"
+}
