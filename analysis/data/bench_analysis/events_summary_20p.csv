@@ -1,0 +1,2 @@
+numPlayers,mean_gap,std_gap,min_gap,max_gap,double_bench_count,total_bench_events
+20,4.0,1.9981252303386912,0,8,35819,900000

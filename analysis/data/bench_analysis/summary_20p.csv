@@ -1,0 +1,2 @@
+numPlayers,numCourts,rounds,mean_avg_gap,std_avg_gap,mean_min_gap,mean_max_gap,min_avg_gap,max_avg_gap,theoreticalMax,total_sims
+20,4,50,4.0,0.0,0.0004,8.0,4,4,4,5000
