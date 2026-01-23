@@ -576,7 +576,7 @@ def _(config, mo):
     - Removing a forbidden edge eliminates exactly 1 matching
     - **Worst case**: {_max_forbidden} forbidden edges → at least {_num_matchings} - {_max_forbidden} = **{_num_matchings - _max_forbidden}** matchings remain
     - **Best case**: {_min_forbidden} forbidden edges → at least {_num_matchings} - {_min_forbidden} = **{_num_matchings - _min_forbidden}** matchings remain
-    - Since {_num_matchings - _max_forbidden} > 0, a valid matching **always** exists ✓
+    - Since {_num_matchings - _max_forbidden} > 0, a valid matching **always** exists
 
     **Conclusion:** For each consecutive transition, we can **always** find a pairing that avoids all repeats.
     Over {_transitions} transitions, the theoretical minimum is **0 total repeats**.
@@ -784,16 +784,16 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _baseline_matrix = build_matrix(baseline_pair_events)
     _new_algo_matrix = build_matrix(new_algo_pair_events)
 
-    # Normalize for comparison (different number of runs)
-    _old_algo_runs = pair_events.select(pl.struct("simulationId")).n_unique()
-    _baseline_runs = baseline_pair_events.select(
-        pl.struct("batch", "simulationId")
-    ).n_unique()
-    _new_algo_runs = new_algo_pair_events.select(pl.struct("simulationId")).n_unique()
+    # Normalize to SAME TOTAL SUM for pattern comparison
+    # (baseline has more events per run, so raw counts would dominate the scale)
+    _old_total = _old_algo_matrix.sum()
+    _baseline_total = _baseline_matrix.sum()
+    _new_total = _new_algo_matrix.sum()
     
-    _old_algo_norm = _old_algo_matrix / _old_algo_runs * 1000  # per 1000 runs
-    _baseline_norm = _baseline_matrix / _baseline_runs * 1000
-    _new_algo_norm = _new_algo_matrix / _new_algo_runs * 1000
+    # Scale all to old algorithm's total (reference)
+    _old_algo_norm = _old_algo_matrix / _old_total * 100 if _old_total > 0 else _old_algo_matrix
+    _baseline_norm = _baseline_matrix / _baseline_total * 100 if _baseline_total > 0 else _baseline_matrix
+    _new_algo_norm = _new_algo_matrix / _new_total * 100 if _new_total > 0 else _new_algo_matrix
 
     # Find common scale for all three heatmaps
     _vmax = max(_old_algo_norm.max(), _baseline_norm.max(), _new_algo_norm.max())
@@ -806,38 +806,38 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _cmap.set_under("white")
 
     # Old Algorithm heatmap
-    _im1 = _ax1.imshow(_old_algo_norm, cmap=_cmap, vmin=0.1, vmax=_vmax, aspect="equal")
+    _im1 = _ax1.imshow(_old_algo_norm, cmap=_cmap, vmin=0.01, vmax=_vmax, aspect="equal")
     _ax1.set_xticks(range(_num_players))
     _ax1.set_yticks(range(_num_players))
     _ax1.set_xticklabels(_players, rotation=45, ha="right", fontsize=7)
     _ax1.set_yticklabels(_players, fontsize=7)
     _ax1.set_xlabel("Player")
     _ax1.set_ylabel("Player")
-    _ax1.set_title("Old Algorithm\n(per 1000 runs)")
+    _ax1.set_title("Old Algorithm\n(% of total repeats)")
 
     # Baseline heatmap
-    _im2 = _ax2.imshow(_baseline_norm, cmap=_cmap, vmin=0.1, vmax=_vmax, aspect="equal")
+    _im2 = _ax2.imshow(_baseline_norm, cmap=_cmap, vmin=0.01, vmax=_vmax, aspect="equal")
     _ax2.set_xticks(range(_num_players))
     _ax2.set_yticks(range(_num_players))
     _ax2.set_xticklabels(_players, rotation=45, ha="right", fontsize=7)
     _ax2.set_yticklabels(_players, fontsize=7)
     _ax2.set_xlabel("Player")
     _ax2.set_ylabel("Player")
-    _ax2.set_title("Random Baseline\n(per 1000 runs)")
+    _ax2.set_title("Random Baseline\n(% of total repeats)")
 
     # New Algorithm heatmap
-    _im3 = _ax3.imshow(_new_algo_norm, cmap=_cmap, vmin=0.1, vmax=_vmax, aspect="equal")
+    _im3 = _ax3.imshow(_new_algo_norm, cmap=_cmap, vmin=0.01, vmax=_vmax, aspect="equal")
     _ax3.set_xticks(range(_num_players))
     _ax3.set_yticks(range(_num_players))
     _ax3.set_xticklabels(_players, rotation=45, ha="right", fontsize=7)
     _ax3.set_yticklabels(_players, fontsize=7)
     _ax3.set_xlabel("Player")
     _ax3.set_ylabel("Player")
-    _ax3.set_title("New Algorithm\n(per 1000 runs)")
+    _ax3.set_title("New Algorithm\n(% of total repeats)")
 
     # Colorbar in dedicated axis (outside the heatmaps)
     _cbar = _fig.colorbar(_im3, cax=_cax)
-    _cbar.set_label("Repeat events per 1000 runs", rotation=270, labelpad=20)
+    _cbar.set_label("% of total repeat events", rotation=270, labelpad=20)
 
     _fig.tight_layout()
     _buffer = io.BytesIO()
@@ -886,11 +886,14 @@ def _(algo_pair_matrix, baseline_pair_matrix, config, mo, new_algo_pair_matrix, 
         f"""
     ### Heatmap Comparison: All Three Algorithms
 
+    All heatmaps are **normalized to the same total** (100%), showing the **distribution pattern** of repeats rather than absolute counts.
+    This allows fair comparison of which pairs are favored by each algorithm.
+
     | Metric | Old Algo | Baseline | New Algo | Interpretation |
     |--------|----------|----------|----------|----------------|
     | Active pairs | {_old_active}/{_total_possible} | {_baseline_active}/{_total_possible} | {_new_active}/{_total_possible} | More active = more distributed |
-    | Max intensity | {_old_max:.1f} | {_baseline_max:.1f} | {_new_max:.1f} | per 1000 runs |
-    | Avg intensity | {_old_mean:.1f} | {_baseline_mean:.1f} | {_new_mean:.1f} | Lower = better distribution |
+    | Max intensity | {_old_max:.2f}% | {_baseline_max:.2f}% | {_new_max:.2f}% | % of total repeats |
+    | Avg intensity | {_old_mean:.2f}% | {_baseline_mean:.2f}% | {_new_mean:.2f}% | Lower = better distribution |
 
     **Pattern Correlations:**
     - Old vs Baseline: r = {_old_baseline_corr:.3f}
@@ -902,7 +905,7 @@ def _(algo_pair_matrix, baseline_pair_matrix, config, mo, new_algo_pair_matrix, 
     - **Baseline**: **Uniform distribution** across all pairs (random selection)
     - **New Algorithm**: {'More uniform distribution (reduced hot spots)' if _new_max < _old_max else 'Similar concentration to old algorithm'}
 
-    {'✅ **New algorithm improved**: reduced max intensity from ' + f'{_old_max:.1f} to {_new_max:.1f} (more fair distribution)' if _new_max < _old_max * 0.8 else '↔️ **Similar patterns**: New algorithm has comparable distribution to old algorithm'}
+    {'**New algorithm improved**: reduced max intensity from ' + f'{_old_max:.2f}% to {_new_max:.2f}% (more fair distribution)' if _new_max < _old_max * 0.8 else '**Similar patterns**: New algorithm has comparable distribution to old algorithm'}
     """
     )
     return
@@ -934,53 +937,57 @@ def _(io, mo, np, plt, stats):
     # Create a side-by-side comparison with improvement arrows
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-    # Left panel: Side-by-side bar chart
-    _metrics = [
-        ("p_any_repeat", "Any repeat\npairs"),
-        ("p_repeat_diff_opponent", "Repeat w/\ndiff opponents"),
-    ]
-    _labels = [label for _, label in _metrics]
-    _algo_values = [_algo[key] for key, _ in _metrics]
-    _baseline_values = [_baseline_row[key] for key, _ in _metrics]
+    # Left panel: Side-by-side bar chart (probability metrics)
+    _prob_labels = ["Any repeat\npairs"]
+    _algo_prob = [_algo["p_any_repeat"]]
+    _baseline_prob = [_baseline_row["p_any_repeat"]]
 
-    _x = np.arange(len(_labels))
+    _x1 = np.arange(len(_prob_labels))
     _width = 0.35
 
-    _bars1 = _ax1.bar(_x - _width / 2, _baseline_values, _width, label="Random Baseline", color="#E45756", alpha=0.8)
-    _bars2 = _ax1.bar(_x + _width / 2, _algo_values, _width, label="Algorithm", color="#4C78A8", alpha=0.8)
+    _bars1 = _ax1.bar(_x1 - _width / 2, _algo_prob, _width, label="Algorithm", color="#4C78A8", alpha=0.8)
+    _bars2 = _ax1.bar(_x1 + _width / 2, _baseline_prob, _width, label="Random Baseline", color="#E45756", alpha=0.8)
 
     _ax1.set_ylabel("Probability", fontsize=11)
-    _ax1.set_title("Algorithm vs Random Baseline", fontsize=12, fontweight="bold")
-    _ax1.set_xticks(_x)
-    _ax1.set_xticklabels(_labels, fontsize=10)
+    _ax1.set_title("Probability of Any Repeat", fontsize=12, fontweight="bold")
+    _ax1.set_xticks(_x1)
+    _ax1.set_xticklabels(_prob_labels, fontsize=10)
     _ax1.legend(loc="upper right")
     _ax1.set_ylim(0, 1.1)
 
     # Add value labels on bars
     for _bar in _bars1:
         _ax1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.02,
-                  f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=9, color="#E45756")
+                  f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=9, color="#4C78A8")
     for _bar in _bars2:
         _ax1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.02,
-                  f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=9, color="#4C78A8")
+                  f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=9, color="#E45756")
 
-    # Right panel: Improvement waterfall
-    _improvements = [
-        (_baseline_values[i] - _algo_values[i]) / _baseline_values[i] * 100
-        if _baseline_values[i] > 0 else 0
-        for i in range(len(_metrics))
-    ]
-    _colors = ["#54A24B" if imp > 0 else "#E45756" for imp in _improvements]
+    # Right panel: Zero-repeat rate (% of runs with NO repeats - the perfect outcome)
+    _zero_labels = ["Zero-repeat\nrate"]
+    _algo_zero = [1 - _algo["p_any_repeat"]]  # Inverse: % with NO repeats
+    _baseline_zero = [1 - _baseline_row["p_any_repeat"]]
 
-    _bars3 = _ax2.barh(_labels, _improvements, color=_colors, alpha=0.8)
-    _ax2.set_xlabel("Improvement (%)", fontsize=11)
-    _ax2.set_title("Algorithm Improvement Over Random", fontsize=12, fontweight="bold")
-    _ax2.axvline(0, color="#666666", linewidth=1)
-    _ax2.set_xlim(-20, 60)
+    _x2 = np.arange(len(_zero_labels))
 
-    for _i, (_bar, _imp) in enumerate(zip(_bars3, _improvements)):
-        _ax2.text(_bar.get_width() + 2, _bar.get_y() + _bar.get_height() / 2,
-                  f"{_imp:.1f}%", ha="left", va="center", fontsize=10, fontweight="bold")
+    _bars3 = _ax2.bar(_x2 - _width / 2, _algo_zero, _width, label="Algorithm", color="#4C78A8", alpha=0.8)
+    _bars4 = _ax2.bar(_x2 + _width / 2, _baseline_zero, _width, label="Random Baseline", color="#E45756", alpha=0.8)
+
+    _ax2.set_ylabel("Rate", fontsize=11)
+    _ax2.set_title("Perfect Runs (No Repeats)", fontsize=12, fontweight="bold")
+    _ax2.set_xticks(_x2)
+    _ax2.set_xticklabels(_zero_labels, fontsize=10)
+    _ax2.legend(loc="upper right")
+    _ax2.set_ylim(0, max(_algo_zero[0], _baseline_zero[0]) * 1.4)
+
+    # Add value labels - show how many more perfect runs the algorithm achieves
+    _improvement = _algo_zero[0] - _baseline_zero[0]
+    for _bar in _bars3:
+        _ax2.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.01,
+                  f"{_bar.get_height():.1%}\n(+{_improvement:.1%})", ha="center", va="bottom", fontsize=9, color="#4C78A8")
+    for _bar in _bars4:
+        _ax2.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 0.01,
+                  f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=9, color="#E45756")
 
     _fig.tight_layout()
     _buffer = io.BytesIO()
@@ -1072,21 +1079,25 @@ def _(config, math, mo):
     # What fraction of theoretical space do we explore?
     _explored_fraction = _runs / _configs_per_round  # Per round
 
-    mo.md(
+    _explanation = mo.md(
         f"""
-    ### What Does "Configuration Space" Mean?
-
     **The Question**: How many *different ways* can we set up one round of badminton?
 
     Think of it like shuffling a deck of cards - there are many possible arrangements.
     For our badminton setup:
 
-    | Step | What It Means | How Many Ways |
-    |------|---------------|---------------|
-    | **1. Pick who plays** | Choose {_P} players from {_N} to play this round | {_select_players:,} ways |
-    | **2. Assign to courts** | Split those {_P} into {_C} groups of 4 | {_partition_courts:,} ways |
-    | **3. Form teams** | On each court, decide who pairs with whom | {_pair_all_courts:,} ways |
-    | **Total** | All possible single-round setups | **~1 trillion** |
+    | Step | What It Means | Formula | How Many Ways |
+    |------|---------------|---------|---------------|
+    | **1. Pick who plays** | Choose {_P} from {_N} | C({_N},{_P}) | {_select_players:,} ways |
+    | **2. Assign to courts** | Split {_P} into {_C} unordered groups of 4 | {_P}! / (4!^{_C} × {_C}!) | {_partition_courts:,} ways |
+    | **3. Form teams** | Pair players on each court | 3^{_C} | {_pair_all_courts:,} ways |
+    | **Total** | All possible single-round setups | Step 1 × 2 × 3 | **{_configs_per_round:,}** |
+
+    **Symmetries Already Accounted For:**
+    - **Step 2**: Dividing by 4!^{_C} removes ordering within groups; dividing by {_C}! makes courts interchangeable
+    - **Step 3**: Only 3 distinct pairings per court: {{A,B}} vs {{C,D}}, {{A,C}} vs {{B,D}}, {{A,D}} vs {{B,C}}
+      - (A,B) = (B,A) -- pair order doesn't matter
+      - AB vs CD = CD vs AB -- team order doesn't matter
 
     **Why This Matters:**
     - With **~1 trillion** possible setups per round, even {_runs:,} simulations explore only a tiny sample
@@ -1095,6 +1106,8 @@ def _(config, math, mo):
     - The fact that we see fewer repeats than random proves the algorithm is working!
     """
     )
+    
+    mo.accordion({"What Does 'Configuration Space' Mean? (click to expand)": _explanation})
     return
 
 
@@ -1128,57 +1141,36 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     # Get all unique pairs across all three
     _all_pairs = sorted(set(_old_algo_dist.keys()) | set(_baseline_dist.keys()) | set(_new_algo_dist.keys()))
 
-    # Calculate vectors for similarity metrics
-    _old_algo_vec = np.array([_old_algo_dist.get(p, 0) for p in _all_pairs])
-    _baseline_vec = np.array([_baseline_dist.get(p, 0) for p in _all_pairs])
-    _new_algo_vec = np.array([_new_algo_dist.get(p, 0) for p in _all_pairs])
-
-    # Cosine similarities
-    def cosine_sim(a, b):
-        norm_a, norm_b = np.linalg.norm(a), np.linalg.norm(b)
-        return np.dot(a, b) / (norm_a * norm_b) if norm_a > 0 and norm_b > 0 else 0
-
-    _old_vs_base_cos = cosine_sim(_old_algo_vec, _baseline_vec)
-    _new_vs_base_cos = cosine_sim(_new_algo_vec, _baseline_vec)
-    _old_vs_new_cos = cosine_sim(_old_algo_vec, _new_algo_vec)
-
     # Calculate concentration metrics (top 10 pairs share)
     _old_top10 = sum(sorted(_old_algo_dist.values(), reverse=True)[:10]) if _old_algo_dist else 0
     _baseline_top10 = sum(sorted(_baseline_dist.values(), reverse=True)[:10]) if _baseline_dist else 0
     _new_top10 = sum(sorted(_new_algo_dist.values(), reverse=True)[:10]) if _new_algo_dist else 0
 
-    # ===== FIGURE 1: Single Heatmap with 3 columns (Old, Baseline, New) =====
-    # Select top 25 pairs by maximum frequency across all algorithms
+    # ===== FIGURE 1: Heatmap (rows=pairs, columns=algorithms) =====
+    # Select top 15 pairs by maximum frequency across all algorithms
     _top_pairs_for_heatmap = sorted(_all_pairs, key=lambda p: max(
         _old_algo_dist.get(p, 0), _baseline_dist.get(p, 0), _new_algo_dist.get(p, 0)
-    ), reverse=True)[:25]
+    ), reverse=True)[:15]
 
-    # Build a matrix: rows = pairs, columns = [Old, Baseline, New]
+    # Build a matrix: rows = pairs, columns = algorithms
     _heatmap_data = np.zeros((len(_top_pairs_for_heatmap), 3))
     for i, pair in enumerate(_top_pairs_for_heatmap):
         _heatmap_data[i, 0] = _old_algo_dist.get(pair, 0) * 100  # percentage
         _heatmap_data[i, 1] = _baseline_dist.get(pair, 0) * 100
         _heatmap_data[i, 2] = _new_algo_dist.get(pair, 0) * 100
 
-    _fig1, _ax1 = plt.subplots(figsize=(6, 10))
+    _fig1, _ax1 = plt.subplots(figsize=(5, 4))
 
     _im1 = _ax1.imshow(_heatmap_data, cmap="YlOrRd", aspect="auto")
     _ax1.set_xticks([0, 1, 2])
     _ax1.set_xticklabels(["Old Algo", "Baseline", "New Algo"], fontsize=10)
     _ax1.set_yticks(range(len(_top_pairs_for_heatmap)))
-    _ax1.set_yticklabels(_top_pairs_for_heatmap, fontsize=8)
+    _ax1.set_yticklabels(_top_pairs_for_heatmap, fontsize=9)
     _ax1.set_xlabel("Algorithm")
     _ax1.set_ylabel("Player Pair")
-    _ax1.set_title("Pair Repetition Comparison\n(Top 25 pairs by % of total repeats)")
+    _ax1.set_title("Pair Repetition Comparison\n(Top 15 pairs by % of total repeats)")
 
-    # Add text annotations
-    for _i in range(len(_top_pairs_for_heatmap)):
-        for _j in range(3):
-            _val = _heatmap_data[_i, _j]
-            _color = "white" if _val > _heatmap_data.max() * 0.5 else "black"
-            _ax1.text(_j, _i, f"{_val:.1f}", ha="center", va="center", color=_color, fontsize=7)
-
-    _cbar = _fig1.colorbar(_im1, ax=_ax1, shrink=0.6)
+    _cbar = _fig1.colorbar(_im1, ax=_ax1, orientation="vertical", shrink=0.8)
     _cbar.set_label("% of Total Repeat Events")
 
     _fig1.tight_layout()
@@ -1187,12 +1179,10 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _buffer1.seek(0)
     plt.close(_fig1)
 
-    # ===== FIGURE 2: Top 15 Repeat Pairs Distribution =====
-    _fig2, _ax4 = plt.subplots(figsize=(12, 4))
+    # ===== FIGURE 2: Top 15 Repeat Pairs Bar Chart =====
+    _fig2, _ax2 = plt.subplots(figsize=(12, 4))
 
-    _top_pairs = sorted(_all_pairs, key=lambda p: max(
-        _old_algo_dist.get(p, 0), _baseline_dist.get(p, 0), _new_algo_dist.get(p, 0)
-    ), reverse=True)[:15]
+    _top_pairs = _top_pairs_for_heatmap  # Same pairs as heatmap
     _x = np.arange(len(_top_pairs))
     _width = 0.25
 
@@ -1200,15 +1190,15 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _baseline_vals = [_baseline_dist.get(p, 0) * 100 for p in _top_pairs]
     _new_vals = [_new_algo_dist.get(p, 0) * 100 for p in _top_pairs]
 
-    _ax4.bar(_x - _width, _old_vals, _width, label="Old Algo", color="#4C78A8", alpha=0.8)
-    _ax4.bar(_x, _baseline_vals, _width, label="Baseline", color="#E45756", alpha=0.8)
-    _ax4.bar(_x + _width, _new_vals, _width, label="New Algo", color="#54A24B", alpha=0.8)
-    _ax4.set_xticks(_x)
-    _ax4.set_xticklabels(_top_pairs, rotation=45, ha="right", fontsize=8)
-    _ax4.set_xlabel("Player Pair")
-    _ax4.set_ylabel("% of Total Repeat Events")
-    _ax4.set_title("Top 15 Repeat Pairs Distribution")
-    _ax4.legend(fontsize=9, loc="upper right")
+    _ax2.bar(_x - _width, _old_vals, _width, label="Old Algo", color="#4C78A8", alpha=0.8)
+    _ax2.bar(_x, _baseline_vals, _width, label="Baseline", color="#E45756", alpha=0.8)
+    _ax2.bar(_x + _width, _new_vals, _width, label="New Algo", color="#54A24B", alpha=0.8)
+    _ax2.set_xticks(_x)
+    _ax2.set_xticklabels(_top_pairs, rotation=45, ha="right", fontsize=9)
+    _ax2.set_xlabel("Player Pair")
+    _ax2.set_ylabel("% of Total Repeat Events")
+    _ax2.set_title("Top 15 Repeat Pairs Distribution")
+    _ax2.legend(fontsize=9, loc="upper right")
 
     _fig2.tight_layout()
     _buffer2 = io.BytesIO()
@@ -1216,130 +1206,86 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _buffer2.seek(0)
     plt.close(_fig2)
 
-    # Store metrics for use in next cell
-    diversity_metrics = {
-        "old_vs_base_cos": _old_vs_base_cos,
-        "new_vs_base_cos": _new_vs_base_cos,
-        "old_vs_new_cos": _old_vs_new_cos,
-        "old_top10": _old_top10,
-        "baseline_top10": _baseline_top10,
-        "new_top10": _new_top10,
-    }
+    # Calculate total repeat events per run for each algorithm
+    _num_batches = config.get("numBatches", 5)
+    _runs_per_batch = config.get("runs", 1000)
+    _total_runs = _num_batches * _runs_per_batch
+    
+    _old_total_events = pair_events.height
+    _baseline_total_events = baseline_pair_events.height
+    _new_total_events = new_algo_pair_events.height
+    
+    _old_avg_per_run = _old_total_events / _total_runs
+    _baseline_avg_per_run = _baseline_total_events / _total_runs
+    _new_avg_per_run = _new_total_events / _total_runs
 
-    # Display the charts
-    _display = mo.vstack([
-        mo.image(_buffer1.getvalue()),
-        mo.image(_buffer2.getvalue()),
-    ])
-    mo.output.replace(_display)
-    return (diversity_metrics,)
+    # ===== FIGURE 3: Side-by-side Concentration + Reduction =====
+    _fig3, (_ax3a, _ax3b) = plt.subplots(1, 2, figsize=(12, 4))
 
-
-@app.cell
-def _(diversity_metrics, io, mo, np, plt):
-    """
-    Chart 2: Distribution Similarity + Repeat Concentration (side by side)
-    """
-    _old_vs_base_cos = diversity_metrics["old_vs_base_cos"]
-    _new_vs_base_cos = diversity_metrics["new_vs_base_cos"]
-    _old_vs_new_cos = diversity_metrics["old_vs_new_cos"]
-    _old_top10 = diversity_metrics["old_top10"]
-    _baseline_top10 = diversity_metrics["baseline_top10"]
-    _new_top10 = diversity_metrics["new_top10"]
-
-    # ===== FIGURE 2: Distribution Similarity + Concentration =====
-    _fig2, (_ax2, _ax3) = plt.subplots(1, 2, figsize=(12, 4))
-
-    # Left: Distribution Similarity (Cosine)
-    _cos_labels = ["Old vs\nBaseline", "New vs\nBaseline", "Old vs\nNew"]
-    _cos_values = [_old_vs_base_cos, _new_vs_base_cos, _old_vs_new_cos]
-    _cos_colors = ["#4C78A8", "#54A24B", "#F58518"]
-
-    _bars2 = _ax2.bar(_cos_labels, _cos_values, color=_cos_colors, alpha=0.8, width=0.6)
-    _ax2.set_ylim(0, 1.15)
-    _ax2.set_ylabel("Cosine Similarity", fontsize=11)
-    _ax2.set_title("Distribution Similarity\n(higher = patterns are more alike)", fontsize=11)
-    _ax2.axhline(y=1.0, color="gray", linestyle="--", alpha=0.5, label="Perfect match")
-
-    for _bar, _val in zip(_bars2, _cos_values):
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.02,
-                  f"{_val:.1%}", ha="center", va="bottom", fontsize=11, fontweight="bold")
-
-    # Right: Repeat Concentration (Top-10 Share)
+    # Left: Repeat Concentration (Top-10 Share)
     _conc_labels = ["Old Algo", "Baseline", "New Algo"]
     _conc_values = [_old_top10, _baseline_top10, _new_top10]
     _conc_colors = ["#4C78A8", "#E45756", "#54A24B"]
 
-    _bars3 = _ax3.bar(_conc_labels, _conc_values, color=_conc_colors, alpha=0.8, width=0.6)
-    _ax3.set_ylim(0, max(_conc_values) * 1.4)
-    _ax3.set_ylabel("Top-10 Pairs Share", fontsize=11)
-    _ax3.set_title("Repeat Concentration\n(lower = repeats spread across more pairs)", fontsize=11)
+    _bars3a = _ax3a.bar(_conc_labels, _conc_values, color=_conc_colors, alpha=0.8, width=0.6)
+    _ax3a.set_ylim(0, max(_conc_values) * 1.3)
+    _ax3a.set_ylabel("Top-10 Pairs Share", fontsize=11)
+    _ax3a.set_title("Repeat Concentration\n(lower = more evenly spread)", fontsize=11)
 
-    for _bar, _val in zip(_bars3, _conc_values):
-        _ax3.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.003,
+    for _bar, _val in zip(_bars3a, _conc_values):
+        _ax3a.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.005,
                   f"{_val:.1%}", ha="center", va="bottom", fontsize=11, fontweight="bold")
 
-    _fig2.tight_layout()
-    _buffer2 = io.BytesIO()
-    _fig2.savefig(_buffer2, format="png", dpi=150, bbox_inches="tight")
-    _buffer2.seek(0)
-    plt.close(_fig2)
+    # Right: Average Repeat Pairs per Run (reduction from baseline)
+    _avg_labels = ["Old Algo", "Baseline", "New Algo"]
+    _avg_values = [_old_avg_per_run, _baseline_avg_per_run, _new_avg_per_run]
+    _avg_colors = ["#4C78A8", "#E45756", "#54A24B"]
 
-    mo.output.replace(mo.image(_buffer2.getvalue()))
-    return
+    _bars3b = _ax3b.bar(_avg_labels, _avg_values, color=_avg_colors, alpha=0.8, width=0.6)
+    _ax3b.set_ylim(0, max(_avg_values) * 1.3)
+    _ax3b.set_ylabel("Avg Repeat Pairs per Run", fontsize=11)
+    _ax3b.set_title("Repeat Volume\n(lower = fewer repeated teammates)", fontsize=11)
 
+    for _bar, _val in zip(_bars3b, _avg_values):
+        _ax3b.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.02,
+                  f"{_val:.2f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
 
-@app.cell(hide_code=True)
-def _(config, diversity_metrics, mo):
-    _N = config["numPlayers"]
-    _C = config["numCourts"]
-    _runs = config["runs"]
+    _fig3.tight_layout()
+    _buffer3 = io.BytesIO()
+    _fig3.savefig(_buffer3, format="png", dpi=150, bbox_inches="tight")
+    _buffer3.seek(0)
+    plt.close(_fig3)
 
-    # Total possible pairs
-    _total_pairs = _N * (_N - 1) // 2
+    # Calculate reduction percentages for caption
+    _old_reduction = (_baseline_avg_per_run - _old_avg_per_run) / _baseline_avg_per_run * 100
+    _new_reduction = (_baseline_avg_per_run - _new_avg_per_run) / _baseline_avg_per_run * 100
 
-    # Extract metrics
-    _old_vs_base_cos = diversity_metrics["old_vs_base_cos"]
-    _new_vs_base_cos = diversity_metrics["new_vs_base_cos"]
-    _old_vs_new_cos = diversity_metrics["old_vs_new_cos"]
-    _old_top10 = diversity_metrics["old_top10"]
-    _baseline_top10 = diversity_metrics["baseline_top10"]
-    _new_top10 = diversity_metrics["new_top10"]
-
-    mo.md(
-        f"""
-    ### Similarity Interpretation
-
-    **Metrics Explained:**
-
-    | Metric | Meaning | Ideal Value |
-    |--------|---------|-------------|
-    | **Cosine Similarity** | How similar are the pair frequency distributions? | Low = different patterns |
-    | **Top-10 Concentration** | What % of repeats come from top 10 pairs? | Low = evenly distributed |
-
-    **Comparison Results:**
-
-    | Comparison | Cosine Sim | Interpretation |
-    |------------|------------|----------------|
-    | Old Algo vs Baseline | {_old_vs_base_cos:.1%} | {'Very similar' if _old_vs_base_cos > 0.8 else 'Different patterns'} |
-    | New Algo vs Baseline | {_new_vs_base_cos:.1%} | {'Very similar' if _new_vs_base_cos > 0.8 else 'Different patterns'} |
-    | Old Algo vs New Algo | {_old_vs_new_cos:.1%} | {'Very similar' if _old_vs_new_cos > 0.8 else 'Different patterns'} |
-
-    **Concentration Analysis:**
-
-    | Algorithm | Top-10 Share | Interpretation |
-    |-----------|--------------|----------------|
-    | Old Algo | {_old_top10:.1%} | {'Concentrated' if _old_top10 > _baseline_top10 else 'Well distributed'} |
-    | Baseline | {_baseline_top10:.1%} | Reference (random) |
-    | New Algo | {_new_top10:.1%} | {'Concentrated' if _new_top10 > _baseline_top10 else 'Well distributed'} |
-
-    **Theoretical Maximum Pairs:** {_total_pairs} possible unique pairs from {_N} players.
-
-    > A perfectly uniform random baseline distributes repeats equally across all pairs.
-    > **Lower concentration** means the algorithm distributes repeats more evenly (better fairness).
-    > **Lower cosine similarity to baseline** means the algorithm produces a different (potentially optimized) pattern.
-    """
+    # Captions for each chart
+    _heatmap_caption = mo.md(
+        "**Heatmap**: Shows which player pairs repeat most often. Each row is a pair, each column is an algorithm. "
+        "Darker cells = that pair accounts for more of the total repeat events."
     )
+    
+    _barchart_caption = mo.md(
+        "**Bar chart**: Same data in bar format for easier comparison between algorithms on specific pairs."
+    )
+    
+    _bottom_caption = mo.md(
+        f"**Left (Concentration)**: What % of all repeats come from the top 10 pairs. Lower = more evenly distributed. "
+        f"**Right (Volume)**: Average repeat pairs per simulation run. "
+        f"Old algo reduces repeats by {_old_reduction:.0f}% vs baseline, New algo by {_new_reduction:.0f}%."
+    )
+
+    # Display each chart with its caption directly below
+    _display = mo.vstack([
+        mo.image(_buffer1.getvalue()),
+        _heatmap_caption,
+        mo.image(_buffer2.getvalue()),
+        _barchart_caption,
+        mo.image(_buffer3.getvalue()),
+        _bottom_caption,
+    ])
+    mo.output.replace(_display)
     return
 
 
@@ -1565,6 +1511,10 @@ def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, io, mo, nor
     _baseline_vals = np.array([normalized_baseline_pairs.get(pid, 0) for pid in batch_pair_ids])
     _new_algo_vals = np.array([normalized_new_algo_pairs.get(pid, 0) for pid in batch_pair_ids])
 
+    # Compute correlation between old algo and baseline patterns
+    _corr_matrix = np.corrcoef(_old_algo_avg, _baseline_vals)
+    batch_baseline_correlation = _corr_matrix[0, 1] if not np.isnan(_corr_matrix[0, 1]) else 0.0
+
     # Bar chart comparing top 10 pairs across all three algorithms
     _top10_idx = np.argsort(_old_algo_avg)[::-1][:10]
     _top10_pairs = [batch_pair_ids[i] for i in _top10_idx]
@@ -1594,7 +1544,7 @@ def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, io, mo, nor
     plt.close(_fig)
 
     mo.image(_buffer.getvalue())
-    return
+    return (batch_baseline_correlation,)
 
 
 @app.cell(hide_code=True)
@@ -1816,7 +1766,7 @@ def _(batch_stats_df, baseline_batch_stats, has_batches, mo, new_algo_batch_stat
     2. **New Algorithm vs Baseline**: {_new_improvement_avg:.0f}% reduction in repeat pairs
     3. **New vs Old Algorithm**: {_new_vs_old_avg:+.1f}% change in repeat pairs
 
-    {'✅ **New algorithm is BETTER** than old algorithm!' if _new_vs_old_avg > 0 else '⚠️ **New algorithm is WORSE** than old algorithm!' if _new_vs_old_avg < 0 else '↔️ **New algorithm is EQUAL** to old algorithm.'}
+    {'**New algorithm is BETTER** than old algorithm.' if _new_vs_old_avg > 0 else '**New algorithm is WORSE** than old algorithm.' if _new_vs_old_avg < 0 else '**New algorithm is EQUAL** to old algorithm.'}
     """
     )
     return
