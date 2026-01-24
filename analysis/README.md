@@ -21,6 +21,13 @@ cd analysis
 SIM_RUNS=5000 SIM_ROUNDS=10 SIM_PLAYERS=20 SIM_COURTS=4 npx tsx ./simulate.ts
 ```
 
+## Run the bench analysis simulation
+
+```bash
+cd analysis
+SIM_TYPE=bench BENCH_RUNS=1000 BENCH_ROUNDS=50 BENCH_MIN_PLAYERS=17 BENCH_MAX_PLAYERS=20 npx tsx ./simulate.ts
+```
+
 ## Run the notebook (editable)
 
 ```bash
@@ -35,3 +42,16 @@ cd analysis
 ./.venv/bin/marimo run ./analysis.py --host 127.0.0.1 --port 2786
 ```
 
+## Run all notebooks (with hot reload)
+
+Serves all notebooks with automatic refresh on file changes:
+
+```bash
+cd analysis
+uv run serve.py
+```
+
+Then open:
+- http://localhost:8765/analysis
+- http://localhost:8765/algorithm_docs
+- http://localhost:8765/bench_analysis
