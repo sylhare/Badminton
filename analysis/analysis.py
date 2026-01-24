@@ -34,6 +34,14 @@ def _(Path, json, pl):
     new_algo_pair_events = pl.read_csv(new_algo_dir / "pair_events.csv")
     new_algo_config = json.loads((new_algo_dir / "config.json").read_text())
     
+    # Derive batch info from the embedded batch column
+    batch_ids = sorted(summary.get_column("batch").unique().to_list())
+    num_batches = len(batch_ids)
+    
+    # Add batch info to config for compatibility with downstream cells
+    config["numBatches"] = num_batches
+    config["batchIds"] = [str(b) for b in batch_ids]
+    
     return config, new_algo_config, new_algo_pair_events, new_algo_summary, pair_events, summary
 
 
@@ -1114,13 +1122,9 @@ def _(config, math, mo):
 @app.cell
 def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_events, pl, plt):
     """
-    Compare all three algorithms: Old Algo, Baseline, and New Algo.
-    Figure 1: Heatmaps showing pair repetition patterns
-    Figure 2: Top 15 Repeat Pairs Distribution (bar chart)
+    Overall diversity metrics: Concentration and Volume comparison.
+    (Detailed pair patterns are in the Multi-Batch Analysis section below)
     """
-    _num_players = config["numPlayers"]
-    _runs = config["runs"]
-
     # Build pair frequency distributions for comparison
     def get_pair_distribution(events_df):
         """Get normalized distribution of pair frequencies."""
@@ -1138,73 +1142,10 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _baseline_dist = get_pair_distribution(baseline_pair_events)
     _new_algo_dist = get_pair_distribution(new_algo_pair_events)
 
-    # Get all unique pairs across all three
-    _all_pairs = sorted(set(_old_algo_dist.keys()) | set(_baseline_dist.keys()) | set(_new_algo_dist.keys()))
-
     # Calculate concentration metrics (top 10 pairs share)
     _old_top10 = sum(sorted(_old_algo_dist.values(), reverse=True)[:10]) if _old_algo_dist else 0
     _baseline_top10 = sum(sorted(_baseline_dist.values(), reverse=True)[:10]) if _baseline_dist else 0
     _new_top10 = sum(sorted(_new_algo_dist.values(), reverse=True)[:10]) if _new_algo_dist else 0
-
-    # ===== FIGURE 1: Heatmap (rows=pairs, columns=algorithms) =====
-    # Select top 15 pairs by maximum frequency across all algorithms
-    _top_pairs_for_heatmap = sorted(_all_pairs, key=lambda p: max(
-        _old_algo_dist.get(p, 0), _baseline_dist.get(p, 0), _new_algo_dist.get(p, 0)
-    ), reverse=True)[:15]
-
-    # Build a matrix: rows = pairs, columns = algorithms
-    _heatmap_data = np.zeros((len(_top_pairs_for_heatmap), 3))
-    for i, pair in enumerate(_top_pairs_for_heatmap):
-        _heatmap_data[i, 0] = _old_algo_dist.get(pair, 0) * 100  # percentage
-        _heatmap_data[i, 1] = _baseline_dist.get(pair, 0) * 100
-        _heatmap_data[i, 2] = _new_algo_dist.get(pair, 0) * 100
-
-    _fig1, _ax1 = plt.subplots(figsize=(5, 4))
-
-    _im1 = _ax1.imshow(_heatmap_data, cmap="YlOrRd", aspect="auto")
-    _ax1.set_xticks([0, 1, 2])
-    _ax1.set_xticklabels(["Old Algo", "Baseline", "New Algo"], fontsize=10)
-    _ax1.set_yticks(range(len(_top_pairs_for_heatmap)))
-    _ax1.set_yticklabels(_top_pairs_for_heatmap, fontsize=9)
-    _ax1.set_xlabel("Algorithm")
-    _ax1.set_ylabel("Player Pair")
-    _ax1.set_title("Pair Repetition Comparison\n(Top 15 pairs by % of total repeats)")
-
-    _cbar = _fig1.colorbar(_im1, ax=_ax1, orientation="vertical", shrink=0.8)
-    _cbar.set_label("% of Total Repeat Events")
-
-    _fig1.tight_layout()
-    _buffer1 = io.BytesIO()
-    _fig1.savefig(_buffer1, format="png", dpi=150, bbox_inches="tight")
-    _buffer1.seek(0)
-    plt.close(_fig1)
-
-    # ===== FIGURE 2: Top 15 Repeat Pairs Bar Chart =====
-    _fig2, _ax2 = plt.subplots(figsize=(12, 4))
-
-    _top_pairs = _top_pairs_for_heatmap  # Same pairs as heatmap
-    _x = np.arange(len(_top_pairs))
-    _width = 0.25
-
-    _old_vals = [_old_algo_dist.get(p, 0) * 100 for p in _top_pairs]
-    _baseline_vals = [_baseline_dist.get(p, 0) * 100 for p in _top_pairs]
-    _new_vals = [_new_algo_dist.get(p, 0) * 100 for p in _top_pairs]
-
-    _ax2.bar(_x - _width, _old_vals, _width, label="Old Algo", color="#4C78A8", alpha=0.8)
-    _ax2.bar(_x, _baseline_vals, _width, label="Baseline", color="#E45756", alpha=0.8)
-    _ax2.bar(_x + _width, _new_vals, _width, label="New Algo", color="#54A24B", alpha=0.8)
-    _ax2.set_xticks(_x)
-    _ax2.set_xticklabels(_top_pairs, rotation=45, ha="right", fontsize=9)
-    _ax2.set_xlabel("Player Pair")
-    _ax2.set_ylabel("% of Total Repeat Events")
-    _ax2.set_title("Top 15 Repeat Pairs Distribution")
-    _ax2.legend(fontsize=9, loc="upper right")
-
-    _fig2.tight_layout()
-    _buffer2 = io.BytesIO()
-    _fig2.savefig(_buffer2, format="png", dpi=150, bbox_inches="tight")
-    _buffer2.seek(0)
-    plt.close(_fig2)
 
     # Calculate total repeat events per run for each algorithm
     _num_batches = config.get("numBatches", 5)
@@ -1219,21 +1160,21 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _baseline_avg_per_run = _baseline_total_events / _total_runs
     _new_avg_per_run = _new_total_events / _total_runs
 
-    # ===== FIGURE 3: Side-by-side Concentration + Reduction =====
-    _fig3, (_ax3a, _ax3b) = plt.subplots(1, 2, figsize=(12, 4))
+    # ===== Concentration + Volume Charts =====
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
     # Left: Repeat Concentration (Top-10 Share)
     _conc_labels = ["Old Algo", "Baseline", "New Algo"]
     _conc_values = [_old_top10, _baseline_top10, _new_top10]
     _conc_colors = ["#4C78A8", "#E45756", "#54A24B"]
 
-    _bars3a = _ax3a.bar(_conc_labels, _conc_values, color=_conc_colors, alpha=0.8, width=0.6)
-    _ax3a.set_ylim(0, max(_conc_values) * 1.3)
-    _ax3a.set_ylabel("Top-10 Pairs Share", fontsize=11)
-    _ax3a.set_title("Repeat Concentration\n(lower = more evenly spread)", fontsize=11)
+    _bars1 = _ax1.bar(_conc_labels, _conc_values, color=_conc_colors, alpha=0.8, width=0.6)
+    _ax1.set_ylim(0, max(_conc_values) * 1.3)
+    _ax1.set_ylabel("Top-10 Pairs Share", fontsize=11)
+    _ax1.set_title("Repeat Concentration\n(lower = more evenly spread)", fontsize=11)
 
-    for _bar, _val in zip(_bars3a, _conc_values):
-        _ax3a.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.005,
+    for _bar, _val in zip(_bars1, _conc_values):
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.005,
                   f"{_val:.1%}", ha="center", va="bottom", fontsize=11, fontweight="bold")
 
     # Right: Average Repeat Pairs per Run (reduction from baseline)
@@ -1241,51 +1182,32 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _avg_values = [_old_avg_per_run, _baseline_avg_per_run, _new_avg_per_run]
     _avg_colors = ["#4C78A8", "#E45756", "#54A24B"]
 
-    _bars3b = _ax3b.bar(_avg_labels, _avg_values, color=_avg_colors, alpha=0.8, width=0.6)
-    _ax3b.set_ylim(0, max(_avg_values) * 1.3)
-    _ax3b.set_ylabel("Avg Repeat Pairs per Run", fontsize=11)
-    _ax3b.set_title("Repeat Volume\n(lower = fewer repeated teammates)", fontsize=11)
+    _bars2 = _ax2.bar(_avg_labels, _avg_values, color=_avg_colors, alpha=0.8, width=0.6)
+    _ax2.set_ylim(0, max(_avg_values) * 1.3)
+    _ax2.set_ylabel("Avg Repeat Pairs per Run", fontsize=11)
+    _ax2.set_title("Repeat Volume\n(lower = fewer repeated teammates)", fontsize=11)
 
-    for _bar, _val in zip(_bars3b, _avg_values):
-        _ax3b.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.02,
+    for _bar, _val in zip(_bars2, _avg_values):
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _bar.get_height() + 0.02,
                   f"{_val:.2f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
 
-    _fig3.tight_layout()
-    _buffer3 = io.BytesIO()
-    _fig3.savefig(_buffer3, format="png", dpi=150, bbox_inches="tight")
-    _buffer3.seek(0)
-    plt.close(_fig3)
+    _fig.tight_layout()
+    _buffer = io.BytesIO()
+    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
+    _buffer.seek(0)
+    plt.close(_fig)
 
     # Calculate reduction percentages for caption
     _old_reduction = (_baseline_avg_per_run - _old_avg_per_run) / _baseline_avg_per_run * 100
     _new_reduction = (_baseline_avg_per_run - _new_avg_per_run) / _baseline_avg_per_run * 100
 
-    # Captions for each chart
-    _heatmap_caption = mo.md(
-        "**Heatmap**: Shows which player pairs repeat most often. Each row is a pair, each column is an algorithm. "
-        "Darker cells = that pair accounts for more of the total repeat events."
-    )
-    
-    _barchart_caption = mo.md(
-        "**Bar chart**: Same data in bar format for easier comparison between algorithms on specific pairs."
-    )
-    
-    _bottom_caption = mo.md(
+    _caption = mo.md(
         f"**Left (Concentration)**: What % of all repeats come from the top 10 pairs. Lower = more evenly distributed. "
         f"**Right (Volume)**: Average repeat pairs per simulation run. "
         f"Old algo reduces repeats by {_old_reduction:.0f}% vs baseline, New algo by {_new_reduction:.0f}%."
     )
 
-    # Display each chart with its caption directly below
-    _display = mo.vstack([
-        mo.image(_buffer1.getvalue()),
-        _heatmap_caption,
-        mo.image(_buffer2.getvalue()),
-        _barchart_caption,
-        mo.image(_buffer3.getvalue()),
-        _bottom_caption,
-    ])
-    mo.output.replace(_display)
+    mo.output.replace(mo.vstack([mo.image(_buffer.getvalue()), _caption]))
     return
 
 
@@ -1312,36 +1234,27 @@ def _(mo):
 
 
 @app.cell
-def _(Path, config, pl):
-    # Load all batch data for OLD and NEW algorithms
-    _data_dir = Path(__file__).parent / "data"
+def _(config, new_algo_pair_events, new_algo_summary, pair_events, pl, summary):
+    # Extract batch data from the embedded batch column (data is already loaded)
     _batch_ids = config.get("batchIds", [])
 
-    # OLD algorithm batches
+    # OLD algorithm batches - filter from main dataframes
     batch_summaries = {}
     batch_pair_events = {}
-    _old_dir = _data_dir / "old_algo"
-    if _batch_ids and _old_dir.exists():
+    if "batch" in summary.columns:
         for _bid in _batch_ids:
-            _summary_file = _old_dir / f"summary_batch{_bid}.csv"
-            _events_file = _old_dir / f"pair_events_batch{_bid}.csv"
-            if _summary_file.exists():
-                batch_summaries[_bid] = pl.read_csv(_summary_file)
-            if _events_file.exists():
-                batch_pair_events[_bid] = pl.read_csv(_events_file)
+            _bid_val = int(_bid) if _bid.isdigit() else _bid
+            batch_summaries[_bid] = summary.filter(pl.col("batch") == _bid_val)
+            batch_pair_events[_bid] = pair_events.filter(pl.col("batch") == _bid_val)
 
-    # NEW algorithm batches
+    # NEW algorithm batches - filter from main dataframes
     new_algo_batch_summaries = {}
     new_algo_batch_pair_events = {}
-    _new_dir = _data_dir / "new_algo"
-    if _batch_ids and _new_dir.exists():
+    if "batch" in new_algo_summary.columns:
         for _bid in _batch_ids:
-            _summary_file = _new_dir / f"summary_batch{_bid}.csv"
-            _events_file = _new_dir / f"pair_events_batch{_bid}.csv"
-            if _summary_file.exists():
-                new_algo_batch_summaries[_bid] = pl.read_csv(_summary_file)
-            if _events_file.exists():
-                new_algo_batch_pair_events[_bid] = pl.read_csv(_events_file)
+            _bid_val = int(_bid) if _bid.isdigit() else _bid
+            new_algo_batch_summaries[_bid] = new_algo_summary.filter(pl.col("batch") == _bid_val)
+            new_algo_batch_pair_events[_bid] = new_algo_pair_events.filter(pl.col("batch") == _bid_val)
 
     has_batches = len(batch_summaries) > 1
     return batch_pair_events, batch_summaries, has_batches, new_algo_batch_pair_events, new_algo_batch_summaries
@@ -1498,7 +1411,12 @@ def _(all_pair_data, has_batches, io, mo, normalized_baseline_pairs, normalized_
     # Store data for correlation analysis
     batch_pair_matrix = _matrix
     batch_pair_ids = _pair_ids
-    mo.image(_buffer.getvalue())
+    
+    _heatmap_caption = mo.md(
+        "**Heatmap**: Shows which player pairs repeat most often across all batches. "
+        "Each row is a pair, each column is an algorithm. Darker cells = more repeat events for that pair."
+    )
+    mo.output.replace(mo.vstack([mo.image(_buffer.getvalue()), _heatmap_caption]))
     return batch_pair_ids, batch_pair_matrix
 
 
@@ -1543,7 +1461,10 @@ def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, io, mo, nor
     _buffer.seek(0)
     plt.close(_fig)
 
-    mo.image(_buffer.getvalue())
+    _barchart_caption = mo.md(
+        "**Bar chart**: Same data in bar format for easier comparison between algorithms on the top 10 repeat pairs."
+    )
+    mo.output.replace(mo.vstack([mo.image(_buffer.getvalue()), _barchart_caption]))
     return (batch_baseline_correlation,)
 
 
