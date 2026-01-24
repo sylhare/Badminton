@@ -1,0 +1,8 @@
+{
+  "runs": 1000,
+  "rounds": 3,
+  "numPlayers": 20,
+  "numCourts": 4,
+  "engine": "sa",
+  "timestamp": "2026-01-23T23:03:27.337Z"
+}
