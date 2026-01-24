@@ -1,7 +1,39 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine.ts';
+import { CourtAssignmentEngineSA } from '../src/utils/CourtAssignmentEngineSA.ts';
+import { ConflictGraphEngine } from '../src/utils/ConflictGraphEngine.ts';
 import type { Player, Court } from '../src/types/index.ts';
+
+// Engine selection: 'mc' for Monte Carlo, 'sa' for Simulated Annealing, 'cg' for Conflict Graph, 'all' for all engines
+const ENGINE_TYPE = process.env.SIM_ENGINE ?? 'mc';
+
+// All available engines for comparison mode
+const ALL_ENGINES = [
+  { id: 'mc', name: 'Monte Carlo (MC)', engine: CourtAssignmentEngine },
+  { id: 'sa', name: 'Simulated Annealing (SA)', engine: CourtAssignmentEngineSA },
+  { id: 'cg', name: 'Conflict Graph (CG)', engine: ConflictGraphEngine },
+] as const;
+
+type EngineType = typeof ALL_ENGINES[number]['engine'];
+
+// Get the appropriate engine based on selection
+const getEngine = (): EngineType => {
+  if (ENGINE_TYPE === 'sa') {
+    return CourtAssignmentEngineSA;
+  }
+  if (ENGINE_TYPE === 'cg') {
+    return ConflictGraphEngine;
+  }
+  return CourtAssignmentEngine;
+};
+
+const getEngineName = (engineId?: string) => {
+  const id = engineId ?? ENGINE_TYPE;
+  if (id === 'sa') return 'Simulated Annealing (SA)';
+  if (id === 'cg') return 'Conflict Graph (CG)';
+  return 'Monte Carlo (MC)';
+};
 
 type RoundResult = {
   roundIndex: number;
@@ -149,17 +181,18 @@ const toCsv = (rows: Array<Record<string, string | number | boolean>>): string =
   return lines.join('\n');
 };
 
-const runSingleBatch = (batchId: string) => {
+const runSingleBatch = (batchId: string, engine?: EngineType, engineId?: string) => {
   const players = toPlayerList(NUM_PLAYERS);
   const summaries: SimulationSummary[] = [];
   const pairEvents: PairEvent[] = [];
+  const Engine = engine ?? getEngine();
 
   for (let simId = 1; simId <= RUNS; simId++) {
-    CourtAssignmentEngine.resetHistory();
+    Engine.resetHistory();
 
     const rounds: RoundResult[] = [];
     for (let round = 0; round < ROUNDS; round++) {
-      const courts = CourtAssignmentEngine.generate(players, NUM_COURTS);
+      const courts = Engine.generate(players, NUM_COURTS);
       rounds.push(extractRoundPairs(round + 1, courts));
     }
 
@@ -178,15 +211,83 @@ const runSingleBatch = (batchId: string) => {
     });
   }
 
-  const suffix = batchId ? `_batch${batchId}` : '';
+  // Include engine ID in suffix when running in comparison mode
+  const engineSuffix = engineId ? `_${engineId}` : '';
+  const batchSuffix = batchId ? `_batch${batchId}` : '';
+  const suffix = `${engineSuffix}${batchSuffix}`;
+  
   writeFileSync(resolve(DATA_DIR, `summary${suffix}.csv`), toCsv(summaries));
   writeFileSync(resolve(DATA_DIR, `pair_events${suffix}.csv`), toCsv(pairEvents));
 
   return { summaries, pairEvents };
 };
 
+/**
+ * Run comparison simulation across all three engines.
+ * Outputs separate files for each engine: summary_mc.csv, summary_sa.csv, summary_cg.csv
+ */
+const runComparisonSimulation = () => {
+  ensureDataDir();
+  console.log('Running COMPARISON mode: All engines (MC, SA, CG)');
+  console.log(`Configuration: ${RUNS} runs, ${ROUNDS} rounds, ${NUM_PLAYERS} players, ${NUM_COURTS} courts\n`);
+
+  const results: Record<string, { repeatRate: number; avgRepeats: number }> = {};
+
+  for (const { id, name, engine } of ALL_ENGINES) {
+    console.log(`Running ${name}...`);
+    const startTime = Date.now();
+    
+    const { summaries } = runSingleBatch('', engine, id);
+    
+    const elapsed = Date.now() - startTime;
+    const repeatCount = summaries.filter(s => s.repeatAnyPair).length;
+    const repeatRate = (repeatCount / summaries.length) * 100;
+    const avgRepeats = summaries.reduce((acc, s) => acc + s.repeatPairCount, 0) / summaries.length;
+    
+    results[id] = { repeatRate, avgRepeats };
+    console.log(`  ✓ ${name}: ${repeatRate.toFixed(1)}% sessions with repeats, avg ${avgRepeats.toFixed(2)} repeats/session (${elapsed}ms)\n`);
+  }
+
+  // Write comparison summary
+  const comparisonSummary = ALL_ENGINES.map(({ id, name }) => ({
+    engine: id,
+    engineName: name,
+    repeatRate: results[id].repeatRate,
+    avgRepeatsPerSession: results[id].avgRepeats,
+  }));
+  writeFileSync(resolve(DATA_DIR, 'comparison_summary.csv'), toCsv(comparisonSummary));
+
+  const config = {
+    runs: RUNS,
+    rounds: ROUNDS,
+    numPlayers: NUM_PLAYERS,
+    numCourts: NUM_COURTS,
+    engines: ALL_ENGINES.map(e => e.id),
+    mode: 'comparison',
+    timestamp: new Date().toISOString(),
+  };
+  writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
+
+  console.log('='.repeat(60));
+  console.log('COMPARISON RESULTS:');
+  console.log('='.repeat(60));
+  for (const { id, name } of ALL_ENGINES) {
+    const r = results[id];
+    console.log(`${name.padEnd(30)} | ${r.repeatRate.toFixed(1).padStart(5)}% repeat rate | ${r.avgRepeats.toFixed(2).padStart(5)} avg repeats`);
+  }
+  console.log('='.repeat(60));
+};
+
 const runSimulation = () => {
   ensureDataDir();
+
+  // If running comparison mode (all engines)
+  if (ENGINE_TYPE === 'all') {
+    runComparisonSimulation();
+    return;
+  }
+
+  console.log(`Using engine: ${getEngineName()}`);
 
   // If running multiple batches, generate all of them
   if (NUM_BATCHES > 1) {
@@ -207,6 +308,7 @@ const runSimulation = () => {
       numCourts: NUM_COURTS,
       numBatches: NUM_BATCHES,
       batchIds: allBatchIds,
+      engine: ENGINE_TYPE,
       timestamp: new Date().toISOString(),
     };
     writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
@@ -220,6 +322,7 @@ const runSimulation = () => {
       numPlayers: NUM_PLAYERS,
       numCourts: NUM_COURTS,
       batchId: BATCH_ID,
+      engine: ENGINE_TYPE,
       timestamp: new Date().toISOString(),
     };
     writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
@@ -232,6 +335,7 @@ const runSimulation = () => {
       rounds: ROUNDS,
       numPlayers: NUM_PLAYERS,
       numCourts: NUM_COURTS,
+      engine: ENGINE_TYPE,
       timestamp: new Date().toISOString(),
     };
     writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
@@ -274,13 +378,14 @@ const calculateTheoreticalMax = (numPlayers: number, numCourts: number): number 
   return playingSpots / benchSpots;
 };
 
-const runBenchSimulation = (numPlayers: number, batchId: number) => {
+const runBenchSimulation = (numPlayers: number, batchId: number, engine?: EngineType, engineId?: string) => {
   const players = toPlayerList(numPlayers);
   const benchEvents: BenchEvent[] = [];
   const summaries: BenchSummary[] = [];
+  const Engine = engine ?? getEngine();
 
   for (let simId = 1; simId <= BENCH_RUNS; simId++) {
-    CourtAssignmentEngine.resetHistory();
+    Engine.resetHistory();
 
     // Track last bench round for each player (0 = start, meaning never benched yet)
     const lastBenchRound: Map<string, number> = new Map();
@@ -289,7 +394,7 @@ const runBenchSimulation = (numPlayers: number, batchId: number) => {
     const allGapsBetweenBenches: number[] = [];
 
     for (let round = 1; round <= BENCH_ROUNDS; round++) {
-      const courts = CourtAssignmentEngine.generate(players, BENCH_COURTS);
+      const courts = Engine.generate(players, BENCH_COURTS);
       const playingIds = new Set(courts.flatMap(c => c.players.map(p => p.id)));
 
       // Find who is benched this round
@@ -332,8 +437,9 @@ const runBenchSimulation = (numPlayers: number, batchId: number) => {
     }
   }
 
-  // Write results
-  const suffix = `_${numPlayers}p_batch${batchId}`;
+  // Write results with engine suffix when in comparison mode
+  const engineSuffix = engineId ? `_${engineId}` : '';
+  const suffix = `${engineSuffix}_${numPlayers}p_batch${batchId}`;
   writeFileSync(resolve(BENCH_DATA_DIR, `bench_events${suffix}.csv`), toCsv(benchEvents));
   writeFileSync(resolve(BENCH_DATA_DIR, `bench_summary${suffix}.csv`), toCsv(summaries));
 
@@ -351,26 +457,54 @@ const runAllBenchSimulations = () => {
     }
   }
 
-  console.log(`Running bench analysis: ${allConfigs.length} configurations...`);
+  // If running comparison mode (all engines)
+  if (ENGINE_TYPE === 'all') {
+    console.log('Running BENCH COMPARISON mode: All engines (MC, SA, CG)');
+    console.log(`Running bench analysis: ${allConfigs.length} configurations × 3 engines...\n`);
 
-  for (const { numPlayers, batchId } of allConfigs) {
-    console.log(`  Running ${numPlayers} players, batch ${batchId}...`);
-    runBenchSimulation(numPlayers, batchId);
+    for (const { id, name, engine } of ALL_ENGINES) {
+      console.log(`\n=== ${name} ===`);
+      for (const { numPlayers, batchId } of allConfigs) {
+        console.log(`  Running ${numPlayers} players, batch ${batchId}...`);
+        runBenchSimulation(numPlayers, batchId, engine, id);
+      }
+    }
+
+    const config = {
+      runs: BENCH_RUNS,
+      rounds: BENCH_ROUNDS,
+      minPlayers: BENCH_MIN_PLAYERS,
+      maxPlayers: BENCH_MAX_PLAYERS,
+      numCourts: BENCH_COURTS,
+      numBatches: BENCH_BATCHES,
+      engines: ALL_ENGINES.map(e => e.id),
+      mode: 'comparison',
+      timestamp: new Date().toISOString(),
+    };
+    writeFileSync(resolve(BENCH_DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
+  } else {
+    console.log(`Using engine: ${getEngineName()}`);
+    console.log(`Running bench analysis: ${allConfigs.length} configurations...`);
+
+    for (const { numPlayers, batchId } of allConfigs) {
+      console.log(`  Running ${numPlayers} players, batch ${batchId}...`);
+      runBenchSimulation(numPlayers, batchId);
+    }
+
+    const config = {
+      runs: BENCH_RUNS,
+      rounds: BENCH_ROUNDS,
+      minPlayers: BENCH_MIN_PLAYERS,
+      maxPlayers: BENCH_MAX_PLAYERS,
+      numCourts: BENCH_COURTS,
+      numBatches: BENCH_BATCHES,
+      engine: ENGINE_TYPE,
+      timestamp: new Date().toISOString(),
+    };
+    writeFileSync(resolve(BENCH_DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
   }
 
-  // Write config file
-  const config = {
-    runs: BENCH_RUNS,
-    rounds: BENCH_ROUNDS,
-    minPlayers: BENCH_MIN_PLAYERS,
-    maxPlayers: BENCH_MAX_PLAYERS,
-    numCourts: BENCH_COURTS,
-    numBatches: BENCH_BATCHES,
-    timestamp: new Date().toISOString(),
-  };
-  writeFileSync(resolve(BENCH_DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
-
-  console.log(`Bench analysis complete. Data saved to ${BENCH_DATA_DIR}`);
+  console.log(`\nBench analysis complete. Data saved to ${BENCH_DATA_DIR}`);
 };
 
 // Main execution: run standard simulation or bench analysis based on env var
