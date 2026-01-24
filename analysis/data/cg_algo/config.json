@@ -1,8 +1,16 @@
 {
-  "runs": 1000,
-  "rounds": 3,
+  "runs": 5000,
+  "rounds": 10,
   "numPlayers": 20,
   "numCourts": 4,
+  "numBatches": 5,
+  "batchIds": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
   "engine": "cg",
-  "timestamp": "2026-01-23T23:03:45.467Z"
+  "timestamp": "2026-01-24T19:17:30.076Z"
 }
