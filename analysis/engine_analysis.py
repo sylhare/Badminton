@@ -6,14 +6,15 @@ app = marimo.App(width="medium")
 
 @app.cell
 def _():
-    import io
     import json
     import math
     from pathlib import Path
 
     import marimo as mo
     import polars as pl
-    return Path, io, json, math, mo, pl
+
+    from utils.plotting import setup_matplotlib, fig_to_image
+    return Path, fig_to_image, json, math, mo, pl, setup_matplotlib
 
 
 @app.cell
@@ -81,15 +82,9 @@ def _(mo):
 
 
 @app.cell
-def _(Path, os):
-    import os
-    _mpl_config_dir = Path(__file__).parent / ".mplconfig"
-    _cache_dir = Path(__file__).parent / ".cache"
-    _mpl_config_dir.mkdir(exist_ok=True)
-    _cache_dir.mkdir(exist_ok=True)
-    _ = os.environ.setdefault("MPLCONFIGDIR", str(_mpl_config_dir))
-    _ = os.environ.setdefault("XDG_CACHE_HOME", str(_cache_dir))
-    return (os,)
+def _(setup_matplotlib):
+    setup_matplotlib(__file__)
+    return
 
 
 @app.cell
@@ -258,7 +253,7 @@ def _(mo):
 
 
 @app.cell
-def _(all_metrics, io, mo, np, plt):
+def _(all_metrics, fig_to_image, mo, np, plt):
     _metrics = all_metrics.to_dicts()
     _labels = [m["label"] for m in _metrics]
     _colors = ["#4C78A8", "#54A24B", "#F58518", "#E45756"]  # MC, SA, CG, Baseline
@@ -297,11 +292,7 @@ def _(all_metrics, io, mo, np, plt):
                   f"{_h:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
-    mo.image(_buffer.getvalue())
+    mo.image(fig_to_image(_fig))
     return
 
 
@@ -356,7 +347,7 @@ def _(mo):
 
 
 @app.cell
-def _(baseline_summary, cg_summary, io, mc_summary, mo, np, plt, sa_summary):
+def _(baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, sa_summary):
     _fig, _axes = plt.subplots(2, 2, figsize=(12, 10))
     _axes = _axes.flatten()
     
@@ -369,8 +360,8 @@ def _(baseline_summary, cg_summary, io, mc_summary, mo, np, plt, sa_summary):
     
     # Find max x for consistent scaling
     _max_x = max(
-        df.get_column("repeatPairDifferentOpponentsCount").max()
-        for df, _, _ in _datasets
+        _data_df.get_column("repeatPairDifferentOpponentsCount").max()
+        for _data_df, _, _ in _datasets
     )
     
     for _ax, (_df, _name, _color) in zip(_axes, _datasets):
@@ -392,11 +383,7 @@ def _(baseline_summary, cg_summary, io, mc_summary, mo, np, plt, sa_summary):
                      bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
     
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
-    mo.image(_buffer.getvalue())
+    mo.image(fig_to_image(_fig))
     return
 
 
@@ -416,21 +403,21 @@ def _(mo):
 
 
 @app.cell
-def _(baseline_pair_events, cg_pair_events, config, io, mc_pair_events, mo, np, plt, sa_pair_events):
+def _(baseline_pair_events, cg_pair_events, config, fig_to_image, mc_pair_events, mo, np, plt, sa_pair_events):
     from matplotlib.gridspec import GridSpec
     
     _num_players = config.get("numPlayers", 20)
     _players = [f"P{i + 1}" for i in range(_num_players)]
     
     # Base matrix with 1 for all valid pairs (i != j) to show grid structure
-    def make_base_matrix(num_players):
-        _base = np.ones((num_players, num_players))
+    def make_base_matrix(player_count):
+        _base = np.ones((player_count, player_count))
         np.fill_diagonal(_base, 0)  # No self-pairs
         return _base
     
-    def build_matrix(events_df, num_players):
+    def build_matrix(events_df, player_count):
         # Start with base of 1 for all valid pairs
-        _matrix = make_base_matrix(num_players)
+        _matrix = make_base_matrix(player_count)
         if events_df.height == 0:
             return _matrix
         
@@ -452,9 +439,9 @@ def _(baseline_pair_events, cg_pair_events, config, io, mc_pair_events, mo, np, 
     _baseline_matrix = build_matrix(baseline_pair_events, _num_players)
     
     # Normalize each to percentage of its own total
-    def normalize(m):
-        total = m.sum()
-        return m / total * 100 if total > 0 else m
+    def normalize(matrix):
+        total = matrix.sum()
+        return matrix / total * 100 if total > 0 else matrix
     
     _mc_norm = normalize(_mc_matrix)
     _sa_norm = normalize(_sa_matrix)
@@ -508,11 +495,7 @@ def _(baseline_pair_events, cg_pair_events, config, io, mc_pair_events, mo, np, 
     _fig.suptitle("Repeat Pair Frequency Distribution\n(base of 1 per pair + actual repeats, normalized)", 
                   fontsize=12, fontweight="bold", y=0.98)
     
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
-    mo.image(_buffer.getvalue())
+    mo.image(fig_to_image(_fig))
     return
 
 
@@ -559,7 +542,7 @@ def _(mo):
 
 
 @app.cell
-def _(all_metrics, io, mo, np, plt):
+def _(all_metrics, fig_to_image, mo, np, plt):
     _metrics = all_metrics.to_dicts()
     _labels = [m["label"] for m in _metrics]
     _avg_repeats = [m["avg_repeat_pairs"] for m in _metrics]
@@ -586,11 +569,7 @@ def _(all_metrics, io, mo, np, plt):
     _ax.axhline(y=_baseline_avg, color="#E45756", linestyle="--", alpha=0.5, label="Baseline")
     
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
-    mo.image(_buffer.getvalue())
+    mo.image(fig_to_image(_fig))
     return
 
 
@@ -610,12 +589,12 @@ def _(mo):
 
 
 @app.cell
-def _(baseline_summary, cg_summary, io, mc_summary, mo, np, plt, pl, sa_summary):
-    def get_batch_stats(df, label):
-        if "batch" not in df.columns:
+def _(baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, pl, sa_summary):
+    def get_batch_stats(data_frame, label):
+        if "batch" not in data_frame.columns:
             return []
         return (
-            df.group_by("batch")
+            data_frame.group_by("batch")
             .agg([
                 pl.col("repeatAnyPair").mean().alias("p_any_repeat"),
                 pl.col("repeatPairDifferentOpponentsCount").mean().alias("avg_repeats"),
@@ -654,11 +633,7 @@ def _(baseline_summary, cg_summary, io, mc_summary, mo, np, plt, pl, sa_summary)
         _ax.set_ylim(0, 1.1)
         
         _fig.tight_layout()
-        _buffer = io.BytesIO()
-        _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-        _buffer.seek(0)
-        plt.close(_fig)
-        mo.output.replace(mo.image(_buffer.getvalue()))
+        mo.output.replace(mo.image(fig_to_image(_fig)))
     else:
         mo.output.replace(mo.md("No batch data available for consistency analysis."))
     return
@@ -708,6 +683,264 @@ def _(all_metrics, mo):
     
     3. **Recommendation**: Use **{_sorted_by_zero[0]['label']}** for maximum teammate variety across consecutive rounds.
     """)
+    return
+
+
+# =============================================================================
+# MATHEMATICAL DEEP DIVE
+# =============================================================================
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ---
+    
+    ## Mathematical Deep Dive
+    
+    Expand the sections below to understand the mathematical foundations behind each algorithm and what makes a "perfect run" achievable.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(config, math, mo):
+    # Calculate key values for the mathematical explanation
+    _n = config.get("numPlayers", 20)
+    _c = config.get("numCourts", 4)
+    _r = config.get("rounds", 10)
+    _playing_per_round = _c * 4
+    _pairs_per_round = _c * 2  # Each court has 2 teammate pairs
+    _total_possible_pairs = _n * (_n - 1) // 2
+    
+    # For birthday paradox approximation
+    _collision_approx = 1 - math.exp(-(_pairs_per_round ** 2) / (2 * _total_possible_pairs))
+    
+    _math_accordion = mo.accordion({
+        "What is a Perfect Run?": mo.md(f"""
+### Definition of a Perfect Run
+
+A **perfect run** occurs when, across all consecutive rounds in a session, **no teammate pair repeats**. 
+This means that if players A and B were teammates in round $r$, they must not be teammates again in round $r+1$.
+
+#### The Combinatorial Space
+
+With **{_n} players**, the total number of possible unique teammate pairs is given by the binomial coefficient:
+
+$$\\binom{{{_n}}}{{2}} = \\frac{{{_n}!}}{{2!({_n}-2)!}} = \\frac{{{_n} \\times {_n - 1}}}{{2}} = {_total_possible_pairs} \\text{{ possible pairs}}$$
+
+Each round uses **{_c} courts** with 4 players each, forming **{_pairs_per_round} teammate pairs** per round (2 pairs per court).
+
+#### The Constraint Challenge
+
+For a perfect run across consecutive rounds, round $r+1$ must avoid all {_pairs_per_round} pairs from round $r$. 
+This is a **constraint satisfaction problem** where we must select {_pairs_per_round} new pairs from the remaining pool of valid pairs.
+
+The probability space grows dramatically: with {_total_possible_pairs} possible pairs and only {_pairs_per_round} "forbidden" pairs from the previous round, 
+the search space has approximately:
+
+$$\\binom{{{_total_possible_pairs} - {_pairs_per_round}}}{{{_pairs_per_round}}} \\approx 10^{{15}} \\text{{ valid configurations}}$$
+
+This vast space makes random search inefficient, but also means **perfect solutions exist** if we search intelligently.
+        """),
+        
+        "Random Baseline: The Birthday Paradox Effect": mo.md(f"""
+### Why Random Selection Fails
+
+The random baseline makes no attempt to avoid previous teammate pairs. It simply:
+1. Randomly selects {_playing_per_round} players from the pool of {_n}
+2. Randomly assigns them to courts
+3. Randomly pairs players within each court
+
+#### Birthday Paradox Analogy
+
+The probability of a teammate repeat follows a pattern similar to the **birthday paradox**. 
+Just as it's surprisingly likely for two people in a small group to share a birthday, 
+it's surprisingly likely for a teammate pair to repeat.
+
+With {_pairs_per_round} pairs generated per round and {_total_possible_pairs} possible pairs, 
+the approximate probability of **at least one collision** in a single round transition is:
+
+$$P(\\text{{collision}}) \\approx 1 - e^{{-\\frac{{k^2}}{{2n}}}}$$
+
+where $k = {_pairs_per_round}$ (pairs per round) and $n = {_total_possible_pairs}$ (total possible pairs).
+
+$$P(\\text{{collision}}) \\approx 1 - e^{{-\\frac{{{_pairs_per_round}^2}}{{2 \\times {_total_possible_pairs}}}}} \\approx {_collision_approx:.1%}$$
+
+Over {_r - 1} round transitions, the cumulative probability of experiencing **at least one repeat** grows substantially.
+
+#### The Baseline's Fatal Flaw
+
+The baseline algorithm has **no memory** of previous rounds. Each round is generated independently, 
+treating the constraint satisfaction problem as if it doesn't exist. This is why it performs so poorly 
+compared to algorithms that explicitly track and avoid previous pairings.
+        """),
+        
+        "Monte Carlo: Sampling the Solution Space": mo.md(f"""
+### Monte Carlo Strategy
+
+The Monte Carlo algorithm approaches the problem through **random sampling with evaluation**. 
+Rather than blindly accepting any configuration, it generates multiple candidates and selects the best one.
+
+#### The Algorithm
+
+1. **Generate** 300 random candidate assignments
+2. **Evaluate** each candidate using a cost function
+3. **Select** the candidate with the lowest cost
+
+#### The Cost Function
+
+The cost function penalizes configurations that violate our constraints. For teammate pairs, the cost includes:
+
+$$C_{{\\text{{teammate}}}} = \\sum_{{(i,j) \\in \\text{{pairs}}}} w_t \\cdot \\text{{count}}_{{\\text{{prev}}}}(i,j)$$
+
+where $w_t$ is the teammate repeat penalty weight and $\\text{{count}}_{{\\text{{prev}}}}(i,j)$ is the number of times 
+players $i$ and $j$ have been teammates in recent rounds.
+
+#### Why It Works Better Than Random
+
+By sampling 300 candidates and keeping the best, Monte Carlo effectively explores a larger portion of the solution space. 
+The probability of finding a zero-cost (perfect) solution in $k$ samples is:
+
+$$P(\\text{{find perfect}}) = 1 - (1 - p_{{\\text{{perfect}}}})^k$$
+
+where $p_{{\\text{{perfect}}}}$ is the probability that a single random sample is perfect. 
+Even if $p_{{\\text{{perfect}}}}$ is small, with $k = 300$ samples, the chances improve significantly.
+
+#### Limitation: Local Optima
+
+Monte Carlo samples are independent—it doesn't learn from previous samples. 
+If the perfect solutions occupy a small region of the search space, random sampling may miss them entirely.
+        """),
+        
+        "Simulated Annealing: Escaping Local Minima": mo.md(f"""
+### Simulated Annealing Strategy
+
+Simulated Annealing (SA) is inspired by the metallurgical process of annealing, 
+where controlled cooling allows atoms to settle into a low-energy crystalline structure.
+
+#### The Algorithm
+
+1. **Start** with a random initial solution
+2. **Perturb** the current solution (swap players between teams/courts)
+3. **Evaluate** the change in cost: $\\Delta C = C_{{\\text{{new}}}} - C_{{\\text{{old}}}}$
+4. **Accept** the new solution based on the Metropolis criterion:
+   - If $\\Delta C < 0$ (improvement): always accept
+   - If $\\Delta C \\geq 0$ (worsening): accept with probability $P = e^{{-\\Delta C / T}}$
+5. **Cool** the temperature: $T_{{\\text{{new}}}} = \\alpha \\cdot T_{{\\text{{old}}}}$ where $\\alpha = 0.9995$
+6. **Repeat** for 5000 iterations
+
+#### The Temperature Schedule
+
+The temperature $T$ controls exploration vs. exploitation:
+
+- **High $T$ (early)**: Algorithm accepts worse solutions frequently, exploring broadly
+- **Low $T$ (late)**: Algorithm becomes greedy, only accepting improvements
+
+The cooling schedule follows:
+
+$$T(t) = T_0 \\cdot \\alpha^t$$
+
+where $T_0 = 100$ (initial temperature) and $\\alpha = 0.9995$ (cooling rate).
+
+#### The Cost Function
+
+SA uses **hard constraints** for teammate repeats:
+
+$$C_{{\\text{{teammate repeat}}}} = 10000 \\cdot \\mathbb{{1}}[\\text{{pair repeated}}]$$
+
+This massive penalty (10,000) effectively makes teammate repetition a **hard constraint**—
+the algorithm will almost never accept a solution that repeats a pair.
+
+#### Why SA Excels
+
+The key advantage of SA is its ability to **escape local minima**. Unlike Monte Carlo which samples independently, 
+SA builds on previous solutions. The probabilistic acceptance of worse solutions allows it to "climb out" of 
+suboptimal regions and eventually find the global optimum.
+
+The mathematical guarantee: as $T \\to 0$ with appropriate cooling, 
+SA converges to the global optimum with probability 1 (given infinite time).
+        """),
+        
+        "Conflict Graph: Deterministic Constraint Propagation": mo.md(f"""
+### Conflict Graph Strategy
+
+The Conflict Graph (CG) algorithm models the problem as a **graph coloring / constraint satisfaction problem** 
+and uses greedy construction with explicit conflict tracking.
+
+#### The Graph Model
+
+The algorithm maintains a **conflict graph** $G = (V, E)$ where:
+- **Vertices** $V$: All possible teammate pairs $(i, j)$ where $i < j$
+- **Edges** $E$: Connect pairs that share a player (and thus cannot both be used simultaneously)
+
+#### The Greedy Construction
+
+1. **Initialize** conflict weights for all pairs based on history
+2. **Sort** available pairs by conflict score (lowest first)
+3. **Greedily select** pairs that don't conflict with already-selected pairs
+4. **Update** conflict weights after each round
+
+#### The Conflict Score
+
+For each potential pair $(i, j)$, the conflict score combines multiple factors:
+
+$$\\text{{score}}(i, j) = w_1 \\cdot \\text{{teammate\\_history}}(i,j) + w_2 \\cdot \\text{{recent\\_play}}(i,j) + w_3 \\cdot |\\text{{skill}}_i - \\text{{skill}}_j|$$
+
+The algorithm prioritizes pairs with:
+- Lower teammate history (haven't played together recently)
+- Players who haven't played in recent rounds
+- Similar skill levels (for balanced games)
+
+#### Why CG is Fast but Sometimes Suboptimal
+
+Greedy algorithms run in $O(n^2 \\log n)$ time—much faster than SA's $O(5000 \\cdot n)$ iterations. 
+However, greedy choices made early can constrain later options. The algorithm finds **a** valid solution quickly, 
+but it may not be **the best** solution.
+
+The CG algorithm trades optimality for speed, making it suitable for real-time applications 
+where a "good enough" solution immediately is better than the perfect solution later.
+        """),
+        
+        "Comparing the Optimization Levers": mo.md(f"""
+### Summary of Optimization Approaches
+
+Each algorithm pulls different "levers" to achieve good solutions:
+
+| Lever | Random | Monte Carlo | Simulated Annealing | Conflict Graph |
+|-------|--------|-------------|---------------------|----------------|
+| **Memory of past** | ❌ None | ✅ Via cost function | ✅ Via cost function | ✅ Via conflict weights |
+| **Search strategy** | Pure random | Sample & select best | Iterative improvement | Greedy construction |
+| **Escape local minima** | N/A | Limited (independent samples) | ✅ Via temperature | ❌ Commits to greedy choices |
+| **Hard constraints** | ❌ None | Soft penalties | ✅ Very high penalties | ✅ Explicit conflict check |
+| **Iterations** | 1 | 300 | 5000 | 1 (greedy pass) |
+| **Time complexity** | $O(n)$ | $O(300 \\cdot n \\log n)$ | $O(5000 \\cdot n)$ | $O(n^2 \\log n)$ |
+
+#### The Mathematical Trade-offs
+
+1. **Exploration vs. Exploitation**
+   - More iterations (SA) = better exploration of solution space
+   - Greedy (CG) = fast but may miss optimal regions
+
+2. **Soft vs. Hard Constraints**
+   - Soft penalties allow flexibility but may accept violations
+   - Hard constraints guarantee validity but restrict search space
+
+3. **Independence vs. Correlation**
+   - Independent samples (MC) can explore diverse regions
+   - Correlated search (SA) builds on good solutions but may get stuck
+
+4. **Theoretical Guarantees**
+   - SA: Converges to global optimum (with proper cooling)
+   - MC: Finds optimum with probability $1 - (1-p)^k$ in $k$ samples
+   - CG: No optimality guarantee, but guaranteed valid solution
+
+The empirical results confirm these theoretical expectations: SA achieves the best performance 
+by combining memory of constraints with the ability to escape local minima through controlled randomness.
+        """),
+    })
+    
+    _math_accordion
     return
 
 
