@@ -1,40 +1,40 @@
 {
-  "runs": 100,
-  "rounds": 3,
+  "runs": 5000,
+  "rounds": 10,
   "numPlayers": 20,
   "numCourts": 4,
   "numBatches": 5,
-  "totalSimulations": 500,
+  "totalSimulations": 25000,
   "aggregateStats": {
-    "repeatRate": 12.4,
-    "avgRepeatsPerRun": 0.128,
-    "zeroRepeatRate": 87.6
+    "repeatRate": 49.348,
+    "avgRepeatsPerRun": 0.66252,
+    "zeroRepeatRate": 50.664
   },
   "timing": {
-    "totalMs": 30,
-    "avgPerBatchMs": 6,
+    "totalMs": 6615,
+    "avgPerBatchMs": 1323,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 8
+        "durationMs": 1352
       },
       {
         "batch": 2,
-        "durationMs": 6
+        "durationMs": 1315
       },
       {
         "batch": 3,
-        "durationMs": 5
+        "durationMs": 1342
       },
       {
         "batch": 4,
-        "durationMs": 5
+        "durationMs": 1311
       },
       {
         "batch": 5,
-        "durationMs": 6
+        "durationMs": 1295
       }
     ]
   },
-  "timestamp": "2026-01-24T19:46:01.226Z"
+  "timestamp": "2026-01-25T16:18:57.766Z"
 }
