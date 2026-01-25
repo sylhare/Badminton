@@ -21,8 +21,8 @@ def _():
 def _(Path, json, pl):
     data_dir = Path(__file__).parent / "data"
     
-    # Load Monte Carlo data (new_algo)
-    mc_dir = data_dir / "new_algo"
+    # Load Monte Carlo data
+    mc_dir = data_dir / "mc_algo"
     mc_summary = pl.read_csv(mc_dir / "summary.csv")
     mc_pair_events = pl.read_csv(mc_dir / "pair_events.csv")
     mc_config = json.loads((mc_dir / "config.json").read_text())
@@ -326,7 +326,7 @@ def _(all_metrics, mo):
     | **Conflict Graph** | {_cg['p_any_repeat']:.1%} | {_cg['zero_repeat_pct']:.1%} | {_cg_vs_bl:+.1f}% | {_cg_vs_mc:+.1f}% |
     | **Random Baseline** | {_bl['p_any_repeat']:.1%} | {_bl['zero_repeat_pct']:.1%} | - | - |
     
-    **🏆 Winner: {_winner}** with {_by_label[_winner]['zero_repeat_pct']:.1%} perfect runs!
+    **Winner: {_winner}** with {_by_label[_winner]['zero_repeat_pct']:.1%} perfect runs!
     """)
     return
 
@@ -500,28 +500,31 @@ def _(baseline_pair_events, cg_pair_events, config, fig_to_image, mc_pair_events
 
 
 @app.cell(hide_code=True)
-def _(cg_pair_events, mc_pair_events, mo, sa_pair_events):
+def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, sa_pair_events):
     _mc_total = mc_pair_events.height
     _sa_total = sa_pair_events.height
     _cg_total = cg_pair_events.height
+    _bl_total = baseline_pair_events.height
     
-    _interpretation = ""
+    _sa_note = ""
     if _sa_total == 0:
-        _interpretation = "**Simulated Annealing achieved ZERO repeat events** - the heatmap shows uniform coloring (only the base value of 1 per pair, no actual repeats)!"
+        _sa_note = "**Simulated Annealing achieved ZERO repeat events** - the heatmap shows uniform coloring (only the base value of 1 per pair, no actual repeats)!"
     
     mo.md(f"""
     ### Heatmap Interpretation
     
     Each heatmap shows a base value of 1 for every valid pair plus actual repeat counts. This ensures all algorithms display a visible grid structure.
     
-    {_interpretation}
+    {_sa_note}
     
-    - **Monte Carlo**: Hot spots indicate pairs that repeated more often
-    - **Conflict Graph**: Different pattern of concentrations
-    - **Random Baseline**: Most uniform distribution (all pairs equally likely to repeat)
-    - **Uniform coloring** (like SA) indicates excellent performance - no pair repeated above the baseline
+    **Pattern Analysis:**
     
-    The algorithms with **more uniform, lighter coloring** are the best at avoiding teammate repetitions.
+    - **Simulated Annealing**: Perfectly uniform (lightest) - no pair repeated above the baseline value of 1
+    - **Monte Carlo**: Similar spread pattern to Random Baseline but with ~4× fewer total repeats ({_mc_total:,} vs {_bl_total:,} events). The distribution is fairly uniform because MC samples randomly.
+    - **Conflict Graph**: Shows **concentrated hot spots** on specific pairs. This is due to its deterministic/greedy nature - when the algorithm fails to avoid repeats, it tends to fail on the same pairs repeatedly across runs. Despite having fewer total repeats ({_cg_total:,} events), the repeats cluster on certain pairs.
+    - **Random Baseline**: Most spread out but darkest overall - repeats are distributed across all pairs with high total volume.
+    
+    **Key insight**: Lighter overall = fewer repeats. Concentrated spots = deterministic failure patterns. Uniform spread = stochastic behavior.
     """)
     return
 
@@ -640,6 +643,121 @@ def _(baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, pl, s
 
 
 # =============================================================================
+# BATCH TIMING ANALYSIS
+# =============================================================================
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ## Batch Timing Analysis
+    
+    How fast are the algorithms? Comparison of execution time across all batches.
+    """)
+    return
+
+
+@app.cell
+def _(cg_config, fig_to_image, mc_config, mo, np, plt, sa_config):
+    # Extract timing data from config files
+    _mc_timings = mc_config.get("timing", {}).get("batchTimings", [])
+    _sa_timings = sa_config.get("timing", {}).get("batchTimings", [])
+    _cg_timings = cg_config.get("timing", {}).get("batchTimings", [])
+    
+    # Calculate averages (in seconds for readability)
+    _mc_avg = mc_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
+    _sa_avg = sa_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
+    _cg_avg = cg_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
+    
+    _mc_total = mc_config.get("timing", {}).get("totalMs", 0) / 1000
+    _sa_total = sa_config.get("timing", {}).get("totalMs", 0) / 1000
+    _cg_total = cg_config.get("timing", {}).get("totalMs", 0) / 1000
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # Left: Average time per batch (bar chart)
+    _labels = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#4C78A8", "#54A24B", "#F58518"]
+    _avgs = [_mc_avg, _sa_avg, _cg_avg]
+    _x = np.arange(len(_labels))
+    
+    _bars = _ax1.bar(_x, _avgs, color=_colors, alpha=0.85, width=0.6)
+    _ax1.set_xticks(_x)
+    _ax1.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
+    _ax1.set_ylabel("Average Time per Batch (seconds)", fontsize=11)
+    _ax1.set_title("Average Execution Time\n(lower is better)", fontsize=12, fontweight="bold")
+    _ax1.set_yscale("log")  # Log scale due to large differences
+    
+    for _bar in _bars:
+        _h = _bar.get_height()
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h * 1.1,
+                  f"{_h:.1f}s", ha="center", va="bottom", fontsize=10, fontweight="bold")
+    
+    # Right: Per-batch timing line chart
+    _batches = [1, 2, 3, 4, 5]
+    _mc_times = [t["durationMs"] / 1000 for t in _mc_timings]
+    _sa_times = [t["durationMs"] / 1000 for t in _sa_timings]
+    _cg_times = [t["durationMs"] / 1000 for t in _cg_timings]
+    
+    _ax2.plot(_batches, _mc_times, marker="o", label="Monte Carlo", color="#4C78A8", linewidth=2)
+    _ax2.plot(_batches, _sa_times, marker="s", label="Simulated Annealing", color="#54A24B", linewidth=2)
+    _ax2.plot(_batches, _cg_times, marker="^", label="Conflict Graph", color="#F58518", linewidth=2)
+    
+    _ax2.set_xlabel("Batch Number", fontsize=11)
+    _ax2.set_ylabel("Execution Time (seconds)", fontsize=11)
+    _ax2.set_title("Timing per Batch\n(5 batches, 5000 runs each)", fontsize=12, fontweight="bold")
+    _ax2.legend(loc="upper right")
+    _ax2.set_yscale("log")  # Log scale due to large differences
+    _ax2.set_xticks(_batches)
+    _ax2.grid(True, alpha=0.3)
+    
+    _fig.tight_layout()
+    mo.image(fig_to_image(_fig))
+    return
+
+
+@app.cell(hide_code=True)
+def _(cg_config, mc_config, mo, sa_config):
+    _mc_avg = mc_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
+    _sa_avg = sa_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
+    _cg_avg = cg_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
+    
+    _mc_total = mc_config.get("timing", {}).get("totalMs", 0) / 1000
+    _sa_total = sa_config.get("timing", {}).get("totalMs", 0) / 1000
+    _cg_total = cg_config.get("timing", {}).get("totalMs", 0) / 1000
+    
+    # Speedup calculations
+    _cg_vs_mc = _mc_avg / _cg_avg if _cg_avg > 0 else 0
+    _cg_vs_sa = _sa_avg / _cg_avg if _cg_avg > 0 else 0
+    _mc_vs_sa = _sa_avg / _mc_avg if _mc_avg > 0 else 0
+    
+    # Find fastest
+    _fastest = "Conflict Graph" if _cg_avg <= _mc_avg and _cg_avg <= _sa_avg else \
+               "Monte Carlo" if _mc_avg <= _sa_avg else "Simulated Annealing"
+    
+    mo.md(f"""
+    ### Timing Summary
+    
+    | Algorithm | Avg per Batch | Total (5 batches) | Speedup vs SA |
+    |-----------|---------------|-------------------|---------------|
+    | **Conflict Graph** | {_cg_avg:.2f}s | {_cg_total:.1f}s | **{_cg_vs_sa:.0f}×** faster |
+    | **Monte Carlo** | {_mc_avg:.1f}s | {_mc_total:.1f}s | {_mc_vs_sa:.1f}× faster |
+    | **Simulated Annealing** | {_sa_avg:.1f}s | {_sa_total:.1f}s | 1.0× (baseline) |
+    
+    **Fastest: {_fastest}** - Conflict Graph is ~{_cg_vs_sa:.0f}× faster than Simulated Annealing and ~{_cg_vs_mc:.0f}× faster than Monte Carlo!
+    
+    ### Trade-off Analysis
+    
+    - **Conflict Graph**: Blazing fast (~{_cg_avg:.1f}s per batch) but only achieves ~50% zero-repeat rate
+    - **Monte Carlo**: Moderate speed (~{_mc_avg:.0f}s per batch) with ~45% zero-repeat rate  
+    - **Simulated Annealing**: Slowest (~{_sa_avg:.0f}s per batch) but achieves **100% zero-repeat rate**
+    
+    The choice depends on your priorities: if perfect teammate variety is critical, SA is worth the wait. For real-time applications, CG provides good-enough results instantly.
+    """)
+    return
+
+
+# =============================================================================
 # FINAL CONCLUSIONS
 # =============================================================================
 
@@ -681,7 +799,11 @@ def _(all_metrics, mo):
        - Simulated Annealing: {(_bl['p_any_repeat'] - _sa['p_any_repeat']) / _bl['p_any_repeat'] * 100:.0f}% reduction in repeat rate
        - Conflict Graph: {(_bl['p_any_repeat'] - _cg['p_any_repeat']) / _bl['p_any_repeat'] * 100:.0f}% reduction in repeat rate
     
-    3. **Recommendation**: Use **{_sorted_by_zero[0]['label']}** for maximum teammate variety across consecutive rounds.
+    3. **Conflict Graph hot spots**: Despite decent overall performance, CG exhibits **concentrated failure patterns** - when it fails to avoid repeats, it tends to fail on the same pairs repeatedly due to its deterministic/greedy nature.
+    
+    4. **Speed vs. Quality trade-off**: Conflict Graph is ~850× faster than Simulated Annealing (~1.3s vs ~1126s per batch), making it ideal for real-time applications. SA is worth the wait only when perfect teammate variety is critical.
+    
+    5. **Recommendation**: Use **{_sorted_by_zero[0]['label']}** for quality, or **Conflict Graph** when speed is the priority.
     """)
     return
 
