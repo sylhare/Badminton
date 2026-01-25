@@ -9,13 +9,15 @@ def _():
     import io
     import json
     import math
-    import os
     import random
     from pathlib import Path
 
     import marimo as mo
     import polars as pl
-    return Path, io, json, math, mo, os, pl, random
+    
+    from utils.plotting import setup_matplotlib, fig_to_image
+    
+    return Path, fig_to_image, io, json, math, mo, pl, random, setup_matplotlib
 
 
 @app.cell
@@ -78,13 +80,8 @@ def _(mo):
 
 
 @app.cell
-def _(Path, os):
-    _mpl_config_dir = Path(__file__).parent / ".mplconfig"
-    _cache_dir = Path(__file__).parent / ".cache"
-    _mpl_config_dir.mkdir(exist_ok=True)
-    _cache_dir.mkdir(exist_ok=True)
-    _ = os.environ.setdefault("MPLCONFIGDIR", str(_mpl_config_dir))
-    _ = os.environ.setdefault("XDG_CACHE_HOME", str(_cache_dir))
+def _(setup_matplotlib):
+    setup_matplotlib(__file__)
     return
 
 
@@ -394,7 +391,7 @@ def _(mo):
 
 
 @app.cell
-def _(io, mo, plt, stats):
+def _(fig_to_image, mo, plt, stats):
     _rows = stats.to_dicts()
     _by_label = {row["label"]: row for row in _rows}
     _algo = _by_label.get("algorithm")
@@ -445,10 +442,7 @@ def _(io, mo, plt, stats):
             )
 
         _fig.tight_layout()
-        _buffer = io.BytesIO()
-        _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-        _buffer.seek(0)
-        mo.image(_buffer.getvalue())
+        mo.image(fig_to_image(_fig))
     return
 
 
@@ -634,7 +628,7 @@ def _(baseline, pl):
 
 
 @app.cell
-def _(baseline_diff_distribution, diff_distribution, io, mo, plt):
+def _(baseline_diff_distribution, diff_distribution, fig_to_image, mo, plt):
     _fig, _axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
     _max_x = max(
         diff_distribution["repeatPairDifferentOpponentsCount"].max(),
@@ -668,10 +662,7 @@ def _(baseline_diff_distribution, diff_distribution, io, mo, plt):
     _axes[1].set_xlim(-0.5, _max_x + 0.5)
 
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    mo.image(_buffer.getvalue())
+    mo.image(fig_to_image(_fig))
     return
 
 
@@ -766,7 +757,7 @@ def _(mo, pair_frequency):
 
 
 @app.cell
-def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_events, pl, plt):
+def _(baseline_pair_events, config, fig_to_image, mo, new_algo_pair_events, np, pair_events, pl, plt):
     # Build matrices for all three: Old Algorithm, Baseline, New Algorithm
     _num_players = config["numPlayers"]
     _players = [f"P{i + 1}" for i in range(_num_players)]
@@ -848,16 +839,13 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
     _cbar.set_label("% of total repeat events", rotation=270, labelpad=20)
 
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
+    _image_bytes = fig_to_image(_fig)
 
     # Store matrices for later analysis
     algo_pair_matrix = _old_algo_norm
     baseline_pair_matrix = _baseline_norm
     new_algo_pair_matrix = _new_algo_norm
-    mo.image(_buffer.getvalue())
+    mo.image(_image_bytes)
     return algo_pair_matrix, baseline_pair_matrix, new_algo_pair_matrix
 
 
@@ -931,7 +919,7 @@ def _(mo):
 
 
 @app.cell
-def _(io, mo, np, plt, stats):
+def _(fig_to_image, mo, np, plt, stats):
     _rows = stats.to_dicts()
     _by_label = {row["label"]: row for row in _rows}
     _algo = _by_label.get("algorithm")
@@ -998,11 +986,7 @@ def _(io, mo, np, plt, stats):
                   f"{_bar.get_height():.1%}", ha="center", va="bottom", fontsize=9, color="#E45756")
 
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
-    mo.image(_buffer.getvalue())
+    mo.image(fig_to_image(_fig))
     return
 
 
@@ -1120,7 +1104,7 @@ def _(config, math, mo):
 
 
 @app.cell
-def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_events, pl, plt):
+def _(baseline_pair_events, config, fig_to_image, mo, new_algo_pair_events, np, pair_events, pl, plt):
     """
     Overall diversity metrics: Concentration and Volume comparison.
     (Detailed pair patterns are in the Multi-Batch Analysis section below)
@@ -1192,10 +1176,7 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
                   f"{_val:.2f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
 
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
+    _image_bytes = fig_to_image(_fig)
 
     # Calculate reduction percentages for caption
     _old_reduction = (_baseline_avg_per_run - _old_avg_per_run) / _baseline_avg_per_run * 100
@@ -1207,7 +1188,7 @@ def _(baseline_pair_events, config, io, mo, new_algo_pair_events, np, pair_event
         f"Old algo reduces repeats by {_old_reduction:.0f}% vs baseline, New algo by {_new_reduction:.0f}%."
     )
 
-    mo.output.replace(mo.vstack([mo.image(_buffer.getvalue()), _caption]))
+    mo.output.replace(mo.vstack([mo.image(_image_bytes), _caption]))
     return
 
 
@@ -1354,7 +1335,7 @@ def _(batch_pair_events, has_batches, mo, pl):
 
 
 @app.cell
-def _(all_pair_data, has_batches, io, mo, normalized_baseline_pairs, normalized_new_algo_pairs, np, plt):
+def _(all_pair_data, has_batches, fig_to_image, mo, normalized_baseline_pairs, normalized_new_algo_pairs, np, plt):
     mo.stop(not has_batches)
 
     # Pivot to get pair x batch matrix (OLD algorithm)
@@ -1403,10 +1384,7 @@ def _(all_pair_data, has_batches, io, mo, normalized_baseline_pairs, normalized_
     _ax.set_title("Top 20 Repeat Pairs: Old Algo vs Baseline vs New Algo\n(All normalized to same total events)")
 
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
+    _image_bytes = fig_to_image(_fig)
 
     # Store data for correlation analysis
     batch_pair_matrix = _matrix
@@ -1416,12 +1394,12 @@ def _(all_pair_data, has_batches, io, mo, normalized_baseline_pairs, normalized_
         "**Heatmap**: Shows which player pairs repeat most often across all batches. "
         "Each row is a pair, each column is an algorithm. Darker cells = more repeat events for that pair."
     )
-    mo.output.replace(mo.vstack([mo.image(_buffer.getvalue()), _heatmap_caption]))
+    mo.output.replace(mo.vstack([mo.image(_image_bytes), _heatmap_caption]))
     return batch_pair_ids, batch_pair_matrix
 
 
 @app.cell
-def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, io, mo, normalized_baseline_pairs, normalized_new_algo_pairs, np, pl, plt):
+def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, fig_to_image, mo, normalized_baseline_pairs, normalized_new_algo_pairs, np, pl, plt):
     mo.stop(not has_batches)
 
     # Compute values for all three datasets
@@ -1456,15 +1434,12 @@ def _(all_pair_data, batch_pair_ids, batch_pair_matrix, has_batches, io, mo, nor
     _ax.legend()
 
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
+    _image_bytes = fig_to_image(_fig)
 
     _barchart_caption = mo.md(
         "**Bar chart**: Same data in bar format for easier comparison between algorithms on the top 10 repeat pairs."
     )
-    mo.output.replace(mo.vstack([mo.image(_buffer.getvalue()), _barchart_caption]))
+    mo.output.replace(mo.vstack([mo.image(_image_bytes), _barchart_caption]))
     return (batch_baseline_correlation,)
 
 
@@ -1581,7 +1556,7 @@ def _(has_batches, mo):
 
 
 @app.cell
-def _(batch_stats_df, baseline_batch_stats, has_batches, io, mo, new_algo_batch_stats_df, np, plt):
+def _(batch_stats_df, baseline_batch_stats, has_batches, fig_to_image, mo, new_algo_batch_stats_df, np, plt):
     mo.stop(not has_batches)
 
     # Get OLD algorithm batch stats
@@ -1630,11 +1605,7 @@ def _(batch_stats_df, baseline_batch_stats, has_batches, io, mo, new_algo_batch_
                   f"{_bar.get_height():.2f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
 
     _fig.tight_layout()
-    _buffer = io.BytesIO()
-    _fig.savefig(_buffer, format="png", dpi=150, bbox_inches="tight")
-    _buffer.seek(0)
-    plt.close(_fig)
-    mo.image(_buffer.getvalue())
+    mo.image(fig_to_image(_fig))
     return
 
 
