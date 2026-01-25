@@ -1,8 +1,40 @@
 {
-  "runs": 5000,
-  "rounds": 10,
+  "runs": 100,
+  "rounds": 3,
   "numPlayers": 20,
   "numCourts": 4,
-  "engine": "sa",
-  "timestamp": "2026-01-24T00:56:53.863Z"
+  "numBatches": 5,
+  "totalSimulations": 500,
+  "aggregateStats": {
+    "repeatRate": 0,
+    "avgRepeatsPerRun": 0,
+    "zeroRepeatRate": 100
+  },
+  "timing": {
+    "totalMs": 33305,
+    "avgPerBatchMs": 6661,
+    "batchTimings": [
+      {
+        "batch": 1,
+        "durationMs": 7792
+      },
+      {
+        "batch": 2,
+        "durationMs": 6380
+      },
+      {
+        "batch": 3,
+        "durationMs": 6360
+      },
+      {
+        "batch": 4,
+        "durationMs": 6432
+      },
+      {
+        "batch": 5,
+        "durationMs": 6341
+      }
+    ]
+  },
+  "timestamp": "2026-01-24T19:46:01.195Z"
 }
