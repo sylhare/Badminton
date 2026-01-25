@@ -10,6 +10,7 @@ Access notebooks at:
   - http://localhost:8765/analysis
   - http://localhost:8765/algorithm_docs
   - http://localhost:8765/bench_analysis
+  - http://localhost:8765/engine_analysis
 """
 
 import marimo
@@ -19,6 +20,7 @@ server = (
     .with_app(path="/analysis", root="./analysis.py")
     .with_app(path="/algorithm_docs", root="./algorithm_docs.py")
     .with_app(path="/bench_analysis", root="./bench_analysis.py")
+    .with_app(path="/engine_analysis", root="./engine_analysis.py")
     .build()
 )
 
@@ -31,6 +33,7 @@ if __name__ == "__main__":
     print("  • http://localhost:8765/analysis")
     print("  • http://localhost:8765/algorithm_docs")
     print("  • http://localhost:8765/bench_analysis")
+    print("  • http://localhost:8765/engine_analysis")
     print("=" * 40)
     print("Watching for file changes...\n")
 

@@ -1,5 +1,6 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+
 import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine.ts';
 import { CourtAssignmentEngineSA } from '../src/utils/CourtAssignmentEngineSA.ts';
 import { ConflictGraphEngine } from '../src/utils/ConflictGraphEngine.ts';
@@ -215,7 +216,7 @@ const runSingleBatch = (batchId: string, engine?: EngineType, engineId?: string)
   const engineSuffix = engineId ? `_${engineId}` : '';
   const batchSuffix = batchId ? `_batch${batchId}` : '';
   const suffix = `${engineSuffix}${batchSuffix}`;
-  
+
   writeFileSync(resolve(DATA_DIR, `summary${suffix}.csv`), toCsv(summaries));
   writeFileSync(resolve(DATA_DIR, `pair_events${suffix}.csv`), toCsv(pairEvents));
 
@@ -236,14 +237,14 @@ const runComparisonSimulation = () => {
   for (const { id, name, engine } of ALL_ENGINES) {
     console.log(`Running ${name}...`);
     const startTime = Date.now();
-    
+
     const { summaries } = runSingleBatch('', engine, id);
-    
+
     const elapsed = Date.now() - startTime;
     const repeatCount = summaries.filter(s => s.repeatAnyPair).length;
     const repeatRate = (repeatCount / summaries.length) * 100;
     const avgRepeats = summaries.reduce((acc, s) => acc + s.repeatPairCount, 0) / summaries.length;
-    
+
     results[id] = { repeatRate, avgRepeats };
     console.log(`  ✓ ${name}: ${repeatRate.toFixed(1)}% sessions with repeats, avg ${avgRepeats.toFixed(2)} repeats/session (${elapsed}ms)\n`);
   }
@@ -363,7 +364,7 @@ const ensureBenchDataDir = () => {
  * With N players and C courts (4 players per court), the bench count per round is N - 4C.
  * In an ideal rotation, each player benches once every N/(N-4C) rounds.
  * So the maximum consecutive games before benching = ceil(N/(N-4C)) - 1
- * 
+ *
  * For a more intuitive formula:
  * - 16 playing spots per round (4 courts × 4 players)
  * - (N-16) players benched per round
@@ -422,7 +423,7 @@ const runBenchSimulation = (numPlayers: number, batchId: number, engine?: Engine
 
     // Calculate summary stats for this simulation
     const theoreticalMax = calculateTheoreticalMax(numPlayers, BENCH_COURTS);
-    
+
     if (allGapsBetweenBenches.length > 0) {
       summaries.push({
         simulationId: simId,
