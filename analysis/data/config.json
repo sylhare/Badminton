@@ -1,0 +1,6 @@
+{
+  "runs": 5000,
+  "rounds": 10,
+  "numPlayers": 20,
+  "numCourts": 4
+}
