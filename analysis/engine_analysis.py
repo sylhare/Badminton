@@ -909,10 +909,10 @@ Each algorithm pulls different "levers" to achieve good solutions:
 
 | Lever | Random | Monte Carlo | Simulated Annealing | Conflict Graph |
 |-------|--------|-------------|---------------------|----------------|
-| **Memory of past** | ❌ None | ✅ Via cost function | ✅ Via cost function | ✅ Via conflict weights |
+| **Memory of past** | None | Yes, via cost function | Yes, via cost function | Yes, via conflict weights |
 | **Search strategy** | Pure random | Sample & select best | Iterative improvement | Greedy construction |
-| **Escape local minima** | N/A | Limited (independent samples) | ✅ Via temperature | ❌ Commits to greedy choices |
-| **Hard constraints** | ❌ None | Soft penalties | ✅ Very high penalties | ✅ Explicit conflict check |
+| **Escape local minima** | N/A | Limited (independent samples) | Yes, via temperature | No, commits to greedy choices |
+| **Hard constraints** | None | Soft penalties | Yes, very high penalties | Yes, explicit conflict check |
 | **Iterations** | 1 | 300 | 5000 | 1 (greedy pass) |
 | **Time complexity** | $O(n)$ | $O(300 \\cdot n \\log n)$ | $O(5000 \\cdot n)$ | $O(n^2 \\log n)$ |
 
