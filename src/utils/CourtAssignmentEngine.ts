@@ -418,6 +418,24 @@ export class CourtAssignmentEngine {
   }
 
   /**
+   * Fisher-Yates (Knuth) shuffle algorithm for unbiased random permutation.
+   * This produces a truly uniform distribution unlike sort(() => Math.random() - 0.5).
+   *
+   * @complexity O(n) time, O(1) space - optimal for shuffling
+   * @param array - Array to shuffle in-place
+   * @returns The same array, shuffled
+   */
+  private static shuffleArray<T>(array: T[]): T[] {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = array[i];
+      array[i] = array[j];
+      array[j] = temp;
+    }
+    return array;
+  }
+
+  /**
    * Selects players to be benched based on historical bench counts.
    * Players with fewer historical bench counts are prioritized for benching (fairness).
    *
@@ -431,9 +449,9 @@ export class CourtAssignmentEngine {
       if (!this.benchCountMap.has(p.id)) this.benchCountMap.set(p.id, 0);
     });
 
-    return [...players].sort((a, b) => {
-      const diff = (this.benchCountMap.get(a.id) ?? 0) - (this.benchCountMap.get(b.id) ?? 0);
-      return diff !== 0 ? diff : Math.random() - 0.5;
+    const shuffled = this.shuffleArray([...players]);
+    return shuffled.sort((a, b) => {
+      return (this.benchCountMap.get(a.id) ?? 0) - (this.benchCountMap.get(b.id) ?? 0);
     }).slice(0, benchSpots);
   }
 
@@ -599,7 +617,7 @@ export class CourtAssignmentEngine {
    */
   private static generateCandidate(onCourtPlayers: Player[], numberOfCourts: number, startCourtNum: number = 1) {
     const courts: Court[] = [];
-    const playersCopy = [...onCourtPlayers].sort(() => Math.random() - 0.5);
+    const playersCopy = this.shuffleArray([...onCourtPlayers]);
 
     const playersPerCourt = 4;
     let idx = 0;
