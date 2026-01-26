@@ -36,7 +36,7 @@ def _(mo):
     2. **Simulated Annealing (SA)** - Iterative improvement with probabilistic acceptance
     3. **Conflict Graph Engine (CG)** - Greedy construction with explicit conflict tracking
 
-    For each algorithm, we define the optimization approach, prove convergence properties, analyze complexity, and provide statistical guarantees. Based on empirical analysis (see `engine_analysis.py`), the choice of algorithm depends on the trade-off between solution quality and computational requirements.
+    For each algorithm, we define the optimization approach, prove convergence properties, analyze complexity, and provide statistical guarantees. Based on empirical analysis (see [engine_analysis.py](/engine_analysis/)), the choice of algorithm depends on the trade-off between solution quality and computational requirements.
     """)
     return
 
@@ -77,7 +77,7 @@ def _(mo):
 
     ### 1.4 Problem Classification
 
-    This problem is a variant of the **Balanced Graph Partitioning Problem**, which is NP-hard [1]. The combination of:
+    This problem is a variant of the **Balanced Graph Partitioning Problem**, which is NP-hard [[1]](#ref-1). The combination of:
     - Multi-objective optimization (teammate diversity, opponent diversity, skill balance)
     - Capacity constraints (exactly 4 players per court)
     - Historical state dependency (costs depend on past assignments)
@@ -201,6 +201,14 @@ def _(mo):
     \mathcal{C}(A) = \sum_{c \in \text{Courts}} \mathcal{C}_{\text{court}}(c)
     $$
 
+    **Variable definitions**:
+    - $\mathcal{C}(A)$ = total cost of assignment $A$ (lower is better)
+    - $A$ = a complete court assignment (who plays where, on which team)
+    - $c$ = a single court
+    - $\sum_{c \in \text{Courts}}$ = sum over all courts being used
+
+    **What this calculates**: The total "badness" of an assignment by adding up the costs from each individual court.
+
     Where the court cost function is:
 
     $$
@@ -211,6 +219,13 @@ def _(mo):
     & + \mathcal{C}_{\text{balance}}(c)
     \end{aligned}
     $$
+
+    **Variable definitions**:
+    - $\mathcal{C}_{\text{court}}(c)$ = cost for a single court $c$
+    - $\mathcal{C}_{\text{teammate}}(c)$ = penalty for repeated teammate pairings on court $c$
+    - $\mathcal{C}_{\text{opponent}}(c)$ = penalty for repeated opponent matchups on court $c$
+    - $\mathcal{C}_{\text{skill-pair}}(c)$ = penalty for similar-skill players on same team
+    - $\mathcal{C}_{\text{balance}}(c)$ = penalty for unbalanced teams
 
     **Note**: All components are additive with equal weight (1.0). Lower cost = better assignment.
 
@@ -286,7 +301,14 @@ def _(mo):
     \mathcal{C}_{\text{teammate}}(c) = \sum_{t \in \{1,2\}} \sum_{\substack{p_i, p_j \in \text{Team}_t \\ i < j}} H_{\text{teammate}}(p_i, p_j)
     $$
 
-    Where $H_{\text{teammate}}(p_i, p_j)$ is the historical count of times players $i$ and $j$ were teammates.
+    **Variable definitions**:
+    - $\mathcal{C}_{\text{teammate}}(c)$ = teammate cost for court $c$ (what we're calculating)
+    - $t$ = team number (1 or 2)
+    - $p_i, p_j$ = two different players on the same team
+    - $i < j$ = ensures we count each pair only once (Alice-Bob, not also Bob-Alice)
+    - $H_{\text{teammate}}(p_i, p_j)$ = how many times players $i$ and $j$ have been teammates before
+
+    **What this calculates**: Sum up all the historical teammate counts for every pair of players on the same team. Higher value = players have played together too often.
 
     #### 2.2.2 Opponent Repetition Cost
 
@@ -296,6 +318,14 @@ def _(mo):
     \mathcal{C}_{\text{opponent}}(c) = \sum_{p_i \in \text{Team}_1} \sum_{p_j \in \text{Team}_2} H_{\text{opponent}}(p_i, p_j)
     $$
 
+    **Variable definitions**:
+    - $\mathcal{C}_{\text{opponent}}(c)$ = opponent cost for court $c$
+    - $p_i \in \text{Team}_1$ = each player on Team 1
+    - $p_j \in \text{Team}_2$ = each player on Team 2
+    - $H_{\text{opponent}}(p_i, p_j)$ = how many times player $i$ has faced player $j$ as opponents
+
+    **What this calculates**: Sum up all the historical opponent counts for every cross-team pair. Higher value = these players have faced each other too often.
+
     #### 2.2.3 Skill Pairing Penalty
 
     Discourages pairing players with similar skill levels on the same team:
@@ -304,7 +334,15 @@ def _(mo):
     \mathcal{C}_{\text{skill-pair}}(c) = \sum_{t \in \{1,2\}} \sum_{\substack{p_i, p_j \in \text{Team}_t \\ i < j}} \left( W_i \cdot W_j + L_i \cdot L_j \right)
     $$
 
-    Where $W_i$ = total wins and $L_i$ = total losses for player $i$.
+    **Variable definitions**:
+    - $W_i$ = total wins for player $i$
+    - $L_i$ = total losses for player $i$
+    - $W_i \cdot W_j$ = product of two players' wins (high if both are strong)
+    - $L_i \cdot L_j$ = product of two players' losses (high if both are weak)
+
+    **What this calculates**: Penalizes putting two high-win players together OR two high-loss players together. Encourages mixing skill levels within each team.
+
+    **Example**: If Alice has 5 wins and Bob has 4 wins: $5 \times 4 = 20$ (high penalty for putting two strong players together). If Alice (5 wins) pairs with Carol (1 win): $5 \times 1 = 5$ (low penalty).
 
     #### 2.2.4 Team Balance Cost
 
@@ -313,6 +351,15 @@ def _(mo):
     $$
     \mathcal{C}_{\text{balance}}(c) = \left| \sum_{p_i \in \text{Team}_1} W_i - \sum_{p_j \in \text{Team}_2} W_j \right| + \left| \sum_{p_i \in \text{Team}_1} L_i - \sum_{p_j \in \text{Team}_2} L_j \right|
     $$
+
+    **Variable definitions**:
+    - $\sum_{p_i \in \text{Team}_1} W_i$ = total wins of all players on Team 1
+    - $\sum_{p_j \in \text{Team}_2} W_j$ = total wins of all players on Team 2
+    - $| \cdot |$ = absolute value (we care about the difference, not which team is stronger)
+
+    **What this calculates**: The difference in total wins between teams PLUS the difference in total losses between teams. Lower value = more evenly matched teams.
+
+    **Example**: Team 1 has 9 total wins, Team 2 has 3 total wins: $|9 - 3| = 6$ (unbalanced). If both teams had 6 wins: $|6 - 6| = 0$ (perfectly balanced).
     """)
     return
 
@@ -506,13 +553,23 @@ def _(mo):
 
     ### 4.1 Theoretical Foundation
 
-    Monte Carlo methods are a class of algorithms that rely on repeated random sampling to obtain numerical results [2]. The key insight is that by generating many random solutions and keeping the best one, we can approximate the global optimum without exhaustive search.
+    Monte Carlo methods are a class of algorithms that rely on repeated random sampling to obtain numerical results [[2]](#ref-2). The key insight is that by generating many random solutions and keeping the best one, we can approximate the global optimum without exhaustive search.
 
     **Definition (Monte Carlo Greedy Search)**: Given a solution space $\mathcal{S}$ and cost function $\mathcal{C}$, the Monte Carlo Greedy Search generates $K$ independent random samples $\{A_1, A_2, ..., A_K\} \subset \mathcal{S}$ and returns:
 
     $$
     A^* = \arg\min_{i \in \{1,...,K\}} \mathcal{C}(A_i)
     $$
+
+    **Variable definitions**:
+    - $\mathcal{S}$ = the set of all possible court assignments
+    - $\mathcal{C}$ = cost function (measures how "bad" an assignment is)
+    - $K$ = number of random samples (300 in our implementation)
+    - $A_i$ = the $i$-th randomly generated assignment
+    - $A^*$ = the best assignment found (returned result)
+    - $\arg\min$ = "the argument that minimizes" (which assignment has lowest cost)
+
+    **What this formula calculates**: Among all $K$ random assignments, return the one with the lowest cost.
 
     ### 4.2 Algorithm Description
 
@@ -655,11 +712,19 @@ def _(mo):
 
     ### 4.4 Convergence Theorem
 
-    **Theorem (MC Convergence)**: Let $p^*$ be the probability of sampling a near-optimal solution in a single iteration. After $K$ iterations, the probability of **not** finding any near-optimal solution is:
+    **Theorem (MC Convergence)** [[2]](#ref-2): Let $p^*$ be the probability of sampling a near-optimal solution in a single iteration. After $K$ iterations, the probability of **not** finding any near-optimal solution is:
 
     $$
     P(\text{failure}) \leq (1 - p^*)^K
     $$
+
+    **Variable definitions**:
+    - $P(\text{failure})$ = probability of failing to find a good solution
+    - $p^*$ = probability that any single random assignment is "near-optimal"
+    - $K$ = number of random samples we generate (300 in our implementation)
+    - $(1 - p^*)$ = probability of failure in a single iteration
+
+    **What this formula calculates**: The worst-case probability of not finding any good solution after K attempts. Since each attempt is independent, we multiply failure probabilities.
 
     To achieve failure probability $\leq \delta$, we need:
 
@@ -667,11 +732,17 @@ def _(mo):
     K \geq \frac{\ln(1/\delta)}{p^*}
     $$
 
+    **Variable definitions**:
+    - $\delta$ = our acceptable failure probability (e.g., 0.01 = 1% failure rate)
+    - $\ln$ = natural logarithm
+
+    **What this formula calculates**: The minimum number of iterations needed to achieve our desired confidence level.
+
     **Proof**: Each iteration is an independent Bernoulli trial. The probability that all $K$ trials fail is $(1-p^*)^K$. Setting this $\leq \delta$ and solving yields the bound. $\blacksquare$
 
     ---
 
-    **Example**: With $p^* = 0.02$ and $K = 300$:
+    **Example**: With $p^* = 0.02$ (2% chance each attempt is good) and $K = 300$:
 
     $$
     P(\text{failure}) = 0.98^{300} \approx 0.24\%
@@ -767,33 +838,134 @@ def _(mo):
 
     ## 5. Simulated Annealing
 
-    ### 5.1 Theoretical Foundation
+    ### 5.1 What is Annealing?
 
-    Simulated Annealing (SA) is a probabilistic optimization technique inspired by the metallurgical process of annealing, where controlled cooling allows atoms to settle into a low-energy crystalline structure [3]. The algorithm was introduced by Kirkpatrick et al. (1983) and has theoretical guarantees of convergence to the global optimum [4].
+    **Annealing** is a heat treatment process used in metallurgy (metalworking). Imagine you're trying to make a strong, perfect sword:
 
-    **Physical Analogy**: When metal is heated and slowly cooled:
-    - **High temperature**: Atoms move freely, exploring many configurations
-    - **Low temperature**: Atoms settle into stable, low-energy states
+    **Step 1 - Heat**: You heat the metal until it's glowing red-hot. At this temperature, the atoms can move around freely—the metal becomes soft and malleable.
 
-    **Algorithmic Translation**:
-    - **High T**: Accept worse solutions frequently → explore broadly
-    - **Low T**: Only accept improvements → converge to optimum
+    **Step 2 - Slow Cooling**: Instead of dunking it in cold water (which would make it brittle), you let it cool down *very slowly*. As it cools, atoms gradually settle into their ideal positions, forming a strong, uniform crystal structure.
 
-    ### 5.2 The Metropolis Criterion
+    **The key insight**: By allowing exploration when "hot" and gradually becoming more selective when "cold", you end up with a better final result than if you had rushed.
 
-    At temperature $T$, the probability of accepting a move from state $s$ to state $s'$ is:
+    ### 5.2 Applying Annealing to Badminton Court Assignment
+
+    For our badminton problem, we borrow this concept metaphorically [[3]](#ref-3):
+
+    | Metallurgy | Court Assignment |
+    |------------|------------------|
+    | Metal atoms | Player assignments |
+    | Atom energy | Assignment cost (teammate repeats, imbalance, etc.) |
+    | Temperature | Willingness to accept worse assignments |
+    | Low energy crystal | Optimal court configuration |
+    | Cooling process | Gradually becoming pickier about changes |
+
+    **In plain terms**: Early on, we freely shuffle players around, even accepting configurations that look worse. As we "cool down", we become increasingly strict, only accepting changes that improve fairness. This prevents us from getting stuck with a "good but not great" arrangement.
+
+    ### 5.3 The Metropolis Criterion: How We Decide to Accept or Reject Changes
+
+    The **Metropolis criterion** (named after physicist Nicholas Metropolis [[2]](#ref-2)) is the rule that determines whether to accept a proposed change to our court assignments. It comes from statistical physics but translates directly to our problem:
 
     $$
-    P(\text{accept}) = \begin{cases}
-    1 & \text{if } \Delta E \leq 0 \\
-    e^{-\Delta E / T} & \text{if } \Delta E > 0
+    P(\text{accept change}) = \begin{cases}
+    1 & \text{if } \Delta E \leq 0 \text{ (change improves or maintains quality)} \\[0.5em]
+    e^{-\Delta E / T} & \text{if } \Delta E > 0 \text{ (change makes things worse)}
     \end{cases}
     $$
 
-    where $\Delta E = \mathcal{C}(s') - \mathcal{C}(s)$ is the change in cost.
+    **Variable definitions**:
+    - $P(\text{accept change})$ = probability (0 to 1) that we accept the proposed new assignment
+    - $\Delta E$ = change in cost = $\mathcal{C}(\text{new assignment}) - \mathcal{C}(\text{current assignment})$
+    - $T$ = current "temperature" (a positive number that decreases over time)
+    - $e$ = Euler's number (≈ 2.718)
 
-    **Key insight**: The Boltzmann factor $e^{-\Delta E / T}$ allows occasional uphill moves, enabling escape from local minima.
+    **What this formula calculates**: The probability of accepting a proposed player swap or team change.
+
+    **Badminton example**:
+    - Current assignment has cost 45 (some teammate repeats)
+    - Proposed swap results in cost 48 (more repeats, worse!)
+    - $\Delta E = 48 - 45 = 3$ (positive = worse)
+    - At high temperature ($T = 100$): $P = e^{-3/100} = e^{-0.03} ≈ 0.97$ → **97% chance to accept anyway!**
+    - At low temperature ($T = 5$): $P = e^{-3/5} = e^{-0.6} ≈ 0.55$ → **55% chance to accept**
+    - At very low temperature ($T = 1$): $P = e^{-3/1} = e^{-3} ≈ 0.05$ → **Only 5% chance to accept**
+
+    **Why accept worse solutions?** This allows the algorithm to escape "local minima"—situations where any single change makes things worse, but a sequence of changes could find a much better solution.
     """)
+    return
+
+
+@app.cell
+def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
+    # Visual diagram: Annealing Process Analogy
+    _fig_anneal, _ax_anneal = plt.subplots(figsize=(14, 5))
+    _ax_anneal.set_xlim(0, 14)
+    _ax_anneal.set_ylim(0, 5)
+    _ax_anneal.axis('off')
+    _ax_anneal.set_title('Annealing: From Metallurgy to Court Assignment', fontsize=14, fontweight='bold', pad=15)
+
+    # Left side: Physical annealing
+    _ax_anneal.text(3.5, 4.7, 'Physical Annealing (Metal)', ha='center', fontsize=12, fontweight='bold')
+    
+    # Hot metal box
+    _hot_box = FancyBboxPatch((0.5, 2.5), 2.2, 1.8, boxstyle="round,pad=0.1",
+                              facecolor='#E74C3C', edgecolor='#922B21', linewidth=2)
+    _ax_anneal.add_patch(_hot_box)
+    _ax_anneal.text(1.6, 3.4, 'HOT', ha='center', fontsize=11, fontweight='bold', color='white')
+    _ax_anneal.text(1.6, 2.9, 'Atoms move\nfreely', ha='center', fontsize=8, color='white')
+    
+    # Arrow
+    _arrow1 = FancyArrowPatch((2.8, 3.4), (4.2, 3.4), arrowstyle='->', mutation_scale=15,
+                              color='#555', linewidth=2)
+    _ax_anneal.add_patch(_arrow1)
+    _ax_anneal.text(3.5, 3.8, 'Slow\ncooling', ha='center', fontsize=8, color='#555')
+    
+    # Cold metal box
+    _cold_box = FancyBboxPatch((4.3, 2.5), 2.2, 1.8, boxstyle="round,pad=0.1",
+                               facecolor='#3498DB', edgecolor='#1A5276', linewidth=2)
+    _ax_anneal.add_patch(_cold_box)
+    _ax_anneal.text(5.4, 3.4, 'COLD', ha='center', fontsize=11, fontweight='bold', color='white')
+    _ax_anneal.text(5.4, 2.9, 'Atoms settle\noptimally', ha='center', fontsize=8, color='white')
+    
+    # Divider
+    _ax_anneal.plot([7, 7], [0.5, 4.5], '--', color='#888', linewidth=2)
+    _ax_anneal.text(7, 0.2, '≡', fontsize=20, ha='center', color='#888')
+    
+    # Right side: Algorithm annealing
+    _ax_anneal.text(10.5, 4.7, 'Court Assignment Algorithm', ha='center', fontsize=12, fontweight='bold')
+    
+    # High T box
+    _high_t_box = FancyBboxPatch((7.5, 2.5), 2.5, 1.8, boxstyle="round,pad=0.1",
+                                 facecolor='#E74C3C', edgecolor='#922B21', linewidth=2)
+    _ax_anneal.add_patch(_high_t_box)
+    _ax_anneal.text(8.75, 3.5, 'High T', ha='center', fontsize=11, fontweight='bold', color='white')
+    _ax_anneal.text(8.75, 2.9, 'Accept almost\nany swap', ha='center', fontsize=8, color='white')
+    
+    # Arrow
+    _arrow2 = FancyArrowPatch((10.1, 3.4), (11.4, 3.4), arrowstyle='->', mutation_scale=15,
+                              color='#555', linewidth=2)
+    _ax_anneal.add_patch(_arrow2)
+    _ax_anneal.text(10.75, 3.8, '5000\niters', ha='center', fontsize=8, color='#555')
+    
+    # Low T box
+    _low_t_box = FancyBboxPatch((11.5, 2.5), 2.2, 1.8, boxstyle="round,pad=0.1",
+                                facecolor='#3498DB', edgecolor='#1A5276', linewidth=2)
+    _ax_anneal.add_patch(_low_t_box)
+    _ax_anneal.text(12.6, 3.5, 'Low T', ha='center', fontsize=11, fontweight='bold', color='white')
+    _ax_anneal.text(12.6, 2.9, 'Only accept\nimprovements', ha='center', fontsize=8, color='white')
+    
+    # Result boxes at bottom
+    _result1 = FancyBboxPatch((1, 0.5), 5, 1.2, boxstyle="round,pad=0.1",
+                              facecolor='#D5F5E3', edgecolor='#27AE60', linewidth=2)
+    _ax_anneal.add_patch(_result1)
+    _ax_anneal.text(3.5, 1.1, 'Strong crystal structure\n(defect-free metal)', ha='center', fontsize=9)
+    
+    _result2 = FancyBboxPatch((8, 0.5), 5.5, 1.2, boxstyle="round,pad=0.1",
+                              facecolor='#D5F5E3', edgecolor='#27AE60', linewidth=2)
+    _ax_anneal.add_patch(_result2)
+    _ax_anneal.text(10.75, 1.1, 'Optimal assignment\n(no teammate repeats, balanced teams)', ha='center', fontsize=9)
+
+    _fig_anneal.tight_layout()
+    mo.image(fig_to_image(_fig_anneal))
     return
 
 
@@ -801,7 +973,7 @@ def _(mo):
 def _(fig_to_image, mo, np, plt):
     # Visual diagram: Metropolis Acceptance Probability
     _fig_metro, (_ax_m1, _ax_m2) = plt.subplots(1, 2, figsize=(12, 5))
-    _fig_metro.suptitle('Metropolis Criterion: Accepting Worse Solutions', fontsize=14, fontweight='bold')
+    _fig_metro.suptitle('Metropolis Criterion in Action: When Do We Accept Worse Assignments?', fontsize=14, fontweight='bold')
 
     # Left: Acceptance probability vs ΔE for different temperatures
     _delta_e = np.linspace(0, 50, 200)
@@ -854,7 +1026,7 @@ def _(fig_to_image, mo, np, plt):
 @app.cell
 def _(mo):
     mo.md(r"""
-    ### 5.3 Algorithm Description
+    ### 5.4 Algorithm Description
 
     ```
     Algorithm: SimulatedAnnealingAssignment
@@ -878,9 +1050,18 @@ def _(mo):
     5. Return best
     ```
 
-    ### 5.4 Move Operators
+    **Variable definitions**:
+    - $P$ = set of all players
+    - $C$ = number of courts
+    - $T_0$ = initial temperature (controls initial exploration, default 100)
+    - $\alpha$ = cooling rate (how fast temperature decreases, default 0.9995)
+    - $A$ = current court assignment
+    - $A'$ = proposed new assignment (neighbor)
+    - $\Delta E$ = change in cost when switching from $A$ to $A'$
 
-    SA uses local perturbations to explore the solution space:
+    ### 5.5 Move Operators
+
+    SA uses local perturbations to explore the solution space. A "move" is a small change to the current assignment:
 
     | Move Type | Description | Effect |
     |-----------|-------------|--------|
@@ -1014,19 +1195,27 @@ def _(Circle, FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, np, plt):
 @app.cell
 def _(mo):
     mo.md(r"""
-    ### 5.5 Convergence Theory
+    ### 5.6 Convergence Theory
 
-    **Theorem (SA Asymptotic Convergence)** [4]: If the cooling schedule satisfies:
+    **Theorem (SA Asymptotic Convergence)** [[4]](#ref-4): If the cooling schedule satisfies:
 
     $$
     T(t) \geq \frac{\Delta_{\max}}{\ln(t + 2)}
     $$
 
-    where $\Delta_{\max}$ is the maximum cost difference between neighboring states, then Simulated Annealing converges to the global optimum with probability 1 as $t \to \infty$.
+    **Variable definitions**:
+    - $T(t)$ = temperature at iteration $t$
+    - $\Delta_{\max}$ = maximum possible cost difference between any two neighboring states
+    - $\ln$ = natural logarithm
+    - $t$ = current iteration number
 
-    **Practical Implication**: With exponential cooling $T(t) = T_0 \cdot \alpha^t$, we trade theoretical guarantees for practical speed. The algorithm may not find the true global optimum, but empirically achieves excellent results.
+    **What this formula means**: The temperature must decrease slowly enough (at most logarithmically) for the algorithm to guarantee finding the global optimum.
 
-    ### 5.6 Temperature Schedule Design
+    If this condition is met, Simulated Annealing converges to the global optimum with probability 1 as $t \to \infty$.
+
+    **Practical Implication**: With exponential cooling $T(t) = T_0 \cdot \alpha^t$, we trade theoretical guarantees for practical speed. The algorithm may not find the true global optimum, but empirically achieves excellent results [[10]](#ref-10).
+
+    ### 5.7 Temperature Schedule Design
 
     Our implementation uses:
     - **Initial temperature**: $T_0 = 100$ (allows ~63% acceptance of moves with $\Delta E = 100$)
@@ -1040,20 +1229,18 @@ def _(mo):
     T(t) = T_0 \cdot \alpha^t
     $$
 
-    provides smooth transition from exploration to exploitation.
+    **Variable definitions**:
+    - $T(t)$ = temperature at iteration $t$
+    - $T_0$ = initial temperature (100 in our implementation)
+    - $\alpha$ = cooling rate (0.9995 in our implementation)
+    - $t$ = current iteration number (0 to 5000)
 
-    ### 5.7 Complexity Analysis
+    **What this formula calculates**: The temperature value at any given iteration. For example:
+    - At $t=0$: $T = 100 \cdot 0.9995^0 = 100$ (hot, exploratory)
+    - At $t=2500$: $T = 100 \cdot 0.9995^{2500} ≈ 28.6$ (medium)
+    - At $t=5000$: $T = 100 \cdot 0.9995^{5000} ≈ 8.2$ (cold, selective)
 
-    | Operation | Complexity |
-    |-----------|------------|
-    | Generate neighbor | $O(1)$ |
-    | Evaluate cost change | $O(1)$ (incremental) |
-    | Single iteration | $O(1)$ |
-    | Full algorithm | $O(I)$ where I = iterations |
-
-    **Total**: $O(5000) = O(1)$ - constant time regardless of player count!
-
-    **Key advantage**: Unlike Monte Carlo, SA cost is dominated by iterations, not player count. This makes SA more efficient for large groups.
+    This provides a smooth transition from exploration to exploitation.
     """)
     return
 
@@ -1104,7 +1291,7 @@ def _(mo):
 
     ### 6.1 Theoretical Foundation
 
-    The Conflict Graph (CG) approach models the court assignment problem as a **constraint satisfaction problem** on a graph structure [5]. This formulation allows us to apply techniques from graph theory and combinatorial optimization.
+    The Conflict Graph (CG) approach models the court assignment problem as a **constraint satisfaction problem** on a graph structure [[5]](#ref-5). This formulation allows us to apply techniques from graph theory and combinatorial optimization.
 
     **Definition (Conflict Graph)**: Given player set $P$, define graph $G = (V, E)$ where:
     - **Vertices** $V$: All possible teammate pairs $\{(p_i, p_j) : i < j, p_i, p_j \in P\}$
@@ -1119,7 +1306,7 @@ def _(mo):
     - Selected pairs must form $C$ disjoint groups of 2 pairs each
     - Each group of 2 pairs shares no players (forms a valid court of 4)
 
-    This is related to the **Maximum Weight Independent Set** problem, which is NP-hard in general [6].
+    This is related to the **Maximum Weight Independent Set** problem, which is NP-hard in general [[6]](#ref-6).
     """)
     return
 
@@ -1212,7 +1399,7 @@ def _(Circle, FancyBboxPatch, fig_to_image, mo, mpatches, np, plt):
         _ax_cg2.add_patch(_box)
         _ax_cg2.text(_pos[0], _pos[1], _pair, ha='center', va='center', fontsize=11, fontweight='bold', color='white')
 
-    _ax_cg2.text(7.25, 5.8, '✓ Selected (no conflict)', ha='center', fontsize=9, color='#27AE60')
+    _ax_cg2.text(7.25, 5.8, 'Selected (no conflict)', ha='center', fontsize=9, color='#27AE60')
 
     for _pair, _pos, _col in _rejected:
         _box = FancyBboxPatch((_pos[0]-0.4, _pos[1]-0.3), 0.8, 0.6, boxstyle="round,pad=0.05",
@@ -1220,7 +1407,7 @@ def _(Circle, FancyBboxPatch, fig_to_image, mo, mpatches, np, plt):
         _ax_cg2.add_patch(_box)
         _ax_cg2.text(_pos[0], _pos[1], _pair, ha='center', va='center', fontsize=11, fontweight='bold', color='#888')
 
-    _ax_cg2.text(7.25, 3.8, '✗ Rejected (conflicts with\nselected pairs)', ha='center', fontsize=9, color='#E74C3C')
+    _ax_cg2.text(7.25, 3.8, 'Rejected (conflicts with\nselected pairs)', ha='center', fontsize=9, color='#E74C3C')
 
     # Result box
     _result_box = FancyBboxPatch((5.5, 1), 3.5, 1.2, boxstyle="round,pad=0.1",
@@ -1269,10 +1456,24 @@ def _(mo):
     \text{score}(p_i, p_j) = w_1 \cdot H_{\text{teammate}}(i,j) + w_2 \cdot H_{\text{opponent}}(i,j) + w_3 \cdot \Delta_{\text{skill}}(i,j)
     $$
 
-    where:
-    - $w_1, w_2$ = history weights (higher → avoid recent pairs)
-    - $w_3$ = skill difference weight
-    - $\Delta_{\text{skill}}$ = absolute difference in win/loss records
+    **Variable definitions**:
+    - $\text{score}(p_i, p_j)$ = how "bad" it is to pair players $i$ and $j$ as teammates
+    - $w_1$ = weight for teammate history (e.g., 1.0)
+    - $w_2$ = weight for opponent history (e.g., 0.5)
+    - $w_3$ = weight for skill difference (e.g., 0.2)
+    - $H_{\text{teammate}}(i,j)$ = times players $i$ and $j$ were teammates before
+    - $H_{\text{opponent}}(i,j)$ = times players $i$ and $j$ were opponents before
+    - $\Delta_{\text{skill}}(i,j)$ = $|W_i - W_j| + |L_i - L_j|$ = skill difference between players
+
+    **What this formula calculates**: A priority score for each possible player pair. Lower score = better pair = selected first.
+
+    **Example**: Alice and Bob have been teammates 3 times, opponents 2 times, and have similar skills ($\Delta = 1$):
+    $$\text{score} = 1.0 \times 3 + 0.5 \times 2 + 0.2 \times 1 = 3 + 1 + 0.2 = 4.2$$
+
+    Carol and Dave have never played together and have different skills ($\Delta = 5$):
+    $$\text{score} = 1.0 \times 0 + 0.5 \times 0 + 0.2 \times 5 = 0 + 0 + 1 = 1.0$$
+
+    → Carol-Dave pair (score 1.0) gets selected before Alice-Bob (score 4.2).
 
     **Selection criterion**: Lower score → higher priority → selected first.
     """)
@@ -1298,7 +1499,7 @@ def _(mo):
 
     ### 6.6 Approximation Quality
 
-    **Observation**: For the Maximum Independent Set problem on general graphs, greedy achieves a $O(\frac{n}{\log n})$ approximation ratio [6]. However, our conflict graph has special structure (uniform degree), which may yield better practical results.
+    **Observation**: For the Maximum Independent Set problem on general graphs, greedy achieves a $O(\frac{n}{\log n})$ approximation ratio [[6]](#ref-6). However, our conflict graph has special structure (uniform degree), which may yield better practical results.
 
     **Empirical finding**: CG achieves comparable results to Monte Carlo on teammate diversity metrics, with faster execution time for small groups (< 20 players).
 
@@ -1393,18 +1594,57 @@ def _(mo):
 
     ## 7. Comparative Analysis
 
-    ### 7.1 Theoretical Comparison
+    ### 7.1 Complexity Analysis
+
+    All three algorithms have different computational characteristics:
+
+    #### Monte Carlo Greedy Search
+
+    | Operation | Complexity | Notes |
+    |-----------|------------|-------|
+    | Fisher-Yates Shuffle | $O(n)$ | Single pass through player array [[7]](#ref-7) |
+    | Single Court Cost | $O(1)$ | Fixed 4 players, constant operations |
+    | Team Split Selection | $O(3) = O(1)$ | Always exactly 3 configurations |
+    | Full Algorithm | $O(K \cdot n)$ | K=300 iterations, each O(n) |
+
+    **Total**: $O(300n) = O(n)$ - linear in number of players.
+
+    #### Simulated Annealing
+
+    | Operation | Complexity | Notes |
+    |-----------|------------|-------|
+    | Generate neighbor | $O(1)$ | Single player swap |
+    | Evaluate cost change | $O(1)$ | Incremental update [[9]](#ref-9) |
+    | Single iteration | $O(1)$ | Constant work per iteration |
+    | Full algorithm | $O(I)$ | I=5000 iterations |
+
+    **Total**: $O(5000) = O(1)$ - constant time regardless of player count!
+
+    #### Conflict Graph Engine
+
+    | Operation | Complexity | Notes |
+    |-----------|------------|-------|
+    | Build conflict graph | $O(n^2)$ | All pairs of players |
+    | Compute scores | $O(n^2)$ | Score each pair |
+    | Sort pairs | $O(n^2 \log n)$ | Dominant term [[8]](#ref-8) |
+    | Selection | $O(n^2)$ | Check conflicts |
+
+    **Total**: $O(n^2 \log n)$ - quadratic in number of players.
+
+    #### Space Complexity (All Algorithms)
+
+    All algorithms require $O(n^2)$ space for storing pairwise history (teammate counts, opponent counts).
+
+    ### 7.2 Theoretical Comparison
 
     | Property | Monte Carlo | Simulated Annealing | Conflict Graph |
     |----------|-------------|---------------------|----------------|
     | **Search type** | Global (random sampling) | Local → Global (iterative) | Local (greedy) |
-    | **Optimality** | Probabilistic | Asymptotic | None |
+    | **Optimality** | Probabilistic | Asymptotic [[4]](#ref-4) | None |
     | **Deterministic** | No | No | Yes |
     | **Time complexity** | $O(Kn)$ | $O(I)$ | $O(n^2 \log n)$ |
     | **Space complexity** | $O(n^2)$ | $O(n^2)$ | $O(n^2)$ |
     | **Tuning required** | K iterations | T₀, α, iterations | Weights only |
-
-    ### 7.2 When to Choose Each
 
     **Monte Carlo** is best when:
     - Simple implementation is valued
@@ -1421,9 +1661,9 @@ def _(mo):
     - Fastest execution is needed (< 5ms)
     - Debugging/verification is important
 
-    ### 7.3 Empirical Results Summary
+    ### 7.4 Empirical Results Summary
 
-    Based on simulations with 20 players, 4 courts, 10 rounds (see `engine_analysis.py`):
+    Based on simulations with 20 players, 4 courts, 10 rounds (see [engine_analysis.py](/engine_analysis/)):
 
     | Algorithm | Zero-Repeat Rate | Avg. Repeats/Run |
     |-----------|------------------|------------------|
@@ -1432,7 +1672,7 @@ def _(mo):
     | Conflict Graph | ~80% | ~0.20 |
     | Random Baseline | ~40% | ~0.80 |
 
-    **Conclusion**: All three algorithms significantly outperform random assignment. SA achieves the best results, with MC and CG providing good alternatives depending on requirements.
+    **Conclusion**: All three algorithms significantly outperform random assignment. SA achieves the best results [[10]](#ref-10), with MC and CG providing good alternatives depending on requirements.
     """)
     return
 
@@ -1533,7 +1773,16 @@ def _(mo):
     \Delta_{\max} = \max_{i,j} |B_i - B_j| \leq \left\lceil \frac{n}{b} \right\rceil
     $$
 
-    where $n$ = players, $b$ = bench spots per round.
+    **Variable definitions**:
+    - $\Delta_{\max}$ = maximum bench count difference between any two players
+    - $B_i$ = number of times player $i$ has been benched
+    - $n$ = total number of present players
+    - $b$ = number of bench spots per round
+    - $\lceil \cdot \rceil$ = ceiling function (round up)
+
+    **What this formula means**: No player will sit out more than $\lceil n/b \rceil$ times more than any other player.
+
+    **Example**: With 20 players, 4 courts (16 playing), and 4 bench spots: $\lceil 20/4 \rceil = 5$. So the least-benched and most-benched players differ by at most 5 bench sessions.
 
     ### 8.2 Team Split Selection
 
@@ -1592,25 +1841,35 @@ def _(mo):
 
     ## References
 
-    [1] Andreev, K., & Räcke, H. (2006). Balanced Graph Partitioning. *Theory of Computing Systems*, 39(6), 929-939.
+    <a id="ref-1"></a>**[1]** Andreev, K., & Räcke, H. (2006). Balanced Graph Partitioning. *Theory of Computing Systems*, 39(6), 929-939.
+    - *Cited in: Section 1.4 (Problem Classification)*
 
-    [2] Metropolis, N., & Ulam, S. (1949). The Monte Carlo Method. *Journal of the American Statistical Association*, 44(247), 335-341.
+    <a id="ref-2"></a>**[2]** Metropolis, N., & Ulam, S. (1949). The Monte Carlo Method. *Journal of the American Statistical Association*, 44(247), 335-341.
+    - *Cited in: Section 4.1 (Monte Carlo Foundation), Section 5.3 (Metropolis Criterion)*
 
-    [3] Kirkpatrick, S., Gelatt, C. D., & Vecchi, M. P. (1983). Optimization by Simulated Annealing. *Science*, 220(4598), 671-680.
+    <a id="ref-3"></a>**[3]** Kirkpatrick, S., Gelatt, C. D., & Vecchi, M. P. (1983). Optimization by Simulated Annealing. *Science*, 220(4598), 671-680.
+    - *Cited in: Section 5.2 (Applying Annealing to Badminton)*
 
-    [4] Hajek, B. (1988). Cooling Schedules for Optimal Annealing. *Mathematics of Operations Research*, 13(2), 311-329.
+    <a id="ref-4"></a>**[4]** Hajek, B. (1988). Cooling Schedules for Optimal Annealing. *Mathematics of Operations Research*, 13(2), 311-329.
+    - *Cited in: Section 5.6 (Convergence Theory), Section 7.2 (Theoretical Comparison)*
 
-    [5] Garey, M. R., & Johnson, D. S. (1979). *Computers and Intractability: A Guide to the Theory of NP-Completeness*. W. H. Freeman.
+    <a id="ref-5"></a>**[5]** Garey, M. R., & Johnson, D. S. (1979). *Computers and Intractability: A Guide to the Theory of NP-Completeness*. W. H. Freeman.
+    - *Cited in: Section 6.1 (Conflict Graph Foundation)*
 
-    [6] Halldórsson, M. M., & Radhakrishnan, J. (1997). Greed is Good: Approximating Independent Sets in Sparse and Bounded-Degree Graphs. *Algorithmica*, 18(1), 145-163.
+    <a id="ref-6"></a>**[6]** Halldórsson, M. M., & Radhakrishnan, J. (1997). Greed is Good: Approximating Independent Sets in Sparse and Bounded-Degree Graphs. *Algorithmica*, 18(1), 145-163.
+    - *Cited in: Section 6.2 (Graph-Theoretic Formulation), Section 6.6 (Approximation Quality)*
 
-    [7] Fisher, R. A., & Yates, F. (1938). *Statistical Tables for Biological, Agricultural and Medical Research*. Oliver and Boyd.
+    <a id="ref-7"></a>**[7]** Fisher, R. A., & Yates, F. (1938). *Statistical Tables for Biological, Agricultural and Medical Research*. Oliver and Boyd.
+    - *Cited in: Section 7.1 (Complexity Analysis - Monte Carlo)*
 
-    [8] Cormen, T. H., Leiserson, C. E., Rivest, R. L., & Stein, C. (2009). *Introduction to Algorithms* (3rd ed.). MIT Press.
+    <a id="ref-8"></a>**[8]** Cormen, T. H., Leiserson, C. E., Rivest, R. L., & Stein, C. (2009). *Introduction to Algorithms* (3rd ed.). MIT Press.
+    - *Cited in: Section 7.1 (Complexity Analysis - Conflict Graph)*
 
-    [9] Van Laarhoven, P. J., & Aarts, E. H. (1987). *Simulated Annealing: Theory and Applications*. Springer.
+    <a id="ref-9"></a>**[9]** Van Laarhoven, P. J., & Aarts, E. H. (1987). *Simulated Annealing: Theory and Applications*. Springer.
+    - *Cited in: Section 7.1 (Complexity Analysis - Simulated Annealing)*
 
-    [10] Johnson, D. S., Aragon, C. R., McGeoch, L. A., & Schevon, C. (1989). Optimization by Simulated Annealing: An Experimental Evaluation. *Operations Research*, 37(6), 865-892.
+    <a id="ref-10"></a>**[10]** Johnson, D. S., Aragon, C. R., McGeoch, L. A., & Schevon, C. (1989). Optimization by Simulated Annealing: An Experimental Evaluation. *Operations Research*, 37(6), 865-892.
+    - *Cited in: Section 5.6 (Convergence Theory), Section 7.4 (Empirical Results)*
     """)
     return
 
