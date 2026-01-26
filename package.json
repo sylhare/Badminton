@@ -17,7 +17,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "remove-comments": "node script/remove_comments.cjs"
+    "remove-comments": "node script/remove_comments.cjs",
+    "prerender-notebooks": "npx tsx script/prerender-notebooks.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
