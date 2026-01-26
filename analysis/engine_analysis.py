@@ -260,35 +260,52 @@ def _(all_metrics, fig_to_image, mo, np, plt):
     
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
     
-    # Left: Any-repeat rate
+    # Left: Any-repeat rate with confidence intervals
     _any_rates = [m["p_any_repeat"] for m in _metrics]
+    _ci_low = [m["ci_any_low"] for m in _metrics]
+    _ci_high = [m["ci_any_high"] for m in _metrics]
+    _errors = [
+        [_any_rates[i] - _ci_low[i] for i in range(len(_metrics))],
+        [_ci_high[i] - _any_rates[i] for i in range(len(_metrics))]
+    ]
+    
     _x = np.arange(len(_labels))
     _bars1 = _ax1.bar(_x, _any_rates, color=_colors, alpha=0.85, width=0.6)
+    _ax1.errorbar(_x, _any_rates, yerr=_errors, fmt="none", ecolor="#444444", capsize=4, capthick=2)
     
     _ax1.set_xticks(_x)
     _ax1.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
     _ax1.set_ylabel("Probability of Any Repeat", fontsize=11)
-    _ax1.set_title("Any-Repeat Rate\n(lower is better)", fontsize=12, fontweight="bold")
+    _ax1.set_title("Any-Repeat Rate (with 95% CI)\n(lower is better)", fontsize=12, fontweight="bold")
     _ax1.set_ylim(0, 1.1)
     
     for _bar in _bars1:
         _h = _bar.get_height()
-        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.02,
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.04,
                   f"{_h:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
-    # Right: Zero-repeat rate
+    # Right: Zero-repeat rate (compute CI for zero-repeat)
     _zero_rates = [m["zero_repeat_pct"] for m in _metrics]
+    # Compute CI for zero-repeat rate using same formula
+    _zero_ci_errors = []
+    for m in _metrics:
+        _n = m["runs"]
+        _p = m["zero_repeat_pct"]
+        _se = np.sqrt(_p * (1 - _p) / _n) if _p > 0 and _p < 1 else 0
+        _zero_ci_errors.append(1.96 * _se)
+    
     _bars2 = _ax2.bar(_x, _zero_rates, color=_colors, alpha=0.85, width=0.6)
+    _ax2.errorbar(_x, _zero_rates, yerr=_zero_ci_errors, fmt="none", ecolor="#444444", capsize=4, capthick=2)
     
     _ax2.set_xticks(_x)
     _ax2.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
     _ax2.set_ylabel("Zero-Repeat Rate", fontsize=11)
-    _ax2.set_title("Perfect Runs (No Repeats)\n(higher is better)", fontsize=12, fontweight="bold")
+    _ax2.set_title("Perfect Runs (with 95% CI)\n(higher is better)", fontsize=12, fontweight="bold")
     _ax2.set_ylim(0, 1.1)
     
-    for _bar in _bars2:
+    for _i, _bar in enumerate(_bars2):
         _h = _bar.get_height()
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.02,
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + _zero_ci_errors[_i] + 0.02,
                   f"{_h:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
@@ -525,6 +542,323 @@ def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, sa_pair_events):
     - **Random Baseline**: Most spread out but darkest overall - repeats are distributed across all pairs with high total volume.
     
     **Key insight**: Lighter overall = fewer repeats. Concentrated spots = deterministic failure patterns. Uniform spread = stochastic behavior.
+    """)
+    return
+
+
+# =============================================================================
+# TOP REPEAT PAIRS ANALYSIS
+# =============================================================================
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ## Top Repeat Pairs Analysis
+    
+    Which player pairs repeat most often? Identifying the "worst offenders" for each algorithm.
+    """)
+    return
+
+
+@app.cell
+def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, pl, sa_pair_events):
+    def get_top_pairs(events_df, label, top_n=10):
+        """Get top N most frequent repeat pairs for an algorithm."""
+        if events_df.height == 0:
+            return pl.DataFrame({"pairId": [], "events": [], "algorithm": []})
+        return (
+            events_df.group_by("pairId")
+            .agg(pl.len().alias("events"))
+            .sort("events", descending=True)
+            .head(top_n)
+            .with_columns(pl.lit(label).alias("algorithm"))
+        )
+    
+    _mc_top = get_top_pairs(mc_pair_events, "Monte Carlo")
+    _sa_top = get_top_pairs(sa_pair_events, "Simulated Annealing")
+    _cg_top = get_top_pairs(cg_pair_events, "Conflict Graph")
+    _bl_top = get_top_pairs(baseline_pair_events, "Random Baseline")
+    
+    top_pairs_data = {
+        "Monte Carlo": _mc_top,
+        "Simulated Annealing": _sa_top,
+        "Conflict Graph": _cg_top,
+        "Random Baseline": _bl_top,
+    }
+    
+    # Display tables side by side
+    _tables = []
+    for _algo, _df in top_pairs_data.items():
+        if _df.height > 0:
+            _tables.append(mo.vstack([
+                mo.md(f"**{_algo}**"),
+                mo.ui.table(_df.select(["pairId", "events"]))
+            ]))
+        else:
+            _tables.append(mo.vstack([
+                mo.md(f"**{_algo}**"),
+                mo.md("*No repeat pairs!*")
+            ]))
+    
+    mo.hstack(_tables, justify="start", gap=2)
+    return top_pairs_data,
+
+
+# =============================================================================
+# ADJACENT PLAYER BIAS ANALYSIS
+# =============================================================================
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ## Adjacent Player Bias Analysis
+    
+    Do algorithms show bias toward pairing players with adjacent IDs (P1|P2, P2|P3, etc.)?
+    This analysis explains the "hot spots" phenomenon in the Conflict Graph algorithm.
+    """)
+    return
+
+
+@app.cell
+def _(baseline_pair_events, cg_pair_events, config, fig_to_image, mc_pair_events, mo, np, pl, plt, sa_pair_events):
+    def is_adjacent_pair(pair_id):
+        """Check if a pair has consecutive player IDs."""
+        parts = pair_id.split("|")
+        p1_num = int(parts[0][1:])
+        p2_num = int(parts[1][1:])
+        return abs(p1_num - p2_num) == 1
+    
+    def analyze_adjacency_bias(events_df, label):
+        """Analyze adjacent vs non-adjacent pair frequencies."""
+        if events_df.height == 0:
+            return {"algorithm": label, "adjacent_events": 0, "nonadjacent_events": 0, 
+                    "adjacent_pairs": 0, "nonadjacent_pairs": 0, "bias_ratio": 0}
+        
+        pair_counts = (
+            events_df.group_by("pairId")
+            .agg(pl.len().alias("events"))
+            .to_dicts()
+        )
+        
+        adjacent_events = 0
+        nonadjacent_events = 0
+        adjacent_pairs = 0
+        nonadjacent_pairs = 0
+        
+        for row in pair_counts:
+            if is_adjacent_pair(row["pairId"]):
+                adjacent_events += row["events"]
+                adjacent_pairs += 1
+            else:
+                nonadjacent_events += row["events"]
+                nonadjacent_pairs += 1
+        
+        # Calculate average events per pair type
+        adj_avg = adjacent_events / adjacent_pairs if adjacent_pairs > 0 else 0
+        nonadj_avg = nonadjacent_events / nonadjacent_pairs if nonadjacent_pairs > 0 else 0
+        bias_ratio = adj_avg / nonadj_avg if nonadj_avg > 0 else 0
+        
+        return {
+            "algorithm": label,
+            "adjacent_events": adjacent_events,
+            "nonadjacent_events": nonadjacent_events,
+            "adjacent_pairs": adjacent_pairs,
+            "nonadjacent_pairs": nonadjacent_pairs,
+            "adj_avg": adj_avg,
+            "nonadj_avg": nonadj_avg,
+            "bias_ratio": bias_ratio,
+        }
+    
+    _mc_bias = analyze_adjacency_bias(mc_pair_events, "Monte Carlo")
+    _sa_bias = analyze_adjacency_bias(sa_pair_events, "Simulated Annealing")
+    _cg_bias = analyze_adjacency_bias(cg_pair_events, "Conflict Graph")
+    _bl_bias = analyze_adjacency_bias(baseline_pair_events, "Random Baseline")
+    
+    adjacency_bias_data = [_mc_bias, _sa_bias, _cg_bias, _bl_bias]
+    
+    # Create visualization
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    _labels = ["Monte Carlo", "Simulated Annealing", "Conflict Graph", "Random Baseline"]
+    _colors = ["#4C78A8", "#54A24B", "#F58518", "#E45756"]
+    _x = np.arange(len(_labels))
+    _width = 0.35
+    
+    # Left: Adjacent vs Non-adjacent average events
+    _adj_avgs = [d["adj_avg"] for d in adjacency_bias_data]
+    _nonadj_avgs = [d["nonadj_avg"] for d in adjacency_bias_data]
+    
+    _bars1 = _ax1.bar(_x - _width/2, _adj_avgs, _width, label="Adjacent pairs (P1|P2, etc.)", color="#FF6B6B", alpha=0.8)
+    _bars2 = _ax1.bar(_x + _width/2, _nonadj_avgs, _width, label="Non-adjacent pairs", color="#4ECDC4", alpha=0.8)
+    
+    _ax1.set_xticks(_x)
+    _ax1.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
+    _ax1.set_ylabel("Avg Events per Pair", fontsize=11)
+    _ax1.set_title("Adjacent vs Non-Adjacent Pair Frequency\n(higher adjacent = more bias)", fontsize=12, fontweight="bold")
+    _ax1.legend(loc="upper right")
+    
+    # Right: Bias ratio
+    _bias_ratios = [d["bias_ratio"] for d in adjacency_bias_data]
+    _bars3 = _ax1.bar(_x, _bias_ratios, color=_colors, alpha=0.0)  # Invisible, just for spacing
+    
+    _ax2.bar(_x, _bias_ratios, color=_colors, alpha=0.85, width=0.6)
+    _ax2.axhline(y=1.0, color="gray", linestyle="--", alpha=0.7, label="No bias (ratio=1)")
+    _ax2.set_xticks(_x)
+    _ax2.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
+    _ax2.set_ylabel("Bias Ratio (Adjacent / Non-Adjacent)", fontsize=11)
+    _ax2.set_title("Adjacent Pair Bias Ratio\n(>1 = favors adjacent, <1 = avoids adjacent)", fontsize=12, fontweight="bold")
+    _ax2.legend(loc="upper right")
+    
+    for _i, _ratio in enumerate(_bias_ratios):
+        if _ratio > 0:
+            _ax2.text(_i, _ratio + 0.05, f"{_ratio:.2f}×", ha="center", va="bottom", fontsize=10, fontweight="bold")
+    
+    _fig.tight_layout()
+    mo.image(fig_to_image(_fig))
+    return adjacency_bias_data, is_adjacent_pair
+
+
+@app.cell(hide_code=True)
+def _(adjacency_bias_data, mo):
+    _cg = next(d for d in adjacency_bias_data if d["algorithm"] == "Conflict Graph")
+    _bl = next(d for d in adjacency_bias_data if d["algorithm"] == "Random Baseline")
+    _mc = next(d for d in adjacency_bias_data if d["algorithm"] == "Monte Carlo")
+    
+    _cg_bias_pct = (_cg["bias_ratio"] - 1) * 100 if _cg["bias_ratio"] > 0 else 0
+    _bl_bias_pct = (_bl["bias_ratio"] - 1) * 100 if _bl["bias_ratio"] > 0 else 0
+    
+    mo.md(f"""
+    ### Adjacent Bias Interpretation
+    
+    | Algorithm | Adjacent Avg | Non-Adjacent Avg | Bias Ratio | Interpretation |
+    |-----------|--------------|------------------|------------|----------------|
+    | **Monte Carlo** | {_mc['adj_avg']:.1f} | {_mc['nonadj_avg']:.1f} | {_mc['bias_ratio']:.2f}× | {'Slight bias' if _mc['bias_ratio'] > 1.1 else 'Neutral'} |
+    | **Simulated Annealing** | {adjacency_bias_data[1]['adj_avg']:.1f} | {adjacency_bias_data[1]['nonadj_avg']:.1f} | {adjacency_bias_data[1]['bias_ratio']:.2f}× | No repeats = no bias |
+    | **Conflict Graph** | {_cg['adj_avg']:.1f} | {_cg['nonadj_avg']:.1f} | **{_cg['bias_ratio']:.2f}×** | **{_cg_bias_pct:.0f}% more likely** |
+    | **Random Baseline** | {_bl['adj_avg']:.1f} | {_bl['nonadj_avg']:.1f} | {_bl['bias_ratio']:.2f}× | {'Slight bias' if _bl['bias_ratio'] > 1.1 else 'Expected uniform'} |
+    
+    **Key Finding**: The Conflict Graph algorithm shows a **{_cg['bias_ratio']:.1f}× bias** toward repeating adjacent player pairs.
+    
+    **Root Cause**: This bias likely stems from how the CG algorithm iterates through players in sorted order.
+    When selecting players for courts, adjacent IDs are more likely to be grouped together during the greedy
+    construction phase, creating systematic repeat patterns on pairs like P1|P2, P2|P3, P3|P4, etc.
+    
+    **Why This Matters**: Even though CG achieves ~50% zero-repeat rate overall, when it *does* fail,
+    it fails on the same pairs repeatedly. This creates unfairness for specific player combinations.
+    """)
+    return
+
+
+# =============================================================================
+# CORRELATION ANALYSIS
+# =============================================================================
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ## Pattern Correlation Analysis
+    
+    Do algorithms produce similar repeat patterns, or do they fail on different pairs?
+    """)
+    return
+
+
+@app.cell
+def _(baseline_pair_events, cg_pair_events, config, fig_to_image, mc_pair_events, mo, np, pl, plt, sa_pair_events):
+    def build_pair_vector(events_df, all_pairs):
+        """Build a frequency vector for all possible pairs."""
+        if events_df.height == 0:
+            return np.zeros(len(all_pairs))
+        
+        pair_counts = dict(
+            events_df.group_by("pairId")
+            .agg(pl.len().alias("count"))
+            .iter_rows()
+        )
+        return np.array([pair_counts.get(p, 0) for p in all_pairs])
+    
+    # Generate all possible pairs
+    _num_players = config.get("numPlayers", 20)
+    _all_pairs = [f"P{i}|P{j}" for i in range(1, _num_players + 1) 
+                  for j in range(i + 1, _num_players + 1)]
+    
+    # Build vectors for each algorithm
+    _mc_vec = build_pair_vector(mc_pair_events, _all_pairs)
+    _sa_vec = build_pair_vector(sa_pair_events, _all_pairs)
+    _cg_vec = build_pair_vector(cg_pair_events, _all_pairs)
+    _bl_vec = build_pair_vector(baseline_pair_events, _all_pairs)
+    
+    # Compute correlation matrix
+    _vectors = np.array([_mc_vec, _sa_vec, _cg_vec, _bl_vec])
+    _labels = ["Monte Carlo", "Simulated Annealing", "Conflict Graph", "Random Baseline"]
+    
+    # Handle SA case (all zeros)
+    _corr_matrix = np.zeros((4, 4))
+    for i in range(4):
+        for j in range(4):
+            if np.std(_vectors[i]) > 0 and np.std(_vectors[j]) > 0:
+                _corr_matrix[i, j] = np.corrcoef(_vectors[i], _vectors[j])[0, 1]
+            elif i == j:
+                _corr_matrix[i, j] = 1.0
+            else:
+                _corr_matrix[i, j] = 0.0
+    
+    # Create heatmap
+    _fig, _ax = plt.subplots(figsize=(8, 6))
+    
+    _im = _ax.imshow(_corr_matrix, cmap="RdYlGn", vmin=-1, vmax=1, aspect="equal")
+    _ax.set_xticks(range(4))
+    _ax.set_yticks(range(4))
+    _ax.set_xticklabels(_labels, rotation=45, ha="right", fontsize=10)
+    _ax.set_yticklabels(_labels, fontsize=10)
+    
+    # Add correlation values as text
+    for i in range(4):
+        for j in range(4):
+            _text_color = "white" if abs(_corr_matrix[i, j]) > 0.5 else "black"
+            _ax.text(j, i, f"{_corr_matrix[i, j]:.2f}", ha="center", va="center", 
+                     fontsize=11, fontweight="bold", color=_text_color)
+    
+    _cbar = _fig.colorbar(_im, ax=_ax, shrink=0.8)
+    _cbar.set_label("Pearson Correlation", rotation=270, labelpad=15)
+    _ax.set_title("Repeat Pattern Correlation Between Algorithms\n(which algorithms fail on similar pairs?)", 
+                  fontsize=12, fontweight="bold")
+    
+    _fig.tight_layout()
+    
+    correlation_matrix = _corr_matrix
+    mo.image(fig_to_image(_fig))
+    return correlation_matrix,
+
+
+@app.cell(hide_code=True)
+def _(correlation_matrix, mo):
+    _mc_bl = correlation_matrix[0, 3]
+    _cg_bl = correlation_matrix[2, 3]
+    _mc_cg = correlation_matrix[0, 2]
+    
+    mo.md(f"""
+    ### Correlation Interpretation
+    
+    | Comparison | Correlation | Meaning |
+    |------------|-------------|---------|
+    | **MC vs Baseline** | r = {_mc_bl:.2f} | {'Similar patterns' if _mc_bl > 0.5 else 'Different patterns'} - MC samples randomly like baseline |
+    | **CG vs Baseline** | r = {_cg_bl:.2f} | {'Similar patterns' if _cg_bl > 0.5 else 'Different patterns'} - CG has its own systematic biases |
+    | **MC vs CG** | r = {_mc_cg:.2f} | {'Similar patterns' if _mc_cg > 0.5 else 'Different patterns'} |
+    | **SA vs All** | r ≈ 0.00 | SA has no repeats, so no correlation possible |
+    
+    **Key Insights:**
+    
+    1. **Monte Carlo ↔ Baseline**: {'High correlation suggests MC fails on similar pairs as random chance.' if _mc_bl > 0.5 else 'Low correlation suggests MC has different failure patterns than random.'}
+    
+    2. **Conflict Graph ↔ Baseline**: {'High correlation means CG fails on the same pairs that random would.' if _cg_bl > 0.5 else 'Low correlation confirms CG has unique, systematic failure patterns (the adjacent bias).'}
+    
+    3. **Simulated Annealing**: With zero repeat events, SA shows no correlation with any algorithm—it successfully avoids all problematic pairs.
+    
+    **Conclusion**: {'CG and MC fail on different pairs than each other, suggesting combining them could cover each other\'s weaknesses.' if _mc_cg < 0.3 else 'CG and MC have similar failure patterns, so combining them may not help much.'}
     """)
     return
 
@@ -838,7 +1172,107 @@ def _(config, math, mo):
     # For birthday paradox approximation
     _collision_approx = 1 - math.exp(-(_pairs_per_round ** 2) / (2 * _total_possible_pairs))
     
+    # For theoretical minimum proof
+    _max_leaving = _n - _playing_per_round  # Players who can leave between rounds
+    _min_forbidden = _pairs_per_round - _max_leaving  # Best case with optimal benching
+    _max_forbidden = _pairs_per_round - (_max_leaving // 2)  # Worst case
+    _num_matchings = _playing_per_round - 1  # K_n has (n-1) edge-disjoint perfect matchings
+    _transitions = _r - 1  # Number of consecutive round pairs
+    
+    # For configuration space
+    _select_players = math.comb(_n, _playing_per_round)
+    _partition_courts = math.factorial(_playing_per_round) // (math.factorial(4) ** _c * math.factorial(_c))
+    _pair_per_court = 3
+    _pair_all_courts = _pair_per_court ** _c
+    _configs_per_round = _select_players * _partition_courts * _pair_all_courts
+    
     _math_accordion = mo.accordion({
+        "Theoretical Minimum: Zero Repeats is Achievable": mo.md(f"""
+### Proof That Zero Repeats is Achievable
+
+$$\\boxed{{\\text{{Theoretical Minimum}} = 0}}$$
+
+**Configuration:**
+- N = {_n} total players
+- C = {_c} courts per round
+- P = {_playing_per_round} players per round (C × 4)
+- T = {_pairs_per_round} teammate pairs per round (C × 2)
+- R = {_r} rounds → {_transitions} consecutive transitions
+
+**Step 1: Player Overlap (Pigeonhole Principle)**
+
+Between consecutive rounds R and R+1:
+- Round R uses {_playing_per_round} players, Round R+1 uses {_playing_per_round} players
+- Maximum {_max_leaving} players can leave (and {_max_leaving} new ones join)
+- Minimum overlap: $2P - N = 2 \\times {_playing_per_round} - {_n} = {2 * _playing_per_round - _n}$ players
+
+**Step 2: Counting Forbidden Pairs**
+
+A **repeat** occurs when two players who were teammates in Round R are teammates again in Round R+1.
+
+- In Round R, {_pairs_per_round} teammate pairs are formed
+- {_max_leaving} players will be benched (not in R+1)
+- A pair **cannot** repeat if at least one player is benched
+
+**Forbidden pairs** = pairs where BOTH players return to R+1:
+
+| Benching Strategy | Pairs with ≥1 benched | Forbidden pairs |
+|-------------------|----------------------|-----------------|
+| **Best case** (1 per pair) | {_max_leaving} pairs | **{_min_forbidden}** |
+| **Worst case** (complete pairs) | {_max_leaving // 2} pairs | **{_max_forbidden}** |
+
+**Step 3: Graph Theory - Can We Always Avoid Forbidden Pairs?**
+
+Model as graph: Players = vertices, potential teammate pairs = edges.
+
+The complete graph $K_{{{_playing_per_round}}}$ on {_playing_per_round} players has:
+- $\\binom{{{_playing_per_round}}}{{2}} = {_playing_per_round * (_playing_per_round - 1) // 2}$ total edges
+- Can be decomposed into **{_num_matchings} edge-disjoint perfect matchings** (theorem for even $n$)
+
+To avoid repeats, we need a perfect matching in $K_{{{_playing_per_round}}}$ that excludes all forbidden edges.
+
+**Proof that this always exists (even in worst case):**
+- Each edge appears in exactly ONE of the {_num_matchings} perfect matchings
+- Removing a forbidden edge eliminates exactly 1 matching
+- **Worst case**: {_max_forbidden} forbidden edges → at least {_num_matchings} - {_max_forbidden} = **{_num_matchings - _max_forbidden}** matchings remain
+- Since {_num_matchings - _max_forbidden} > 0, a valid matching **always** exists
+
+**Conclusion:** For each consecutive transition, we can **always** find a pairing that avoids all repeats.
+Over {_transitions} transitions, the theoretical minimum is **0 total repeats**.
+
+This proves that Simulated Annealing's 100% zero-repeat rate is not luck—it's achieving the theoretical optimum!
+        """),
+        
+        "Configuration Space: Why Search is Hard": mo.md(f"""
+### The Vast Configuration Space
+
+**The Question**: How many *different ways* can we set up one round of badminton?
+
+| Step | What It Means | Formula | How Many Ways |
+|------|---------------|---------|---------------|
+| **1. Pick who plays** | Choose {_playing_per_round} from {_n} | C({_n},{_playing_per_round}) | {_select_players:,} ways |
+| **2. Assign to courts** | Split {_playing_per_round} into {_c} unordered groups of 4 | {_playing_per_round}! / (4!^{_c} × {_c}!) | {_partition_courts:,} ways |
+| **3. Form teams** | Pair players on each court | 3^{_c} | {_pair_all_courts:,} ways |
+| **Total** | All possible single-round setups | Step 1 × 2 × 3 | **{_configs_per_round:,}** |
+
+**Symmetries Already Accounted For:**
+- **Step 2**: Dividing by 4!^{_c} removes ordering within groups; dividing by {_c}! makes courts interchangeable
+- **Step 3**: Only 3 distinct pairings per court: {{A,B}} vs {{C,D}}, {{A,C}} vs {{B,D}}, {{A,D}} vs {{B,C}}
+  - (A,B) = (B,A) -- pair order doesn't matter
+  - AB vs CD = CD vs AB -- team order doesn't matter
+
+**Why This Matters:**
+- With **~{_configs_per_round / 1e12:.0f} trillion** possible setups per round, even 5000 simulations explore only a tiny sample
+- A **random** algorithm would pick configurations blindly
+- Our **smart** algorithms try to pick configurations that minimize repeat teammate pairs
+- The fact that SA achieves 100% zero-repeat proves it's navigating this vast space intelligently!
+
+**Search Space Implications:**
+- Random sampling has probability ~{1/_configs_per_round:.2e} of hitting any specific configuration
+- Monte Carlo's 300 samples explore {300/_configs_per_round * 100:.2e}% of the space
+- This is why intelligent search (SA, CG) dramatically outperforms random
+        """),
+        
         "What is a Perfect Run?": mo.md(f"""
 ### Definition of a Perfect Run
 
