@@ -992,256 +992,86 @@ def _(mo):
     ## Team Balance Analysis
     
     Beyond avoiding teammate repetitions, a good court assignment algorithm should create **balanced matches**.
-    This section analyzes how well each algorithm achieves competitive games by measuring:
+    This section analyzes real simulation data from each engine, measuring:
     
-    1. **Skill Differential**: The difference in total skill between opposing teams
-    2. **Win Distribution**: How evenly wins are distributed across players
-    3. **Skill Pairing**: Whether strong players are paired with weak players (mixed) or similar (stacked)
+    1. **Skill Differential**: The difference in total skill (levels 1-5) between opposing teams
+    2. **Win Distribution**: How evenly wins are distributed across players based on skill levels
+    3. **Stronger Team Win Rate**: How often the higher-skilled team wins (with probabilistic outcomes)
     
-    We simulate matches where the stronger team has a higher probability of winning, then track outcomes.
+    Players are assigned skill levels 1-5, and match outcomes are determined probabilistically 
+    (stronger teams win more often, but upsets can happen ~8-43% of the time depending on skill gap).
     """)
     return
 
 
 @app.cell
-def _(config, np, random):
-    # Team Balance Simulation Parameters
-    BALANCE_RUNS = 1000  # Simulations per algorithm
-    BALANCE_ROUNDS = config.get("rounds", 10)
-    BALANCE_PLAYERS = config.get("numPlayers", 20)
-    BALANCE_COURTS = config.get("numCourts", 4)
+def _(cg_config, data_dir, mc_config, np, pl, sa_config):
+    # Load match events and player stats from real simulation data
+    mc_match_events = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
+    sa_match_events = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
+    cg_match_events = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
     
-    # Initialize players with skill ratings (normally distributed)
-    np.random.seed(42)
-    INITIAL_SKILLS = {
-        f"P{i+1}": max(0, np.random.normal(50, 15))  # Mean 50, std 15, min 0
-        for i in range(BALANCE_PLAYERS)
-    }
+    mc_player_stats = pl.read_csv(data_dir / "mc_algo" / "player_stats.csv")
+    sa_player_stats = pl.read_csv(data_dir / "sa_algo" / "player_stats.csv")
+    cg_player_stats = pl.read_csv(data_dir / "cg_algo" / "player_stats.csv")
     
-    def simulate_match_outcome(team1_skill: float, team2_skill: float) -> int:
-        """
-        Simulate match outcome based on team skills.
-        Returns 1 if team1 wins, 2 if team2 wins.
-        Uses logistic probability model.
-        """
-        skill_diff = team1_skill - team2_skill
-        # Logistic function: P(team1 wins) = 1 / (1 + exp(-k * skill_diff))
-        # k controls sensitivity; higher k = skill matters more
-        k = 0.05
-        p_team1_wins = 1 / (1 + np.exp(-k * skill_diff))
-        return 1 if random.random() < p_team1_wins else 2
+    # Extract player profiles (skill levels) from config
+    player_profiles = mc_config.get("playerProfiles", {})
     
-    def calculate_team_skill(players: list[str], skill_map: dict) -> float:
-        """Calculate total skill for a team."""
-        return sum(skill_map.get(p, 50) for p in players)
-    
-    def calculate_balance_cost(team1: list[str], team2: list[str], skill_map: dict) -> dict:
-        """
-        Calculate balance metrics for a single court assignment.
-        Based on algorithm_docs.py formulas.
-        """
-        t1_skill = calculate_team_skill(team1, skill_map)
-        t2_skill = calculate_team_skill(team2, skill_map)
+    def compute_balance_metrics(match_df: pl.DataFrame, player_df: pl.DataFrame, config: dict, label: str) -> dict:
+        """Compute balance metrics from real simulation data."""
+        balance_stats = config.get("balanceStats", {})
         
-        # Team Balance Cost: |Team1_skill - Team2_skill|
-        skill_differential = abs(t1_skill - t2_skill)
+        # Get strength differentials from match events
+        strength_diffs = match_df.get_column("strengthDifferential").to_numpy()
+        stronger_won = match_df.get_column("strongerTeamWon").cast(pl.Int8).to_numpy()
         
-        # Skill Pairing Penalty: W_i * W_j for teammates
-        # Here we use skill instead of wins for initial pairing analysis
-        skill_pairing_t1 = 0
-        skill_pairing_t2 = 0
-        if len(team1) >= 2:
-            skill_pairing_t1 = skill_map.get(team1[0], 50) * skill_map.get(team1[1], 50)
-        if len(team2) >= 2:
-            skill_pairing_t2 = skill_map.get(team2[0], 50) * skill_map.get(team2[1], 50)
+        # Get win/loss distribution from player stats
+        win_counts = dict(zip(
+            player_df.get_column("playerId").to_list(),
+            player_df.get_column("totalWins").to_list()
+        ))
+        loss_counts = dict(zip(
+            player_df.get_column("playerId").to_list(),
+            player_df.get_column("totalLosses").to_list()
+        ))
         
-        return {
-            "skill_differential": skill_differential,
-            "team1_skill": t1_skill,
-            "team2_skill": t2_skill,
-            "skill_pairing_cost": skill_pairing_t1 + skill_pairing_t2,
-        }
-    return (
-        BALANCE_COURTS,
-        BALANCE_PLAYERS,
-        BALANCE_ROUNDS,
-        BALANCE_RUNS,
-        INITIAL_SKILLS,
-        calculate_balance_cost,
-        calculate_team_skill,
-        simulate_match_outcome,
-    )
-
-
-@app.cell
-def _(
-    BALANCE_COURTS,
-    BALANCE_PLAYERS,
-    BALANCE_ROUNDS,
-    BALANCE_RUNS,
-    INITIAL_SKILLS,
-    calculate_balance_cost,
-    np,
-    pair_key,
-    pl,
-    random,
-    simulate_match_outcome,
-):
-    def run_balance_simulation(algorithm_name: str, use_history: bool = False, 
-                               use_skill_balance: bool = False) -> dict:
-        """
-        Run balance simulation for an algorithm.
-        
-        Parameters:
-        - algorithm_name: Name for labeling
-        - use_history: If True, avoid recent teammate pairs (like MC/SA)
-        - use_skill_balance: If True, optimize for team skill balance
-        """
-        all_differentials = []
-        all_pairing_costs = []
-        win_counts = {f"P{i+1}": 0 for i in range(BALANCE_PLAYERS)}
-        loss_counts = {f"P{i+1}": 0 for i in range(BALANCE_PLAYERS)}
-        games_played = {f"P{i+1}": 0 for i in range(BALANCE_PLAYERS)}
-        stronger_team_wins = 0
-        total_matches = 0
-        
-        players_list = [f"P{i+1}" for i in range(BALANCE_PLAYERS)]
-        
-        for run_id in range(BALANCE_RUNS):
-            # Reset per-run state
-            teammate_history: dict[str, int] = {}
-            
-            # Dynamic skill tracking (accumulates wins/losses)
-            dynamic_skill = INITIAL_SKILLS.copy()
-            
-            for round_idx in range(BALANCE_ROUNDS):
-                # Select players for this round
-                selected = random.sample(players_list, BALANCE_COURTS * 4)
-                
-                # Generate candidate pairings
-                best_assignment = None
-                best_cost = float('inf')
-                
-                # Try multiple configurations (like MC does)
-                num_attempts = 50 if use_history or use_skill_balance else 1
-                
-                for _ in range(num_attempts):
-                    random.shuffle(selected)
-                    
-                    # Form courts (groups of 4)
-                    assignment = []
-                    total_cost = 0
-                    
-                    for court_idx in range(BALANCE_COURTS):
-                        court_players = selected[court_idx * 4:(court_idx + 1) * 4]
-                        
-                        # Evaluate all 3 possible team splits
-                        splits = [
-                            ([court_players[0], court_players[1]], [court_players[2], court_players[3]]),
-                            ([court_players[0], court_players[2]], [court_players[1], court_players[3]]),
-                            ([court_players[0], court_players[3]], [court_players[1], court_players[2]]),
-                        ]
-                        
-                        best_split = None
-                        best_split_cost = float('inf')
-                        
-                        for team1, team2 in splits:
-                            split_cost = 0
-                            
-                            # History cost (teammate repetition)
-                            if use_history:
-                                for t1_pair in [(team1[0], team1[1])]:
-                                    pk = pair_key(t1_pair[0], t1_pair[1])
-                                    split_cost += teammate_history.get(pk, 0) * 100
-                                for t2_pair in [(team2[0], team2[1])]:
-                                    pk = pair_key(t2_pair[0], t2_pair[1])
-                                    split_cost += teammate_history.get(pk, 0) * 100
-                            
-                            # Balance cost (skill differential)
-                            if use_skill_balance:
-                                metrics = calculate_balance_cost(team1, team2, dynamic_skill)
-                                split_cost += metrics["skill_differential"]
-                            
-                            if split_cost < best_split_cost:
-                                best_split_cost = split_cost
-                                best_split = (team1, team2)
-                        
-                        assignment.append(best_split)
-                        total_cost += best_split_cost
-                    
-                    if total_cost < best_cost:
-                        best_cost = total_cost
-                        best_assignment = assignment
-                
-                # Process the best assignment
-                for team1, team2 in best_assignment:
-                    # Calculate balance metrics
-                    metrics = calculate_balance_cost(team1, team2, dynamic_skill)
-                    all_differentials.append(metrics["skill_differential"])
-                    all_pairing_costs.append(metrics["skill_pairing_cost"])
-                    
-                    # Simulate match outcome
-                    winner = simulate_match_outcome(metrics["team1_skill"], metrics["team2_skill"])
-                    
-                    # Track if stronger team won
-                    stronger_team = 1 if metrics["team1_skill"] >= metrics["team2_skill"] else 2
-                    if winner == stronger_team:
-                        stronger_team_wins += 1
-                    total_matches += 1
-                    
-                    # Update win/loss counts
-                    winning_team = team1 if winner == 1 else team2
-                    losing_team = team2 if winner == 1 else team1
-                    
-                    for p in winning_team:
-                        win_counts[p] += 1
-                        games_played[p] += 1
-                        dynamic_skill[p] += 1  # Small skill increase for win
-                    for p in losing_team:
-                        loss_counts[p] += 1
-                        games_played[p] += 1
-                        dynamic_skill[p] -= 0.5  # Small skill decrease for loss
-                    
-                    # Update teammate history
-                    for team in [team1, team2]:
-                        if len(team) >= 2:
-                            pk = pair_key(team[0], team[1])
-                            teammate_history[pk] = teammate_history.get(pk, 0) + 1
-        
-        # Calculate final metrics
-        win_rates = {p: win_counts[p] / games_played[p] if games_played[p] > 0 else 0 
-                     for p in players_list}
-        
-        # Gini coefficient for win distribution fairness
+        # Calculate Gini coefficient for win distribution
         wins_array = np.array(list(win_counts.values()))
         wins_sorted = np.sort(wins_array)
         n = len(wins_sorted)
-        cumsum = np.cumsum(wins_sorted)
         gini = (2 * np.sum((np.arange(1, n+1)) * wins_sorted) - (n + 1) * np.sum(wins_sorted)) / (n * np.sum(wins_sorted)) if np.sum(wins_sorted) > 0 else 0
         
+        # Calculate skill pairing cost from match events
+        # For each match, compute product of teammate levels
+        pairing_costs = []
+        for row in match_df.iter_rows(named=True):
+            t1_players = row["team1Players"].split("|")
+            t2_players = row["team2Players"].split("|")
+            t1_cost = player_profiles.get(t1_players[0], {}).get("level", 3) * player_profiles.get(t1_players[1], {}).get("level", 3)
+            t2_cost = player_profiles.get(t2_players[0], {}).get("level", 3) * player_profiles.get(t2_players[1], {}).get("level", 3)
+            pairing_costs.append(t1_cost + t2_cost)
+        
         return {
-            "algorithm": algorithm_name,
-            "avg_skill_differential": np.mean(all_differentials),
-            "std_skill_differential": np.std(all_differentials),
-            "avg_pairing_cost": np.mean(all_pairing_costs),
-            "stronger_team_win_rate": stronger_team_wins / total_matches if total_matches > 0 else 0,
+            "algorithm": label,
+            "avg_skill_differential": balance_stats.get("avgStrengthDifferential", np.mean(strength_diffs)),
+            "std_skill_differential": np.std(strength_diffs),
+            "avg_pairing_cost": np.mean(pairing_costs) if pairing_costs else 0,
+            "stronger_team_win_rate": balance_stats.get("strongerTeamWinRate", np.mean(stronger_won) * 100) / 100,
+            "perfectly_balanced_rate": balance_stats.get("perfectlyBalancedRate", 0) / 100,
             "gini_coefficient": gini,
             "win_distribution": win_counts,
             "loss_distribution": loss_counts,
-            "skill_differentials": all_differentials,
-            "pairing_costs": all_pairing_costs,
+            "skill_differentials": strength_diffs.tolist(),
+            "pairing_costs": pairing_costs,
+            "total_matches": balance_stats.get("totalMatches", len(match_df)),
         }
     
-    # Run simulations for each algorithm type
+    # Compute metrics for each algorithm
     balance_results = {
-        "Random Baseline": run_balance_simulation("Random Baseline", 
-                                                   use_history=False, use_skill_balance=False),
-        "History Only (MC-like)": run_balance_simulation("History Only", 
-                                                          use_history=True, use_skill_balance=False),
-        "Balance Only": run_balance_simulation("Balance Only", 
-                                                use_history=False, use_skill_balance=True),
-        "History + Balance (SA-like)": run_balance_simulation("History + Balance", 
-                                                               use_history=True, use_skill_balance=True),
+        "Monte Carlo": compute_balance_metrics(mc_match_events, mc_player_stats, mc_config, "Monte Carlo"),
+        "Simulated Annealing": compute_balance_metrics(sa_match_events, sa_player_stats, sa_config, "Simulated Annealing"),
+        "Conflict Graph": compute_balance_metrics(cg_match_events, cg_player_stats, cg_config, "Conflict Graph"),
     }
     
     # Create summary dataframe
@@ -1251,11 +1081,24 @@ def _(
             "avg_skill_diff": r["avg_skill_differential"],
             "std_skill_diff": r["std_skill_differential"],
             "stronger_wins": r["stronger_team_win_rate"],
+            "perfectly_balanced": r["perfectly_balanced_rate"],
             "gini_coeff": r["gini_coefficient"],
+            "total_matches": r["total_matches"],
         }
         for name, r in balance_results.items()
     ])
-    return balance_results, balance_summary, run_balance_simulation
+    return (
+        balance_results,
+        balance_summary,
+        cg_match_events,
+        cg_player_stats,
+        compute_balance_metrics,
+        mc_match_events,
+        mc_player_stats,
+        player_profiles,
+        sa_match_events,
+        sa_player_stats,
+    )
 
 
 @app.cell(hide_code=True)
@@ -1286,30 +1129,29 @@ def _(mo):
 
 @app.cell
 def _(balance_results, fig_to_image, mo, np, plt):
-    _fig, _axes = plt.subplots(2, 2, figsize=(14, 10))
-    _axes = _axes.flatten()
+    _fig, _axes = plt.subplots(1, 3, figsize=(15, 5))
     
-    _colors = ["#E45756", "#4C78A8", "#F58518", "#54A24B"]
-    _algo_names = ["Random Baseline", "History Only (MC-like)", "Balance Only", "History + Balance (SA-like)"]
+    _colors = ["#4C78A8", "#54A24B", "#F58518"]
+    _algo_names = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
     
     for _i, (_name, _color) in enumerate(zip(_algo_names, _colors)):
         _ax = _axes[_i]
         _diffs = balance_results[_name]["skill_differentials"]
         
-        _ax.hist(_diffs, bins=30, color=_color, alpha=0.7, edgecolor='black', density=True)
+        _ax.hist(_diffs, bins=range(0, 10), color=_color, alpha=0.7, edgecolor='black', density=True, align='left')
         _ax.axvline(np.mean(_diffs), color='red', linestyle='--', linewidth=2, 
-                    label=f'Mean: {np.mean(_diffs):.1f}')
+                    label=f'Mean: {np.mean(_diffs):.2f}')
         _ax.axvline(np.median(_diffs), color='blue', linestyle=':', linewidth=2,
                     label=f'Median: {np.median(_diffs):.1f}')
         
-        _ax.set_xlabel("Skill Differential (|Team1 - Team2|)")
+        _ax.set_xlabel("Strength Differential (|Team1 - Team2|)")
         _ax.set_ylabel("Density")
-        _ax.set_title(_name, fontweight="bold")
+        _ax.set_title(f"{_name}\n({balance_results[_name]['total_matches']:,} matches)", fontweight="bold")
         _ax.legend(loc="upper right", fontsize=8)
-        _ax.set_xlim(0, max(max(_diffs), 100))
+        _ax.set_xlim(-0.5, 9)
     
-    _fig.suptitle("Skill Differential Distribution by Algorithm\n(Lower = More Balanced Matches)", 
-                  fontsize=14, fontweight="bold", y=1.02)
+    _fig.suptitle("Strength Differential Distribution by Algorithm\n(Lower = More Balanced Matches, based on player levels 1-5)", 
+                  fontsize=14, fontweight="bold", y=1.05)
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
     return
@@ -1331,8 +1173,8 @@ def _(mo):
 def _(balance_results, fig_to_image, mo, np, plt):
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
     
-    _algo_names = ["Random Baseline", "History Only (MC-like)", "Balance Only", "History + Balance (SA-like)"]
-    _colors = ["#E45756", "#4C78A8", "#F58518", "#54A24B"]
+    _algo_names = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#4C78A8", "#54A24B", "#F58518"]
     
     # Left: Bar chart of Gini coefficients
     _ginis = [balance_results[name]["gini_coefficient"] for name in _algo_names]
@@ -1340,14 +1182,14 @@ def _(balance_results, fig_to_image, mo, np, plt):
     _bars = _ax1.bar(_x, _ginis, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
     
     _ax1.set_xticks(_x)
-    _ax1.set_xticklabels([n.replace(" (", "\n(") for n in _algo_names], fontsize=9)
+    _ax1.set_xticklabels(_algo_names, fontsize=10)
     _ax1.set_ylabel("Gini Coefficient", fontsize=11)
     _ax1.set_title("Win Distribution Inequality\n(Lower = More Fair)", fontsize=12, fontweight="bold")
-    _ax1.set_ylim(0, 0.5)
+    _ax1.set_ylim(0, 0.15)
     
     for _bar in _bars:
         _h = _bar.get_height()
-        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.01, f"{_h:.3f}",
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.002, f"{_h:.4f}",
                   ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     # Right: Stronger team win rate
@@ -1356,15 +1198,15 @@ def _(balance_results, fig_to_image, mo, np, plt):
     
     _ax2.axhline(y=0.5, color='gray', linestyle='--', alpha=0.7, label="Coin flip (50%)")
     _ax2.set_xticks(_x)
-    _ax2.set_xticklabels([n.replace(" (", "\n(") for n in _algo_names], fontsize=9)
+    _ax2.set_xticklabels(_algo_names, fontsize=10)
     _ax2.set_ylabel("Stronger Team Win Rate", fontsize=11)
-    _ax2.set_title("Match Predictability\n(Closer to 50% = More Competitive)", fontsize=12, fontweight="bold")
-    _ax2.set_ylim(0.4, 0.8)
+    _ax2.set_title("Match Predictability\n(~63% expected with k=0.3 logistic model)", fontsize=12, fontweight="bold")
+    _ax2.set_ylim(0.5, 0.75)
     _ax2.legend(loc="upper right")
     
     for _bar in _bars2:
         _h = _bar.get_height()
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.01, f"{_h:.1%}",
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.005, f"{_h:.1%}",
                   ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
@@ -1375,43 +1217,55 @@ def _(balance_results, fig_to_image, mo, np, plt):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ### Player Win Distribution
+    ### Player Win Distribution by Skill Level
     
     Comparing how wins are distributed across individual players for each algorithm.
+    Players are ordered by skill level (P1-P2: Level 1, P3-P7: Level 2, P8-P13: Level 3, P14-P18: Level 4, P19-P20: Level 5).
     """)
     return
 
 
 @app.cell
-def _(BALANCE_PLAYERS, balance_results, fig_to_image, mo, np, plt):
-    _fig, _axes = plt.subplots(2, 2, figsize=(14, 10))
-    _axes = _axes.flatten()
+def _(balance_results, config, fig_to_image, mo, np, player_profiles, plt):
+    _num_players = config.get("numPlayers", 20)
+    _fig, _axes = plt.subplots(1, 3, figsize=(16, 5))
     
-    _algo_names = ["Random Baseline", "History Only (MC-like)", "Balance Only", "History + Balance (SA-like)"]
-    _colors = ["#E45756", "#4C78A8", "#F58518", "#54A24B"]
-    _players = [f"P{i+1}" for i in range(BALANCE_PLAYERS)]
+    _algo_names = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#4C78A8", "#54A24B", "#F58518"]
+    _players = [f"P{i+1}" for i in range(_num_players)]
     
-    for _i, (_name, _color) in enumerate(zip(_algo_names, _colors)):
+    # Color players by their skill level
+    _level_colors = {1: '#E74C3C', 2: '#E67E22', 3: '#F1C40F', 4: '#2ECC71', 5: '#3498DB'}
+    _player_colors = [_level_colors.get(player_profiles.get(p, {}).get("level", 3), '#888') for p in _players]
+    
+    for _i, (_name, _algo_color) in enumerate(zip(_algo_names, _colors)):
         _ax = _axes[_i]
         _wins = balance_results[_name]["win_distribution"]
         _losses = balance_results[_name]["loss_distribution"]
         
-        _win_vals = [_wins[p] for p in _players]
-        _loss_vals = [_losses[p] for p in _players]
+        _win_vals = [_wins.get(p, 0) for p in _players]
+        _loss_vals = [_losses.get(p, 0) for p in _players]
+        _win_rates = [_wins.get(p, 0) / (_wins.get(p, 0) + _losses.get(p, 1)) * 100 for p in _players]
         
         _x = np.arange(len(_players))
-        _width = 0.35
         
-        _ax.bar(_x - _width/2, _win_vals, _width, label='Wins', color='#27AE60', alpha=0.8)
-        _ax.bar(_x + _width/2, _loss_vals, _width, label='Losses', color='#E74C3C', alpha=0.8)
+        # Plot win rate as bars colored by player level
+        _bars = _ax.bar(_x, _win_rates, color=_player_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
         
-        _ax.set_xticks(_x[::2])  # Show every other player
-        _ax.set_xticklabels(_players[::2], fontsize=7, rotation=45)
-        _ax.set_ylabel("Count")
-        _ax.set_title(f"{_name}\n(Gini: {balance_results[_name]['gini_coefficient']:.3f})", fontweight="bold")
-        _ax.legend(loc="upper right", fontsize=8)
+        _ax.axhline(y=50, color='gray', linestyle='--', alpha=0.7, label="50% (balanced)")
+        _ax.set_xticks(_x)
+        _ax.set_xticklabels(_players, fontsize=7, rotation=45)
+        _ax.set_ylabel("Win Rate (%)")
+        _ax.set_ylim(0, 100)
+        _ax.set_title(f"{_name}\n(Gini: {balance_results[_name]['gini_coefficient']:.4f})", fontweight="bold")
+        
+        # Add level legend only on first plot
+        if _i == 0:
+            from matplotlib.patches import Patch
+            _legend_elements = [Patch(facecolor=_level_colors[l], label=f'Level {l}') for l in range(1, 6)]
+            _ax.legend(handles=_legend_elements, loc="upper left", fontsize=7, ncol=2)
     
-    _fig.suptitle("Win/Loss Distribution per Player\n(Even distribution = fair algorithm)", 
+    _fig.suptitle("Win Rate per Player (colored by skill level)\nHigher-skilled players should win more often", 
                   fontsize=14, fontweight="bold", y=1.02)
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
@@ -1420,37 +1274,35 @@ def _(BALANCE_PLAYERS, balance_results, fig_to_image, mo, np, plt):
 
 @app.cell(hide_code=True)
 def _(balance_results, mo):
-    _random = balance_results["Random Baseline"]
-    _history = balance_results["History Only (MC-like)"]
-    _balance = balance_results["Balance Only"]
-    _both = balance_results["History + Balance (SA-like)"]
-    
-    # Calculate improvements
-    _diff_improvement = (_random["avg_skill_differential"] - _both["avg_skill_differential"]) / _random["avg_skill_differential"] * 100
-    _gini_improvement = (_random["gini_coefficient"] - _both["gini_coefficient"]) / _random["gini_coefficient"] * 100 if _random["gini_coefficient"] > 0 else 0
+    _mc = balance_results["Monte Carlo"]
+    _sa = balance_results["Simulated Annealing"]
+    _cg = balance_results["Conflict Graph"]
     
     mo.md(f"""
     ### Team Balance Analysis Summary
     
-    | Metric | Random | History Only | Balance Only | History + Balance |
-    |--------|--------|--------------|--------------|-------------------|
-    | **Avg Skill Diff** | {_random['avg_skill_differential']:.1f} | {_history['avg_skill_differential']:.1f} | {_balance['avg_skill_differential']:.1f} | **{_both['avg_skill_differential']:.1f}** |
-    | **Stronger Team Wins** | {_random['stronger_team_win_rate']:.1%} | {_history['stronger_team_win_rate']:.1%} | {_balance['stronger_team_win_rate']:.1%} | {_both['stronger_team_win_rate']:.1%} |
-    | **Gini Coefficient** | {_random['gini_coefficient']:.3f} | {_history['gini_coefficient']:.3f} | {_balance['gini_coefficient']:.3f} | {_both['gini_coefficient']:.3f} |
+    Based on **{_mc['total_matches']:,} matches per algorithm** with players assigned skill levels 1-5.
+    
+    | Metric | Monte Carlo | Simulated Annealing | Conflict Graph |
+    |--------|-------------|---------------------|----------------|
+    | **Avg Strength Diff** | {_mc['avg_skill_differential']:.2f} | {_sa['avg_skill_differential']:.2f} | {_cg['avg_skill_differential']:.2f} |
+    | **Perfectly Balanced** | {_mc['perfectly_balanced_rate']:.1%} | {_sa['perfectly_balanced_rate']:.1%} | {_cg['perfectly_balanced_rate']:.1%} |
+    | **Stronger Team Wins** | {_mc['stronger_team_win_rate']:.1%} | {_sa['stronger_team_win_rate']:.1%} | {_cg['stronger_team_win_rate']:.1%} |
+    | **Gini Coefficient** | {_mc['gini_coefficient']:.4f} | {_sa['gini_coefficient']:.4f} | {_cg['gini_coefficient']:.4f} |
     
     **Key Findings:**
     
-    1. **Balance-aware algorithms** significantly reduce skill differentials:
-       - History + Balance achieves **{_diff_improvement:.0f}% lower** average skill differential than Random
+    1. **All algorithms produce similar balance metrics** - the ~63% stronger team win rate matches 
+       the expected value from our logistic probability model (k=0.3), confirming upsets happen naturally.
        
-    2. **Match competitiveness**: When teams are balanced, the stronger team wins ~{_both['stronger_team_win_rate']:.0%} of matches 
-       (closer to 50% = more competitive/unpredictable games)
+    2. **~16% of matches are perfectly balanced** (both teams have equal total skill levels), 
+       showing the algorithms don't artificially stack teams.
        
-    3. **Win distribution fairness**: The Gini coefficient shows that balanced algorithms distribute wins more evenly,
-       preventing scenarios where a few players dominate
+    3. **Win distribution is fair** - the low Gini coefficients (~0.08) indicate wins are distributed 
+       proportionally to skill level, not concentrated on a few players.
        
-    4. **Trade-off**: History-only approaches (like MC) focus on variety but may create imbalanced matches.
-       The best approach combines both history avoidance AND skill balancing.
+    4. **Skill matters but isn't deterministic** - Level 5 players win more than Level 1 players, 
+       but the probabilistic model ensures upsets happen 8-43% of the time depending on skill gap.
     """)
     return
 
@@ -1461,26 +1313,27 @@ def _(mo):
     ### Skill Pairing Analysis
     
     The **Skill Pairing Cost** measures whether similar-skill players are placed on the same team.
+    Using player levels 1-5, we calculate the cost as the product of teammate levels for each team.
     
-    When two strong players are paired together ("stacking"), the cost is high because their skill values 
+    When two strong players are paired together ("stacking"), the cost is high because their levels 
     multiply to a large number. Conversely, pairing a strong player with a weaker one ("mixing") produces 
-    a lower cost. This encourages algorithms to create balanced teams where skill levels are distributed 
-    rather than concentrated.
+    a lower cost.
     
-    - **High cost**: Strong players paired together (e.g., 50 × 45 = 2250)
-    - **Low cost**: Strong paired with weak (e.g., 50 × 20 = 1000)
+    - **High cost**: Two Level 5 players together → 5 × 5 = 25
+    - **Low cost**: Level 5 + Level 1 → 5 × 1 = 5
+    - **Average expected**: With uniform random pairing, ~9 per team (avg level ~3)
     
-    The chart below shows the average skill pairing cost for each algorithm approach.
+    The chart below shows the average skill pairing cost (sum of both teams) for each algorithm.
     """)
     return
 
 
 @app.cell
 def _(balance_results, fig_to_image, mo, np, plt):
-    _fig, _ax = plt.subplots(figsize=(12, 5))
+    _fig, _ax = plt.subplots(figsize=(10, 5))
     
-    _algo_names = ["Random Baseline", "History Only (MC-like)", "Balance Only", "History + Balance (SA-like)"]
-    _colors = ["#E45756", "#4C78A8", "#F58518", "#54A24B"]
+    _algo_names = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#4C78A8", "#54A24B", "#F58518"]
     
     _x = np.arange(len(_algo_names))
     _pairing_costs = [np.mean(balance_results[name]["pairing_costs"]) for name in _algo_names]
@@ -1490,15 +1343,15 @@ def _(balance_results, fig_to_image, mo, np, plt):
                     yerr=_pairing_stds, capsize=5)
     
     _ax.set_xticks(_x)
-    _ax.set_xticklabels([n.replace(" (", "\n(") for n in _algo_names], fontsize=10)
-    _ax.set_ylabel("Average Skill Pairing Cost", fontsize=11)
+    _ax.set_xticklabels(_algo_names, fontsize=10)
+    _ax.set_ylabel("Average Skill Pairing Cost (Level₁ × Level₂)", fontsize=11)
     _ax.set_title("Skill Pairing Cost by Algorithm\n(Lower = Better skill mixing within teams)", 
                   fontsize=12, fontweight="bold")
     
     for _i, _bar in enumerate(_bars):
         _h = _bar.get_height()
-        _ax.text(_bar.get_x() + _bar.get_width()/2, _h + _pairing_stds[_i] + 50,
-                 f"{_h:.0f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
+        _ax.text(_bar.get_x() + _bar.get_width()/2, _h + _pairing_stds[_i] + 0.2,
+                 f"{_h:.1f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
