@@ -1005,12 +1005,22 @@ def _(mo):
 
 
 @app.cell
-def _(cg_config, data_dir, mc_config, np, pl, sa_config):
+def _(data_dir, json, pl):
+    # Load random baseline config
+    with open(data_dir / "random_baseline" / "config.json") as f:
+        random_config = json.load(f)
+    return (random_config,)
+
+
+@app.cell
+def _(cg_config, data_dir, mc_config, np, pl, random_config, sa_config):
     # Load match events and player stats from real simulation data
+    random_match_events = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
     mc_match_events = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
     sa_match_events = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
     cg_match_events = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
     
+    random_player_stats = pl.read_csv(data_dir / "random_baseline" / "player_stats.csv")
     mc_player_stats = pl.read_csv(data_dir / "mc_algo" / "player_stats.csv")
     sa_player_stats = pl.read_csv(data_dir / "sa_algo" / "player_stats.csv")
     cg_player_stats = pl.read_csv(data_dir / "cg_algo" / "player_stats.csv")
@@ -1069,6 +1079,7 @@ def _(cg_config, data_dir, mc_config, np, pl, sa_config):
     
     # Compute metrics for each algorithm
     balance_results = {
+        "Random Baseline": compute_balance_metrics(random_match_events, random_player_stats, random_config, "Random Baseline"),
         "Monte Carlo": compute_balance_metrics(mc_match_events, mc_player_stats, mc_config, "Monte Carlo"),
         "Simulated Annealing": compute_balance_metrics(sa_match_events, sa_player_stats, sa_config, "Simulated Annealing"),
         "Conflict Graph": compute_balance_metrics(cg_match_events, cg_player_stats, cg_config, "Conflict Graph"),
@@ -1096,6 +1107,8 @@ def _(cg_config, data_dir, mc_config, np, pl, sa_config):
         mc_match_events,
         mc_player_stats,
         player_profiles,
+        random_match_events,
+        random_player_stats,
         sa_match_events,
         sa_player_stats,
     )
@@ -1129,10 +1142,11 @@ def _(mo):
 
 @app.cell
 def _(balance_results, fig_to_image, mo, np, plt):
-    _fig, _axes = plt.subplots(1, 3, figsize=(15, 5))
+    _fig, _axes = plt.subplots(2, 2, figsize=(14, 10))
+    _axes = _axes.flatten()
     
-    _colors = ["#4C78A8", "#54A24B", "#F58518"]
-    _algo_names = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
     
     for _i, (_name, _color) in enumerate(zip(_algo_names, _colors)):
         _ax = _axes[_i]
@@ -1151,7 +1165,7 @@ def _(balance_results, fig_to_image, mo, np, plt):
         _ax.set_xlim(-0.5, 9)
     
     _fig.suptitle("Strength Differential Distribution by Algorithm\n(Lower = More Balanced Matches, based on player levels 1-5)", 
-                  fontsize=14, fontweight="bold", y=1.05)
+                  fontsize=14, fontweight="bold", y=1.02)
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
     return
@@ -1173,8 +1187,8 @@ def _(mo):
 def _(balance_results, fig_to_image, mo, np, plt):
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
     
-    _algo_names = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
-    _colors = ["#4C78A8", "#54A24B", "#F58518"]
+    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
     
     # Left: Bar chart of Gini coefficients
     _ginis = [balance_results[name]["gini_coefficient"] for name in _algo_names]
@@ -1182,7 +1196,7 @@ def _(balance_results, fig_to_image, mo, np, plt):
     _bars = _ax1.bar(_x, _ginis, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
     
     _ax1.set_xticks(_x)
-    _ax1.set_xticklabels(_algo_names, fontsize=10)
+    _ax1.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
     _ax1.set_ylabel("Gini Coefficient", fontsize=11)
     _ax1.set_title("Win Distribution Inequality\n(Lower = More Fair)", fontsize=12, fontweight="bold")
     _ax1.set_ylim(0, 0.15)
@@ -1190,7 +1204,7 @@ def _(balance_results, fig_to_image, mo, np, plt):
     for _bar in _bars:
         _h = _bar.get_height()
         _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.002, f"{_h:.4f}",
-                  ha="center", va="bottom", fontsize=10, fontweight="bold")
+                  ha="center", va="bottom", fontsize=9, fontweight="bold")
     
     # Right: Stronger team win rate
     _stronger_rates = [balance_results[name]["stronger_team_win_rate"] for name in _algo_names]
@@ -1198,7 +1212,7 @@ def _(balance_results, fig_to_image, mo, np, plt):
     
     _ax2.axhline(y=0.5, color='gray', linestyle='--', alpha=0.7, label="Coin flip (50%)")
     _ax2.set_xticks(_x)
-    _ax2.set_xticklabels(_algo_names, fontsize=10)
+    _ax2.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
     _ax2.set_ylabel("Stronger Team Win Rate", fontsize=11)
     _ax2.set_title("Match Predictability\n(~63% expected with k=0.3 logistic model)", fontsize=12, fontweight="bold")
     _ax2.set_ylim(0.5, 0.75)
@@ -1207,7 +1221,7 @@ def _(balance_results, fig_to_image, mo, np, plt):
     for _bar in _bars2:
         _h = _bar.get_height()
         _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.005, f"{_h:.1%}",
-                  ha="center", va="bottom", fontsize=10, fontweight="bold")
+                  ha="center", va="bottom", fontsize=9, fontweight="bold")
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
@@ -1228,17 +1242,17 @@ def _(mo):
 @app.cell
 def _(balance_results, config, fig_to_image, mo, np, player_profiles, plt):
     _num_players = config.get("numPlayers", 20)
-    _fig, _axes = plt.subplots(1, 3, figsize=(16, 5))
+    _fig, _axes = plt.subplots(2, 2, figsize=(14, 10))
+    _axes = _axes.flatten()
     
-    _algo_names = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
-    _colors = ["#4C78A8", "#54A24B", "#F58518"]
+    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
     _players = [f"P{i+1}" for i in range(_num_players)]
     
     # Color players by their skill level
     _level_colors = {1: '#E74C3C', 2: '#E67E22', 3: '#F1C40F', 4: '#2ECC71', 5: '#3498DB'}
     _player_colors = [_level_colors.get(player_profiles.get(p, {}).get("level", 3), '#888') for p in _players]
     
-    for _i, (_name, _algo_color) in enumerate(zip(_algo_names, _colors)):
+    for _i, _name in enumerate(_algo_names):
         _ax = _axes[_i]
         _wins = balance_results[_name]["win_distribution"]
         _losses = balance_results[_name]["loss_distribution"]
@@ -1274,6 +1288,7 @@ def _(balance_results, config, fig_to_image, mo, np, player_profiles, plt):
 
 @app.cell(hide_code=True)
 def _(balance_results, mo):
+    _rand = balance_results["Random Baseline"]
     _mc = balance_results["Monte Carlo"]
     _sa = balance_results["Simulated Annealing"]
     _cg = balance_results["Conflict Graph"]
@@ -1283,26 +1298,33 @@ def _(balance_results, mo):
     
     Based on **{_mc['total_matches']:,} matches per algorithm** with players assigned skill levels 1-5.
     
-    | Metric | Monte Carlo | Simulated Annealing | Conflict Graph |
-    |--------|-------------|---------------------|----------------|
-    | **Avg Strength Diff** | {_mc['avg_skill_differential']:.2f} | {_sa['avg_skill_differential']:.2f} | {_cg['avg_skill_differential']:.2f} |
-    | **Perfectly Balanced** | {_mc['perfectly_balanced_rate']:.1%} | {_sa['perfectly_balanced_rate']:.1%} | {_cg['perfectly_balanced_rate']:.1%} |
-    | **Stronger Team Wins** | {_mc['stronger_team_win_rate']:.1%} | {_sa['stronger_team_win_rate']:.1%} | {_cg['stronger_team_win_rate']:.1%} |
-    | **Gini Coefficient** | {_mc['gini_coefficient']:.4f} | {_sa['gini_coefficient']:.4f} | {_cg['gini_coefficient']:.4f} |
+    | Metric | Random Baseline | Monte Carlo | Simulated Annealing | Conflict Graph |
+    |--------|-----------------|-------------|---------------------|----------------|
+    | **Avg Strength Diff** | {_rand['avg_skill_differential']:.2f} | {_mc['avg_skill_differential']:.2f} | {_sa['avg_skill_differential']:.2f} | {_cg['avg_skill_differential']:.2f} |
+    | **Perfectly Balanced** | {_rand['perfectly_balanced_rate']:.1%} | {_mc['perfectly_balanced_rate']:.1%} | {_sa['perfectly_balanced_rate']:.1%} | {_cg['perfectly_balanced_rate']:.1%} |
+    | **Stronger Team Wins** | {_rand['stronger_team_win_rate']:.1%} | {_mc['stronger_team_win_rate']:.1%} | {_sa['stronger_team_win_rate']:.1%} | {_cg['stronger_team_win_rate']:.1%} |
+    | **Gini Coefficient** | {_rand['gini_coefficient']:.4f} | {_mc['gini_coefficient']:.4f} | {_sa['gini_coefficient']:.4f} | {_cg['gini_coefficient']:.4f} |
     
     **Key Findings:**
     
-    1. **All algorithms produce similar balance metrics** - the ~63% stronger team win rate matches 
-       the expected value from our logistic probability model (k=0.3), confirming upsets happen naturally.
+    1. **All algorithms produce similar balance metrics** despite the engines having skill-balancing logic.
+       This is because of **two different skill concepts**:
+       - **Engine's skill tracking**: Based on accumulated wins/losses during the session
+       - **Simulation's strength**: Based on fixed player levels (1-5) assigned at start
        
-    2. **~16% of matches are perfectly balanced** (both teams have equal total skill levels), 
-       showing the algorithms don't artificially stack teams.
+    2. **The ~63% stronger team win rate** matches the expected value from our logistic probability model 
+       (k=0.3), confirming the simulation correctly applies skill-based win probabilities with realistic upsets.
        
-    3. **Win distribution is fair** - the low Gini coefficients (~0.08) indicate wins are distributed 
-       proportionally to skill level, not concentrated on a few players.
+    3. **~16% of matches are perfectly balanced** (both teams have equal total skill levels) - this is 
+       the natural probability given the level distribution (2 players at L1, 5 at L2, 6 at L3, 5 at L4, 2 at L5).
        
-    4. **Skill matters but isn't deterministic** - Level 5 players win more than Level 1 players, 
-       but the probabilistic model ensures upsets happen 8-43% of the time depending on skill gap.
+    4. **Win distribution correlates with skill level** - the low Gini coefficients (~0.08) show wins 
+       are distributed proportionally to player skill levels, not randomly or unfairly concentrated.
+       
+    5. **Why similar balance despite skill optimization?** The engines DO optimize for skill balance, but 
+       based on **session wins/losses** they track internally. Our simulation determines "stronger team" 
+       using **fixed player levels**, which the engines don't know about. The engines are balancing based 
+       on who's been winning, while we measure based on pre-assigned levels - two different metrics!
     """)
     return
 
@@ -1330,10 +1352,10 @@ def _(mo):
 
 @app.cell
 def _(balance_results, fig_to_image, mo, np, plt):
-    _fig, _ax = plt.subplots(figsize=(10, 5))
+    _fig, _ax = plt.subplots(figsize=(12, 5))
     
-    _algo_names = ["Monte Carlo", "Simulated Annealing", "Conflict Graph"]
-    _colors = ["#4C78A8", "#54A24B", "#F58518"]
+    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
     
     _x = np.arange(len(_algo_names))
     _pairing_costs = [np.mean(balance_results[name]["pairing_costs"]) for name in _algo_names]
@@ -1343,7 +1365,7 @@ def _(balance_results, fig_to_image, mo, np, plt):
                     yerr=_pairing_stds, capsize=5)
     
     _ax.set_xticks(_x)
-    _ax.set_xticklabels(_algo_names, fontsize=10)
+    _ax.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=10)
     _ax.set_ylabel("Average Skill Pairing Cost (Level₁ × Level₂)", fontsize=11)
     _ax.set_title("Skill Pairing Cost by Algorithm\n(Lower = Better skill mixing within teams)", 
                   fontsize=12, fontweight="bold")

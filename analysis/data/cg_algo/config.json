@@ -68,42 +68,42 @@
     }
   },
   "aggregateStats": {
-    "repeatRate": 48.687999999999995,
-    "avgRepeatsPerRun": 0.65344,
-    "zeroRepeatRate": 51.32
+    "repeatRate": 42.164,
+    "avgRepeatsPerRun": 0.54368,
+    "zeroRepeatRate": 57.84
   },
   "balanceStats": {
     "totalMatches": 1000000,
-    "strongerTeamWinRate": 63.4193,
-    "avgStrengthDifferential": 1.924846,
-    "perfectlyBalancedMatches": 156787,
-    "perfectlyBalancedRate": 15.678700000000001
+    "strongerTeamWinRate": 63.3381,
+    "avgStrengthDifferential": 1.905328,
+    "perfectlyBalancedMatches": 159285,
+    "perfectlyBalancedRate": 15.928500000000001
   },
   "timing": {
-    "totalMs": 8478,
-    "avgPerBatchMs": 1695.6,
+    "totalMs": 9389,
+    "avgPerBatchMs": 1877.8,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 1445
+        "durationMs": 1612
       },
       {
         "batch": 2,
-        "durationMs": 2623
+        "durationMs": 2062
       },
       {
         "batch": 3,
-        "durationMs": 1653
+        "durationMs": 2117
       },
       {
         "batch": 4,
-        "durationMs": 1372
+        "durationMs": 1991
       },
       {
         "batch": 5,
-        "durationMs": 1385
+        "durationMs": 1607
       }
     ]
   },
-  "timestamp": "2026-01-26T22:55:44.174Z"
+  "timestamp": "2026-01-27T21:47:40.386Z"
 }

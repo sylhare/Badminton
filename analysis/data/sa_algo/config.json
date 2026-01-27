@@ -74,36 +74,36 @@
   },
   "balanceStats": {
     "totalMatches": 1000000,
-    "strongerTeamWinRate": 63.113,
-    "avgStrengthDifferential": 1.870822,
-    "perfectlyBalancedMatches": 163856,
-    "perfectlyBalancedRate": 16.3856
+    "strongerTeamWinRate": 63.078,
+    "avgStrengthDifferential": 1.864622,
+    "perfectlyBalancedMatches": 165096,
+    "perfectlyBalancedRate": 16.5096
   },
   "timing": {
-    "totalMs": 6211823,
-    "avgPerBatchMs": 1242364.6,
+    "totalMs": 8089599,
+    "avgPerBatchMs": 1617919.8,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 1439305
+        "durationMs": 2426106
       },
       {
         "batch": 2,
-        "durationMs": 1306282
+        "durationMs": 1519749
       },
       {
         "batch": 3,
-        "durationMs": 1148314
+        "durationMs": 1689075
       },
       {
         "batch": 4,
-        "durationMs": 1175832
+        "durationMs": 1239378
       },
       {
         "batch": 5,
-        "durationMs": 1142090
+        "durationMs": 1215291
       }
     ]
   },
-  "timestamp": "2026-01-26T22:55:33.879Z"
+  "timestamp": "2026-01-27T21:47:29.945Z"
 }
