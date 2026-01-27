@@ -5,36 +5,105 @@
   "numCourts": 4,
   "numBatches": 5,
   "totalSimulations": 25000,
+  "playerProfiles": {
+    "P1": {
+      "level": 1
+    },
+    "P2": {
+      "level": 1
+    },
+    "P3": {
+      "level": 2
+    },
+    "P4": {
+      "level": 2
+    },
+    "P5": {
+      "level": 2
+    },
+    "P6": {
+      "level": 2
+    },
+    "P7": {
+      "level": 2
+    },
+    "P8": {
+      "level": 3
+    },
+    "P9": {
+      "level": 3
+    },
+    "P10": {
+      "level": 3
+    },
+    "P11": {
+      "level": 3
+    },
+    "P12": {
+      "level": 3
+    },
+    "P13": {
+      "level": 3
+    },
+    "P14": {
+      "level": 4
+    },
+    "P15": {
+      "level": 4
+    },
+    "P16": {
+      "level": 4
+    },
+    "P17": {
+      "level": 4
+    },
+    "P18": {
+      "level": 4
+    },
+    "P19": {
+      "level": 5
+    },
+    "P20": {
+      "level": 5
+    }
+  },
   "aggregateStats": {
-    "repeatRate": 54.644000000000005,
-    "avgRepeatsPerRun": 0.78892,
-    "zeroRepeatRate": 45.36
+    "repeatRate": 54.69199999999999,
+    "avgRepeatsPerRun": 0.78736,
+    "zeroRepeatRate": 45.308
+  },
+  "balanceStats": {
+    "totalMatches": 1000000,
+    "strongerTeamWinRate": 63.0558,
+    "avgStrengthDifferential": 1.87104,
+    "perfectlyBalancedMatches": 164369,
+    "perfectlyBalancedRate": 16.436899999999998
   },
   "timing": {
-    "totalMs": 450801,
-    "avgPerBatchMs": 90160.2,
+    "totalMs": 488956,
+    "avgPerBatchMs": 97791.2,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 103084
+        "durationMs": 106582
       },
       {
         "batch": 2,
-        "durationMs": 99358
+        "durationMs": 90212
       },
       {
         "batch": 3,
-        "durationMs": 84389
+        "durationMs": 93095
       },
       {
         "batch": 4,
-        "durationMs": 82630
+        "durationMs": 98196
       },
       {
         "batch": 5,
-        "durationMs": 81340
+        "durationMs": 100871
       }
     ]
   },
-  "timestamp": "2026-01-25T14:45:00.278Z"
+  "timestamp": "2026-01-26T21:12:00.462Z"
 }
