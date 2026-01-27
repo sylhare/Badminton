@@ -6,6 +6,58 @@ import { CourtAssignmentEngineSA } from '../src/utils/CourtAssignmentEngineSA.ts
 import { ConflictGraphEngine } from '../src/utils/ConflictGraphEngine.ts';
 import type { Player, Court } from '../src/types/index.ts';
 
+// =============================================================================
+// RANDOM BASELINE ENGINE (no optimization, pure random assignment)
+// =============================================================================
+class RandomBaselineEngine {
+  static reset(): void {
+    // No state to reset
+  }
+
+  static resetHistory(): void {
+    // No history to reset
+  }
+
+  static recordWins(_courts: Court[]): void {
+    // Random baseline doesn't track wins - it's purely random
+  }
+
+  static generate(players: Player[], numberOfCourts: number): Court[] {
+    const presentPlayers = players.filter(p => p.isPresent);
+    if (presentPlayers.length === 0) return [];
+
+    // Shuffle players randomly
+    const shuffled = [...presentPlayers].sort(() => Math.random() - 0.5);
+    
+    // Calculate how many can play
+    const capacity = numberOfCourts * 4;
+    const onCourt = shuffled.slice(0, Math.min(shuffled.length, capacity));
+    
+    // Assign to courts with random team splits
+    const courts: Court[] = [];
+    let idx = 0;
+    
+    for (let courtNum = 1; courtNum <= numberOfCourts && idx + 3 < onCourt.length; courtNum++) {
+      const courtPlayers = onCourt.slice(idx, idx + 4);
+      idx += 4;
+      
+      if (courtPlayers.length < 4) break;
+      
+      // Random team split (pick one of 3 possible splits randomly)
+      const splits = [
+        { team1: [courtPlayers[0], courtPlayers[1]], team2: [courtPlayers[2], courtPlayers[3]] },
+        { team1: [courtPlayers[0], courtPlayers[2]], team2: [courtPlayers[1], courtPlayers[3]] },
+        { team1: [courtPlayers[0], courtPlayers[3]], team2: [courtPlayers[1], courtPlayers[2]] },
+      ];
+      const teams = splits[Math.floor(Math.random() * 3)];
+      
+      courts.push({ courtNumber: courtNum, players: courtPlayers, teams });
+    }
+    
+    return courts;
+  }
+}
+
 // Configuration from analysis/data/config.json
 const SCRIPT_DIR = import.meta.dirname;
 const DATA_DIR = resolve(SCRIPT_DIR, 'data');
@@ -98,6 +150,7 @@ type PlayerStats = {
 
 // All available engines
 const ALL_ENGINES = [
+  { id: 'random', name: 'Random Baseline', engine: RandomBaselineEngine, dir: 'random_baseline' },
   { id: 'mc', name: 'Monte Carlo (MC)', engine: CourtAssignmentEngine, dir: 'mc_algo' },
   { id: 'sa', name: 'Simulated Annealing (SA)', engine: CourtAssignmentEngineSA, dir: 'sa_algo' },
   { id: 'cg', name: 'Conflict Graph (CG)', engine: ConflictGraphEngine, dir: 'cg_algo' },
@@ -155,10 +208,12 @@ const extractRoundPairs = (
   roundIndex: number, 
   courts: Court[], 
   batchId: number, 
-  simulationId: number
+  simulationId: number,
+  Engine: EngineType  // Pass engine to record wins
 ): RoundResult => {
   const pairToOpponent = new Map<string, string>();
   const matchEvents: MatchEvent[] = [];
+  const courtsWithWinners: Court[] = [];
 
   for (let courtIdx = 0; courtIdx < courts.length; courtIdx++) {
     const court = courts[courtIdx];
@@ -180,6 +235,9 @@ const extractRoundPairs = (
     const winner = simulateMatchOutcome(team1Strength, team2Strength);
     const strongerTeam = team1Strength >= team2Strength ? 1 : 2;
 
+    // Store court with winner for recording
+    courtsWithWinners.push({ ...court, winner });
+
     matchEvents.push({
       batch: batchId,
       simulationId,
@@ -193,6 +251,12 @@ const extractRoundPairs = (
       winner,
       strongerTeamWon: winner === strongerTeam,
     });
+  }
+
+  // CRITICAL: Record wins so the engine can use win/loss data for skill balancing
+  // This feeds the match outcomes back to the engine's winCountMap and lossCountMap
+  if (Engine.recordWins) {
+    Engine.recordWins(courtsWithWinners);
   }
 
   return { roundIndex, pairToOpponent, matchEvents };
@@ -279,7 +343,8 @@ const runSingleBatch = (batchId: number, Engine: EngineType): {
     const rounds: RoundResult[] = [];
     for (let round = 0; round < ROUNDS; round++) {
       const courts = Engine.generate(players, NUM_COURTS);
-      const roundResult = extractRoundPairs(round + 1, courts, batchId, simId);
+      // Pass Engine to extractRoundPairs so it can record wins for skill balancing
+      const roundResult = extractRoundPairs(round + 1, courts, batchId, simId, Engine);
       rounds.push(roundResult);
       for (const m of roundResult.matchEvents) matchEvents.push(m);
     }
@@ -503,6 +568,7 @@ for (const level of PLAYER_LEVELS.values()) {
 console.log(`    Level 1: ${levelCounts[1]} players | Level 2: ${levelCounts[2]} players | Level 3: ${levelCounts[3]} players | Level 4: ${levelCounts[4]} players | Level 5: ${levelCounts[5]} players`);
 
 console.log(`\n✓ Data saved to ${DATA_DIR}`);
+console.log(`  - random_baseline/summary.csv, pair_events.csv, match_events.csv, player_stats.csv, batch_timings.csv, config.json`);
 console.log(`  - mc_algo/summary.csv, pair_events.csv, match_events.csv, player_stats.csv, batch_timings.csv, config.json`);
 console.log(`  - sa_algo/summary.csv, pair_events.csv, match_events.csv, player_stats.csv, batch_timings.csv, config.json`);
 console.log(`  - cg_algo/summary.csv, pair_events.csv, match_events.csv, player_stats.csv, batch_timings.csv, config.json`);
