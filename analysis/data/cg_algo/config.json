@@ -5,36 +5,105 @@
   "numCourts": 4,
   "numBatches": 5,
   "totalSimulations": 25000,
+  "playerProfiles": {
+    "P1": {
+      "level": 1
+    },
+    "P2": {
+      "level": 1
+    },
+    "P3": {
+      "level": 2
+    },
+    "P4": {
+      "level": 2
+    },
+    "P5": {
+      "level": 2
+    },
+    "P6": {
+      "level": 2
+    },
+    "P7": {
+      "level": 2
+    },
+    "P8": {
+      "level": 3
+    },
+    "P9": {
+      "level": 3
+    },
+    "P10": {
+      "level": 3
+    },
+    "P11": {
+      "level": 3
+    },
+    "P12": {
+      "level": 3
+    },
+    "P13": {
+      "level": 3
+    },
+    "P14": {
+      "level": 4
+    },
+    "P15": {
+      "level": 4
+    },
+    "P16": {
+      "level": 4
+    },
+    "P17": {
+      "level": 4
+    },
+    "P18": {
+      "level": 4
+    },
+    "P19": {
+      "level": 5
+    },
+    "P20": {
+      "level": 5
+    }
+  },
   "aggregateStats": {
-    "repeatRate": 49.348,
-    "avgRepeatsPerRun": 0.66252,
-    "zeroRepeatRate": 50.664
+    "repeatRate": 48.687999999999995,
+    "avgRepeatsPerRun": 0.65344,
+    "zeroRepeatRate": 51.32
+  },
+  "balanceStats": {
+    "totalMatches": 1000000,
+    "strongerTeamWinRate": 63.4193,
+    "avgStrengthDifferential": 1.924846,
+    "perfectlyBalancedMatches": 156787,
+    "perfectlyBalancedRate": 15.678700000000001
   },
   "timing": {
-    "totalMs": 6615,
-    "avgPerBatchMs": 1323,
+    "totalMs": 8478,
+    "avgPerBatchMs": 1695.6,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 1352
+        "durationMs": 1445
       },
       {
         "batch": 2,
-        "durationMs": 1315
+        "durationMs": 2623
       },
       {
         "batch": 3,
-        "durationMs": 1342
+        "durationMs": 1653
       },
       {
         "batch": 4,
-        "durationMs": 1311
+        "durationMs": 1372
       },
       {
         "batch": 5,
-        "durationMs": 1295
+        "durationMs": 1385
       }
     ]
   },
-  "timestamp": "2026-01-25T16:18:57.766Z"
+  "timestamp": "2026-01-26T22:55:44.174Z"
 }
