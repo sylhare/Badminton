@@ -1,10 +1,10 @@
 {
-  "runs": 5000,
+  "runs": 2000,
   "rounds": 10,
   "numPlayers": 20,
   "numCourts": 4,
   "numBatches": 5,
-  "totalSimulations": 25000,
+  "totalSimulations": 10000,
   "playerProfiles": {
     "P1": {
       "level": 1
@@ -68,42 +68,56 @@
     }
   },
   "aggregateStats": {
-    "repeatRate": 95.52000000000001,
-    "avgRepeatsPerRun": 3.04544,
-    "zeroRepeatRate": 4.536
+    "repeatRate": 95.47,
+    "avgRepeatsPerRun": 3.0296,
+    "zeroRepeatRate": 4.61
   },
-  "balanceStats": {
-    "totalMatches": 1000000,
-    "strongerTeamWinRate": 63.0359,
-    "avgStrengthDifferential": 1.876565,
-    "perfectlyBalancedMatches": 165017,
-    "perfectlyBalancedRate": 16.5017
+  "levelBasedBalance": {
+    "totalMatches": 400000,
+    "strongerTeamWinRate": 63.302499999999995,
+    "avgStrengthDifferential": 1.880965,
+    "perfectlyBalancedMatches": 65802,
+    "perfectlyBalancedRate": 16.4505
+  },
+  "engineTrackedBalance": {
+    "totalMatches": 400000,
+    "engineBalancedWinRate": 52.703250000000004,
+    "avgEngineWinDifferential": 1.57505,
+    "perfectlyBalancedMatches": 111213,
+    "perfectlyBalancedRate": 27.803250000000002
+  },
+  "benchFairness": {
+    "avgBenchRange": 4.7217,
+    "avgMeanGap": 1.7080481914357846,
+    "doubleBenchRate": 33.17498373425788,
+    "totalSessions": 10000,
+    "totalGapEvents": 224398
   },
   "timing": {
-    "totalMs": 1497,
-    "avgPerBatchMs": 299.4,
+    "totalMs": 524,
+    "avgPerBatchMs": 104.8,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 323
+        "durationMs": 115
       },
       {
         "batch": 2,
-        "durationMs": 303
+        "durationMs": 104
       },
       {
         "batch": 3,
-        "durationMs": 312
+        "durationMs": 94
       },
       {
         "batch": 4,
-        "durationMs": 299
+        "durationMs": 114
       },
       {
         "batch": 5,
-        "durationMs": 260
+        "durationMs": 97
       }
     ]
   },
-  "timestamp": "2026-01-27T19:17:21.587Z"
+  "timestamp": "2026-01-28T17:51:21.186Z"
 }
