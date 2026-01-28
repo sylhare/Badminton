@@ -10,16 +10,30 @@ import type { Player, Court } from '../src/types/index.ts';
 // RANDOM BASELINE ENGINE (no optimization, pure random assignment)
 // =============================================================================
 class RandomBaselineEngine {
+  // Track wins for comparison purposes (even though we don't use them for optimization)
+  private static winCountMap: Map<string, number> = new Map();
+
   static reset(): void {
-    // No state to reset
+    this.winCountMap.clear();
   }
 
   static resetHistory(): void {
-    // No history to reset
+    this.winCountMap.clear();
   }
 
-  static recordWins(_courts: Court[]): void {
-    // Random baseline doesn't track wins - it's purely random
+  static recordWins(courts: Court[]): void {
+    for (const court of courts) {
+      if (court.winner && court.teams) {
+        const winningTeam = court.winner === 1 ? court.teams.team1 : court.teams.team2;
+        for (const player of winningTeam) {
+          this.winCountMap.set(player.id, (this.winCountMap.get(player.id) ?? 0) + 1);
+        }
+      }
+    }
+  }
+
+  static getWinCounts(): Map<string, number> {
+    return new Map(this.winCountMap);
   }
 
   static generate(players: Player[], numberOfCourts: number): Court[] {
@@ -133,11 +147,16 @@ type MatchEvent = {
   courtIndex: number;
   team1Players: string; // "P1|P2"
   team2Players: string; // "P3|P4"
-  team1Strength: number;
+  team1Strength: number;  // Based on fixed player levels
   team2Strength: number;
   strengthDifferential: number;
   winner: 1 | 2;
   strongerTeamWon: boolean;
+  // NEW: Engine-tracked balance metrics (based on accumulated wins/losses)
+  team1EngineWins: number;
+  team2EngineWins: number;
+  engineWinDifferential: number;
+  engineBalancedTeamWon: boolean;  // Did the team with more engine-tracked wins win?
 };
 
 type PlayerStats = {
@@ -146,6 +165,31 @@ type PlayerStats = {
   totalWins: number;
   totalLosses: number;
   gamesPlayed: number;
+};
+
+// NEW: Bench tracking per session
+type BenchEvent = {
+  batch: number;
+  simulationId: number;
+  numPlayers: number;
+  roundIndex: number;
+  playerId: string;
+  benchedThisRound: boolean;
+  totalBenchCount: number;  // Cumulative for this session
+};
+
+type SessionBenchStats = {
+  batch: number;
+  simulationId: number;
+  numPlayers: number;
+  maxBenchCount: number;
+  minBenchCount: number;
+  benchRange: number;  // max - min (lower = more fair)
+  avgBenchCount: number;
+  // Pre-computed gap statistics (games between benches)
+  meanGap: number;
+  doubleBenchCount: number;  // Gap = 0 events
+  totalGapEvents: number;
 };
 
 // All available engines
@@ -215,6 +259,9 @@ const extractRoundPairs = (
   const matchEvents: MatchEvent[] = [];
   const courtsWithWinners: Court[] = [];
 
+  // Get engine's win counts BEFORE this round (to measure balance at decision time)
+  const engineWinCounts = Engine.getWinCounts ? Engine.getWinCounts() : new Map<string, number>();
+
   for (let courtIdx = 0; courtIdx < courts.length; courtIdx++) {
     const court = courts[courtIdx];
     if (!court.teams || court.teams.team1.length !== 2 || court.teams.team2.length !== 2) continue;
@@ -228,12 +275,18 @@ const extractRoundPairs = (
     pairToOpponent.set(team1Key, team2Key);
     pairToOpponent.set(team2Key, team1Key);
 
-    // Calculate team strengths and simulate match outcome
+    // Calculate team strengths based on FIXED player levels
     const team1Strength = calculateTeamStrength(court.teams.team1);
     const team2Strength = calculateTeamStrength(court.teams.team2);
     const strengthDiff = Math.abs(team1Strength - team2Strength);
     const winner = simulateMatchOutcome(team1Strength, team2Strength);
     const strongerTeam = team1Strength >= team2Strength ? 1 : 2;
+
+    // Calculate ENGINE-TRACKED balance (based on accumulated wins the engine knows about)
+    const team1EngineWins = (engineWinCounts.get(a1.id) ?? 0) + (engineWinCounts.get(a2.id) ?? 0);
+    const team2EngineWins = (engineWinCounts.get(b1.id) ?? 0) + (engineWinCounts.get(b2.id) ?? 0);
+    const engineWinDiff = Math.abs(team1EngineWins - team2EngineWins);
+    const engineStrongerTeam = team1EngineWins >= team2EngineWins ? 1 : 2;
 
     // Store court with winner for recording
     courtsWithWinners.push({ ...court, winner });
@@ -250,6 +303,11 @@ const extractRoundPairs = (
       strengthDifferential: strengthDiff,
       winner,
       strongerTeamWon: winner === strongerTeam,
+      // Engine-tracked balance metrics
+      team1EngineWins,
+      team2EngineWins,
+      engineWinDifferential: engineWinDiff,
+      engineBalancedTeamWon: winner === engineStrongerTeam,
     });
   }
 
@@ -327,18 +385,34 @@ const toCsv = (rows: Array<Record<string, string | number | boolean>>, defaultHe
   return lines.join('\n');
 };
 
-const runSingleBatch = (batchId: number, Engine: EngineType): { 
+const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number): { 
   summaries: SimulationSummary[]; 
   pairEvents: PairEvent[];
   matchEvents: MatchEvent[];
+  benchEvents: BenchEvent[];
+  benchStats: SessionBenchStats[];
 } => {
-  const players = toPlayerList(NUM_PLAYERS);
+  const players = toPlayerList(numPlayers);
   const summaries: SimulationSummary[] = [];
   const pairEvents: PairEvent[] = [];
   const matchEvents: MatchEvent[] = [];
+  const benchEvents: BenchEvent[] = [];
+  const benchStats: SessionBenchStats[] = [];
 
   for (let simId = 1; simId <= RUNS; simId++) {
     Engine.resetHistory();
+    
+    // Track bench counts for this session (reset per session)
+    const sessionBenchCounts = new Map<string, number>();
+    // Track last bench round per player (for gap calculation)
+    const lastBenchRound = new Map<string, number>();
+    players.forEach(p => {
+      sessionBenchCounts.set(p.id, 0);
+      lastBenchRound.set(p.id, 0); // 0 means never benched yet
+    });
+    
+    // Gap tracking for this session
+    const sessionGaps: number[] = [];
 
     const rounds: RoundResult[] = [];
     for (let round = 0; round < ROUNDS; round++) {
@@ -347,7 +421,69 @@ const runSingleBatch = (batchId: number, Engine: EngineType): {
       const roundResult = extractRoundPairs(round + 1, courts, batchId, simId, Engine);
       rounds.push(roundResult);
       for (const m of roundResult.matchEvents) matchEvents.push(m);
+      
+      // Track who was benched this round
+      const playersOnCourt = new Set<string>();
+      for (const court of courts) {
+        for (const p of court.players) {
+          playersOnCourt.add(p.id);
+        }
+      }
+      
+      // Update bench counts and calculate gaps
+      for (const player of players) {
+        const wasBenched = !playersOnCourt.has(player.id);
+        if (wasBenched) {
+          sessionBenchCounts.set(player.id, (sessionBenchCounts.get(player.id) ?? 0) + 1);
+          
+          // Calculate gap (games since last bench)
+          const lastRound = lastBenchRound.get(player.id) ?? 0;
+          if (lastRound > 0) {
+            // Gap = current round - last bench round - 1
+            // Round 1 is index 0 internally, so use (round + 1) for actual round number
+            const gap = (round + 1) - lastRound - 1;
+            sessionGaps.push(gap);
+          }
+          lastBenchRound.set(player.id, round + 1);
+        }
+        
+        // Only save a small sample of bench events (first batch only)
+        if (batchId === 1 && simId <= 10) {
+          benchEvents.push({
+            batch: batchId,
+            simulationId: simId,
+            numPlayers,
+            roundIndex: round + 1,
+            playerId: player.id,
+            benchedThisRound: wasBenched,
+            totalBenchCount: sessionBenchCounts.get(player.id) ?? 0,
+          });
+        }
+      }
     }
+    
+    // Calculate bench fairness stats for this session (including pre-computed gaps)
+    const benchCounts = Array.from(sessionBenchCounts.values());
+    const maxBench = Math.max(...benchCounts);
+    const minBench = Math.min(...benchCounts);
+    const avgBench = benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length;
+    
+    // Calculate gap statistics
+    const meanGap = sessionGaps.length > 0 ? sessionGaps.reduce((a, b) => a + b, 0) / sessionGaps.length : 0;
+    const doubleBenchCount = sessionGaps.filter(g => g === 0).length;
+    
+    benchStats.push({
+      batch: batchId,
+      simulationId: simId,
+      numPlayers,
+      maxBenchCount: maxBench,
+      minBenchCount: minBench,
+      benchRange: maxBench - minBench,
+      avgBenchCount: avgBench,
+      meanGap,
+      doubleBenchCount,
+      totalGapEvents: sessionGaps.length,
+    });
 
     const repeatStats = evaluateRepeats(rounds, simId, batchId);
     for (const e of repeatStats.events) pairEvents.push(e);
@@ -365,27 +501,29 @@ const runSingleBatch = (batchId: number, Engine: EngineType): {
     });
   }
 
-  return { summaries, pairEvents, matchEvents };
+  return { summaries, pairEvents, matchEvents, benchEvents, benchStats };
 };
 
-const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
+const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number], numPlayers: number = NUM_PLAYERS) => {
   const { id, name, engine, dir } = engineConfig;
   const engineDir = resolve(DATA_DIR, dir);
   mkdirSync(engineDir, { recursive: true });
 
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`Running ${name} - ${NUM_BATCHES} batches`);
+  console.log(`Running ${name} - ${NUM_BATCHES} batches (${numPlayers} players)`);
   console.log(`${'='.repeat(60)}`);
 
   const allSummaries: SimulationSummary[] = [];
   const allPairEvents: PairEvent[] = [];
   const allMatchEvents: MatchEvent[] = [];
+  const allBenchEvents: BenchEvent[] = [];
+  const allBenchStats: SessionBenchStats[] = [];
   const batchTimings: BatchTiming[] = [];
 
   for (let batchId = 1; batchId <= NUM_BATCHES; batchId++) {
     const startTime = Date.now();
     
-    const { summaries, pairEvents, matchEvents } = runSingleBatch(batchId, engine);
+    const { summaries, pairEvents, matchEvents, benchEvents, benchStats } = runSingleBatch(batchId, engine, numPlayers);
     
     const elapsed = Date.now() - startTime;
     
@@ -393,6 +531,8 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
     for (const s of summaries) allSummaries.push(s);
     for (const p of pairEvents) allPairEvents.push(p);
     for (const m of matchEvents) allMatchEvents.push(m);
+    for (const b of benchEvents) allBenchEvents.push(b);
+    for (const bs of benchStats) allBenchStats.push(bs);
     
     batchTimings.push({
       batch: batchId,
@@ -409,11 +549,15 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
 
   // Write combined results
   const pairEventHeaders = ['batch', 'simulationId', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
-  const matchEventHeaders = ['batch', 'simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'winner', 'strongerTeamWon'];
+  const matchEventHeaders = ['batch', 'simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
+  const benchEventHeaders = ['batch', 'simulationId', 'numPlayers', 'roundIndex', 'playerId', 'benchedThisRound', 'totalBenchCount'];
+  const benchStatsHeaders = ['batch', 'simulationId', 'numPlayers', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
   
   writeFileSync(resolve(engineDir, 'summary.csv'), toCsv(allSummaries));
   writeFileSync(resolve(engineDir, 'pair_events.csv'), toCsv(allPairEvents, pairEventHeaders));
   writeFileSync(resolve(engineDir, 'match_events.csv'), toCsv(allMatchEvents, matchEventHeaders));
+  writeFileSync(resolve(engineDir, 'bench_events.csv'), toCsv(allBenchEvents, benchEventHeaders));
+  writeFileSync(resolve(engineDir, 'bench_stats.csv'), toCsv(allBenchStats, benchStatsHeaders));
   writeFileSync(resolve(engineDir, 'batch_timings.csv'), toCsv(batchTimings));
 
   // Calculate aggregate stats
@@ -423,11 +567,23 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
   const totalTime = batchTimings.reduce((acc, t) => acc + t.durationMs, 0);
   const avgTimePerBatch = totalTime / NUM_BATCHES;
 
-  // Calculate team balance stats from match events
+  // Calculate team balance stats from match events (based on fixed player levels)
   const totalMatches = allMatchEvents.length;
   const strongerTeamWins = allMatchEvents.filter(m => m.strongerTeamWon).length;
   const avgStrengthDiff = allMatchEvents.reduce((acc, m) => acc + m.strengthDifferential, 0) / totalMatches;
   const perfectlyBalanced = allMatchEvents.filter(m => m.strengthDifferential === 0).length;
+  
+  // Calculate ENGINE-TRACKED balance stats (based on wins the engine tracks)
+  const engineBalancedWins = allMatchEvents.filter(m => m.engineBalancedTeamWon).length;
+  const avgEngineWinDiff = allMatchEvents.reduce((acc, m) => acc + m.engineWinDifferential, 0) / totalMatches;
+  const enginePerfectBalance = allMatchEvents.filter(m => m.engineWinDifferential === 0).length;
+  
+  // Calculate bench fairness stats
+  const avgBenchRange = allBenchStats.reduce((acc, bs) => acc + bs.benchRange, 0) / allBenchStats.length;
+  const avgMeanGap = allBenchStats.reduce((acc, bs) => acc + bs.meanGap, 0) / allBenchStats.length;
+  const totalDoubleBench = allBenchStats.reduce((acc, bs) => acc + bs.doubleBenchCount, 0);
+  const totalGapEvents = allBenchStats.reduce((acc, bs) => acc + bs.totalGapEvents, 0);
+  const doubleBenchRate = totalGapEvents > 0 ? (totalDoubleBench / totalGapEvents) * 100 : 0;
 
   // Calculate player win stats
   const playerWins = new Map<string, number>();
@@ -452,7 +608,7 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
 
   // Build player stats array
   const playerStats: PlayerStats[] = [];
-  for (let i = 0; i < NUM_PLAYERS; i++) {
+  for (let i = 0; i < numPlayers; i++) {
     const playerId = `P${i + 1}`;
     playerStats.push({
       playerId,
@@ -470,24 +626,43 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
   const engineConfigFile = {
     runs: RUNS,
     rounds: ROUNDS,
-    numPlayers: NUM_PLAYERS,
+    numPlayers,
     numCourts: NUM_COURTS,
     numBatches: NUM_BATCHES,
     totalSimulations: allSummaries.length,
     playerProfiles: Object.fromEntries(
-      Array.from(PLAYER_LEVELS.entries()).map(([id, level]) => [id, { level }])
+      Array.from(PLAYER_LEVELS.entries())
+        .filter(([id]) => parseInt(id.replace('P', '')) <= numPlayers)
+        .map(([id, level]) => [id, { level }])
     ),
     aggregateStats: {
       repeatRate: totalRepeatRate,
       avgRepeatsPerRun: avgRepeats,
       zeroRepeatRate: (allSummaries.filter(s => s.repeatPairDifferentOpponentsCount === 0).length / allSummaries.length) * 100,
     },
-    balanceStats: {
+    // Balance based on FIXED player levels
+    levelBasedBalance: {
       totalMatches,
       strongerTeamWinRate: (strongerTeamWins / totalMatches) * 100,
       avgStrengthDifferential: avgStrengthDiff,
       perfectlyBalancedMatches: perfectlyBalanced,
       perfectlyBalancedRate: (perfectlyBalanced / totalMatches) * 100,
+    },
+    // Balance based on ENGINE-TRACKED wins (what the engine actually optimizes)
+    engineTrackedBalance: {
+      totalMatches,
+      engineBalancedWinRate: (engineBalancedWins / totalMatches) * 100,
+      avgEngineWinDifferential: avgEngineWinDiff,
+      perfectlyBalancedMatches: enginePerfectBalance,
+      perfectlyBalancedRate: (enginePerfectBalance / totalMatches) * 100,
+    },
+    // Bench fairness stats
+    benchFairness: {
+      avgBenchRange,
+      avgMeanGap,
+      doubleBenchRate,
+      totalSessions: allBenchStats.length,
+      totalGapEvents,
     },
     timing: {
       totalMs: totalTime,
@@ -503,11 +678,19 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
   console.log(`    Overall repeat rate: ${totalRepeatRate.toFixed(2)}%`);
   console.log(`    Zero-repeat rate: ${engineConfigFile.aggregateStats.zeroRepeatRate.toFixed(2)}%`);
   console.log(`    Avg repeats/run: ${avgRepeats.toFixed(3)}`);
-  console.log(`    Stronger team win rate: ${engineConfigFile.balanceStats.strongerTeamWinRate.toFixed(1)}%`);
-  console.log(`    Avg strength differential: ${avgStrengthDiff.toFixed(2)}`);
+  console.log(`    [Level-based] Stronger team wins: ${engineConfigFile.levelBasedBalance.strongerTeamWinRate.toFixed(1)}%`);
+  console.log(`    [Engine-tracked] Balanced team wins: ${engineConfigFile.engineTrackedBalance.engineBalancedWinRate.toFixed(1)}%`);
+  console.log(`    Bench fairness: avg gap ${avgMeanGap.toFixed(2)}, double-bench rate ${doubleBenchRate.toFixed(1)}%`);
   console.log(`    Total time: ${totalTime}ms (avg ${avgTimePerBatch.toFixed(0)}ms/batch)`);
 
-  return { summaries: allSummaries, timings: batchTimings, stats: engineConfigFile.aggregateStats, balanceStats: engineConfigFile.balanceStats };
+  return { 
+    summaries: allSummaries, 
+    timings: batchTimings, 
+    stats: engineConfigFile.aggregateStats, 
+    levelBasedBalance: engineConfigFile.levelBasedBalance,
+    engineTrackedBalance: engineConfigFile.engineTrackedBalance,
+    benchFairness: engineConfigFile.benchFairness,
+  };
 };
 
 // Main execution
@@ -541,8 +724,16 @@ const comparisonData = ALL_ENGINES.map(({ id, name }) => {
     repeatRate: result.stats.repeatRate,
     zeroRepeatRate: result.stats.zeroRepeatRate,
     avgRepeatsPerRun: result.stats.avgRepeatsPerRun,
-    strongerTeamWinRate: result.balanceStats.strongerTeamWinRate,
-    avgStrengthDiff: result.balanceStats.avgStrengthDifferential,
+    // Level-based balance (fixed player levels)
+    levelStrongerWinRate: result.levelBasedBalance.strongerTeamWinRate,
+    levelAvgDiff: result.levelBasedBalance.avgStrengthDifferential,
+    // Engine-tracked balance (wins the engine optimizes)
+    engineBalancedWinRate: result.engineTrackedBalance.engineBalancedWinRate,
+    engineAvgDiff: result.engineTrackedBalance.avgEngineWinDifferential,
+    // Bench fairness
+    benchRange: result.benchFairness.avgBenchRange,
+    avgMeanGap: result.benchFairness.avgMeanGap,
+    doubleBenchRate: result.benchFairness.doubleBenchRate,
     totalTimeMs: result.timings.reduce((a, t) => a + t.durationMs, 0),
   };
 });
@@ -554,9 +745,19 @@ for (const row of comparisonData) {
   console.log(`    ${row.engineName.padEnd(30)} | ${row.zeroRepeatRate.toFixed(1).padStart(6)}% zero-repeat | ${row.avgRepeatsPerRun.toFixed(3).padStart(6)} avg`);
 }
 
-console.log('\n  Balance Metrics:');
+console.log('\n  Balance (Fixed Levels 1-5):');
 for (const row of comparisonData) {
-  console.log(`    ${row.engineName.padEnd(30)} | ${row.strongerTeamWinRate.toFixed(1).padStart(5)}% stronger wins | ${row.avgStrengthDiff.toFixed(2).padStart(5)} avg diff`);
+  console.log(`    ${row.engineName.padEnd(30)} | ${row.levelStrongerWinRate.toFixed(1).padStart(5)}% stronger wins | ${row.levelAvgDiff.toFixed(2).padStart(5)} avg diff`);
+}
+
+console.log('\n  Balance (Engine-Tracked Wins):');
+for (const row of comparisonData) {
+  console.log(`    ${row.engineName.padEnd(30)} | ${row.engineBalancedWinRate.toFixed(1).padStart(5)}% balanced wins | ${row.engineAvgDiff.toFixed(2).padStart(5)} avg diff`);
+}
+
+console.log('\n  Bench Fairness:');
+for (const row of comparisonData) {
+  console.log(`    ${row.engineName.padEnd(30)} | ${row.avgMeanGap.toFixed(2).padStart(5)} avg gap | ${row.doubleBenchRate.toFixed(1).padStart(5)}% double-bench`);
 }
 
 // Print player level distribution
@@ -568,12 +769,9 @@ for (const level of PLAYER_LEVELS.values()) {
 console.log(`    Level 1: ${levelCounts[1]} players | Level 2: ${levelCounts[2]} players | Level 3: ${levelCounts[3]} players | Level 4: ${levelCounts[4]} players | Level 5: ${levelCounts[5]} players`);
 
 console.log(`\n✓ Data saved to ${DATA_DIR}`);
-console.log(`  - random_baseline/summary.csv, pair_events.csv, match_events.csv, player_stats.csv, batch_timings.csv, config.json`);
-console.log(`  - mc_algo/summary.csv, pair_events.csv, match_events.csv, player_stats.csv, batch_timings.csv, config.json`);
-console.log(`  - sa_algo/summary.csv, pair_events.csv, match_events.csv, player_stats.csv, batch_timings.csv, config.json`);
-console.log(`  - cg_algo/summary.csv, pair_events.csv, match_events.csv, player_stats.csv, batch_timings.csv, config.json`);
+console.log(`  Files per engine: summary.csv, pair_events.csv, match_events.csv, bench_events.csv, bench_stats.csv, player_stats.csv, batch_timings.csv, config.json`);
+console.log(`  - random_baseline/, mc_algo/, sa_algo/, cg_algo/`);
 console.log(`  - comparison_summary.csv`);
-console.log(`\n  New files for team balance analysis:`);
-console.log(`    - match_events.csv: Team compositions, strengths, and match outcomes`);
-console.log(`    - player_stats.csv: Per-player win/loss statistics`);
-console.log(`    - config.json now includes playerProfiles with skill levels (1-5)`);
+console.log(`\n  New metrics in this run:`);
+console.log(`    - Engine-tracked balance: Based on wins the engine actually optimizes`);
+console.log(`    - Bench fairness: bench_stats.csv with pre-computed gap statistics`);
