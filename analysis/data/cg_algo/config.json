@@ -1,10 +1,10 @@
 {
-  "runs": 5000,
+  "runs": 2000,
   "rounds": 10,
   "numPlayers": 20,
   "numCourts": 4,
   "numBatches": 5,
-  "totalSimulations": 25000,
+  "totalSimulations": 10000,
   "playerProfiles": {
     "P1": {
       "level": 1
@@ -68,42 +68,56 @@
     }
   },
   "aggregateStats": {
-    "repeatRate": 42.164,
-    "avgRepeatsPerRun": 0.54368,
-    "zeroRepeatRate": 57.84
+    "repeatRate": 42.52,
+    "avgRepeatsPerRun": 0.5497,
+    "zeroRepeatRate": 57.48
   },
-  "balanceStats": {
-    "totalMatches": 1000000,
-    "strongerTeamWinRate": 63.3381,
-    "avgStrengthDifferential": 1.905328,
-    "perfectlyBalancedMatches": 159285,
-    "perfectlyBalancedRate": 15.928500000000001
+  "levelBasedBalance": {
+    "totalMatches": 400000,
+    "strongerTeamWinRate": 63.265249999999995,
+    "avgStrengthDifferential": 1.904135,
+    "perfectlyBalancedMatches": 63550,
+    "perfectlyBalancedRate": 15.8875
+  },
+  "engineTrackedBalance": {
+    "totalMatches": 400000,
+    "engineBalancedWinRate": 50.222,
+    "avgEngineWinDifferential": 0.5353275,
+    "perfectlyBalancedMatches": 202276,
+    "perfectlyBalancedRate": 50.568999999999996
+  },
+  "benchFairness": {
+    "avgBenchRange": 0,
+    "avgMeanGap": 4,
+    "doubleBenchRate": 4.0235,
+    "totalSessions": 10000,
+    "totalGapEvents": 200000
   },
   "timing": {
-    "totalMs": 9389,
-    "avgPerBatchMs": 1877.8,
+    "totalMs": 3115,
+    "avgPerBatchMs": 623,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 1612
+        "durationMs": 631
       },
       {
         "batch": 2,
-        "durationMs": 2062
+        "durationMs": 613
       },
       {
         "batch": 3,
-        "durationMs": 2117
+        "durationMs": 613
       },
       {
         "batch": 4,
-        "durationMs": 1991
+        "durationMs": 632
       },
       {
         "batch": 5,
-        "durationMs": 1607
+        "durationMs": 626
       }
     ]
   },
-  "timestamp": "2026-01-27T21:47:40.386Z"
+  "timestamp": "2026-01-28T18:03:54.852Z"
 }

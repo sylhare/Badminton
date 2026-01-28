@@ -1,10 +1,10 @@
 {
-  "runs": 5000,
+  "runs": 2000,
   "rounds": 10,
   "numPlayers": 20,
   "numCourts": 4,
   "numBatches": 5,
-  "totalSimulations": 25000,
+  "totalSimulations": 10000,
   "playerProfiles": {
     "P1": {
       "level": 1
@@ -72,38 +72,52 @@
     "avgRepeatsPerRun": 0,
     "zeroRepeatRate": 100
   },
-  "balanceStats": {
-    "totalMatches": 1000000,
-    "strongerTeamWinRate": 63.078,
-    "avgStrengthDifferential": 1.864622,
-    "perfectlyBalancedMatches": 165096,
-    "perfectlyBalancedRate": 16.5096
+  "levelBasedBalance": {
+    "totalMatches": 400000,
+    "strongerTeamWinRate": 63.112,
+    "avgStrengthDifferential": 1.862555,
+    "perfectlyBalancedMatches": 66200,
+    "perfectlyBalancedRate": 16.55
+  },
+  "engineTrackedBalance": {
+    "totalMatches": 400000,
+    "engineBalancedWinRate": 50.52625,
+    "avgEngineWinDifferential": 0.2799525,
+    "perfectlyBalancedMatches": 293920,
+    "perfectlyBalancedRate": 73.48
+  },
+  "benchFairness": {
+    "avgBenchRange": 0,
+    "avgMeanGap": 4,
+    "doubleBenchRate": 4.007000000000001,
+    "totalSessions": 10000,
+    "totalGapEvents": 200000
   },
   "timing": {
-    "totalMs": 8089599,
-    "avgPerBatchMs": 1617919.8,
+    "totalMs": 568668,
+    "avgPerBatchMs": 113733.6,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 2426106
+        "durationMs": 116178
       },
       {
         "batch": 2,
-        "durationMs": 1519749
+        "durationMs": 113026
       },
       {
         "batch": 3,
-        "durationMs": 1689075
+        "durationMs": 113068
       },
       {
         "batch": 4,
-        "durationMs": 1239378
+        "durationMs": 113112
       },
       {
         "batch": 5,
-        "durationMs": 1215291
+        "durationMs": 113284
       }
     ]
   },
-  "timestamp": "2026-01-27T21:47:29.945Z"
+  "timestamp": "2026-01-28T18:03:51.238Z"
 }
