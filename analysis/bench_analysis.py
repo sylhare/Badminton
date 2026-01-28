@@ -7,15 +7,13 @@ app = marimo.App(width="medium")
 @app.cell
 def _():
     import json
-    import random
     from pathlib import Path
 
     import marimo as mo
-    import polars as pl
     
     from utils.plotting import setup_matplotlib, fig_to_image
     
-    return Path, fig_to_image, json, mo, pl, random, setup_matplotlib
+    return Path, fig_to_image, json, mo, setup_matplotlib
 
 
 @app.cell
@@ -32,56 +30,21 @@ def _():
 
 
 @app.cell
-def _(Path, json, pl):
-    # Load bench analysis data (aggregated format)
+def _(Path, json):
+    # Load pre-computed bench analysis data from single JSON file
     script_path = Path(__file__).resolve()
-    data_dir = script_path.parent / "data" / "bench_analysis"
+    data_file = script_path.parent / "data" / "bench_analysis" / "bench_data.json"
 
-    # Load config
-    config_path = data_dir / "config.json"
-    if config_path.exists():
-        config = json.loads(config_path.read_text())
+    if data_file.exists():
+        bench_data = json.loads(data_file.read_text())
+        has_data = len(bench_data.get("players", [])) > 0
+        config = bench_data.get("config", {})
     else:
-        config = {
-            "runs": 1000,
-            "rounds": 50,
-            "minPlayers": 17,
-            "maxPlayers": 20,
-            "numCourts": 4,
-            "numBatches": 5,
-        }
+        bench_data = {"players": [], "config": {}}
+        has_data = False
+        config = {}
 
-    # Load aggregated summary files
-    all_summaries = []
-    all_events = []
-    all_distributions = []
-
-    for num_players in range(config["minPlayers"], config["maxPlayers"] + 1):
-        summary_file = data_dir / f"summary_{num_players}p.csv"
-        events_file = data_dir / f"events_summary_{num_players}p.csv"
-        dist_file = data_dir / f"gap_distribution_{num_players}p.csv"
-
-        if summary_file.exists():
-            all_summaries.append(pl.read_csv(summary_file))
-
-        if events_file.exists():
-            all_events.append(pl.read_csv(events_file))
-            
-        if dist_file.exists():
-            all_distributions.append(pl.read_csv(dist_file))
-
-    has_data = len(all_summaries) > 0
-
-    if has_data:
-        summaries = pl.concat(all_summaries, how="diagonal_relaxed")
-        events_summary = pl.concat(all_events, how="diagonal_relaxed")
-        gap_distributions = pl.concat(all_distributions, how="diagonal_relaxed")
-    else:
-        summaries = pl.DataFrame()
-        events_summary = pl.DataFrame()
-        gap_distributions = pl.DataFrame()
-
-    return config, events_summary, gap_distributions, has_data, summaries
+    return bench_data, config, has_data
 
 
 @app.cell(hide_code=True)
@@ -100,7 +63,7 @@ This notebook analyzes the **bench distribution algorithm** performance - specif
 
 
 @app.cell(hide_code=True)
-def _(has_data, mo, summaries):
+def _(has_data, mo):
     mo.stop(not has_data, mo.md("""
     ## No Data Found
 
@@ -109,12 +72,11 @@ def _(has_data, mo, summaries):
     ```bash
     cd analysis
     SIM_TYPE=bench npx tsx simulate.ts
+    python precompute_bench_data.py
     ```
 
     This will generate data for 17-20 players with 4 courts over 50 rounds.
     """))
-    
-    mo.md(f"**Data loaded:** {len(summaries)} player configurations (17-20 players)")
     return
 
 
@@ -167,41 +129,16 @@ The algorithm should aim to approach this theoretical maximum. If the observed a
 
 
 @app.cell
-def _(config):
-    def calc_theoretical_max(num_players: int, num_courts: int) -> float:
-        """Calculate theoretical maximum games between bench periods."""
-        playing_spots = num_courts * 4
-        bench_spots = num_players - playing_spots
-        if bench_spots <= 0:
-            return float('inf')
-        return playing_spots / bench_spots
-
-    theoretical_values = {
-        n: calc_theoretical_max(n, config["numCourts"])
-        for n in range(config["minPlayers"], config["maxPlayers"] + 1)
-    }
-    return (theoretical_values,)
-
-
-@app.cell
-def _(has_data, mo, summaries):
+def _(bench_data, fig_to_image, has_data, mo, np, plt):
     mo.stop(not has_data)
 
-    # Data is already aggregated with theoreticalMax column
-    algo_stats = summaries.sort("numPlayers")
-    return (algo_stats,)
-
-
-@app.cell
-def _(algo_stats, fig_to_image, has_data, mo, np, plt):
-    mo.stop(not has_data)
-
+    _players = bench_data["players"]
     _fig_main, _ax_main = plt.subplots(figsize=(10, 6))
 
-    _players_list = algo_stats.get_column("numPlayers").to_list()
-    _mean_gaps = algo_stats.get_column("mean_avg_gap").to_list()
-    _std_gaps = algo_stats.get_column("std_avg_gap").to_list()
-    _theoretical = algo_stats.get_column("theoreticalMax").to_list()
+    _players_list = [p["numPlayers"] for p in _players]
+    _mean_gaps = [p["algo_mean_gap"] for p in _players]
+    _std_gaps = [p["algo_std_gap"] for p in _players]
+    _theoretical = [p["theoreticalMax"] for p in _players]
 
     _x_pos = np.arange(len(_players_list))
     _width = 0.35
@@ -238,20 +175,20 @@ def _(algo_stats, fig_to_image, has_data, mo, np, plt):
 
 
 @app.cell(hide_code=True)
-def _(algo_stats, has_data, mo):
+def _(bench_data, has_data, mo):
     mo.stop(not has_data)
 
     # Calculate efficiency (how close to theoretical max)
-    _stats_list = algo_stats.to_dicts()
+    _players = bench_data["players"]
 
     _analysis = []
-    for _row in _stats_list:
-        _efficiency = (_row["mean_avg_gap"] / _row["theoreticalMax"]) * 100 if _row["theoreticalMax"] > 0 else 0
-        _gap_from_ideal = _row["theoreticalMax"] - _row["mean_avg_gap"]
+    for _p in _players:
+        _efficiency = (_p["algo_mean_gap"] / _p["theoreticalMax"]) * 100 if _p["theoreticalMax"] > 0 else 0
+        _gap_from_ideal = _p["theoreticalMax"] - _p["algo_mean_gap"]
         _analysis.append({
-            "players": _row["numPlayers"],
-            "algo_avg": _row["mean_avg_gap"],
-            "theoretical": _row["theoreticalMax"],
+            "players": _p["numPlayers"],
+            "algo_avg": _p["algo_mean_gap"],
+            "theoretical": _p["theoreticalMax"],
             "efficiency": _efficiency,
             "gap": _gap_from_ideal,
         })
@@ -280,64 +217,20 @@ def _(algo_stats, has_data, mo):
 
 
 @app.cell
-def _(config, has_data, mo, np, pl, random):
+def _(bench_data, fig_to_image, has_data, mo, np, plt):
     mo.stop(not has_data)
 
-    def simulate_random_baseline(num_players: int, num_courts: int, num_rounds: int, num_sims: int = 1000):
-        """Simulate random player selection to establish baseline bench gaps."""
-        all_gaps = []
-        playing_spots = num_courts * 4
-        player_names = [f"P{i+1}" for i in range(num_players)]
-
-        for _ in range(num_sims):
-            last_bench = {p: 0 for p in player_names}
-            gaps = []
-
-            for round_num in range(1, num_rounds + 1):
-                playing = set(random.sample(player_names, min(playing_spots, len(player_names))))
-
-                for player in player_names:
-                    if player not in playing:
-                        if last_bench[player] > 0:
-                            gap = round_num - last_bench[player] - 1
-                            gaps.append(gap)
-                        last_bench[player] = round_num
-
-            if gaps:
-                all_gaps.append(np.mean(gaps))
-
-        return np.mean(all_gaps) if all_gaps else 0, np.std(all_gaps) if all_gaps else 0
-
-    # Calculate baseline for each player count
-    baseline_stats = []
-    for np_count in range(config["minPlayers"], config["maxPlayers"] + 1):
-        mean_gap, std_gap = simulate_random_baseline(
-            np_count, config["numCourts"], config["rounds"], num_sims=500
-        )
-        baseline_stats.append({
-            "numPlayers": np_count,
-            "baseline_mean": mean_gap,
-            "baseline_std": std_gap,
-        })
-
-    baseline_df = pl.DataFrame(baseline_stats)
-    return (baseline_df,)
-
-
-@app.cell
-def _(algo_stats, baseline_df, fig_to_image, has_data, mo, np, plt, theoretical_values):
-    mo.stop(not has_data)
-
+    _players = bench_data["players"]
     _fig_compare, _ax_compare = plt.subplots(figsize=(12, 6))
 
-    _players_compare = algo_stats.get_column("numPlayers").to_list()
-    _algo_means = algo_stats.get_column("mean_avg_gap").to_list()
-    _algo_stds = algo_stats.get_column("std_avg_gap").to_list()
-    _baseline_means = baseline_df.get_column("baseline_mean").to_list()
-    _baseline_stds = baseline_df.get_column("baseline_std").to_list()
-    _theoretical_compare = [theoretical_values[p] for p in _players_compare]
+    _players_list = [p["numPlayers"] for p in _players]
+    _algo_means = [p["algo_mean_gap"] for p in _players]
+    _algo_stds = [p["algo_std_gap"] for p in _players]
+    _baseline_means = [p["baseline_mean_gap"] for p in _players]
+    _baseline_stds = [p["baseline_std_gap"] for p in _players]
+    _theoretical = [p["theoreticalMax"] for p in _players]
 
-    _x_compare = np.arange(len(_players_compare))
+    _x_compare = np.arange(len(_players_list))
     _width_compare = 0.25
 
     # Baseline bars
@@ -353,14 +246,14 @@ def _(algo_stats, baseline_df, fig_to_image, has_data, mo, np, plt, theoretical_
                         fmt='none', color='#333', capsize=3)
 
     # Theoretical max bars
-    _bars_theo = _ax_compare.bar(_x_compare + _width_compare, _theoretical_compare, _width_compare,
+    _bars_theo = _ax_compare.bar(_x_compare + _width_compare, _theoretical, _width_compare,
                                 label="Theoretical Max", color="#54A24B", alpha=0.8)
 
     _ax_compare.set_xlabel("Number of Players")
     _ax_compare.set_ylabel("Average Games Between Benches")
     _ax_compare.set_title("Bench Gap Analysis: Algorithm vs Random Baseline vs Theoretical Maximum")
     _ax_compare.set_xticks(_x_compare)
-    _ax_compare.set_xticklabels(_players_compare)
+    _ax_compare.set_xticklabels(_players_list)
     _ax_compare.legend()
     _ax_compare.grid(axis='y', alpha=0.3)
 
@@ -370,18 +263,16 @@ def _(algo_stats, baseline_df, fig_to_image, has_data, mo, np, plt, theoretical_
 
 
 @app.cell(hide_code=True)
-def _(algo_stats, baseline_df, has_data, mo, theoretical_values):
+def _(bench_data, has_data, mo):
     mo.stop(not has_data)
 
-    _algo_list = algo_stats.to_dicts()
-    _baseline_list = baseline_df.to_dicts()
+    _players = bench_data["players"]
 
     _comparison = []
-    for _i, _row in enumerate(_algo_list):
-        _np_val = _row["numPlayers"]
-        _algo_mean = _row["mean_avg_gap"]
-        _baseline_mean = _baseline_list[_i]["baseline_mean"]
-        _theoretical = theoretical_values[_np_val]
+    for _p in _players:
+        _algo_mean = _p["algo_mean_gap"]
+        _baseline_mean = _p["baseline_mean_gap"]
+        _theoretical = _p["theoreticalMax"]
 
         # Improvement over baseline
         _improvement = ((_algo_mean - _baseline_mean) / _baseline_mean * 100) if _baseline_mean > 0 else 0
@@ -391,7 +282,7 @@ def _(algo_stats, baseline_df, has_data, mo, theoretical_values):
         _baseline_efficiency = (_baseline_mean / _theoretical * 100) if _theoretical > 0 else 0
 
         _comparison.append({
-            "players": _np_val,
+            "players": _p["numPlayers"],
             "baseline": _baseline_mean,
             "algorithm": _algo_mean,
             "theoretical": _theoretical,
@@ -425,33 +316,33 @@ def _(algo_stats, baseline_df, has_data, mo, theoretical_values):
 
 
 @app.cell
-def _(events_summary, fig_to_image, gap_distributions, has_data, mo, np, pl, plt):
+def _(bench_data, fig_to_image, has_data, mo, plt):
     mo.stop(not has_data)
 
-    # Get distribution of gaps for each player count from pre-aggregated histogram data
+    # Get distribution of gaps for each player count from pre-computed histogram data
+    _players = bench_data["players"]
     _fig_dist, _axes_dist = plt.subplots(2, 2, figsize=(12, 10))
     _axes_flat = _axes_dist.flatten()
 
-    _player_counts = gap_distributions.get_column("numPlayers").unique().sort().to_list()
-
-    for _idx, _np_val in enumerate(_player_counts[:4]):
+    for _idx, _p in enumerate(_players[:4]):
         _ax = _axes_flat[_idx]
+        _np_val = _p["numPlayers"]
+        _distribution = _p["distribution"]
 
-        # Get histogram data for this player count
-        _hist_data = gap_distributions.filter(pl.col("numPlayers") == _np_val).sort("gamesSinceLastBench")
-        _gaps = _hist_data.get_column("gamesSinceLastBench").to_list()
-        _counts = _hist_data.get_column("count").to_list()
+        if _distribution:
+            # Distribution is stored as array of counts where index = gap value
+            _gaps = list(range(len(_distribution)))
+            _counts = _distribution
 
-        if _gaps:
             _ax.bar(_gaps, _counts, color="#4C78A8", alpha=0.7, edgecolor='white', width=0.8)
             
-            # Get mean from events_summary
-            _mean_gap = events_summary.filter(pl.col("numPlayers") == _np_val).get_column("mean_gap")[0]
+            # Get mean from pre-computed data
+            _mean_gap = _p["events_mean_gap"]
             _ax.axvline(_mean_gap, color='#E45756', linestyle='--', 
                        linewidth=2, label=f'Mean: {_mean_gap:.2f}')
 
             # Add theoretical max line
-            _theoretical = 16 / (_np_val - 16)
+            _theoretical = _p["theoreticalMax"]
             _ax.axvline(_theoretical, color='#54A24B', linestyle='-', 
                        linewidth=2, label=f'Theoretical: {_theoretical:.2f}')
 
@@ -509,46 +400,20 @@ $n - b \geq b$, which simplifies to $16 \geq b$
 
 
 @app.cell
-def _(config, events_summary, fig_to_image, has_data, mo, np, pl, plt, random):
+def _(bench_data, fig_to_image, has_data, mo, np, plt):
     mo.stop(not has_data)
 
-    # Get double bench rate from pre-aggregated data
+    _players = bench_data["players"]
+
+    # Get double bench rate from pre-computed data
     _algo_double_bench = {}
-    for _np_val in range(config["minPlayers"], config["maxPlayers"] + 1):
-        _row = events_summary.filter(pl.col("numPlayers") == _np_val)
-        if _row.height > 0:
-            _total = _row.get_column("total_bench_events")[0]
-            _double = _row.get_column("double_bench_count")[0]
-            _algo_double_bench[_np_val] = (_double / _total * 100) if _total > 0 else 0
-
-    # Simulate random baseline double bench rate
-    def _simulate_baseline_double_bench(num_players: int, num_courts: int, num_rounds: int, num_sims: int = 500):
-        playing_spots = num_courts * 4
-        player_names = [f"P{i+1}" for i in range(num_players)]
-        total_double = 0
-        total_benches = 0
-
-        for _ in range(num_sims):
-            last_bench = {p: 0 for p in player_names}
-
-            for round_num in range(1, num_rounds + 1):
-                playing = set(random.sample(player_names, min(playing_spots, len(player_names))))
-
-                for player in player_names:
-                    if player not in playing:
-                        if last_bench[player] > 0:
-                            total_benches += 1
-                            if round_num - last_bench[player] == 1:
-                                total_double += 1
-                        last_bench[player] = round_num
-
-        return (total_double / total_benches * 100) if total_benches > 0 else 0
-
     _baseline_double_bench = {}
-    for _np_val in range(config["minPlayers"], config["maxPlayers"] + 1):
-        _baseline_double_bench[_np_val] = _simulate_baseline_double_bench(
-            _np_val, config["numCourts"], config["rounds"], num_sims=500
-        )
+    for _p in _players:
+        _np_val = _p["numPlayers"]
+        _total = _p["total_bench_events"]
+        _double = _p["double_bench_count"]
+        _algo_double_bench[_np_val] = (_double / _total * 100) if _total > 0 else 0
+        _baseline_double_bench[_np_val] = _p["baseline_double_bench_rate"]
 
     # Create comparison chart
     _fig_double, _ax_double = plt.subplots(figsize=(10, 6))
@@ -587,43 +452,18 @@ def _(config, events_summary, fig_to_image, has_data, mo, np, pl, plt, random):
 
 
 @app.cell(hide_code=True)
-def _(config, events_summary, has_data, mo, pl, random):
+def _(bench_data, has_data, mo):
     mo.stop(not has_data)
 
-    # Get algorithm data from pre-aggregated events_summary
-    _algo_data = {}
-    for _np_val in range(config["minPlayers"], config["maxPlayers"] + 1):
-        _row = events_summary.filter(pl.col("numPlayers") == _np_val)
-        if _row.height > 0:
-            _total = _row.get_column("total_bench_events")[0]
-            _double = _row.get_column("double_bench_count")[0]
-            _algo_data[_np_val] = {"total": _total, "double": _double, "rate": (_double / _total * 100) if _total > 0 else 0}
-
-    def _sim_baseline(num_players, num_courts, num_rounds, num_sims=500):
-        playing_spots = num_courts * 4
-        player_names = [f"P{i+1}" for i in range(num_players)]
-        total_double = 0
-        total_benches = 0
-        for _ in range(num_sims):
-            last_bench = {p: 0 for p in player_names}
-            for round_num in range(1, num_rounds + 1):
-                playing = set(random.sample(player_names, min(playing_spots, num_players)))
-                for player in player_names:
-                    if player not in playing:
-                        if last_bench[player] > 0:
-                            total_benches += 1
-                            if round_num - last_bench[player] == 1:
-                                total_double += 1
-                        last_bench[player] = round_num
-        return (total_double / total_benches * 100) if total_benches > 0 else 0
-
-    _baseline_data = {_np_val: _sim_baseline(_np_val, config["numCourts"], config["rounds"]) 
-                     for _np_val in range(config["minPlayers"], config["maxPlayers"] + 1)}
+    _players = bench_data["players"]
 
     _rows_double = []
-    for _np_val in sorted(_algo_data.keys()):
-        _algo_rate = _algo_data[_np_val]["rate"]
-        _base_rate = _baseline_data[_np_val]
+    for _p in _players:
+        _np_val = _p["numPlayers"]
+        _total = _p["total_bench_events"]
+        _double = _p["double_bench_count"]
+        _algo_rate = (_double / _total * 100) if _total > 0 else 0
+        _base_rate = _p["baseline_double_bench_rate"]
         _reduction = ((_base_rate - _algo_rate) / _base_rate * 100) if _base_rate > 0 else 0
         _rows_double.append(f"| {_np_val} | {_base_rate:.2f}% | {_algo_rate:.2f}% | **{_reduction:+.1f}%** |")
 
@@ -640,11 +480,11 @@ def _(config, events_summary, has_data, mo, pl, random):
 
 
 @app.cell(hide_code=True)
-def _(events_summary, has_data, mo):
+def _(bench_data, has_data, mo):
     mo.stop(not has_data)
 
-    # Analyze variability using aggregated stats
-    _rows_var = events_summary.sort("numPlayers").to_dicts()
+    # Analyze variability using pre-computed stats
+    _players = bench_data["players"]
 
     mo.md(f"""
     ### Distribution Analysis: Bench Gap Variability
@@ -655,8 +495,8 @@ def _(events_summary, has_data, mo):
     | Players | Mean Gap | Std Gap | CV (%) | Total Bench Events |
     |---------|----------|---------|--------|-------------------|
     """ + "\n".join([
-        f"| {r['numPlayers']} | {r['mean_gap']:.2f} | {r['std_gap']:.2f} | {(r['std_gap'] / r['mean_gap'] * 100):.1f}% | {r['total_bench_events']:,} |"
-        for r in _rows_var
+        f"| {p['numPlayers']} | {p['events_mean_gap']:.2f} | {p['events_std_gap']:.2f} | {(p['events_std_gap'] / p['events_mean_gap'] * 100):.1f}% | {p['total_bench_events']:,} |"
+        for p in _players
     ]) + f"""
 
     **Note:** CV (Coefficient of Variation) = std / mean × 100%. This measures relative variability.
@@ -665,21 +505,20 @@ def _(events_summary, has_data, mo):
 
 
 @app.cell(hide_code=True)
-def _(algo_stats, baseline_df, has_data, mo, theoretical_values):
+def _(bench_data, has_data, mo):
     mo.stop(not has_data)
 
-    _algo_final = algo_stats.to_dicts()
-    _baseline_final = baseline_df.to_dicts()
+    _players = bench_data["players"]
 
     _overall_algo_eff = sum(
-        r["mean_avg_gap"] / theoretical_values[r["numPlayers"]] * 100 
-        for r in _algo_final
-    ) / len(_algo_final)
+        p["algo_mean_gap"] / p["theoreticalMax"] * 100 
+        for p in _players
+    ) / len(_players)
 
     _overall_baseline_eff = sum(
-        r["baseline_mean"] / theoretical_values[r["numPlayers"]] * 100 
-        for r in _baseline_final
-    ) / len(_baseline_final)
+        p["baseline_mean_gap"] / p["theoreticalMax"] * 100 
+        for p in _players
+    ) / len(_players)
 
     _improvement_final = _overall_algo_eff - _overall_baseline_eff
 
@@ -701,8 +540,8 @@ def _(algo_stats, baseline_df, has_data, mo, theoretical_values):
     {'**The algorithm is working well** - it significantly outperforms random selection and approaches the theoretical optimum.' if _improvement_final > 10 else '**The algorithm could be improved** - while it beats random selection, there is room for optimization.' if _improvement_final > 0 else '**The algorithm needs attention** - it is not effectively optimizing bench distribution.'}
 
     **For best player experience:**
-    - With 17 players: Players can expect ~{_algo_final[0]['mean_avg_gap']:.1f} games between benches (theoretical max: {theoretical_values[17]:.1f})
-    - With 20 players: Players can expect ~{_algo_final[3]['mean_avg_gap']:.1f} games between benches (theoretical max: {theoretical_values[20]:.1f})
+    - With 17 players: Players can expect ~{_players[0]['algo_mean_gap']:.1f} games between benches (theoretical max: {_players[0]['theoreticalMax']:.1f})
+    - With 20 players: Players can expect ~{_players[3]['algo_mean_gap']:.1f} games between benches (theoretical max: {_players[3]['theoreticalMax']:.1f})
     """)
     return
 

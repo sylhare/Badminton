@@ -10,16 +10,15 @@ dependencies = [
   "uvicorn",
 ]
 
-[tool.uv.scripts]
-export-html = """
-mkdir -p html && \
-marimo export html algorithm_docs.py -o html/algorithm_docs.html && \
-marimo export html analysis.py -o html/analysis.html && \
-marimo export html bench_analysis.py -o html/bench_analysis.html && \
-marimo export html engine_analysis.py -o html/engine_analysis.html
-"""
+[tool.setuptools]
+py-modules = []
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
+# Export command (run manually):
+# marimo export html --no-include-code algorithm_docs.py -o html/algorithm_docs.html
+# marimo export html --no-include-code analysis.py -o html/analysis.html
+# marimo export html --no-include-code bench_analysis.py -o html/bench_analysis.html
+# marimo export html --no-include-code engine_analysis.py -o html/engine_analysis.html
