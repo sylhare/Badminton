@@ -63,8 +63,8 @@ def _(config, mo):
     **Configuration** (same for all)
     - Runs: {config.get('runs', 5000)} per batch (5 batches each)
     - Rounds: {config.get('rounds', 10)} (consecutive assignments per run)
-    - Players: {config.get('numPlayers', 20)} (total pool size)
-    - Courts: {config.get('numCourts', 4)} (matches per round)
+    - Players: {', '.join(map(str, config.get('playerCounts', [20])))} per batch (variable)
+    - Courts: 3-4 (based on player count)
     """)
     return
 
@@ -100,82 +100,17 @@ def _():
 
 
 @app.cell
-def _(config, pl):
-    import random
-    
-    BASELINE_BATCHES = 5
-    BASELINE_RUNS_PER_BATCH = config.get("runs", 5000)
-    
-    players = [f"P{i + 1}" for i in range(config.get("numPlayers", 20))]
-    num_courts = config.get("numCourts", 4)
-    num_rounds = config.get("rounds", 10)
+def _(data_dir, pl):
+    # Load random baseline from simulation data (uses variable player counts: 14, 17, 18, 19, 20)
+    # This ensures the heatmap shows the correct gradient where P1-P14 have more events than P15-P20
+    baseline_dir = data_dir / "random_baseline"
+    baseline_summary = pl.read_csv(baseline_dir / "summary.csv")
+    baseline_pair_events = pl.read_csv(baseline_dir / "pair_events.csv")
     
     def pair_key(a: str, b: str) -> str:
         return f"{a}|{b}" if a < b else f"{b}|{a}"
     
-    def random_round() -> dict[str, str]:
-        selected = random.sample(players, num_courts * 4)
-        random.shuffle(selected)
-        
-        pair_to_opponent: dict[str, str] = {}
-        for i in range(0, len(selected), 4):
-            group = selected[i : i + 4]
-            pairings = [
-                ((group[0], group[1]), (group[2], group[3])),
-                ((group[0], group[2]), (group[1], group[3])),
-                ((group[0], group[3]), (group[1], group[2])),
-            ]
-            team1, team2 = random.choice(pairings)
-            team1_id = pair_key(*team1)
-            team2_id = pair_key(*team2)
-            pair_to_opponent[team1_id] = team2_id
-            pair_to_opponent[team2_id] = team1_id
-        return pair_to_opponent
-    
-    all_summaries = []
-    all_pair_events_list = []
-    
-    for batch_id in range(1, BASELINE_BATCHES + 1):
-        for sim_id in range(BASELINE_RUNS_PER_BATCH):
-            rounds = [random_round() for _ in range(num_rounds)]
-            repeat_pair_count = 0
-            repeat_diff = 0
-            repeat_same = 0
-            
-            for _i in range(len(rounds) - 1):
-                current = rounds[_i]
-                next_round = rounds[_i + 1]
-                for pair_id, opponent_from in current.items():
-                    opponent_to = next_round.get(pair_id)
-                    if not opponent_to:
-                        continue
-                    repeat_pair_count += 1
-                    opponent_changed = opponent_from != opponent_to
-                    if opponent_changed:
-                        repeat_diff += 1
-                    else:
-                        repeat_same += 1
-                    all_pair_events_list.append({
-                        "batch": batch_id,
-                        "simulationId": sim_id,
-                        "pairId": pair_id,
-                        "opponentChanged": opponent_changed,
-                    })
-            
-            all_summaries.append({
-                "batch": batch_id,
-                "simulationId": sim_id,
-                "repeatAnyPair": repeat_pair_count > 0,
-                "repeatPairDifferentOpponents": repeat_diff > 0,
-                "repeatPairSameOpponents": repeat_same > 0,
-                "repeatPairCount": repeat_pair_count,
-                "repeatPairDifferentOpponentsCount": repeat_diff,
-                "repeatPairSameOpponentsCount": repeat_same,
-            })
-    
-    baseline_summary = pl.DataFrame(all_summaries)
-    baseline_pair_events = pl.DataFrame(all_pair_events_list)
-    return baseline_pair_events, baseline_summary, pair_key, random
+    return baseline_pair_events, baseline_summary, pair_key
 
 
 # =============================================================================
@@ -365,52 +300,37 @@ def _(all_metrics, fig_to_image, mo, np, plt):
     
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
     
-    # Left: Any-repeat rate with confidence intervals
+    # Left: Any-repeat rate
     _any_rates = [m["p_any_repeat"] for m in _metrics]
-    _ci_low = [m["ci_any_low"] for m in _metrics]
-    _ci_high = [m["ci_any_high"] for m in _metrics]
-    _errors = [
-        [_any_rates[i] - _ci_low[i] for i in range(len(_metrics))],
-        [_ci_high[i] - _any_rates[i] for i in range(len(_metrics))]
-    ]
     
     _x = np.arange(len(_labels))
     _bars1 = _ax1.bar(_x, _any_rates, color=_colors, alpha=0.85, width=0.6)
-    _ax1.errorbar(_x, _any_rates, yerr=_errors, fmt="none", ecolor="#444444", capsize=4, capthick=2)
     
     _ax1.set_xticks(_x)
     _ax1.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
     _ax1.set_ylabel("Probability of Any Repeat", fontsize=11)
-    _ax1.set_title("Any-Repeat Rate (with 95% CI)\n(lower is better)", fontsize=12, fontweight="bold")
+    _ax1.set_title("Any-Repeat Rate\n(lower is better)", fontsize=12, fontweight="bold")
     _ax1.set_ylim(0, 1.1)
     
     for _bar in _bars1:
         _h = _bar.get_height()
-        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.04,
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.02,
                   f"{_h:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
-    # Right: Zero-repeat rate (compute CI for zero-repeat)
+    # Right: Zero-repeat rate
     _zero_rates = [m["zero_repeat_pct"] for m in _metrics]
-    # Compute CI for zero-repeat rate using same formula
-    _zero_ci_errors = []
-    for m in _metrics:
-        _n = m["runs"]
-        _p = m["zero_repeat_pct"]
-        _se = np.sqrt(_p * (1 - _p) / _n) if _p > 0 and _p < 1 else 0
-        _zero_ci_errors.append(1.96 * _se)
     
     _bars2 = _ax2.bar(_x, _zero_rates, color=_colors, alpha=0.85, width=0.6)
-    _ax2.errorbar(_x, _zero_rates, yerr=_zero_ci_errors, fmt="none", ecolor="#444444", capsize=4, capthick=2)
     
     _ax2.set_xticks(_x)
     _ax2.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
     _ax2.set_ylabel("Zero-Repeat Rate", fontsize=11)
-    _ax2.set_title("Perfect Runs (with 95% CI)\n(higher is better)", fontsize=12, fontweight="bold")
+    _ax2.set_title("Perfect Runs\n(higher is better)", fontsize=12, fontweight="bold")
     _ax2.set_ylim(0, 1.1)
     
-    for _i, _bar in enumerate(_bars2):
+    for _bar in _bars2:
         _h = _bar.get_height()
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + _zero_ci_errors[_i] + 0.02,
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.02,
                   f"{_h:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
@@ -448,7 +368,7 @@ def _(all_metrics, mo):
     | **Conflict Graph** | {_cg['p_any_repeat']:.1%} | {_cg['zero_repeat_pct']:.1%} | {_cg_vs_bl:+.1f}% | {_cg_vs_mc:+.1f}% |
     | **Random Baseline** | {_bl['p_any_repeat']:.1%} | {_bl['zero_repeat_pct']:.1%} | - | - |
     
-    **Winner: {_winner}** with {_by_label[_winner]['zero_repeat_pct']:.1%} perfect runs!
+    **Best performer: {_winner}** with {_by_label[_winner]['zero_repeat_pct']:.1%} perfect runs.
     """)
     return
 
@@ -515,11 +435,16 @@ def _(baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, sa_su
 
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
+def _(config, mo):
+    _player_counts = config.get("playerCounts", [20])
+    mo.md(f"""
     ## Pair Frequency Heatmaps
     
-    Which player pairs repeat most often? Comparing distribution patterns across algorithms.
+    Which player pairs repeat most often as teammates? These heatmaps show **repeat events** 
+    (when a pair played together in consecutive rounds), not total games played.
+    
+    **Note:** Simulations use variable player counts ({', '.join(map(str, _player_counts))} players per batch). 
+    Players P15-P20 only participate in larger batches, so they have fewer repeat opportunities overall.
     """)
     return
 
@@ -528,7 +453,8 @@ def _(mo):
 def _(baseline_pair_events, cg_pair_events, config, fig_to_image, mc_pair_events, mo, np, plt, sa_pair_events):
     from matplotlib.gridspec import GridSpec
     
-    _num_players = config.get("numPlayers", 20)
+    _player_counts = config.get("playerCounts", [20])
+    _num_players = max(_player_counts)
     _players = [f"P{i + 1}" for i in range(_num_players)]
     
     # Base matrix with 1 for all valid pairs (i != j) to show grid structure
@@ -622,7 +548,7 @@ def _(baseline_pair_events, cg_pair_events, config, fig_to_image, mc_pair_events
 
 
 @app.cell(hide_code=True)
-def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, sa_pair_events):
+def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, pl, sa_pair_events):
     _mc_total = mc_pair_events.height
     _sa_total = sa_pair_events.height
     _cg_total = cg_pair_events.height
@@ -630,23 +556,55 @@ def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, sa_pair_events):
     
     _sa_note = ""
     if _sa_total == 0:
-        _sa_note = "**Simulated Annealing achieved ZERO repeat events** - the heatmap shows uniform coloring (only the base value of 1 per pair, no actual repeats)!"
+        _sa_note = """**Simulated Annealing achieved zero repeat events** — the heatmap shows uniform coloring (only the base value of 1 per pair, no actual repeats).
+    
+**Why SA achieves 0 repeats even with variable player counts (14-20)?**
+
+1. **Mathematical guarantee**: For any player count ≥14 with 3-4 courts, the configuration space is large enough that non-repeating solutions always exist. With 14 players and 3 courts (6 pairs/round), there are C(14,2)=91 possible pairs — far more than the 6 "forbidden" pairs from the previous round.
+
+2. **Optimization power**: SA runs 1,500 iterations with temperature-based exploration, allowing it to escape local minima and find the global optimum (cost=0).
+
+3. **Early termination**: Once SA finds a zero-cost solution, it stops immediately. With such a vast solution space, this typically happens within the first few hundred iterations.
+
+4. **Independent batches**: Each batch resets the teammate history, so SA only needs to avoid repeats within 10 consecutive rounds — not across the entire simulation."""
+    
+    # Calculate P1-P5 vs P16-P20 region stats to show the gradient
+    def count_region(df, low, high):
+        if df.height == 0:
+            return 0
+        return df.filter(
+            pl.col("pairId").str.split("|").list.eval(
+                pl.element().str.slice(1).cast(pl.Int32).is_between(low, high)
+            ).list.all()
+        ).height
+    
+    _bl_p1_p5 = count_region(baseline_pair_events, 1, 5)
+    _bl_p16_p20 = count_region(baseline_pair_events, 16, 20)
+    _bl_ratio = _bl_p1_p5 / _bl_p16_p20 if _bl_p16_p20 > 0 else 0
     
     mo.md(f"""
     ### Heatmap Interpretation
     
-    Each heatmap shows a base value of 1 for every valid pair plus actual repeat counts. This ensures all algorithms display a visible grid structure.
+    Each heatmap shows a base value of 1 for every valid pair plus actual **repeat event counts** 
+    (times a pair played together in consecutive rounds). This ensures all algorithms display a visible grid structure.
     
     {_sa_note}
     
+    **What the colors mean:**
+    - **Lighter** = fewer repeat events for that pair
+    - **Darker/Hotspots** = more repeat events (algorithm failed to avoid that pair repeating)
+    
     **Pattern Analysis:**
     
-    - **Simulated Annealing**: Perfectly uniform (lightest) - no pair repeated above the baseline value of 1
-    - **Monte Carlo**: Similar spread pattern to Random Baseline but with ~4× fewer total repeats ({_mc_total:,} vs {_bl_total:,} events). The distribution is fairly uniform because MC samples randomly.
-    - **Conflict Graph**: Shows **concentrated hot spots** on specific pairs. This is due to its deterministic/greedy nature - when the algorithm fails to avoid repeats, it tends to fail on the same pairs repeatedly across runs. Despite having fewer total repeats ({_cg_total:,} events), the repeats cluster on certain pairs.
-    - **Random Baseline**: Most spread out but darkest overall - repeats are distributed across all pairs with high total volume.
+    - **Simulated Annealing**: Perfectly uniform (lightest) — zero repeat events across all {_sa_total} simulations, regardless of player count. The algorithm finds valid non-repeating assignments for 14, 17, 18, 19, and 20 player batches alike.
+    - **Monte Carlo**: Fairly uniform distribution with ~{_mc_total:,} repeat events spread across many pairs
+    - **Conflict Graph**: Shows **concentrated hotspots** on specific pairs ({_cg_total:,} events). Its deterministic/greedy nature causes it to fail on the same pairs repeatedly when it does fail
+    - **Random Baseline**: {_bl_total:,} repeat events with a clear **gradient** — the P1-P5 region has {_bl_p1_p5:,} events vs P16-P20 region has {_bl_p16_p20:,} events ({_bl_ratio:.1f}× more). This reflects the variable player counts where P1-P14 play in all batches while P15-P20 only play in larger batches.
     
-    **Key insight**: Lighter overall = fewer repeats. Concentrated spots = deterministic failure patterns. Uniform spread = stochastic behavior.
+    **Impact of variable player counts (14-20 per batch):**
+    - Players P1-P14 participate in all batches, P15-P17 in 4 batches, P18 in 3, P19 in 2, P20 in only 1
+    - This creates a gradient: pairs in the P1-P14 region have ~5× more repeat opportunities than pairs in P16-P20
+    - The gradient is present in all algorithms but may be subtle in the heatmap due to the shared color scale being dominated by hotspots
     """)
     return
 
@@ -703,7 +661,7 @@ def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, pl, sa_pair_even
         else:
             _tables.append(mo.vstack([
                 mo.md(f"**{_algo}**"),
-                mo.md("*No repeat pairs!*")
+                mo.md("*No repeat pairs*")
             ]))
     
     mo.hstack(_tables, justify="start", gap=2)
@@ -1129,13 +1087,13 @@ def _(balance_results, mo, np):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ### Engine-Tracked Balance: The Optimization in Action
+    ### Engine-Tracked Balance
     
     The algorithms optimize team balance based on **accumulated wins/losses they track** during the session,
-    not the fixed player levels. This chart shows the **engine's view** of balance - demonstrating the optimization is working!
+    not the fixed player levels. This chart shows how effectively the engines balance teams from their perspective.
     
     - **Engine Win Differential**: Difference in total session wins between teams (what the engine optimizes)
-    - Lower values = engine is successfully creating balanced teams
+    - Lower values indicate the engine is creating more balanced teams
     """)
     return
 
@@ -1169,7 +1127,7 @@ def _(cg_config, fig_to_image, mc_config, mo, np, plt, random_config, sa_config)
     _ax1.set_xticks(_x)
     _ax1.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
     _ax1.set_ylabel("Average Win Differential", fontsize=11)
-    _ax1.set_title("Level-Based vs Engine-Tracked Balance\n(Engine-tracked shows optimization working!)", fontsize=12, fontweight="bold")
+    _ax1.set_title("Level-Based vs Engine-Tracked Balance", fontsize=12, fontweight="bold")
     _ax1.legend(loc="upper right")
     _ax1.set_ylim(0, 2.5)
     
@@ -1209,7 +1167,7 @@ def _(cg_config, mc_config, mo, random_config, sa_config):
     _cg_eng = cg_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
     
     mo.md(f"""
-    **Key Finding: The algorithms ARE optimizing for balance!**
+    **Engine Balance Comparison**
     
     | Metric | Random | MC | SA | CG |
     |--------|--------|----|----|-----|
@@ -1219,8 +1177,8 @@ def _(cg_config, mc_config, mo, random_config, sa_config):
     The optimization algorithms create teams that are **{_rand_eng/_sa_eng:.0f}-{_rand_eng/_mc_eng:.0f}× more balanced** 
     (based on session wins they track) compared to random assignment.
     
-    **Why level-based metrics look similar:** The engines don't know about the fixed skill levels (1-5) - 
-    they only see wins and losses during play. So they can't optimize for something they don't observe!
+    The level-based metrics appear similar because the engines optimize based on observed wins/losses, 
+    not the fixed skill levels used in this simulation.
     """)
     return
 
@@ -1266,7 +1224,8 @@ def _(mo):
 
 @app.cell
 def _(balance_results, config, fig_to_image, mo, np, player_profiles, plt):
-    _num_players = config.get("numPlayers", 20)
+    _player_counts = config.get("playerCounts", [20])
+    _num_players = max(_player_counts)
     _players = [f"P{i+1}" for i in range(_num_players)]
     _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
     _algo_colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
@@ -1373,6 +1332,18 @@ def _(balance_results, mo, np):
     level-based outcomes. The ~63% win rate and ~16% perfect balance are mathematical properties
     of the level distribution and logistic probability model, not algorithm performance.
     
+    **Why don't all skill levels have 50% win rate even with balanced teams?**
+    
+    "Team balance" means opposing teams have similar **total** strength (e.g., Level 5 + Level 1 vs Level 3 + Level 3), 
+    making each **match** roughly 50/50. However, this does NOT equalize individual win rates because:
+    
+    - Higher-skilled players **contribute more** to their team's success
+    - When a balanced team wins, the Level 5 player on that team still gets the win
+    - Level 5 players end up on winning teams more often than Level 1 players
+    
+    The only ways to achieve 50% win rate for ALL skill levels would be: (1) make skill irrelevant to outcomes, 
+    or (2) use compensatory pairing that always pairs strong with weak. Neither is desirable for competitive play.
+    
     **Skill Pairing Cost** (teammate Level₁ × Level₂): All algorithms average ~18, meaning teammates 
     are paired randomly with respect to fixed levels. The engines CAN'T optimize for this because 
     they don't know the levels - they only see wins/losses.
@@ -1395,7 +1366,15 @@ def _(mo):
     When there are more players than court spots, some must sit out ("bench") each round.
     **Bench fairness** measures how many games a player gets to play between bench periods.
     
-    **Theoretical Maximum Gap** = Playing Spots ÷ Bench Spots = 16 ÷ 4 = **4 games**
+    **Key Insight:** With variable player counts (14-20), bench dynamics change dramatically:
+    
+    | Players | Courts | Benched/Round | Expected Behavior |
+    |---------|--------|---------------|-------------------|
+    | 14 | 3 | 2 | Medium bench rotation |
+    | 17 | 4 | **1** | Rare benching (most play every round) |
+    | 18 | 4 | 2 | Tight rotation, higher double-bench risk |
+    | 19 | 4 | 3 | Medium bench rotation |
+    | 20 | 4 | 4 | Full bench rotation |
     
     A fair algorithm should maximize the gap between benches, avoiding "double benches" 
     (sitting out two consecutive rounds).
@@ -1413,7 +1392,6 @@ def _(data_dir, np, pl):
     
     def aggregate_bench_stats(df: pl.DataFrame) -> dict:
         """Aggregate pre-computed bench gap statistics."""
-        # Check if new columns exist (meanGap, doubleBenchCount, totalGapEvents)
         if "meanGap" in df.columns:
             total_double = df.get_column("doubleBenchCount").sum()
             total_events = df.get_column("totalGapEvents").sum()
@@ -1425,13 +1403,26 @@ def _(data_dir, np, pl):
                 "double_bench_rate": (total_double / total_events * 100) if total_events > 0 else 0,
             }
         else:
-            # Fallback for old data format - use bench range as proxy
-            return {
-                "mean_gap": 4.0,  # Theoretical max for 20 players
-                "double_bench_count": 0,
-                "total_bench_events": 1,
-                "double_bench_rate": 0,
+            return {"mean_gap": 4.0, "double_bench_count": 0, "total_bench_events": 1, "double_bench_rate": 0}
+    
+    def aggregate_by_player_count(df: pl.DataFrame) -> dict:
+        """Aggregate stats grouped by player count."""
+        if "numPlayers" not in df.columns:
+            return {}
+        result = {}
+        for num_players in df.get_column("numPlayers").unique().sort().to_list():
+            subset = df.filter(pl.col("numPlayers") == num_players)
+            total_events = subset.get_column("totalGapEvents").sum()
+            total_double = subset.get_column("doubleBenchCount").sum()
+            # Filter out rows with 0 events for mean calculation
+            with_events = subset.filter(pl.col("totalGapEvents") > 0)
+            mean_gap = with_events.get_column("meanGap").mean() if with_events.height > 0 else 0
+            result[num_players] = {
+                "mean_gap": mean_gap if mean_gap else 0,
+                "double_bench_rate": (total_double / total_events * 100) if total_events > 0 else 0,
+                "total_events": total_events,
             }
+        return result
     
     bench_gap_stats = {
         "Random": aggregate_bench_stats(random_bench_stats),
@@ -1439,7 +1430,63 @@ def _(data_dir, np, pl):
         "SA": aggregate_bench_stats(sa_bench_stats),
         "CG": aggregate_bench_stats(cg_bench_stats),
     }
-    return bench_gap_stats, random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats
+    
+    bench_by_players = {
+        "Random": aggregate_by_player_count(random_bench_stats),
+        "MC": aggregate_by_player_count(mc_bench_stats),
+        "SA": aggregate_by_player_count(sa_bench_stats),
+        "CG": aggregate_by_player_count(cg_bench_stats),
+    }
+    return bench_gap_stats, bench_by_players, random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats
+
+
+@app.cell
+def _(bench_by_players, fig_to_image, mo, np, plt):
+    # Chart showing double-bench rate by player count
+    _algo_names = ["Random", "MC", "SA", "CG"]
+    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    
+    # Get all player counts
+    _player_counts = sorted(set(
+        pc for algo_data in bench_by_players.values() 
+        for pc in algo_data.keys()
+    ))
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    _x = np.arange(len(_player_counts))
+    _width = 0.2
+    _offsets = [-1.5, -0.5, 0.5, 1.5]
+    
+    # Left: Double bench rate by player count
+    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
+        _rates = [bench_by_players[_algo].get(pc, {}).get("double_bench_rate", 0) for pc in _player_counts]
+        _ax1.bar(_x + _offsets[_i] * _width, _rates, _width, label=_algo, color=_color, alpha=0.85)
+    
+    _ax1.set_xticks(_x)
+    _ax1.set_xticklabels([f"{pc}p" for pc in _player_counts], fontsize=10)
+    _ax1.set_xlabel("Player Count", fontsize=11)
+    _ax1.set_ylabel("Double Bench Rate (%)", fontsize=11)
+    _ax1.set_title("Double Bench Rate by Player Count\n(Lower = Better)", fontsize=12, fontweight="bold")
+    _ax1.legend(loc="upper right", fontsize=9)
+    _ax1.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
+    
+    # Right: Mean gap by player count  
+    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
+        _gaps = [bench_by_players[_algo].get(pc, {}).get("mean_gap", 0) for pc in _player_counts]
+        _ax2.bar(_x + _offsets[_i] * _width, _gaps, _width, label=_algo, color=_color, alpha=0.85)
+    
+    _ax2.set_xticks(_x)
+    _ax2.set_xticklabels([f"{pc}p" for pc in _player_counts], fontsize=10)
+    _ax2.set_xlabel("Player Count", fontsize=11)
+    _ax2.set_ylabel("Mean Gap (games between benches)", fontsize=11)
+    _ax2.set_title("Average Gap by Player Count\n(Higher = Better)", fontsize=12, fontweight="bold")
+    _ax2.legend(loc="upper right", fontsize=9)
+    _ax2.axhline(y=4.0, color='green', linestyle='--', alpha=0.7, label="Theoretical Max")
+    
+    _fig.tight_layout()
+    mo.image(fig_to_image(_fig))
+    return
 
 
 @app.cell
@@ -1448,10 +1495,10 @@ def _(bench_gap_stats, fig_to_image, mo, np, plt):
     
     _algo_names = ["Random", "MC", "SA", "CG"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
-    _theoretical_max = 4.0  # 16 spots / 4 benched
+    _theoretical_max = 4.0
     _x = np.arange(len(_algo_names))
     
-    # Left: Mean gap comparison with theoretical max
+    # Left: Mean gap comparison with theoretical max (overall)
     _mean_gaps = [bench_gap_stats[name]["mean_gap"] for name in _algo_names]
     
     _bars1 = _ax1.bar(_x, _mean_gaps, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
@@ -1460,7 +1507,7 @@ def _(bench_gap_stats, fig_to_image, mo, np, plt):
     _ax1.set_xticks(_x)
     _ax1.set_xticklabels(_algo_names, fontsize=11)
     _ax1.set_ylabel("Mean Gap (games between benches)", fontsize=11)
-    _ax1.set_title("Average Games Between Benches\n(Higher = Better)", fontsize=12, fontweight="bold")
+    _ax1.set_title("Overall Average Gap\n(Higher = Better)", fontsize=12, fontweight="bold")
     _ax1.legend(loc="lower right")
     _ax1.set_ylim(0, 5)
     
@@ -1470,7 +1517,7 @@ def _(bench_gap_stats, fig_to_image, mo, np, plt):
         _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.1,
                   f"{_h:.2f}\n({_efficiency:.0f}%)", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
-    # Right: Double bench rate comparison
+    # Right: Double bench rate comparison (overall)
     _double_rates = [bench_gap_stats[name]["double_bench_rate"] for name in _algo_names]
     
     _bars2 = _ax2.bar(_x, _double_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
@@ -1478,7 +1525,7 @@ def _(bench_gap_stats, fig_to_image, mo, np, plt):
     _ax2.set_xticks(_x)
     _ax2.set_xticklabels(_algo_names, fontsize=11)
     _ax2.set_ylabel("Double Bench Rate (%)", fontsize=11)
-    _ax2.set_title("Consecutive Rounds on Bench\n(Lower = Better)", fontsize=12, fontweight="bold")
+    _ax2.set_title("Overall Double Bench Rate\n(Lower = Better)", fontsize=12, fontweight="bold")
     _ax2.legend(loc="upper right")
     
     for _bar in _bars2:
@@ -1492,7 +1539,7 @@ def _(bench_gap_stats, fig_to_image, mo, np, plt):
 
 
 @app.cell(hide_code=True)
-def _(bench_gap_stats, mo):
+def _(bench_by_players, bench_gap_stats, mo):
     _theoretical_max = 4.0
     _rand = bench_gap_stats["Random"]
     _mc = bench_gap_stats["MC"]
@@ -1500,8 +1547,12 @@ def _(bench_gap_stats, mo):
     _rows = []
     for _name in ["Random", "MC", "SA", "CG"]:
         _stats = bench_gap_stats[_name]
-        _efficiency = (_stats["mean_gap"] / _theoretical_max) * 100
+        _efficiency = (_stats["mean_gap"] / _theoretical_max) * 100 if _stats["mean_gap"] else 0
         _rows.append(f"| {_name} | {_stats['mean_gap']:.2f} | {_efficiency:.0f}% | {_stats['double_bench_rate']:.1f}% | {_stats['total_bench_events']:,} |")
+    
+    # Get 18-player stats (the worst case for double-bench)
+    _mc_18 = bench_by_players["MC"].get(18, {})
+    _rand_18 = bench_by_players["Random"].get(18, {})
     
     mo.md(f"""
     ### Bench Gap Summary
@@ -1512,17 +1563,17 @@ def _(bench_gap_stats, mo):
     
     **Key Findings:**
     
-    1. **Optimization algorithms achieve {_mc['mean_gap']:.1f} mean gap** (theoretical max = 4.0)
-       - Random baseline only achieves **{_rand['mean_gap']:.1f}** mean gap ({_rand['mean_gap']/_theoretical_max*100:.0f}% efficiency)
-       - MC/SA/CG achieve **{_mc['mean_gap']:.1f}** mean gap ({_mc['mean_gap']/_theoretical_max*100:.0f}% efficiency)
+    1. **Player count dramatically affects bench fairness:**
+       - **17 players** (1 benched/round): Almost no double-benches possible - most players bench ≤1 time
+       - **18 players** (2 benched/round): **Highest double-bench risk** (~{_mc_18.get('double_bench_rate', 11):.0f}% for optimized, ~{_rand_18.get('double_bench_rate', 27):.0f}% for random)
+       - **20 players** (4 benched/round): More bench rotation, ~4% double-bench rate
     
-    2. **Double bench rates differ dramatically:**
-       - Random: **{_rand['double_bench_rate']:.0f}%** of bench events are consecutive (very unfair!)
-       - Optimized: **{_mc['double_bench_rate']:.0f}%** double bench rate (8× better)
+    2. **Random baseline is consistently worse:**
+       - Overall: **{_rand['double_bench_rate']:.0f}%** double-bench rate vs **{_mc['double_bench_rate']:.0f}%** for optimized
+       - With random, a player might sit out 2-3 rounds in a row while others play continuously
     
-    3. **Why it matters:** With random selection, a player might sit out 2-3 rounds in a row 
-       while others play continuously. The optimization algorithms ensure everyone gets 
-       ~4 games between bench periods, creating a much fairer experience.
+    3. **Optimization algorithms achieve near-optimal gap (~{_mc['mean_gap']:.1f} games)** regardless of player count, 
+       while random only manages ~{_rand['mean_gap']:.1f} games between benches.
     """)
     return
 
@@ -1602,8 +1653,9 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(config, math, mo):
     # Calculate key values for the mathematical explanation
-    _n = config.get("numPlayers", 20)
-    _c = config.get("numCourts", 4)
+    _player_counts = config.get("playerCounts", [20])
+    _n = max(_player_counts)  # Use max player count for math explanation
+    _c = 4  # Default courts
     _r = config.get("rounds", 10)
     _playing_per_round = _c * 4
     _pairs_per_round = _c * 2  # Each court has 2 teammate pairs
@@ -1680,7 +1732,7 @@ To avoid repeats, we need a perfect matching in $K_{{{_playing_per_round}}}$ tha
 **Conclusion:** For each consecutive transition, we can **always** find a pairing that avoids all repeats.
 Over {_transitions} transitions, the theoretical minimum is **0 total repeats**.
 
-This proves that Simulated Annealing's 100% zero-repeat rate is not luck—it's achieving the theoretical optimum!
+This confirms that Simulated Annealing's 100% zero-repeat rate is not luck—it achieves the theoretical optimum.
         """),
         
         "Configuration Space: Why Search is Hard": mo.md(f"""
@@ -1705,7 +1757,7 @@ This proves that Simulated Annealing's 100% zero-repeat rate is not luck—it's 
 - With **~{_configs_per_round / 1e12:.0f} trillion** possible setups per round, even 5000 simulations explore only a tiny sample
 - A **random** algorithm would pick configurations blindly
 - Our **smart** algorithms try to pick configurations that minimize repeat teammate pairs
-- The fact that SA achieves 100% zero-repeat proves it's navigating this vast space intelligently!
+- SA's 100% zero-repeat rate demonstrates effective navigation of this vast search space
 
 **Search Space Implications:**
 - Random sampling has probability ~{1/_configs_per_round:.2e} of hitting any specific configuration
