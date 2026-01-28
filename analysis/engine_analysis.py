@@ -634,7 +634,7 @@ def _(baseline_pair_events, cg_pair_events, config, fig_to_image, mc_pair_events
         """Analyze adjacent vs non-adjacent pair frequencies."""
         if events_df.height == 0:
             return {"algorithm": label, "adjacent_events": 0, "nonadjacent_events": 0, 
-                    "adjacent_pairs": 0, "nonadjacent_pairs": 0, "bias_ratio": 0}
+                    "adjacent_pairs": 0, "nonadjacent_pairs": 0, "adj_avg": 0, "nonadj_avg": 0, "bias_ratio": 0}
         
         pair_counts = (
             events_df.group_by("pairId")
@@ -1131,97 +1131,115 @@ def _(balance_summary, mo):
 
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ### Skill Differential Distribution
-    
-    The skill differential measures how evenly matched teams are. Lower values = more balanced matches.
-    """)
-    return
-
-
-@app.cell
-def _(balance_results, fig_to_image, mo, np, plt):
-    _fig, _axes = plt.subplots(2, 2, figsize=(14, 10))
-    _axes = _axes.flatten()
-    
-    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+def _(balance_results, mo, np):
     _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
     
-    for _i, (_name, _color) in enumerate(zip(_algo_names, _colors)):
-        _ax = _axes[_i]
+    # Calculate distribution stats for each algorithm
+    _stats = []
+    for _name in _algo_names:
         _diffs = balance_results[_name]["skill_differentials"]
-        
-        _ax.hist(_diffs, bins=range(0, 10), color=_color, alpha=0.7, edgecolor='black', density=True, align='left')
-        _ax.axvline(np.mean(_diffs), color='red', linestyle='--', linewidth=2, 
-                    label=f'Mean: {np.mean(_diffs):.2f}')
-        _ax.axvline(np.median(_diffs), color='blue', linestyle=':', linewidth=2,
-                    label=f'Median: {np.median(_diffs):.1f}')
-        
-        _ax.set_xlabel("Strength Differential (|Team1 - Team2|)")
-        _ax.set_ylabel("Density")
-        _ax.set_title(f"{_name}\n({balance_results[_name]['total_matches']:,} matches)", fontweight="bold")
-        _ax.legend(loc="upper right", fontsize=8)
-        _ax.set_xlim(-0.5, 9)
+        _counts = np.bincount(_diffs, minlength=9)
+        _pcts = _counts / len(_diffs) * 100
+        _stats.append({
+            "name": _name,
+            "mean": np.mean(_diffs),
+            "pcts": _pcts[:9],  # 0-8
+        })
     
-    _fig.suptitle("Strength Differential Distribution by Algorithm\n(Lower = More Balanced Matches, based on player levels 1-5)", 
-                  fontsize=14, fontweight="bold", y=1.02)
-    _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
+    # All algorithms have nearly identical distributions
+    _range_means = max(s["mean"] for s in _stats) - min(s["mean"] for s in _stats)
+    
+    mo.md(f"""
+    ### Skill Differential Distribution
+    
+    The skill differential (|Team1 - Team2| based on fixed levels 1-5) is **nearly identical** across all algorithms:
+    
+    | Diff | Random | MC | SA | CG | Interpretation |
+    |------|--------|----|----|-----|----------------|
+    | **0** | {_stats[0]['pcts'][0]:.1f}% | {_stats[1]['pcts'][0]:.1f}% | {_stats[2]['pcts'][0]:.1f}% | {_stats[3]['pcts'][0]:.1f}% | Perfectly balanced |
+    | **1** | {_stats[0]['pcts'][1]:.1f}% | {_stats[1]['pcts'][1]:.1f}% | {_stats[2]['pcts'][1]:.1f}% | {_stats[3]['pcts'][1]:.1f}% | Very close |
+    | **2** | {_stats[0]['pcts'][2]:.1f}% | {_stats[1]['pcts'][2]:.1f}% | {_stats[2]['pcts'][2]:.1f}% | {_stats[3]['pcts'][2]:.1f}% | Slight advantage |
+    | **3** | {_stats[0]['pcts'][3]:.1f}% | {_stats[1]['pcts'][3]:.1f}% | {_stats[2]['pcts'][3]:.1f}% | {_stats[3]['pcts'][3]:.1f}% | Moderate gap |
+    | **4+** | {sum(_stats[0]['pcts'][4:]):.1f}% | {sum(_stats[1]['pcts'][4:]):.1f}% | {sum(_stats[2]['pcts'][4:]):.1f}% | {sum(_stats[3]['pcts'][4:]):.1f}% | Large gap |
+    | **Mean** | {_stats[0]['mean']:.2f} | {_stats[1]['mean']:.2f} | {_stats[2]['mean']:.2f} | {_stats[3]['mean']:.2f} | Δ = {_range_means:.2f} |
+    
+    **Why identical?** The skill differential depends on which players are selected for each court, 
+    not how they're paired into teams. Since player selection is similar across algorithms (random from the pool), 
+    the level-based strength differential is the same. The algorithms only control **team composition** 
+    (who plays with whom), not **player selection** (who plays at all).
+    """)
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ### Win Distribution Fairness
+    ### Engine-Tracked Balance: The Optimization in Action
     
-    A fair algorithm should distribute wins evenly across players. We measure this with the **Gini coefficient**:
-    - Gini = 0: Perfect equality (all players have equal wins)
-    - Gini = 1: Maximum inequality (one player has all wins)
+    The algorithms optimize team balance based on **accumulated wins/losses they track** during the session,
+    not the fixed player levels. This chart shows the **engine's view** of balance - demonstrating the optimization is working!
+    
+    - **Engine Win Differential**: Difference in total session wins between teams (what the engine optimizes)
+    - Lower values = engine is successfully creating balanced teams
     """)
     return
 
 
 @app.cell
-def _(balance_results, fig_to_image, mo, np, plt):
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
+def _(cg_config, fig_to_image, mc_config, mo, np, plt, random_config, sa_config):
+    # Extract engine-tracked balance from configs
     _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _configs = [random_config, mc_config, sa_config, cg_config]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
     
-    # Left: Bar chart of Gini coefficients
-    _ginis = [balance_results[name]["gini_coefficient"] for name in _algo_names]
+    # Get engine-tracked metrics
+    _engine_win_diffs = []
+    _level_win_diffs = []
+    for _cfg in _configs:
+        _engine = _cfg.get("engineTrackedBalance", {})
+        _level = _cfg.get("levelBasedBalance", _cfg.get("balanceStats", {}))
+        _engine_win_diffs.append(_engine.get("avgEngineWinDifferential", 0))
+        _level_win_diffs.append(_level.get("avgStrengthDifferential", 0))
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
     _x = np.arange(len(_algo_names))
-    _bars = _ax1.bar(_x, _ginis, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _width = 0.35
+    
+    # Left: Comparison of both metrics
+    _bars1 = _ax1.bar(_x - _width/2, _level_win_diffs, _width, label="Level-Based (fixed 1-5)", 
+                      color=[c for c in _colors], alpha=0.5, edgecolor='black', hatch='//')
+    _bars2 = _ax1.bar(_x + _width/2, _engine_win_diffs, _width, label="Engine-Tracked (optimized)", 
+                      color=_colors, alpha=0.9, edgecolor='black')
     
     _ax1.set_xticks(_x)
     _ax1.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
-    _ax1.set_ylabel("Gini Coefficient", fontsize=11)
-    _ax1.set_title("Win Distribution Inequality\n(Lower = More Fair)", fontsize=12, fontweight="bold")
-    _ax1.set_ylim(0, 0.15)
+    _ax1.set_ylabel("Average Win Differential", fontsize=11)
+    _ax1.set_title("Level-Based vs Engine-Tracked Balance\n(Engine-tracked shows optimization working!)", fontsize=12, fontweight="bold")
+    _ax1.legend(loc="upper right")
+    _ax1.set_ylim(0, 2.5)
     
-    for _bar in _bars:
-        _h = _bar.get_height()
-        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.002, f"{_h:.4f}",
+    for _i, (_b1, _b2) in enumerate(zip(_bars1, _bars2)):
+        _ax1.text(_b1.get_x() + _b1.get_width()/2, _b1.get_height() + 0.05, f"{_level_win_diffs[_i]:.2f}",
+                  ha="center", va="bottom", fontsize=8)
+        _ax1.text(_b2.get_x() + _b2.get_width()/2, _b2.get_height() + 0.05, f"{_engine_win_diffs[_i]:.2f}",
                   ha="center", va="bottom", fontsize=9, fontweight="bold")
     
-    # Right: Stronger team win rate
-    _stronger_rates = [balance_results[name]["stronger_team_win_rate"] for name in _algo_names]
-    _bars2 = _ax2.bar(_x, _stronger_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
+    # Right: Improvement ratio (how much better than random)
+    _random_engine = _engine_win_diffs[0]
+    _improvements = [_random_engine / d if d > 0 else 0 for d in _engine_win_diffs]
     
-    _ax2.axhline(y=0.5, color='gray', linestyle='--', alpha=0.7, label="Coin flip (50%)")
+    _bars3 = _ax2.bar(_x, _improvements, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _ax2.axhline(y=1, color='gray', linestyle='--', alpha=0.7, label="Random baseline")
     _ax2.set_xticks(_x)
     _ax2.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
-    _ax2.set_ylabel("Stronger Team Win Rate", fontsize=11)
-    _ax2.set_title("Match Predictability\n(~63% expected with k=0.3 logistic model)", fontsize=12, fontweight="bold")
-    _ax2.set_ylim(0.5, 0.75)
-    _ax2.legend(loc="upper right")
+    _ax2.set_ylabel("Improvement Ratio vs Random", fontsize=11)
+    _ax2.set_title("Engine Balance Optimization\n(Higher = Better optimization)", fontsize=12, fontweight="bold")
+    _ax2.legend(loc="upper left")
     
-    for _bar in _bars2:
+    for _bar in _bars3:
         _h = _bar.get_height()
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.005, f"{_h:.1%}",
-                  ha="center", va="bottom", fontsize=9, fontweight="bold")
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.1, f"{_h:.1f}×",
+                  ha="center", va="bottom", fontsize=11, fontweight="bold")
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
@@ -1229,12 +1247,64 @@ def _(balance_results, fig_to_image, mo, np, plt):
 
 
 @app.cell(hide_code=True)
+def _(cg_config, mc_config, mo, random_config, sa_config):
+    _rand_eng = random_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
+    _mc_eng = mc_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
+    _sa_eng = sa_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
+    _cg_eng = cg_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
+    
+    mo.md(f"""
+    **Key Finding: The algorithms ARE optimizing for balance!**
+    
+    | Metric | Random | MC | SA | CG |
+    |--------|--------|----|----|-----|
+    | **Engine Win Diff** | {_rand_eng:.2f} | **{_mc_eng:.2f}** | **{_sa_eng:.2f}** | **{_cg_eng:.2f}** |
+    | **Improvement** | 1.0× | **{_rand_eng/_mc_eng:.1f}×** | **{_rand_eng/_sa_eng:.1f}×** | **{_rand_eng/_cg_eng:.1f}×** |
+    
+    The optimization algorithms create teams that are **{_rand_eng/_sa_eng:.0f}-{_rand_eng/_mc_eng:.0f}× more balanced** 
+    (based on session wins they track) compared to random assignment.
+    
+    **Why level-based metrics look similar:** The engines don't know about the fixed skill levels (1-5) - 
+    they only see wins and losses during play. So they can't optimize for something they don't observe!
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(balance_results, mo):
+    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _ginis = [balance_results[name]["gini_coefficient"] for name in _algo_names]
+    _stronger = [balance_results[name]["stronger_team_win_rate"] * 100 for name in _algo_names]
+    
+    _gini_range = max(_ginis) - min(_ginis)
+    _stronger_range = max(_stronger) - min(_stronger)
+    
+    mo.md(f"""
+    ### Win Distribution Summary
+    
+    All algorithms produce **nearly identical** win distributions because they don't control the fixed player skill levels:
+    
+    | Metric | Random | MC | SA | CG | Range |
+    |--------|--------|----|----|-----|-------|
+    | **Gini Coefficient** | {_ginis[0]:.4f} | {_ginis[1]:.4f} | {_ginis[2]:.4f} | {_ginis[3]:.4f} | Δ {_gini_range:.4f} |
+    | **Stronger Team Wins** | {_stronger[0]:.1f}% | {_stronger[1]:.1f}% | {_stronger[2]:.1f}% | {_stronger[3]:.1f}% | Δ {_stronger_range:.1f}% |
+    
+    **Why so similar?** The ~63% stronger team win rate and ~0.08 Gini coefficient are determined by:
+    - Fixed player skill levels (1-5) assigned at simulation start
+    - Probabilistic match outcomes (logistic model with k=0.3)
+    
+    The algorithms can't change these fundamentals - they only control **who plays with whom**, not player skill levels.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ### Player Win Distribution by Skill Level
+    ### Win Rate by Skill Level
     
-    Comparing how wins are distributed across individual players for each algorithm.
-    Players are ordered by skill level (P1-P2: Level 1, P3-P7: Level 2, P8-P13: Level 3, P14-P18: Level 4, P19-P20: Level 5).
+    Since all algorithms produce nearly identical win distributions, we aggregate by skill level 
+    to show the expected pattern: **higher-skilled players win more often**.
     """)
     return
 
@@ -1242,141 +1312,348 @@ def _(mo):
 @app.cell
 def _(balance_results, config, fig_to_image, mo, np, player_profiles, plt):
     _num_players = config.get("numPlayers", 20)
-    _fig, _axes = plt.subplots(2, 2, figsize=(14, 10))
-    _axes = _axes.flatten()
-    
-    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
     _players = [f"P{i+1}" for i in range(_num_players)]
+    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _algo_colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
     
-    # Color players by their skill level
-    _level_colors = {1: '#E74C3C', 2: '#E67E22', 3: '#F1C40F', 4: '#2ECC71', 5: '#3498DB'}
-    _player_colors = [_level_colors.get(player_profiles.get(p, {}).get("level", 3), '#888') for p in _players]
+    # Get player levels
+    _player_levels = {p: player_profiles.get(p, {}).get("level", 3) for p in _players}
     
-    for _i, _name in enumerate(_algo_names):
-        _ax = _axes[_i]
-        _wins = balance_results[_name]["win_distribution"]
-        _losses = balance_results[_name]["loss_distribution"]
-        
-        _win_vals = [_wins.get(p, 0) for p in _players]
-        _loss_vals = [_losses.get(p, 0) for p in _players]
-        _win_rates = [_wins.get(p, 0) / (_wins.get(p, 0) + _losses.get(p, 1)) * 100 for p in _players]
-        
-        _x = np.arange(len(_players))
-        
-        # Plot win rate as bars colored by player level
-        _bars = _ax.bar(_x, _win_rates, color=_player_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-        
-        _ax.axhline(y=50, color='gray', linestyle='--', alpha=0.7, label="50% (balanced)")
-        _ax.set_xticks(_x)
-        _ax.set_xticklabels(_players, fontsize=7, rotation=45)
-        _ax.set_ylabel("Win Rate (%)")
-        _ax.set_ylim(0, 100)
-        _ax.set_title(f"{_name}\n(Gini: {balance_results[_name]['gini_coefficient']:.4f})", fontweight="bold")
-        
-        # Add level legend only on first plot
-        if _i == 0:
-            from matplotlib.patches import Patch
-            _legend_elements = [Patch(facecolor=_level_colors[l], label=f'Level {l}') for l in range(1, 6)]
-            _ax.legend(handles=_legend_elements, loc="upper left", fontsize=7, ncol=2)
+    # Calculate average win rate per skill level for each algorithm
+    _level_win_rates = {algo: {level: [] for level in range(1, 6)} for algo in _algo_names}
     
-    _fig.suptitle("Win Rate per Player (colored by skill level)\nHigher-skilled players should win more often", 
-                  fontsize=14, fontweight="bold", y=1.02)
+    for _algo in _algo_names:
+        _wins = balance_results[_algo]["win_distribution"]
+        _losses = balance_results[_algo]["loss_distribution"]
+        for _p in _players:
+            _level = _player_levels[_p]
+            _w = _wins.get(_p, 0)
+            _l = _losses.get(_p, 0)
+            _rate = _w / (_w + _l) * 100 if (_w + _l) > 0 else 50
+            _level_win_rates[_algo][_level].append(_rate)
+    
+    # Average per level
+    _level_avgs = {algo: {level: np.mean(rates) if rates else 50 
+                         for level, rates in levels.items()}
+                  for algo, levels in _level_win_rates.items()}
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # Left: Win rate by skill level (all algorithms overlaid)
+    _x = np.arange(1, 6)
+    _width = 0.18
+    _offsets = [-1.5, -0.5, 0.5, 1.5]
+    
+    for _i, (_algo, _color) in enumerate(zip(_algo_names, _algo_colors)):
+        _rates = [_level_avgs[_algo][level] for level in range(1, 6)]
+        _ax1.bar(_x + _offsets[_i] * _width, _rates, _width, label=_algo, color=_color, alpha=0.85)
+    
+    _ax1.axhline(y=50, color='gray', linestyle='--', alpha=0.7, label="50% baseline")
+    _ax1.set_xticks(_x)
+    _ax1.set_xticklabels([f"Level {l}" for l in range(1, 6)])
+    _ax1.set_xlabel("Player Skill Level", fontsize=11)
+    _ax1.set_ylabel("Average Win Rate (%)", fontsize=11)
+    _ax1.set_title("Win Rate by Skill Level\n(All algorithms nearly identical)", fontsize=12, fontweight="bold")
+    _ax1.legend(loc="upper left", fontsize=8)
+    _ax1.set_ylim(30, 70)
+    
+    # Right: Difference from random baseline
+    _random_rates = [_level_avgs["Random Baseline"][level] for level in range(1, 6)]
+    
+    for _i, (_algo, _color) in enumerate(zip(_algo_names[1:], _algo_colors[1:])):  # Skip random
+        _rates = [_level_avgs[_algo][level] for level in range(1, 6)]
+        _diffs = [r - b for r, b in zip(_rates, _random_rates)]
+        _ax2.plot(_x, _diffs, marker='o', label=_algo, color=_color, linewidth=2, markersize=8)
+    
+    _ax2.axhline(y=0, color='gray', linestyle='--', alpha=0.7, label="No difference")
+    _ax2.fill_between(_x, -1, 1, alpha=0.2, color='gray', label="±1% zone")
+    _ax2.set_xticks(_x)
+    _ax2.set_xticklabels([f"Level {l}" for l in range(1, 6)])
+    _ax2.set_xlabel("Player Skill Level", fontsize=11)
+    _ax2.set_ylabel("Difference from Random (%)", fontsize=11)
+    _ax2.set_title("Win Rate Difference vs Random Baseline\n(Algorithms produce nearly identical outcomes)", fontsize=12, fontweight="bold")
+    _ax2.legend(loc="upper right", fontsize=8)
+    _ax2.set_ylim(-3, 3)
+    
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
     return
 
 
 @app.cell(hide_code=True)
-def _(balance_results, mo):
+def _(balance_results, mo, np):
     _rand = balance_results["Random Baseline"]
     _mc = balance_results["Monte Carlo"]
     _sa = balance_results["Simulated Annealing"]
     _cg = balance_results["Conflict Graph"]
+    
+    # Calculate skill pairing costs
+    _rand_pair = np.mean(_rand['pairing_costs']) if _rand['pairing_costs'] else 0
+    _mc_pair = np.mean(_mc['pairing_costs']) if _mc['pairing_costs'] else 0
+    _sa_pair = np.mean(_sa['pairing_costs']) if _sa['pairing_costs'] else 0
+    _cg_pair = np.mean(_cg['pairing_costs']) if _cg['pairing_costs'] else 0
     
     mo.md(f"""
     ### Team Balance Analysis Summary
     
     Based on **{_mc['total_matches']:,} matches per algorithm** with players assigned skill levels 1-5.
     
-    | Metric | Random Baseline | Monte Carlo | Simulated Annealing | Conflict Graph |
-    |--------|-----------------|-------------|---------------------|----------------|
-    | **Avg Strength Diff** | {_rand['avg_skill_differential']:.2f} | {_mc['avg_skill_differential']:.2f} | {_sa['avg_skill_differential']:.2f} | {_cg['avg_skill_differential']:.2f} |
-    | **Perfectly Balanced** | {_rand['perfectly_balanced_rate']:.1%} | {_mc['perfectly_balanced_rate']:.1%} | {_sa['perfectly_balanced_rate']:.1%} | {_cg['perfectly_balanced_rate']:.1%} |
-    | **Stronger Team Wins** | {_rand['stronger_team_win_rate']:.1%} | {_mc['stronger_team_win_rate']:.1%} | {_sa['stronger_team_win_rate']:.1%} | {_cg['stronger_team_win_rate']:.1%} |
-    | **Gini Coefficient** | {_rand['gini_coefficient']:.4f} | {_mc['gini_coefficient']:.4f} | {_sa['gini_coefficient']:.4f} | {_cg['gini_coefficient']:.4f} |
+    | Metric | Random | MC | SA | CG | Notes |
+    |--------|--------|----|----|-----|-------|
+    | **Avg Strength Diff** | {_rand['avg_skill_differential']:.2f} | {_mc['avg_skill_differential']:.2f} | {_sa['avg_skill_differential']:.2f} | {_cg['avg_skill_differential']:.2f} | Similar (~1.87) |
+    | **Perfectly Balanced** | {_rand['perfectly_balanced_rate']:.1%} | {_mc['perfectly_balanced_rate']:.1%} | {_sa['perfectly_balanced_rate']:.1%} | {_cg['perfectly_balanced_rate']:.1%} | Similar (~16%) |
+    | **Stronger Team Wins** | {_rand['stronger_team_win_rate']:.1%} | {_mc['stronger_team_win_rate']:.1%} | {_sa['stronger_team_win_rate']:.1%} | {_cg['stronger_team_win_rate']:.1%} | Similar (~63%) |
+    | **Win Gini** | {_rand['gini_coefficient']:.4f} | {_mc['gini_coefficient']:.4f} | {_sa['gini_coefficient']:.4f} | {_cg['gini_coefficient']:.4f} | Similar (~0.08) |
+    | **Skill Pairing Cost** | {_rand_pair:.1f} | {_mc_pair:.1f} | {_sa_pair:.1f} | {_cg_pair:.1f} | Similar (~18) |
     
-    **Key Findings:**
+    **Why are all metrics similar?**
     
-    1. **All algorithms produce similar balance metrics** despite the engines having skill-balancing logic.
-       This is because of **two different skill concepts**:
-       - **Engine's skill tracking**: Based on accumulated wins/losses during the session
-       - **Simulation's strength**: Based on fixed player levels (1-5) assigned at start
-       
-    2. **The ~63% stronger team win rate** matches the expected value from our logistic probability model 
-       (k=0.3), confirming the simulation correctly applies skill-based win probabilities with realistic upsets.
-       
-    3. **~16% of matches are perfectly balanced** (both teams have equal total skill levels) - this is 
-       the natural probability given the level distribution (2 players at L1, 5 at L2, 6 at L3, 5 at L4, 2 at L5).
-       
-    4. **Win distribution correlates with skill level** - the low Gini coefficients (~0.08) show wins 
-       are distributed proportionally to player skill levels, not randomly or unfairly concentrated.
-       
-    5. **Why similar balance despite skill optimization?** The engines DO optimize for skill balance, but 
-       based on **session wins/losses** they track internally. Our simulation determines "stronger team" 
-       using **fixed player levels**, which the engines don't know about. The engines are balancing based 
-       on who's been winning, while we measure based on pre-assigned levels - two different metrics!
+    The algorithms optimize based on **session wins/losses** they track, but our simulation measures 
+    "strength" using **fixed player levels (1-5)** that the engines don't know about.
+    
+    - **Engine's view**: "Player X has won 3 times, Player Y has won 1 time → balance them"
+    - **Simulation's view**: "Player X is Level 5, Player Y is Level 2 → strength diff = 3"
+    
+    Since player selection is random and skill levels are fixed, all algorithms produce similar 
+    level-based outcomes. The ~63% win rate and ~16% perfect balance are mathematical properties
+    of the level distribution and logistic probability model, not algorithm performance.
+    
+    **Skill Pairing Cost** (teammate Level₁ × Level₂): All algorithms average ~18, meaning teammates 
+    are paired randomly with respect to fixed levels. The engines CAN'T optimize for this because 
+    they don't know the levels - they only see wins/losses.
     """)
+    return
+
+
+# =============================================================================
+# BENCH FAIRNESS ANALYSIS
+# =============================================================================
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ---
+    
+    ## Bench Fairness Analysis
+    
+    When there are more players than court spots (e.g., 20 players with 4 courts = 16 spots), 
+    some players must sit out ("bench") each round. A **fair algorithm** should distribute 
+    bench time evenly across all players.
+    
+    This section analyzes:
+    1. **Bench Range**: Difference between most-benched and least-benched player per session
+    2. **Bench Gini Coefficient**: Inequality measure (0 = perfectly fair, 1 = one player always benched)
+    3. **Comparison to Random**: How much better than random player selection?
+    """)
+    return
+
+
+@app.cell
+def _(data_dir, pl):
+    # Load bench stats from simulation data
+    random_bench_stats = pl.read_csv(data_dir / "random_baseline" / "bench_stats.csv")
+    mc_bench_stats = pl.read_csv(data_dir / "mc_algo" / "bench_stats.csv")
+    sa_bench_stats = pl.read_csv(data_dir / "sa_algo" / "bench_stats.csv")
+    cg_bench_stats = pl.read_csv(data_dir / "cg_algo" / "bench_stats.csv")
+    
+    # Compute summary statistics for each algorithm
+    def summarize_bench_stats(df: pl.DataFrame, label: str) -> dict:
+        return {
+            "algorithm": label,
+            "sessions": df.height,
+            "mean_bench_range": df.get_column("benchRange").mean(),
+            "std_bench_range": df.get_column("benchRange").std(),
+            "mean_gini": df.get_column("benchGini").mean(),
+            "std_gini": df.get_column("benchGini").std(),
+            "perfect_fairness_rate": (df.get_column("benchRange") == 0).sum() / df.height * 100,
+            "max_bench_range": df.get_column("benchRange").max(),
+        }
+    
+    bench_summary = {
+        "Random Baseline": summarize_bench_stats(random_bench_stats, "Random Baseline"),
+        "Monte Carlo": summarize_bench_stats(mc_bench_stats, "Monte Carlo"),
+        "Simulated Annealing": summarize_bench_stats(sa_bench_stats, "Simulated Annealing"),
+        "Conflict Graph": summarize_bench_stats(cg_bench_stats, "Conflict Graph"),
+    }
+    return (
+        bench_summary,
+        cg_bench_stats,
+        mc_bench_stats,
+        random_bench_stats,
+        sa_bench_stats,
+        summarize_bench_stats,
+    )
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Bench Fairness Metrics
+    
+    Key metrics comparing how fairly each algorithm distributes bench time:
+    """)
+    return
+
+
+@app.cell
+def _(bench_summary, mo, pl):
+    _bench_df = pl.DataFrame([
+        {
+            "Algorithm": name,
+            "Mean Bench Range": f"{s['mean_bench_range']:.2f} ± {s['std_bench_range']:.2f}",
+            "Mean Gini": f"{s['mean_gini']:.4f}",
+            "Perfect Fairness %": f"{s['perfect_fairness_rate']:.1f}%",
+            "Max Range Observed": s['max_bench_range'],
+        }
+        for name, s in bench_summary.items()
+    ])
+    mo.ui.table(_bench_df)
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ### Skill Pairing Analysis
+    ### Bench Range Distribution
     
-    The **Skill Pairing Cost** measures whether similar-skill players are placed on the same team.
-    Using player levels 1-5, we calculate the cost as the product of teammate levels for each team.
-    
-    When two strong players are paired together ("stacking"), the cost is high because their levels 
-    multiply to a large number. Conversely, pairing a strong player with a weaker one ("mixing") produces 
-    a lower cost.
-    
-    - **High cost**: Two Level 5 players together → 5 × 5 = 25
-    - **Low cost**: Level 5 + Level 1 → 5 × 1 = 5
-    - **Average expected**: With uniform random pairing, ~9 per team (avg level ~3)
-    
-    The chart below shows the average skill pairing cost (sum of both teams) for each algorithm.
+    The **bench range** measures the difference between the most-benched and least-benched player 
+    in each session. A range of 0 means perfect fairness - all players benched equally.
     """)
     return
 
 
 @app.cell
-def _(balance_results, fig_to_image, mo, np, plt):
-    _fig, _ax = plt.subplots(figsize=(12, 5))
+def _(bench_summary, fig_to_image, mo, np, plt):
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
     
     _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
-    
     _x = np.arange(len(_algo_names))
-    _pairing_costs = [np.mean(balance_results[name]["pairing_costs"]) for name in _algo_names]
-    _pairing_stds = [np.std(balance_results[name]["pairing_costs"]) for name in _algo_names]
     
-    _bars = _ax.bar(_x, _pairing_costs, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5,
-                    yerr=_pairing_stds, capsize=5)
+    # Left: Mean bench range
+    _ranges = [bench_summary[name]["mean_bench_range"] for name in _algo_names]
+    _range_stds = [bench_summary[name]["std_bench_range"] for name in _algo_names]
     
-    _ax.set_xticks(_x)
-    _ax.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=10)
-    _ax.set_ylabel("Average Skill Pairing Cost (Level₁ × Level₂)", fontsize=11)
-    _ax.set_title("Skill Pairing Cost by Algorithm\n(Lower = Better skill mixing within teams)", 
-                  fontsize=12, fontweight="bold")
+    _bars1 = _ax1.bar(_x, _ranges, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5,
+                      yerr=_range_stds, capsize=5)
+    _ax1.axhline(y=0, color='green', linestyle='--', alpha=0.7, label="Perfect fairness")
+    _ax1.set_xticks(_x)
+    _ax1.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
+    _ax1.set_ylabel("Mean Bench Range (max - min)", fontsize=11)
+    _ax1.set_title("Bench Range by Algorithm\n(Lower = More Fair)", fontsize=12, fontweight="bold")
+    _ax1.legend(loc="upper left")
     
-    for _i, _bar in enumerate(_bars):
+    for _i, _bar in enumerate(_bars1):
         _h = _bar.get_height()
-        _ax.text(_bar.get_x() + _bar.get_width()/2, _h + _pairing_stds[_i] + 0.2,
-                 f"{_h:.1f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + _range_stds[_i] + 0.1,
+                  f"{_h:.2f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
+    
+    # Right: Gini coefficient
+    _ginis = [bench_summary[name]["mean_gini"] for name in _algo_names]
+    _gini_stds = [bench_summary[name]["std_gini"] for name in _algo_names]
+    
+    _bars2 = _ax2.bar(_x, _ginis, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5,
+                      yerr=_gini_stds, capsize=5)
+    _ax2.axhline(y=0, color='green', linestyle='--', alpha=0.7, label="Perfect equality")
+    _ax2.set_xticks(_x)
+    _ax2.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
+    _ax2.set_ylabel("Gini Coefficient", fontsize=11)
+    _ax2.set_title("Bench Distribution Inequality\n(Lower = More Fair)", fontsize=12, fontweight="bold")
+    _ax2.legend(loc="upper left")
+    _ax2.set_ylim(0, 0.5)
+    
+    for _i, _bar in enumerate(_bars2):
+        _h = _bar.get_height()
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + _gini_stds[_i] + 0.01,
+                  f"{_h:.4f}", ha="center", va="bottom", fontsize=9, fontweight="bold")
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Perfect Fairness Rate
+    
+    What percentage of sessions achieved **perfect bench fairness** (all players benched the same number of times)?
+    """)
+    return
+
+
+@app.cell
+def _(bench_summary, fig_to_image, mo, np, plt):
+    _fig, _ax = plt.subplots(figsize=(10, 6))
+    
+    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    _x = np.arange(len(_algo_names))
+    
+    _perfect_rates = [bench_summary[name]["perfect_fairness_rate"] for name in _algo_names]
+    
+    _bars = _ax.bar(_x, _perfect_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _ax.set_xticks(_x)
+    _ax.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=10)
+    _ax.set_ylabel("Perfect Fairness Rate (%)", fontsize=11)
+    _ax.set_title("Sessions with Perfect Bench Distribution\n(Higher = Better)", fontsize=12, fontweight="bold")
+    _ax.set_ylim(0, 110)
+    
+    for _bar in _bars:
+        _h = _bar.get_height()
+        _ax.text(_bar.get_x() + _bar.get_width()/2, _h + 2,
+                 f"{_h:.1f}%", ha="center", va="bottom", fontsize=11, fontweight="bold")
+    
+    _fig.tight_layout()
+    mo.image(fig_to_image(_fig))
+    return
+
+
+@app.cell(hide_code=True)
+def _(bench_summary, config, mo):
+    _rand = bench_summary["Random Baseline"]
+    _mc = bench_summary["Monte Carlo"]
+    _sa = bench_summary["Simulated Annealing"]
+    _cg = bench_summary["Conflict Graph"]
+    
+    _num_players = config.get("numPlayers", 20)
+    _num_courts = config.get("numCourts", 4)
+    _bench_per_round = _num_players - (_num_courts * 4)
+    _rounds = config.get("rounds", 10)
+    _expected_bench = _bench_per_round * _rounds / _num_players
+    
+    mo.md(f"""
+    ### Bench Fairness Summary
+    
+    **Configuration**: {_num_players} players, {_num_courts} courts, {_rounds} rounds per session.
+    
+    With {_bench_per_round} players benched per round, the **expected bench count** per player 
+    in a perfectly fair system is **{_expected_bench:.1f}** times per session.
+    
+    | Metric | Random Baseline | Monte Carlo | Simulated Annealing | Conflict Graph |
+    |--------|-----------------|-------------|---------------------|----------------|
+    | **Mean Bench Range** | {_rand['mean_bench_range']:.2f} | {_mc['mean_bench_range']:.2f} | {_sa['mean_bench_range']:.2f} | {_cg['mean_bench_range']:.2f} |
+    | **Gini Coefficient** | {_rand['mean_gini']:.4f} | {_mc['mean_gini']:.4f} | {_sa['mean_gini']:.4f} | {_cg['mean_gini']:.4f} |
+    | **Perfect Fairness** | {_rand['perfect_fairness_rate']:.1f}% | {_mc['perfect_fairness_rate']:.1f}% | {_sa['perfect_fairness_rate']:.1f}% | {_cg['perfect_fairness_rate']:.1f}% |
+    | **Max Range Seen** | {_rand['max_bench_range']} | {_mc['max_bench_range']} | {_sa['max_bench_range']} | {_cg['max_bench_range']} |
+    
+    **Key Findings:**
+    
+    1. **All optimization algorithms achieve perfect bench fairness** (100% of sessions with bench range = 0), 
+       while random selection shows significant inequality (Gini ≈ {_rand['mean_gini']:.2f}).
+    
+    2. **Random baseline unfairness**: With random selection, some players get benched up to 
+       {_rand['max_bench_range']} more times than others in a single session - a significant difference 
+       when sessions are only {_rounds} rounds long.
+    
+    3. **Algorithm design matters**: The optimization algorithms explicitly track bench counts and 
+       prioritize players who have been benched more, ensuring fair rotation. Random selection 
+       has no memory and creates unfair distributions by chance.
+    
+    4. **Bench fairness is a "solved problem"** for these algorithms - they all achieve perfect 
+       fairness. The differentiator is teammate/opponent variety and team balance.
+    """)
     return
 
 
@@ -1424,11 +1701,13 @@ def _(all_metrics, mo):
     
     3. **Conflict Graph hot spots**: Despite decent overall performance, CG exhibits **concentrated failure patterns** - when it fails to avoid repeats, it tends to fail on the same pairs repeatedly due to its deterministic/greedy nature.
     
-    4. **Speed vs. Quality trade-off**: Conflict Graph is ~850× faster than Simulated Annealing (~1.3s vs ~1126s per batch), making it ideal for real-time applications. SA is worth the wait only when perfect teammate variety is critical.
+    4. **Speed vs. Quality trade-off**: Conflict Graph is ~650× faster than Simulated Annealing, making it ideal for real-time applications. SA is worth the wait only when perfect teammate variety is critical.
     
-    5. **Team Balance**: Algorithms that combine history tracking with skill balancing create more competitive matches with lower skill differentials between teams and more evenly distributed wins across players.
+    5. **Team Balance**: All algorithms produce similar match balance because they optimize based on accumulated wins/losses (which they track), not the fixed player skill levels used in simulation.
     
-    6. **Recommendation**: Use **{_sorted_by_zero[0]['label']}** for quality, or **Conflict Graph** when speed is the priority. For optimal fairness, ensure the algorithm uses both history avoidance AND skill balancing.
+    6. **Bench Fairness**: All optimization algorithms achieve **100% perfect bench fairness** (equal bench time for all players), while random selection shows significant inequality (Gini ≈ 0.35). This is a "solved problem" for these algorithms.
+    
+    7. **Recommendation**: Use **{_sorted_by_zero[0]['label']}** for quality, or **Conflict Graph** when speed is the priority. All algorithms provide perfect bench fairness, so the differentiator is teammate variety.
     """)
     return
 
@@ -1612,7 +1891,7 @@ $$P(\\text{{collision}}) \\approx 1 - e^{{-\\frac{{k^2}}{{2n}}}}$$
 
 where $k = {_pairs_per_round}$ (pairs per round) and $n = {_total_possible_pairs}$ (total possible pairs).
 
-$$P(\\text{{collision}}) \\approx 1 - e^{{-\\frac{{{_pairs_per_round}^2}}{{2 \\times {_total_possible_pairs}}}}} \\approx {_collision_approx:.1%}$$
+$$P(\\text{{collision}}) \\approx 1 - e^{{-\\frac{{{_pairs_per_round}^2}}{{2 \\times {_total_possible_pairs}}}}} \\approx {_collision_approx * 100:.1f}\\%$$
 
 Over {_r - 1} round transitions, the cumulative probability of experiencing **at least one repeat** grows substantially.
 
