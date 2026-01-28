@@ -1,8 +1,13 @@
 {
   "runs": 2000,
   "rounds": 10,
-  "numPlayers": 20,
-  "numCourts": 4,
+  "playerCounts": [
+    14,
+    17,
+    18,
+    19,
+    20
+  ],
   "numBatches": 5,
   "totalSimulations": 10000,
   "playerProfiles": {
@@ -68,56 +73,56 @@
     }
   },
   "aggregateStats": {
-    "repeatRate": 45.71,
-    "avgRepeatsPerRun": 0.6208,
-    "zeroRepeatRate": 54.31
+    "repeatRate": 54.81,
+    "avgRepeatsPerRun": 0.8463,
+    "zeroRepeatRate": 45.33
   },
   "levelBasedBalance": {
-    "totalMatches": 400000,
-    "strongerTeamWinRate": 63.0115,
-    "avgStrengthDifferential": 1.863545,
-    "perfectlyBalancedMatches": 66112,
-    "perfectlyBalancedRate": 16.528000000000002
+    "totalMatches": 380000,
+    "strongerTeamWinRate": 61.59078947368422,
+    "avgStrengthDifferential": 1.6409184210526315,
+    "perfectlyBalancedMatches": 71174,
+    "perfectlyBalancedRate": 18.73
   },
   "engineTrackedBalance": {
-    "totalMatches": 400000,
-    "engineBalancedWinRate": 50.5135,
-    "avgEngineWinDifferential": 0.3164675,
-    "perfectlyBalancedMatches": 289807,
-    "perfectlyBalancedRate": 72.45175
+    "totalMatches": 380000,
+    "engineBalancedWinRate": 50.375263157894736,
+    "avgEngineWinDifferential": 0.3181578947368421,
+    "perfectlyBalancedMatches": 279695,
+    "perfectlyBalancedRate": 73.60394736842105
   },
   "benchFairness": {
-    "avgBenchRange": 0,
-    "avgMeanGap": 4,
-    "doubleBenchRate": 4.0280000000000005,
+    "avgBenchRange": 0.8,
+    "avgMeanGap": 3.197553030303032,
+    "doubleBenchRate": 4.743589743589744,
     "totalSessions": 10000,
-    "totalGapEvents": 200000
+    "totalGapEvents": 78000
   },
   "timing": {
-    "totalMs": 180464,
-    "avgPerBatchMs": 36092.8,
+    "totalMs": 166478,
+    "avgPerBatchMs": 33295.6,
     "batchTimings": [
       {
         "batch": 1,
-        "durationMs": 36274
+        "durationMs": 22792
       },
       {
         "batch": 2,
-        "durationMs": 35998
+        "durationMs": 35963
       },
       {
         "batch": 3,
-        "durationMs": 36130
+        "durationMs": 35890
       },
       {
         "batch": 4,
-        "durationMs": 36114
+        "durationMs": 35664
       },
       {
         "batch": 5,
-        "durationMs": 35948
+        "durationMs": 36169
       }
     ]
   },
-  "timestamp": "2026-01-28T17:54:22.116Z"
+  "timestamp": "2026-01-28T19:29:22.791Z"
 }
