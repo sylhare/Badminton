@@ -22,7 +22,7 @@ def _():
 
 @app.cell
 def _(Path, json, pl):
-    data_dir = Path(__file__).parent / "data"
+    data_dir = Path(__file__).parent / "data" / "initial_analysis"
     
     # Load OLD algorithm data (original)
     old_algo_dir = data_dir / "old_algo"

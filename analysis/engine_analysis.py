@@ -331,10 +331,10 @@ def _(cg_config, mc_config, mo, sa_config):
     
     | Algorithm | Zero-Repeat | Speed | Best For |
     |-----------|-------------|-------|----------|
-    | **Simulated Annealing** | 🥇 100% | 🐢 {_sa_time:.0f}s | Quality-critical (tournaments) |
-    | **Conflict Graph** | 🥈 ~58% | 🚀 {_cg_time:.1f}s ({_cg_vs_sa:.0f}× faster) | Real-time apps |
-    | **Monte Carlo** | 🥉 ~56% | ⚡ {_mc_time:.0f}s ({_mc_vs_sa:.0f}× faster) | Balanced choice |
-    | **Random Baseline** | ❌ ~5% | ⚡ instant | Never use this |
+    | **Simulated Annealing** | #1 100% | {_sa_time:.0f}s | Quality-critical (tournaments) |
+    | **Conflict Graph** | #2 ~58% | {_cg_time:.1f}s ({_cg_vs_sa:.0f}x faster) | Real-time apps |
+    | **Monte Carlo** | #3 ~56% | {_mc_time:.0f}s ({_mc_vs_sa:.0f}x faster) | Balanced choice |
+    | **Random Baseline** | ~5% | instant | Never use this |
     
     All algorithms achieve **perfect bench fairness** and similar team balance. 
     The key differentiator is **repeat avoidance vs speed**.
@@ -1555,9 +1555,9 @@ def _(all_metrics, mo):
     
     | Rank | Algorithm | Zero-Repeat Rate | Avg Repeats/Run |
     |------|-----------|------------------|-----------------|
-    | 🥇 1st | {_sorted_by_zero[0]['label']} | **{_sorted_by_zero[0]['zero_repeat_pct']:.1%}** | {_sorted_by_zero[0]['avg_repeat_pairs']:.3f} |
-    | 🥈 2nd | {_sorted_by_zero[1]['label']} | {_sorted_by_zero[1]['zero_repeat_pct']:.1%} | {_sorted_by_zero[1]['avg_repeat_pairs']:.3f} |
-    | 🥉 3rd | {_sorted_by_zero[2]['label']} | {_sorted_by_zero[2]['zero_repeat_pct']:.1%} | {_sorted_by_zero[2]['avg_repeat_pairs']:.3f} |
+    | 1st | {_sorted_by_zero[0]['label']} | **{_sorted_by_zero[0]['zero_repeat_pct']:.1%}** | {_sorted_by_zero[0]['avg_repeat_pairs']:.3f} |
+    | 2nd | {_sorted_by_zero[1]['label']} | {_sorted_by_zero[1]['zero_repeat_pct']:.1%} | {_sorted_by_zero[1]['avg_repeat_pairs']:.3f} |
+    | 3rd | {_sorted_by_zero[2]['label']} | {_sorted_by_zero[2]['zero_repeat_pct']:.1%} | {_sorted_by_zero[2]['avg_repeat_pairs']:.3f} |
     | 4th | {_sorted_by_zero[3]['label']} | {_sorted_by_zero[3]['zero_repeat_pct']:.1%} | {_sorted_by_zero[3]['avg_repeat_pairs']:.3f} |
     
     ### Key Insights
