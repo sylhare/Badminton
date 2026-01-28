@@ -88,9 +88,19 @@ const loadConfig = () => {
 const config = loadConfig();
 const RUNS = config.runs;
 const ROUNDS = config.rounds;
-const NUM_PLAYERS = config.numPlayers;
-const NUM_COURTS = config.numCourts;
 const NUM_BATCHES = 5;
+
+// Variable player counts per batch (14-20 players)
+// Each batch tests a different scenario for bench fairness
+const BATCH_PLAYER_COUNTS = [14, 17, 18, 19, 20];
+
+// Calculate courts based on player count (max 4 players per court)
+const getCourtsForPlayers = (numPlayers: number): number => {
+  return Math.min(4, Math.floor(numPlayers / 4));
+};
+
+// Max players for generating levels
+const MAX_PLAYERS = 20;
 
 // =============================================================================
 // PLAYER SKILL LEVELS & MATCH OUTCOME SIMULATION
@@ -113,7 +123,8 @@ const generatePlayerLevels = (count: number): Map<string, number> => {
 };
 
 // Global player levels (consistent across all simulations)
-const PLAYER_LEVELS = generatePlayerLevels(NUM_PLAYERS);
+// Generate for MAX_PLAYERS so we have levels for any batch size
+const PLAYER_LEVELS = generatePlayerLevels(MAX_PLAYERS);
 
 // Calculate team strength (sum of player levels)
 const calculateTeamStrength = (players: Player[]): number => {
@@ -385,7 +396,7 @@ const toCsv = (rows: Array<Record<string, string | number | boolean>>, defaultHe
   return lines.join('\n');
 };
 
-const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number): { 
+const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number, numCourts: number): { 
   summaries: SimulationSummary[]; 
   pairEvents: PairEvent[];
   matchEvents: MatchEvent[];
@@ -416,7 +427,7 @@ const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number)
 
     const rounds: RoundResult[] = [];
     for (let round = 0; round < ROUNDS; round++) {
-      const courts = Engine.generate(players, NUM_COURTS);
+      const courts = Engine.generate(players, numCourts);
       // Pass Engine to extractRoundPairs so it can record wins for skill balancing
       const roundResult = extractRoundPairs(round + 1, courts, batchId, simId, Engine);
       rounds.push(roundResult);
@@ -504,13 +515,13 @@ const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number)
   return { summaries, pairEvents, matchEvents, benchEvents, benchStats };
 };
 
-const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number], numPlayers: number = NUM_PLAYERS) => {
+const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
   const { id, name, engine, dir } = engineConfig;
   const engineDir = resolve(DATA_DIR, dir);
   mkdirSync(engineDir, { recursive: true });
 
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`Running ${name} - ${NUM_BATCHES} batches (${numPlayers} players)`);
+  console.log(`Running ${name} - ${NUM_BATCHES} batches (variable players: ${BATCH_PLAYER_COUNTS.join(', ')})`);
   console.log(`${'='.repeat(60)}`);
 
   const allSummaries: SimulationSummary[] = [];
@@ -521,9 +532,11 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number], numPlaye
   const batchTimings: BatchTiming[] = [];
 
   for (let batchId = 1; batchId <= NUM_BATCHES; batchId++) {
+    const numPlayers = BATCH_PLAYER_COUNTS[batchId - 1];
+    const numCourts = getCourtsForPlayers(numPlayers);
     const startTime = Date.now();
     
-    const { summaries, pairEvents, matchEvents, benchEvents, benchStats } = runSingleBatch(batchId, engine, numPlayers);
+    const { summaries, pairEvents, matchEvents, benchEvents, benchStats } = runSingleBatch(batchId, engine, numPlayers, numCourts);
     
     const elapsed = Date.now() - startTime;
     
@@ -544,7 +557,8 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number], numPlaye
 
     const repeatCount = summaries.filter(s => s.repeatAnyPair).length;
     const repeatRate = (repeatCount / summaries.length) * 100;
-    console.log(`  Batch ${batchId}: ${repeatRate.toFixed(1)}% repeat rate (${elapsed}ms)`);
+    const benchedPerRound = numPlayers - (numCourts * 4);
+    console.log(`  Batch ${batchId} (${numPlayers}p/${numCourts}c/${benchedPerRound}b): ${repeatRate.toFixed(1)}% repeat rate (${elapsed}ms)`);
   }
 
   // Write combined results
@@ -606,9 +620,9 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number], numPlaye
     }
   }
 
-  // Build player stats array
+  // Build player stats array (all players that participated in any batch)
   const playerStats: PlayerStats[] = [];
-  for (let i = 0; i < numPlayers; i++) {
+  for (let i = 0; i < MAX_PLAYERS; i++) {
     const playerId = `P${i + 1}`;
     playerStats.push({
       playerId,
@@ -626,13 +640,11 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number], numPlaye
   const engineConfigFile = {
     runs: RUNS,
     rounds: ROUNDS,
-    numPlayers,
-    numCourts: NUM_COURTS,
+    playerCounts: BATCH_PLAYER_COUNTS,
     numBatches: NUM_BATCHES,
     totalSimulations: allSummaries.length,
     playerProfiles: Object.fromEntries(
       Array.from(PLAYER_LEVELS.entries())
-        .filter(([id]) => parseInt(id.replace('P', '')) <= numPlayers)
         .map(([id, level]) => [id, { level }])
     ),
     aggregateStats: {
@@ -700,8 +712,7 @@ console.log('╚═════════════════════�
 console.log(`\nConfiguration:`);
 console.log(`  Runs per batch: ${RUNS}`);
 console.log(`  Rounds per run: ${ROUNDS}`);
-console.log(`  Players: ${NUM_PLAYERS}`);
-console.log(`  Courts: ${NUM_COURTS}`);
+console.log(`  Players per batch: ${BATCH_PLAYER_COUNTS.join(', ')}`);
 console.log(`  Batches: ${NUM_BATCHES}`);
 console.log(`  Total simulations per engine: ${RUNS * NUM_BATCHES}`);
 
