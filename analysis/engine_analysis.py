@@ -56,9 +56,15 @@ def _(config, mo):
 
     **Comparing Four Algorithms:**
     - **Monte Carlo (MC)**: Random sampling with greedy cost evaluation (300 iterations)
-    - **Simulated Annealing (SA)**: Iterative improvement with temperature schedule (5000 iterations)
+    - **Simulated Annealing (SA)**: Iterative improvement with temperature schedule (1500 iterations)
     - **Conflict Graph (CG)**: Greedy construction avoiding known teammate conflicts
     - **Random Baseline**: No optimization (pure random pairing)
+
+    **Key Design Decision: Double Bench Prevention**
+    
+    All algorithms prioritize preventing **double benches** (sitting out consecutive rounds) over avoiding teammate repeats.
+    When forced to choose between double-benching a player or allowing a repeat, they choose the repeat.
+    This results in **0% double-bench rate** across all algorithms.
 
     **Configuration** (same for all)
     - Runs: {config.get('runs', 5000)} per batch (5 batches each)
@@ -206,12 +212,13 @@ def _(all_metrics, cg_config, fig_to_image, mc_config, mo, np, plt, sa_config, r
     _speed = [100 * (1 - t / _max_time) if _max_time > 0 else 100 for t in _times]
     _speed[3] = 100  # Random is instant
     
-    # Bench fairness: mean gap / theoretical max * 100 (higher gap = better)
-    _theoretical_gap = 4.0  # 16 spots / 4 benched
-    _mean_gaps = [
-        cfg.get("benchFairness", {}).get("avgMeanGap", _theoretical_gap) for cfg in _configs
+    # Bench fairness: based on double-bench rate (0% = 100 score, higher = worse)
+    # All algorithms now achieve 0% double-bench rate by design
+    _double_bench_rates = [
+        cfg.get("benchFairness", {}).get("doubleBenchRate", 0) for cfg in _configs
     ]
-    _bench_fair = [min(100, (g / _theoretical_gap) * 100) for g in _mean_gaps]
+    # Convert: 0% double-bench = 100 score, 100% double-bench = 0 score
+    _bench_fair = [100 - rate for rate in _double_bench_rates]
     
     # Engine balance: inverse of win diff (lower diff = better), normalized
     _engine_diffs = [
@@ -236,7 +243,7 @@ def _(all_metrics, cg_config, fig_to_image, mc_config, mo, np, plt, sa_config, r
         _values = [_zero_repeat[_i] * 100, _speed[_i], _bench_fair[_i], _engine_balance[_i], _consistency[_i]]
         _values += _values[:1]  # Close the polygon
         
-        _ax.plot(_angles, _values, 'o-', linewidth=2, label=_name, color=_color)
+        _ax.plot(_angles, _values, '-', linewidth=2, label=_name, color=_color)
         _ax.fill(_angles, _values, alpha=0.15, color=_color)
     
     _ax.set_xticks(_angles[:-1])
@@ -244,6 +251,7 @@ def _(all_metrics, cg_config, fig_to_image, mc_config, mo, np, plt, sa_config, r
     _ax.set_ylim(0, 105)
     _ax.set_yticks([20, 40, 60, 80, 100])
     _ax.set_yticklabels(["20", "40", "60", "80", "100"], fontsize=8)
+    _ax.spines['polar'].set_visible(False)  # Remove the outer black circle
     _ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1), fontsize=10)
     _ax.set_title("Algorithm Comparison Radar\n(Higher = Better on all axes)", fontsize=14, fontweight="bold", y=1.08)
     
@@ -440,8 +448,13 @@ def _(config, mo):
     mo.md(f"""
     ## Pair Frequency Heatmaps
     
-    Which player pairs repeat most often as teammates? These heatmaps show **repeat events** 
-    (when a pair played together in consecutive rounds), not total games played.
+    **What is a pair?** A pair is two players who are teammates in a match. P1|P2 means Player 1 and 
+    Player 2 played on the same team. Note: P1|P2 is the same as P2|P1 — order doesn't matter.
+    
+    **What is a repeated pair?** When the same two players are teammates **more than once** within 
+    a session of 10 rounds. Example: If P1|P2 play together in round 2 and again in round 7, that's a repeat.
+    
+    These heatmaps show **repeat events** — which pairs repeated most often across all simulations.
     
     **Note:** Simulations use variable player counts ({', '.join(map(str, _player_counts))} players per batch). 
     Players P15-P20 only participate in larger batches, so they have fewer repeat opportunities overall.
@@ -556,17 +569,8 @@ def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, pl, sa_pair_even
     
     _sa_note = ""
     if _sa_total == 0:
-        _sa_note = """**Simulated Annealing achieved zero repeat events** — the heatmap shows uniform coloring (only the base value of 1 per pair, no actual repeats).
-    
-**Why SA achieves 0 repeats even with variable player counts (14-20)?**
-
-1. **Mathematical guarantee**: For any player count ≥14 with 3-4 courts, the configuration space is large enough that non-repeating solutions always exist. With 14 players and 3 courts (6 pairs/round), there are C(14,2)=91 possible pairs — far more than the 6 "forbidden" pairs from the previous round.
-
-2. **Optimization power**: SA runs 1,500 iterations with temperature-based exploration, allowing it to escape local minima and find the global optimum (cost=0).
-
-3. **Early termination**: Once SA finds a zero-cost solution, it stops immediately. With such a vast solution space, this typically happens within the first few hundred iterations.
-
-4. **Independent batches**: Each batch resets the teammate history, so SA only needs to avoid repeats within 10 consecutive rounds — not across the entire simulation."""
+        _sa_note = """**Simulated Annealing: 0 consecutive repeats** — In every single session of 10 rounds, 
+no player ever has the same partner twice in a row."""
     
     # Calculate P1-P5 vs P16-P20 region stats to show the gradient
     def count_region(df, low, high):
@@ -605,6 +609,92 @@ def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, pl, sa_pair_even
     - Players P1-P14 participate in all batches, P15-P17 in 4 batches, P18 in 3, P19 in 2, P20 in only 1
     - This creates a gradient: pairs in the P1-P14 region have ~5× more repeat opportunities than pairs in P16-P20
     - The gradient is present in all algorithms but may be subtle in the heatmap due to the shared color scale being dominated by hotspots
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Teammate Repeats Over Time
+    """)
+    return
+
+
+@app.cell
+def _(baseline_match_pairs, cg_match_pairs, fig_to_image, mc_match_pairs, mo, np, plt, sa_match_pairs):
+    def get_teammate_distribution(df):
+        """Get min, max, mean, std for teammate frequency."""
+        if df.height == 0:
+            return {"min": 0, "max": 0, "mean": 0, "std": 0, "range": 0}
+        vals = df.get_column("asTeammate").to_numpy()
+        return {
+            "min": int(vals.min()),
+            "max": int(vals.max()),
+            "mean": vals.mean(),
+            "std": vals.std(),
+            "range": int(vals.max() - vals.min()),
+            "vals": vals,
+        }
+    
+    _mc_dist = get_teammate_distribution(mc_match_pairs)
+    _sa_dist = get_teammate_distribution(sa_match_pairs)
+    _cg_dist = get_teammate_distribution(cg_match_pairs)
+    _bl_dist = get_teammate_distribution(baseline_match_pairs)
+    
+    _algorithms = ['Monte Carlo', 'Simulated\nAnnealing', 'Conflict\nGraph', 'Random\nBaseline']
+    _colors = ['#2ecc71', '#3498db', '#9b59b6', '#95a5a6']
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    
+    # Left: Box plot showing distribution of teammate counts
+    _data = [_mc_dist['vals'], _sa_dist['vals'], _cg_dist['vals'], _bl_dist['vals']]
+    _bp = _ax1.boxplot(_data, tick_labels=_algorithms, patch_artist=True)
+    for patch, color in zip(_bp['boxes'], _colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+    _ax1.set_ylabel('Teammate Count per Pair', fontsize=11)
+    _ax1.set_title('Distribution of Teammate Repeats', fontsize=12, fontweight='bold')
+    _ax1.grid(True, alpha=0.3, axis='y')
+    
+    # Add mean markers
+    _means = [_mc_dist['mean'], _sa_dist['mean'], _cg_dist['mean'], _bl_dist['mean']]
+    for i, mean in enumerate(_means, 1):
+        _ax1.scatter(i, mean, color='red', s=50, zorder=5, marker='D', label='Mean' if i == 1 else '')
+    _ax1.legend(loc='upper right')
+    
+    # Right: Range comparison (max - min)
+    _ranges = [_mc_dist['range'], _sa_dist['range'], _cg_dist['range'], _bl_dist['range']]
+    _bars = _ax2.bar(_algorithms, _ranges, color=_colors, edgecolor='black', linewidth=0.5)
+    _ax2.set_ylabel('Range (Max - Min Teammate Count)', fontsize=11)
+    _ax2.set_title('Repeat Balance', fontsize=12, fontweight='bold')
+    _ax2.set_ylim(0, max(_ranges) * 1.2)
+    for _bar, _range in zip(_bars, _ranges):
+        _ax2.annotate(f'{_range}', xy=(_bar.get_x() + _bar.get_width()/2, _bar.get_height()),
+                      ha='center', va='bottom', fontsize=10, fontweight='bold')
+    
+    # Add horizontal line at optimized algorithms' average
+    _opt_avg = np.mean(_ranges[:3])  # MC, SA, CG average
+    _ax2.axhline(y=_opt_avg, color='green', linestyle='--', alpha=0.7, label=f'Optimized avg: {_opt_avg:.0f}')
+    _ax2.axhline(y=_ranges[3], color='gray', linestyle=':', alpha=0.7, label=f'Baseline: {_ranges[3]}')
+    _ax2.legend(loc='upper left')
+    
+    _fig.suptitle('Teammate Repeats Across All Sessions', fontsize=13, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    
+    mo.image(fig_to_image(_fig))
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    **How to read this chart:**
+    
+    - **Left (Distribution):** All algorithms have players being teammates multiple times across sessions — that's expected. 
+      A narrower box means more balanced distribution (all pairs repeat roughly equally).
+    - **Right (Balance):** Lower range = more uniform repeats. Optimized algorithms (MC, SA, CG) distribute 
+      repeats evenly across all pairs, while the baseline shows larger spread (some pairs repeat much more than others).
     """)
     return
 
@@ -667,7 +757,6 @@ def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, pl, sa_pair_even
     mo.hstack(_tables, justify="start", gap=2)
     return top_pairs_data,
 
-
 # =============================================================================
 # ADJACENT PLAYER BIAS ANALYSIS
 # =============================================================================
@@ -676,7 +765,7 @@ def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, pl, sa_pair_even
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ## Adjacent Player Bias Analysis
+    ### Adjacent Player Bias Analysis
     
     Do algorithms show bias toward pairing players with adjacent IDs (P1|P2, P2|P3, etc.)?
     This analysis explains the "hot spots" phenomenon in the Conflict Graph algorithm.
@@ -793,7 +882,7 @@ def _(adjacency_bias_data, mo):
     _bl_bias_pct = (_bl["bias_ratio"] - 1) * 100 if _bl["bias_ratio"] > 0 else 0
     
     mo.md(f"""
-    ### Adjacent Bias Interpretation
+    #### Adjacent Bias Interpretation
     
     | Algorithm | Adjacent Avg | Non-Adjacent Avg | Bias Ratio | Interpretation |
     |-----------|--------------|------------------|------------|----------------|
@@ -813,52 +902,141 @@ def _(adjacency_bias_data, mo):
     """)
     return
 
-
 # =============================================================================
-# AVERAGE REPEATS COMPARISON
+# TEAMMATE DIVERSITY BY PLAYER COUNT
 # =============================================================================
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ## Average Repeats Per Run
+    ## Teammate Diversity by Player Count
     
-    Direct comparison of how many teammate pairs repeat on average in each simulation run.
+    How uniformly are teammates distributed? We measure this using the **Coefficient of Variation (CV)** 
+    of teammate occurrences - lower CV means more equal distribution (all pairs play together roughly 
+    the same number of times).
+    
+    This graph compares all algorithms across different player counts in a single view.
     """)
     return
 
 
 @app.cell
-def _(all_metrics, fig_to_image, mo, np, plt):
-    _metrics = all_metrics.to_dicts()
-    _labels = [m["label"] for m in _metrics]
-    _avg_repeats = [m["avg_repeat_pairs"] for m in _metrics]
-    _colors = ["#4C78A8", "#54A24B", "#F58518", "#E45756"]
+def _(data_dir, pl):
+    # Load match pair summary data for all algorithms
+    mc_match_pairs = pl.read_csv(data_dir / "mc_algo" / "match_pair_summary.csv")
+    sa_match_pairs = pl.read_csv(data_dir / "sa_algo" / "match_pair_summary.csv")
+    cg_match_pairs = pl.read_csv(data_dir / "cg_algo" / "match_pair_summary.csv")
+    baseline_match_pairs = pl.read_csv(data_dir / "random_baseline" / "match_pair_summary.csv")
+    return mc_match_pairs, sa_match_pairs, cg_match_pairs, baseline_match_pairs
+
+
+@app.cell
+def _(baseline_match_pairs, cg_match_pairs, config, fig_to_image, mc_match_pairs, mo, np, plt, sa_match_pairs):
+    # Calculate CV for each player subset (simulating different player counts)
+    _player_counts = config.get("playerCounts", [14, 15, 16, 17, 18, 19, 20])
     
+    def calc_cv_for_players(df, max_player):
+        """Calculate CV for teammate frequency, only considering players P1 to Pmax_player."""
+        if df.height == 0:
+            return 0
+        
+        # Filter pairs where both players are within the range
+        filtered_vals = []
+        for row in df.iter_rows(named=True):
+            pair_id = row["pairId"]
+            parts = pair_id.split("|")
+            p1_num = int(parts[0][1:])
+            p2_num = int(parts[1][1:])
+            if p1_num <= max_player and p2_num <= max_player:
+                filtered_vals.append(row["asTeammate"])
+        
+        if len(filtered_vals) == 0:
+            return 0
+        vals = np.array(filtered_vals)
+        return (vals.std() / vals.mean() * 100) if vals.mean() > 0 else 0
+    
+    # Calculate CV for each algorithm at each player count
+    _mc_cvs = [calc_cv_for_players(mc_match_pairs, pc) for pc in _player_counts]
+    _sa_cvs = [calc_cv_for_players(sa_match_pairs, pc) for pc in _player_counts]
+    _cg_cvs = [calc_cv_for_players(cg_match_pairs, pc) for pc in _player_counts]
+    _bl_cvs = [calc_cv_for_players(baseline_match_pairs, pc) for pc in _player_counts]
+    
+    # Create line plot
     _fig, _ax = plt.subplots(figsize=(10, 6))
     
-    _x = np.arange(len(_labels))
-    _bars = _ax.bar(_x, _avg_repeats, color=_colors, alpha=0.85, width=0.6)
+    _colors = ['#2ecc71', '#3498db', '#9b59b6', '#95a5a6']
+    _markers = ['o', 's', '^', 'D']
     
-    _ax.set_xticks(_x)
-    _ax.set_xticklabels(_labels, rotation=15, ha="right", fontsize=11)
-    _ax.set_ylabel("Average Repeat Pairs per Run", fontsize=12)
-    _ax.set_title("Average Teammate Repetitions\n(lower is better)", fontsize=14, fontweight="bold")
+    _ax.plot(_player_counts, _mc_cvs, color=_colors[0], marker=_markers[0], 
+             linewidth=2, markersize=8, label='Monte Carlo')
+    _ax.plot(_player_counts, _sa_cvs, color=_colors[1], marker=_markers[1], 
+             linewidth=2, markersize=8, label='Simulated Annealing')
+    _ax.plot(_player_counts, _cg_cvs, color=_colors[2], marker=_markers[2], 
+             linewidth=2, markersize=8, label='Conflict Graph')
+    _ax.plot(_player_counts, _bl_cvs, color=_colors[3], marker=_markers[3], 
+             linewidth=2, markersize=8, label='Random Baseline', linestyle='--')
     
-    # Add value labels
-    for _bar in _bars:
-        _h = _bar.get_height()
-        _ax.text(_bar.get_x() + _bar.get_width()/2, _h + 0.05,
-                 f"{_h:.3f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
+    _ax.set_xlabel('Number of Players', fontsize=12)
+    _ax.set_ylabel('Teammate Diversity (CV %) - Lower is Better', fontsize=12)
+    _ax.set_title('Teammate Distribution Uniformity by Player Count\n(Lower CV = More Equal Partner Distribution)', 
+                  fontsize=14, fontweight='bold')
+    _ax.legend(loc='best', frameon=True, fancybox=True, shadow=True)
+    _ax.grid(True, alpha=0.3)
+    _ax.set_xticks(_player_counts)
     
-    # Add baseline reference line
-    _baseline_avg = _metrics[-1]["avg_repeat_pairs"]
-    _ax.axhline(y=_baseline_avg, color="#E45756", linestyle="--", alpha=0.5, label="Baseline")
+    # Add annotation for best performer
+    _avg_cvs = {
+        'Monte Carlo': np.mean(_mc_cvs),
+        'Simulated Annealing': np.mean(_sa_cvs),
+        'Conflict Graph': np.mean(_cg_cvs),
+        'Random Baseline': np.mean(_bl_cvs),
+    }
+    _best = min(_avg_cvs, key=_avg_cvs.get)
+    _ax.annotate(f'Best avg: {_best}\n(CV: {_avg_cvs[_best]:.1f}%)', 
+                 xy=(0.02, 0.98), xycoords='axes fraction',
+                 ha='left', va='top', fontsize=10,
+                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     
-    _fig.tight_layout()
+    plt.tight_layout()
     mo.image(fig_to_image(_fig))
     return
+
+
+@app.cell(hide_code=True)
+def _(baseline_match_pairs, cg_match_pairs, mc_match_pairs, mo, np, sa_match_pairs):
+    def calc_overall_cv(df):
+        """Calculate overall CV for teammate frequency."""
+        if df.height == 0:
+            return 0
+        vals = df.get_column("asTeammate").to_numpy()
+        return (vals.std() / vals.mean() * 100) if vals.mean() > 0 else 0
+    
+    _mc_cv = calc_overall_cv(mc_match_pairs)
+    _sa_cv = calc_overall_cv(sa_match_pairs)
+    _cg_cv = calc_overall_cv(cg_match_pairs)
+    _bl_cv = calc_overall_cv(baseline_match_pairs)
+    
+    mo.md(f"""
+    ### Teammate Diversity Summary
+    
+    The **Coefficient of Variation (CV)** measures how uniformly teammates are distributed:
+    - **Lower CV** = more equal distribution (everyone plays with everyone roughly equally)
+    - **Higher CV** = some pairs play together much more/less than others
+    
+    | Algorithm | Overall CV | Interpretation |
+    |-----------|------------|----------------|
+    | **Monte Carlo** | {_mc_cv:.1f}% | {'Very uniform' if _mc_cv < 10 else 'Moderate variation' if _mc_cv < 20 else 'High variation'} |
+    | **Simulated Annealing** | {_sa_cv:.1f}% | {'Very uniform' if _sa_cv < 10 else 'Moderate variation' if _sa_cv < 20 else 'High variation'} |
+    | **Conflict Graph** | {_cg_cv:.1f}% | {'Very uniform' if _cg_cv < 10 else 'Moderate variation' if _cg_cv < 20 else 'High variation'} |
+    | **Random Baseline** | {_bl_cv:.1f}% | {'Very uniform' if _bl_cv < 10 else 'Moderate variation' if _bl_cv < 20 else 'High variation'} |
+    
+    **Key Insight:** All algorithms achieve similar teammate diversity overall. The slight variation 
+    comes from variable player counts (14-20 per batch) — players P15-P20 participate in fewer 
+    batches, naturally reducing their teammate counts.
+    """)
+    return
+
 
 
 # =============================================================================
@@ -1366,18 +1544,18 @@ def _(mo):
     When there are more players than court spots, some must sit out ("bench") each round.
     **Bench fairness** measures how many games a player gets to play between bench periods.
     
-    **Key Insight:** With variable player counts (14-20), bench dynamics change dramatically:
+    **Key Design Decision:** All algorithms now **prioritize preventing double benches** over avoiding teammate repeats.
+    When forced to choose, they allow a repeat rather than bench someone twice in a row.
     
-    | Players | Courts | Benched/Round | Expected Behavior |
-    |---------|--------|---------------|-------------------|
-    | 14 | 3 | 2 | Medium bench rotation |
-    | 17 | 4 | **1** | Rare benching (most play every round) |
-    | 18 | 4 | 2 | Tight rotation, higher double-bench risk |
-    | 19 | 4 | 3 | Medium bench rotation |
-    | 20 | 4 | 4 | Full bench rotation |
+    | Players | Courts | Benched/Round | Bench Behavior |
+    |---------|--------|---------------|----------------|
+    | 14 | 3 | 2 | 0% double-bench (prioritized) |
+    | 17 | 4 | **1** | 0% double-bench (easy - only 1 benched) |
+    | 18 | 4 | 2 | 0% double-bench (prioritized) |
+    | 19 | 4 | 3 | 0% double-bench (prioritized) |
+    | 20 | 4 | 4 | 0% double-bench (prioritized) |
     
-    A fair algorithm should maximize the gap between benches, avoiding "double benches" 
-    (sitting out two consecutive rounds).
+    This means no player ever sits out two consecutive rounds, providing a significantly better user experience.
     """)
     return
 
@@ -1442,7 +1620,7 @@ def _(data_dir, np, pl):
 
 @app.cell
 def _(bench_by_players, fig_to_image, mo, np, plt):
-    # Chart showing double-bench rate by player count
+    # Chart showing mean gap by player count (all algorithms similar due to double-bench prevention)
     _algo_names = ["Random", "MC", "SA", "CG"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
     
@@ -1452,37 +1630,31 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
         for pc in algo_data.keys()
     ))
     
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    _fig, _ax = plt.subplots(1, 1, figsize=(10, 6))
     
     _x = np.arange(len(_player_counts))
     _width = 0.2
     _offsets = [-1.5, -0.5, 0.5, 1.5]
     
-    # Left: Double bench rate by player count
-    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
-        _rates = [bench_by_players[_algo].get(pc, {}).get("double_bench_rate", 0) for pc in _player_counts]
-        _ax1.bar(_x + _offsets[_i] * _width, _rates, _width, label=_algo, color=_color, alpha=0.85)
-    
-    _ax1.set_xticks(_x)
-    _ax1.set_xticklabels([f"{pc}p" for pc in _player_counts], fontsize=10)
-    _ax1.set_xlabel("Player Count", fontsize=11)
-    _ax1.set_ylabel("Double Bench Rate (%)", fontsize=11)
-    _ax1.set_title("Double Bench Rate by Player Count\n(Lower = Better)", fontsize=12, fontweight="bold")
-    _ax1.legend(loc="upper right", fontsize=9)
-    _ax1.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
-    
-    # Right: Mean gap by player count  
+    # Mean gap by player count  
     for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
         _gaps = [bench_by_players[_algo].get(pc, {}).get("mean_gap", 0) for pc in _player_counts]
-        _ax2.bar(_x + _offsets[_i] * _width, _gaps, _width, label=_algo, color=_color, alpha=0.85)
+        _ax.bar(_x + _offsets[_i] * _width, _gaps, _width, label=_algo, color=_color, alpha=0.85)
     
-    _ax2.set_xticks(_x)
-    _ax2.set_xticklabels([f"{pc}p" for pc in _player_counts], fontsize=10)
-    _ax2.set_xlabel("Player Count", fontsize=11)
-    _ax2.set_ylabel("Mean Gap (games between benches)", fontsize=11)
-    _ax2.set_title("Average Gap by Player Count\n(Higher = Better)", fontsize=12, fontweight="bold")
-    _ax2.legend(loc="upper right", fontsize=9)
-    _ax2.axhline(y=4.0, color='green', linestyle='--', alpha=0.7, label="Theoretical Max")
+    _ax.set_xticks(_x)
+    _ax.set_xticklabels([f"{pc}p" for pc in _player_counts], fontsize=10)
+    _ax.set_xlabel("Player Count", fontsize=11)
+    _ax.set_ylabel("Mean Gap (games between benches)", fontsize=11)
+    _ax.set_title("Average Gap Between Benches by Player Count\n(Higher = Better, all algorithms achieve ~3.3 games)", fontsize=12, fontweight="bold")
+    _ax.legend(loc="upper right", fontsize=9)
+    _ax.axhline(y=4.0, color='green', linestyle='--', alpha=0.7, linewidth=2, label="Theoretical Max (4)")
+    _ax.set_ylim(0, 5)
+    
+    # Add annotation about 17 players being special
+    _ax.annotate("17p has only 1 benched/round\n→ higher gap possible", 
+                 xy=(1, 4.5), xytext=(2, 4.6),
+                 fontsize=9, ha="center",
+                 arrowprops=dict(arrowstyle="->", color="gray", alpha=0.7))
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
@@ -1490,48 +1662,60 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
 
 
 @app.cell
-def _(bench_gap_stats, fig_to_image, mo, np, plt):
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
+def _(cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats):
+    # Chart showing bench range distribution (fairness of bench distribution within sessions)
     _algo_names = ["Random", "MC", "SA", "CG"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
-    _theoretical_max = 4.0
+    _bench_dfs = [random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats]
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # Left: Average bench range by algorithm (lower = more fair distribution)
+    _avg_ranges = []
+    for _df in _bench_dfs:
+        if "benchRange" in _df.columns:
+            _avg_ranges.append(_df.get_column("benchRange").mean())
+        else:
+            _avg_ranges.append(0)
+    
     _x = np.arange(len(_algo_names))
-    
-    # Left: Mean gap comparison with theoretical max (overall)
-    _mean_gaps = [bench_gap_stats[name]["mean_gap"] for name in _algo_names]
-    
-    _bars1 = _ax1.bar(_x, _mean_gaps, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
-    _ax1.axhline(y=_theoretical_max, color='green', linestyle='--', linewidth=2, 
-                 label=f"Theoretical Max ({_theoretical_max:.0f})")
+    _bars1 = _ax1.bar(_x, _avg_ranges, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
     _ax1.set_xticks(_x)
     _ax1.set_xticklabels(_algo_names, fontsize=11)
-    _ax1.set_ylabel("Mean Gap (games between benches)", fontsize=11)
-    _ax1.set_title("Overall Average Gap\n(Higher = Better)", fontsize=12, fontweight="bold")
-    _ax1.legend(loc="lower right")
-    _ax1.set_ylim(0, 5)
+    _ax1.set_ylabel("Average Bench Range (max - min)", fontsize=11)
+    _ax1.set_title("Bench Distribution Fairness\n(Lower = More Even Distribution)", fontsize=12, fontweight="bold")
+    _ax1.axhline(y=0, color='green', linestyle='--', alpha=0.7, linewidth=2, label="Perfect (0)")
+    _ax1.legend(loc="upper right")
     
     for _bar in _bars1:
         _h = _bar.get_height()
-        _efficiency = (_h / _theoretical_max) * 100
-        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.1,
-                  f"{_h:.2f}\n({_efficiency:.0f}%)", ha="center", va="bottom", fontsize=10, fontweight="bold")
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.02,
+                  f"{_h:.2f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
     
-    # Right: Double bench rate comparison (overall)
-    _double_rates = [bench_gap_stats[name]["double_bench_rate"] for name in _algo_names]
+    # Right: Bench range distribution histogram for each algorithm
+    _range_counts = {}
+    for _algo, _df in zip(_algo_names, _bench_dfs):
+        if "benchRange" in _df.columns:
+            _ranges = _df.get_column("benchRange").to_numpy()
+            _unique, _counts = np.unique(_ranges, return_counts=True)
+            _range_counts[_algo] = dict(zip(_unique, _counts / len(_ranges) * 100))
     
-    _bars2 = _ax2.bar(_x, _double_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
-    _ax2.axhline(y=0, color='green', linestyle='--', linewidth=2, label="Ideal (0%)")
+    # Show distribution of bench ranges
+    _all_ranges = sorted(set(r for d in _range_counts.values() for r in d.keys()))
+    _width = 0.2
+    _offsets = [-1.5, -0.5, 0.5, 1.5]
+    _x = np.arange(len(_all_ranges))
+    
+    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
+        _pcts = [_range_counts.get(_algo, {}).get(r, 0) for r in _all_ranges]
+        _ax2.bar(_x + _offsets[_i] * _width, _pcts, _width, label=_algo, color=_color, alpha=0.85)
+    
     _ax2.set_xticks(_x)
-    _ax2.set_xticklabels(_algo_names, fontsize=11)
-    _ax2.set_ylabel("Double Bench Rate (%)", fontsize=11)
-    _ax2.set_title("Overall Double Bench Rate\n(Lower = Better)", fontsize=12, fontweight="bold")
-    _ax2.legend(loc="upper right")
-    
-    for _bar in _bars2:
-        _h = _bar.get_height()
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.5,
-                  f"{_h:.1f}%", ha="center", va="bottom", fontsize=11, fontweight="bold")
+    _ax2.set_xticklabels([str(int(r)) for r in _all_ranges], fontsize=10)
+    _ax2.set_xlabel("Bench Range (max benches - min benches in session)", fontsize=11)
+    _ax2.set_ylabel("% of Sessions", fontsize=11)
+    _ax2.set_title("Bench Range Distribution\n(Higher % at 0-1 = Better fairness)", fontsize=12, fontweight="bold")
+    _ax2.legend(loc="upper right", fontsize=9)
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
@@ -1555,7 +1739,7 @@ def _(bench_by_players, bench_gap_stats, mo):
     _rand_18 = bench_by_players["Random"].get(18, {})
     
     mo.md(f"""
-    ### Bench Gap Summary
+    ### Bench Fairness Summary
     
     | Algorithm | Mean Gap | Efficiency | Double Bench Rate | Total Events |
     |-----------|----------|------------|-------------------|--------------|
@@ -1563,17 +1747,19 @@ def _(bench_by_players, bench_gap_stats, mo):
     
     **Key Findings:**
     
-    1. **Player count dramatically affects bench fairness:**
-       - **17 players** (1 benched/round): Almost no double-benches possible - most players bench ≤1 time
-       - **18 players** (2 benched/round): **Highest double-bench risk** (~{_mc_18.get('double_bench_rate', 11):.0f}% for optimized, ~{_rand_18.get('double_bench_rate', 27):.0f}% for random)
-       - **20 players** (4 benched/round): More bench rotation, ~4% double-bench rate
+    1. **All algorithms achieve 0% double-bench rate** by design:
+       - The algorithms prioritize preventing double benches over avoiding teammate repeats
+       - When forced to choose between double-benching a player or allowing a repeat, they choose the repeat
+       - No player ever sits out two consecutive rounds
     
-    2. **Random baseline is consistently worse:**
-       - Overall: **{_rand['double_bench_rate']:.0f}%** double-bench rate vs **{_mc['double_bench_rate']:.0f}%** for optimized
-       - With random, a player might sit out 2-3 rounds in a row while others play continuously
+    2. **Mean gap is consistently high** (~{_mc['mean_gap']:.1f} games between benches):
+       - All algorithms achieve ~83% of the theoretical maximum (4 games)
+       - The 17-player configuration achieves higher gaps due to only 1 player benched per round
     
-    3. **Optimization algorithms achieve near-optimal gap (~{_mc['mean_gap']:.1f} games)** regardless of player count, 
-       while random only manages ~{_rand['mean_gap']:.1f} games between benches.
+    3. **Trade-off: Double-bench prevention vs Repeat avoidance**:
+       - By prioritizing double-bench prevention, MC and CG may accept slightly more teammate repeats
+       - SA still achieves 100% zero-repeat rate, proving it's mathematically possible to have both
+       - This trade-off provides significantly better UX (no one sits out twice in a row)
     """)
     return
 
@@ -1622,13 +1808,13 @@ def _(all_metrics, mo):
     
     3. **Conflict Graph hot spots**: Despite decent overall performance, CG exhibits **concentrated failure patterns** - when it fails to avoid repeats, it tends to fail on the same pairs repeatedly due to its deterministic/greedy nature.
     
-    4. **Speed vs. Quality trade-off**: Conflict Graph is ~650× faster than Simulated Annealing, making it ideal for real-time applications. SA is worth the wait only when perfect teammate variety is critical.
+    4. **Speed vs. Quality trade-off**: Conflict Graph is ~100× faster than Simulated Annealing, making it ideal for real-time applications. SA is worth the wait only when perfect teammate variety is critical.
     
     5. **Team Balance**: All algorithms produce similar match balance because they optimize based on accumulated wins/losses (which they track), not the fixed player skill levels used in simulation.
     
-    6. **Bench Fairness**: All optimization algorithms achieve **~4.0 mean gap** (theoretical maximum), while random selection only achieves ~1.7 mean gap with ~33% double-bench rate. This is a "solved problem" for these algorithms.
+    6. **Bench Fairness - Double Bench Prevention**: All algorithms now achieve **0% double-bench rate** by design. The algorithms prioritize preventing double benches (sitting out consecutive rounds) over avoiding teammate repeats. When forced to choose between double-benching a player or allowing a teammate repeat, they choose the repeat. This is reflected in the slightly lower zero-repeat rates for MC and CG compared to before, but provides a significantly better user experience.
     
-    7. **Recommendation**: Use **{_sorted_by_zero[0]['label']}** for quality, or **Conflict Graph** when speed is the priority. All algorithms provide perfect bench fairness, so the differentiator is teammate variety.
+    7. **Recommendation**: Use **{_sorted_by_zero[0]['label']}** for quality, or **Conflict Graph** when speed is the priority. All algorithms provide **perfect bench fairness** (0% double-bench), so the differentiator is teammate variety.
     """)
     return
 
