@@ -8,6 +8,7 @@ import type { Player, Court } from '../src/types/index.ts';
 
 // =============================================================================
 // RANDOM BASELINE ENGINE (no optimization, pure random assignment)
+// NO double-bench prevention - truly random to show contrast with optimized engines
 // =============================================================================
 class RandomBaselineEngine {
   // Track wins for comparison purposes (even though we don't use them for optimization)
@@ -40,7 +41,7 @@ class RandomBaselineEngine {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
-    // Shuffle players randomly
+    // Shuffle players randomly (no bench fairness optimization)
     const shuffled = [...presentPlayers].sort(() => Math.random() - 0.5);
     
     // Calculate how many can play
@@ -88,11 +89,11 @@ const loadConfig = () => {
 const config = loadConfig();
 const RUNS = config.runs;
 const ROUNDS = config.rounds;
-const NUM_BATCHES = 5;
+const NUM_BATCHES = 7;
 
 // Variable player counts per batch (14-20 players)
 // Each batch tests a different scenario for bench fairness
-const BATCH_PLAYER_COUNTS = [14, 17, 18, 19, 20];
+const BATCH_PLAYER_COUNTS = [14, 15, 16, 17, 18, 19, 20];
 
 // Calculate courts based on player count (max 4 players per court)
 const getCourtsForPlayers = (numPlayers: number): number => {
@@ -203,6 +204,16 @@ type SessionBenchStats = {
   totalGapEvents: number;
 };
 
+// Match frequency tracking: counts how often any two players were in the same match
+// (same court, regardless of team - AB vs CD counts A-B, A-C, A-D, B-C, B-D, C-D)
+type MatchPairEvent = {
+  batch: number;
+  simulationId: number;
+  roundIndex: number;
+  pairId: string;  // "P1|P2" (sorted)
+  wasTeammate: boolean;  // true if same team, false if opponents
+};
+
 // All available engines
 const ALL_ENGINES = [
   { id: 'random', name: 'Random Baseline', engine: RandomBaselineEngine, dir: 'random_baseline' },
@@ -217,6 +228,7 @@ type RoundResult = {
   roundIndex: number;
   pairToOpponent: Map<string, string>;
   matchEvents: MatchEvent[];
+  matchPairEvents: MatchPairEvent[];  // All pairs of players in same match (court)
 };
 
 type SimulationSummary = {
@@ -268,6 +280,7 @@ const extractRoundPairs = (
 ): RoundResult => {
   const pairToOpponent = new Map<string, string>();
   const matchEvents: MatchEvent[] = [];
+  const matchPairEvents: MatchPairEvent[] = [];
   const courtsWithWinners: Court[] = [];
 
   // Get engine's win counts BEFORE this round (to measure balance at decision time)
@@ -285,6 +298,25 @@ const extractRoundPairs = (
 
     pairToOpponent.set(team1Key, team2Key);
     pairToOpponent.set(team2Key, team1Key);
+
+    // Track ALL pairs of players in this match (6 pairs for 4 players)
+    // Teammates: a1-a2, b1-b2
+    // Opponents: a1-b1, a1-b2, a2-b1, a2-b2
+    const allPlayers = [a1, a2, b1, b2];
+    for (let i = 0; i < allPlayers.length; i++) {
+      for (let j = i + 1; j < allPlayers.length; j++) {
+        const p1 = allPlayers[i];
+        const p2 = allPlayers[j];
+        const wasTeammate = (i < 2 && j < 2) || (i >= 2 && j >= 2);  // Same team indices
+        matchPairEvents.push({
+          batch: batchId,
+          simulationId,
+          roundIndex,
+          pairId: pairKey(p1.id, p2.id),
+          wasTeammate,
+        });
+      }
+    }
 
     // Calculate team strengths based on FIXED player levels
     const team1Strength = calculateTeamStrength(court.teams.team1);
@@ -328,7 +360,7 @@ const extractRoundPairs = (
     Engine.recordWins(courtsWithWinners);
   }
 
-  return { roundIndex, pairToOpponent, matchEvents };
+  return { roundIndex, pairToOpponent, matchEvents, matchPairEvents };
 };
 
 const evaluateRepeats = (rounds: RoundResult[], simulationId: number, batchId: number) => {
@@ -337,16 +369,30 @@ const evaluateRepeats = (rounds: RoundResult[], simulationId: number, batchId: n
   let repeatPairSameOpponentsCount = 0;
   const events: PairEvent[] = [];
 
-  for (let i = 0; i < rounds.length - 1; i++) {
-    const current = rounds[i];
-    const next = rounds[i + 1];
+  // Build a map of pairId -> list of occurrences (round and opponent)
+  const pairOccurrences = new Map<string, { roundIndex: number; opponent: string }[]>();
+  
+  for (const round of rounds) {
+    for (const [pairId, opponent] of round.pairToOpponent.entries()) {
+      const occurrences = pairOccurrences.get(pairId) ?? [];
+      occurrences.push({ roundIndex: round.roundIndex, opponent });
+      pairOccurrences.set(pairId, occurrences);
+    }
+  }
 
-    for (const [pairId, opponentFrom] of current.pairToOpponent.entries()) {
-      const opponentTo = next.pairToOpponent.get(pairId);
-      if (!opponentTo) continue;
+  // For each pair that appears more than once, count as repeats
+  for (const [pairId, occurrences] of pairOccurrences.entries()) {
+    if (occurrences.length <= 1) continue;
 
+    // Each occurrence after the first is a repeat
+    // Compare each repeat to the FIRST occurrence for opponent tracking
+    const firstOccurrence = occurrences[0];
+    
+    for (let i = 1; i < occurrences.length; i++) {
+      const repeat = occurrences[i];
       repeatPairCount += 1;
-      const opponentChanged = opponentFrom !== opponentTo;
+      
+      const opponentChanged = firstOccurrence.opponent !== repeat.opponent;
       if (opponentChanged) {
         repeatPairDifferentOpponentsCount += 1;
       } else {
@@ -356,11 +402,11 @@ const evaluateRepeats = (rounds: RoundResult[], simulationId: number, batchId: n
       events.push({
         batch: batchId,
         simulationId,
-        fromRound: current.roundIndex,
-        toRound: next.roundIndex,
+        fromRound: firstOccurrence.roundIndex,
+        toRound: repeat.roundIndex,
         pairId,
-        opponentFrom,
-        opponentTo,
+        opponentFrom: firstOccurrence.opponent,
+        opponentTo: repeat.opponent,
         opponentChanged,
       });
     }
@@ -400,6 +446,7 @@ const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number,
   summaries: SimulationSummary[]; 
   pairEvents: PairEvent[];
   matchEvents: MatchEvent[];
+  matchPairEvents: MatchPairEvent[];
   benchEvents: BenchEvent[];
   benchStats: SessionBenchStats[];
 } => {
@@ -407,6 +454,7 @@ const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number,
   const summaries: SimulationSummary[] = [];
   const pairEvents: PairEvent[] = [];
   const matchEvents: MatchEvent[] = [];
+  const matchPairEvents: MatchPairEvent[] = [];
   const benchEvents: BenchEvent[] = [];
   const benchStats: SessionBenchStats[] = [];
 
@@ -432,6 +480,7 @@ const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number,
       const roundResult = extractRoundPairs(round + 1, courts, batchId, simId, Engine);
       rounds.push(roundResult);
       for (const m of roundResult.matchEvents) matchEvents.push(m);
+      for (const mp of roundResult.matchPairEvents) matchPairEvents.push(mp);
       
       // Track who was benched this round
       const playersOnCourt = new Set<string>();
@@ -512,7 +561,7 @@ const runSingleBatch = (batchId: number, Engine: EngineType, numPlayers: number,
     });
   }
 
-  return { summaries, pairEvents, matchEvents, benchEvents, benchStats };
+  return { summaries, pairEvents, matchEvents, matchPairEvents, benchEvents, benchStats };
 };
 
 const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
@@ -527,6 +576,7 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
   const allSummaries: SimulationSummary[] = [];
   const allPairEvents: PairEvent[] = [];
   const allMatchEvents: MatchEvent[] = [];
+  const allMatchPairEvents: MatchPairEvent[] = [];
   const allBenchEvents: BenchEvent[] = [];
   const allBenchStats: SessionBenchStats[] = [];
   const batchTimings: BatchTiming[] = [];
@@ -536,7 +586,7 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
     const numCourts = getCourtsForPlayers(numPlayers);
     const startTime = Date.now();
     
-    const { summaries, pairEvents, matchEvents, benchEvents, benchStats } = runSingleBatch(batchId, engine, numPlayers, numCourts);
+    const { summaries, pairEvents, matchEvents, matchPairEvents, benchEvents, benchStats } = runSingleBatch(batchId, engine, numPlayers, numCourts);
     
     const elapsed = Date.now() - startTime;
     
@@ -544,6 +594,7 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
     for (const s of summaries) allSummaries.push(s);
     for (const p of pairEvents) allPairEvents.push(p);
     for (const m of matchEvents) allMatchEvents.push(m);
+    for (const mp of matchPairEvents) allMatchPairEvents.push(mp);
     for (const b of benchEvents) allBenchEvents.push(b);
     for (const bs of benchStats) allBenchStats.push(bs);
     
@@ -564,6 +615,7 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
   // Write combined results
   const pairEventHeaders = ['batch', 'simulationId', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
   const matchEventHeaders = ['batch', 'simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
+  const matchPairEventHeaders = ['batch', 'simulationId', 'roundIndex', 'pairId', 'wasTeammate'];
   const benchEventHeaders = ['batch', 'simulationId', 'numPlayers', 'roundIndex', 'playerId', 'benchedThisRound', 'totalBenchCount'];
   const benchStatsHeaders = ['batch', 'simulationId', 'numPlayers', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
   
@@ -573,6 +625,23 @@ const runEngineWithBatches = (engineConfig: typeof ALL_ENGINES[number]) => {
   writeFileSync(resolve(engineDir, 'bench_events.csv'), toCsv(allBenchEvents, benchEventHeaders));
   writeFileSync(resolve(engineDir, 'bench_stats.csv'), toCsv(allBenchStats, benchStatsHeaders));
   writeFileSync(resolve(engineDir, 'batch_timings.csv'), toCsv(batchTimings));
+  
+  // Aggregate match pair events into summary (how many times each pair played in same match)
+  const matchPairCounts = new Map<string, { total: number; asTeammate: number; asOpponent: number }>();
+  for (const mp of allMatchPairEvents) {
+    const existing = matchPairCounts.get(mp.pairId) ?? { total: 0, asTeammate: 0, asOpponent: 0 };
+    existing.total++;
+    if (mp.wasTeammate) existing.asTeammate++;
+    else existing.asOpponent++;
+    matchPairCounts.set(mp.pairId, existing);
+  }
+  const matchPairSummary = Array.from(matchPairCounts.entries()).map(([pairId, counts]) => ({
+    pairId,
+    totalMatches: counts.total,
+    asTeammate: counts.asTeammate,
+    asOpponent: counts.asOpponent,
+  }));
+  writeFileSync(resolve(engineDir, 'match_pair_summary.csv'), toCsv(matchPairSummary));
 
   // Calculate aggregate stats
   const totalRepeats = allSummaries.filter(s => s.repeatAnyPair).length;
