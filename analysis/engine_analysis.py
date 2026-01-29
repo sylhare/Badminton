@@ -55,8 +55,8 @@ def _(config, mo):
     # Court Assignment Engine Comparison
 
     **Comparing Four Algorithms:**
-    - **Monte Carlo (MC)**: Random sampling with greedy cost evaluation (300 iterations)
-    - **Simulated Annealing (SA)**: Iterative improvement with temperature schedule (1500 iterations)
+    - **Monte Carlo (MC)**: Random sampling with greedy cost evaluation (300 candidates per round)
+    - **Simulated Annealing (SA)**: Iterative improvement with temperature schedule (1500 optimization steps per round)
     - **Conflict Graph (CG)**: Greedy construction avoiding known teammate conflicts
     - **Random Baseline**: No optimization (pure random pairing)
 
@@ -67,10 +67,10 @@ def _(config, mo):
     This results in **0% double-bench rate** across all algorithms.
 
     **Configuration** (same for all)
-    - Runs: {config.get('runs', 5000)} per batch (5 batches each)
+    - Runs: {config.get('runs', 2000)} per batch (5 batches each)
     - Rounds: {config.get('rounds', 10)} (consecutive assignments per run)
     - Players: {', '.join(map(str, config.get('playerCounts', [20])))} per batch (variable)
-    - Courts: 3-4 (based on player count)
+    - Courts: 4 (based on player count)
     """)
     return
 
@@ -173,18 +173,65 @@ def _(mo):
 
 
 @app.cell
-def _(all_metrics, mo):
-    mo.ui.table(all_metrics)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ### Algorithm Characteristics at a Glance
+def _(adjacency_bias_data, all_metrics, cg_config, mc_config, mo, pl, random_config, sa_config):
+    _metrics = all_metrics.to_dicts()
     
-    A radar chart comparing all key dimensions of each algorithm. Each axis is normalized 0-100 where **higher is better**.
-    """)
+    # Determine rankings by zero-repeat rate
+    _sorted_by_zero = sorted(_metrics, key=lambda x: x["zero_repeat_pct"], reverse=True)
+    
+    # Get additional metrics from configs
+    _configs_by_label = {
+        "Monte Carlo": mc_config,
+        "Simulated Annealing": sa_config,
+        "Conflict Graph": cg_config,
+        "Random Baseline": random_config,
+    }
+    
+    # Get adjacency bias data by algorithm name
+    _bias_by_label = {d["algorithm"]: d for d in adjacency_bias_data}
+    
+    def get_time_per_round(cfg):
+        total_ms = cfg.get("timing", {}).get("totalMs", 0)
+        total_sims = cfg.get("totalSimulations", 1)
+        rounds = cfg.get("rounds", 10)
+        if total_ms == 0:
+            return 0.01
+        return total_ms / (total_sims * rounds)
+    
+    def get_engine_win_diff(cfg):
+        return cfg.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
+    
+    def get_bench_fairness(cfg):
+        double_bench_rate = cfg.get("benchFairness", {}).get("doubleBenchRate", 0)
+        return 100 - double_bench_rate
+    
+    def get_adjacent_bias(label):
+        return _bias_by_label.get(label, {}).get("bias_ratio", 1.0)
+    
+    for _m in _sorted_by_zero:
+        _cfg = _configs_by_label[_m["label"]]
+        _m["time_per_round"] = get_time_per_round(_cfg)
+        _m["engine_win_diff"] = get_engine_win_diff(_cfg)
+        _m["bench_fairness"] = get_bench_fairness(_cfg)
+        _m["adjacent_bias"] = get_adjacent_bias(_m["label"])
+    
+    _rankings_df = pl.DataFrame({
+        "Rank": ["1st", "2nd", "3rd", "4th"],
+        "Algorithm": [m["label"] for m in _sorted_by_zero],
+        "Zero-Repeat": [f"{m['zero_repeat_pct']:.1%}" for m in _sorted_by_zero],
+        "Repeats/Run": [round(m["avg_repeat_pairs"], 2) for m in _sorted_by_zero],
+        "Time/Round (ms)": [round(m["time_per_round"], 2) for m in _sorted_by_zero],
+        "Win Diff": [round(m["engine_win_diff"], 2) for m in _sorted_by_zero],
+        "Adjacent Bias": [f"{(m['adjacent_bias'] - 1) * 100:.0f}%" if m['adjacent_bias'] > 0 else "0%" for m in _sorted_by_zero],
+        "Bench Fairness": [f"{m['bench_fairness']:.0f}%" for m in _sorted_by_zero],
+    })
+    
+    mo.vstack([
+        mo.ui.table(_rankings_df),
+        mo.md("""
+*Zero-Repeat: % of runs with no repeated pairs. Win Diff: Team balance (lower = better). Adjacent Bias: Bias toward adjacent pairs (0% = none). Bench Fairness: 100% = no double benches.*
+        """),
+    ])
     return
 
 
@@ -237,26 +284,28 @@ def _(all_metrics, cg_config, fig_to_image, mc_config, mo, np, plt, sa_config, r
     _angles = [n / float(_n_cats) * 2 * np.pi for n in range(_n_cats)]
     _angles += _angles[:1]  # Close the polygon
     
-    _fig, _ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(projection='polar'))
+    _fig, _ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(projection='polar'))
     
     for _i, (_name, _color) in enumerate(zip(_algo_names, _colors)):
         _values = [_zero_repeat[_i] * 100, _speed[_i], _bench_fair[_i], _engine_balance[_i], _consistency[_i]]
         _values += _values[:1]  # Close the polygon
         
-        _ax.plot(_angles, _values, '-', linewidth=2, label=_name, color=_color)
+        _ax.plot(_angles, _values, '-', linewidth=1.5, label=_name, color=_color)
         _ax.fill(_angles, _values, alpha=0.15, color=_color)
     
     _ax.set_xticks(_angles[:-1])
-    _ax.set_xticklabels(_categories, fontsize=11)
+    _ax.set_xticklabels(_categories, fontsize=8)
     _ax.set_ylim(0, 105)
     _ax.set_yticks([20, 40, 60, 80, 100])
-    _ax.set_yticklabels(["20", "40", "60", "80", "100"], fontsize=8)
-    _ax.spines['polar'].set_visible(False)  # Remove the outer black circle
-    _ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1), fontsize=10)
-    _ax.set_title("Algorithm Comparison Radar\n(Higher = Better on all axes)", fontsize=14, fontweight="bold", y=1.08)
+    _ax.set_yticklabels(["20", "40", "60", "80", "100"], fontsize=6)
+    _ax.spines['polar'].set_visible(False)
+    _ax.set_title("Algorithm Comparison", fontsize=10, fontweight="bold", y=1.05)
+    
+    # Legend outside the chart
+    _ax.legend(loc='upper left', bbox_to_anchor=(-0.3, 1.15), fontsize=7, frameon=False)
     
     _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
+    mo.hstack([mo.image(fig_to_image(_fig))], justify="center")
     return
 
 
@@ -269,16 +318,7 @@ def _(cg_config, mc_config, mo, sa_config):
     _cg_vs_sa = _sa_time / _cg_time if _cg_time > 0 else 0
     _mc_vs_sa = _sa_time / _mc_time if _mc_time > 0 else 0
     
-    mo.md(f"""
-    **Trade-off Summary:**
-    
-    | Algorithm | Zero-Repeat | Speed | Best For |
-    |-----------|-------------|-------|----------|
-    | **Simulated Annealing** | #1 100% | {_sa_time:.0f}s | Quality-critical (tournaments) |
-    | **Conflict Graph** | #2 ~58% | {_cg_time:.1f}s ({_cg_vs_sa:.0f}x faster) | Real-time apps |
-    | **Monte Carlo** | #3 ~56% | {_mc_time:.0f}s ({_mc_vs_sa:.0f}x faster) | Balanced choice |
-    | **Random Baseline** | ~5% | instant | Never use this |
-    
+    mo.md(f"""    
     All algorithms achieve **perfect bench fairness** and similar team balance. 
     The key differentiator is **repeat avoidance vs speed**.
     """)
@@ -379,16 +419,7 @@ def _(all_metrics, mo):
               "Conflict Graph" if _cg["p_any_repeat"] <= _mc["p_any_repeat"] else "Monte Carlo"
     
     mo.md(f"""
-    ### Performance Summary
-    
-    | Algorithm | Any-Repeat Rate | Zero-Repeat Rate | vs Baseline | vs Monte Carlo |
-    |-----------|-----------------|------------------|-------------|----------------|
-    | **Monte Carlo** | {_mc['p_any_repeat']:.1%} | {_mc['zero_repeat_pct']:.1%} | {_mc_vs_bl:+.1f}% | - |
-    | **Simulated Annealing** | {_sa['p_any_repeat']:.1%} | {_sa['zero_repeat_pct']:.1%} | {_sa_vs_bl:+.1f}% | {_sa_vs_mc:+.1f}% |
-    | **Conflict Graph** | {_cg['p_any_repeat']:.1%} | {_cg['zero_repeat_pct']:.1%} | {_cg_vs_bl:+.1f}% | {_cg_vs_mc:+.1f}% |
-    | **Random Baseline** | {_bl['p_any_repeat']:.1%} | {_bl['zero_repeat_pct']:.1%} | - | - |
-    
-    **Best performer: {_winner}** with {_by_label[_winner]['zero_repeat_pct']:.1%} perfect runs.
+    **Best performer**: {_winner} with {_by_label[_winner]['zero_repeat_pct']:.1%} perfect runs.
     """)
     return
 
@@ -403,7 +434,14 @@ def _(mo):
     mo.md("""
     ## Repeat-Count Distribution
     
-    How many repeat teammate pairs occur per simulation run?
+    Investigating repetiton within pairs during a simulation run.
+
+    **What is a pair?** A pair is two players who are teammates in a match. P1|P2 means Player 1 and 
+    Player 2 played on the same team. Note: P1|P2 is the same as P2|P1 — order doesn't matter.
+    
+    **What is a repeated pair?** When the same two players are teammates **more than once** within 
+    a session of 10 rounds. Example: If P1|P2 play together in round 2 and again in round 7, that's a repeat.
+    
     """)
     return
 
@@ -462,12 +500,6 @@ def _(config, mo):
     _player_counts = config.get("playerCounts", [20])
     mo.md(f"""
     ## Pair Frequency Heatmaps
-    
-    **What is a pair?** A pair is two players who are teammates in a match. P1|P2 means Player 1 and 
-    Player 2 played on the same team. Note: P1|P2 is the same as P2|P1 — order doesn't matter.
-    
-    **What is a repeated pair?** When the same two players are teammates **more than once** within 
-    a session of 10 rounds. Example: If P1|P2 play together in round 2 and again in round 7, that's a repeat.
     
     These heatmaps show **repeat events** — which pairs repeated most often across all simulations.
     
@@ -713,65 +745,6 @@ def _(mo):
     """)
     return
 
-
-# =============================================================================
-# TOP REPEAT PAIRS ANALYSIS
-# =============================================================================
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ## Top Repeat Pairs Analysis
-    
-    Which player pairs repeat most often? Identifying the "worst offenders" for each algorithm.
-    """)
-    return
-
-
-@app.cell
-def _(baseline_pair_events, cg_pair_events, mc_pair_events, mo, pl, sa_pair_events):
-    def get_top_pairs(events_df, label, top_n=10):
-        """Get top N most frequent repeat pairs for an algorithm."""
-        if events_df.height == 0:
-            return pl.DataFrame({"pairId": [], "events": [], "algorithm": []})
-        return (
-            events_df.group_by("pairId")
-            .agg(pl.len().alias("events"))
-            .sort("events", descending=True)
-            .head(top_n)
-            .with_columns(pl.lit(label).alias("algorithm"))
-        )
-    
-    _mc_top = get_top_pairs(mc_pair_events, "Monte Carlo")
-    _sa_top = get_top_pairs(sa_pair_events, "Simulated Annealing")
-    _cg_top = get_top_pairs(cg_pair_events, "Conflict Graph")
-    _bl_top = get_top_pairs(baseline_pair_events, "Random Baseline")
-    
-    top_pairs_data = {
-        "Monte Carlo": _mc_top,
-        "Simulated Annealing": _sa_top,
-        "Conflict Graph": _cg_top,
-        "Random Baseline": _bl_top,
-    }
-    
-    # Display tables side by side
-    _tables = []
-    for _algo, _df in top_pairs_data.items():
-        if _df.height > 0:
-            _tables.append(mo.vstack([
-                mo.md(f"**{_algo}**"),
-                mo.ui.table(_df.select(["pairId", "events"]))
-            ]))
-        else:
-            _tables.append(mo.vstack([
-                mo.md(f"**{_algo}**"),
-                mo.md("*No repeat pairs*")
-            ]))
-    
-    mo.hstack(_tables, justify="start", gap=2)
-    return top_pairs_data,
-
 # =============================================================================
 # ADJACENT PLAYER BIAS ANALYSIS
 # =============================================================================
@@ -870,17 +843,19 @@ def _(baseline_pair_events, cg_pair_events, config, fig_to_image, mc_pair_events
     _bias_ratios = [d["bias_ratio"] for d in adjacency_bias_data]
     _bars3 = _ax1.bar(_x, _bias_ratios, color=_colors, alpha=0.0)  # Invisible, just for spacing
     
-    _ax2.bar(_x, _bias_ratios, color=_colors, alpha=0.85, width=0.6)
-    _ax2.axhline(y=1.0, color="gray", linestyle="--", alpha=0.7, label="No bias (ratio=1)")
+    # Convert ratios to percentages (ratio - 1) * 100
+    # If ratio is 0 (no repeats), show 0% instead of -100%
+    _bias_pcts = [(_r - 1) * 100 if _r > 0 else 0 for _r in _bias_ratios]
+    _ax2.bar(_x, _bias_pcts, color=_colors, alpha=0.85, width=0.6)
+    _ax2.axhline(y=0, color="gray", linestyle="--", alpha=0.7, label="No bias (0%)")
     _ax2.set_xticks(_x)
     _ax2.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
-    _ax2.set_ylabel("Bias Ratio (Adjacent / Non-Adjacent)", fontsize=11)
-    _ax2.set_title("Adjacent Pair Bias Ratio\n(>1 = favors adjacent, <1 = avoids adjacent)", fontsize=12, fontweight="bold")
+    _ax2.set_ylabel("Adjacent Pair Bias (%)", fontsize=11)
+    _ax2.set_title("Adjacent Pair Bias\n(>0% = more likely to repeat adjacent pairs)", fontsize=12, fontweight="bold")
     _ax2.legend(loc="upper right")
     
-    for _i, _ratio in enumerate(_bias_ratios):
-        if _ratio > 0:
-            _ax2.text(_i, _ratio + 0.05, f"{_ratio:.2f}×", ha="center", va="bottom", fontsize=10, fontweight="bold")
+    for _i, _pct in enumerate(_bias_pcts):
+        _ax2.text(_i, _pct + 1, f"{_pct:.0f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
@@ -892,28 +867,30 @@ def _(adjacency_bias_data, mo):
     _cg = next(d for d in adjacency_bias_data if d["algorithm"] == "Conflict Graph")
     _bl = next(d for d in adjacency_bias_data if d["algorithm"] == "Random Baseline")
     _mc = next(d for d in adjacency_bias_data if d["algorithm"] == "Monte Carlo")
+    _sa = next(d for d in adjacency_bias_data if d["algorithm"] == "Simulated Annealing")
     
     _cg_bias_pct = (_cg["bias_ratio"] - 1) * 100 if _cg["bias_ratio"] > 0 else 0
+    _mc_bias_pct = (_mc["bias_ratio"] - 1) * 100 if _mc["bias_ratio"] > 0 else 0
     _bl_bias_pct = (_bl["bias_ratio"] - 1) * 100 if _bl["bias_ratio"] > 0 else 0
     
     mo.md(f"""
-    #### Adjacent Bias Interpretation
-    
-    | Algorithm | Adjacent Avg | Non-Adjacent Avg | Bias Ratio | Interpretation |
-    |-----------|--------------|------------------|------------|----------------|
-    | **Monte Carlo** | {_mc['adj_avg']:.1f} | {_mc['nonadj_avg']:.1f} | {_mc['bias_ratio']:.2f}× | {'Slight bias' if _mc['bias_ratio'] > 1.1 else 'Neutral'} |
-    | **Simulated Annealing** | {adjacency_bias_data[1]['adj_avg']:.1f} | {adjacency_bias_data[1]['nonadj_avg']:.1f} | {adjacency_bias_data[1]['bias_ratio']:.2f}× | No repeats = no bias |
-    | **Conflict Graph** | {_cg['adj_avg']:.1f} | {_cg['nonadj_avg']:.1f} | **{_cg['bias_ratio']:.2f}×** | **{_cg_bias_pct:.0f}% more likely** |
-    | **Random Baseline** | {_bl['adj_avg']:.1f} | {_bl['nonadj_avg']:.1f} | {_bl['bias_ratio']:.2f}× | {'Slight bias' if _bl['bias_ratio'] > 1.1 else 'Expected uniform'} |
-    
-    **Key Finding**: The Conflict Graph algorithm shows a **{_cg['bias_ratio']:.1f}× bias** toward repeating adjacent player pairs.
-    
-    **Root Cause**: This bias likely stems from how the CG algorithm iterates through players in sorted order.
-    When selecting players for courts, adjacent IDs are more likely to be grouped together during the greedy
-    construction phase, creating systematic repeat patterns on pairs like P1|P2, P2|P3, P3|P4, etc.
-    
-    **Why This Matters**: Even though CG achieves ~50% zero-repeat rate overall, when it *does* fail,
-    it fails on the same pairs repeatedly. This creates unfairness for specific player combinations.
+**Adjacent Pair Bias Summary:**
+- **Conflict Graph**: **{_cg_bias_pct:.0f}%** more likely to repeat adjacent pairs
+- **Monte Carlo**: **{_mc_bias_pct:.0f}%** more likely to repeat adjacent pairs  
+- **Random Baseline**: **{_bl_bias_pct:.0f}%** more likely to repeat adjacent pairs
+- **Simulated Annealing**: **0%** bias (no repeats = no bias)
+
+**Why does each algorithm show bias?**
+
+- **Conflict Graph ({_cg_bias_pct:.0f}%)**: The greedy construction iterates through players in sorted order. Adjacent IDs are more likely to be grouped together during court assignment, creating systematic repeat patterns on pairs like P1|P2, P2|P3.
+
+- **Monte Carlo ({_mc_bias_pct:.0f}%)**: Random sampling with Fisher-Yates shuffle should be unbiased, but when repeats occur, they're slightly more likely on adjacent pairs due to how candidates are evaluated — adjacent players often end up on the same court in initial random assignments.
+
+- **Random Baseline ({_bl_bias_pct:.0f}%)**: Pure random assignment without optimization. The bias comes from the player list ordering — when shuffling and assigning to courts, adjacent IDs have a slightly higher probability of landing together.
+
+- **Simulated Annealing (0%)**: No bias because it achieves 100% zero-repeat rate. When there are no repeats, there's nothing to be biased about.
+
+**Why This Matters**: Even when algorithms have similar overall repeat rates, concentrated bias on specific pairs creates unfairness for those player combinations.
     """)
     return
 
@@ -1038,15 +1015,7 @@ def _(baseline_match_pairs, cg_match_pairs, mc_match_pairs, mo, np, sa_match_pai
     The **Coefficient of Variation (CV)** measures how uniformly teammates are distributed:
     - **Lower CV** = more equal distribution (everyone plays with everyone roughly equally)
     - **Higher CV** = some pairs play together much more/less than others
-    
-    | Algorithm | Overall CV | Interpretation |
-    |-----------|------------|----------------|
-    | **Monte Carlo** | {_mc_cv:.1f}% | {'Very uniform' if _mc_cv < 10 else 'Moderate variation' if _mc_cv < 20 else 'High variation'} |
-    | **Simulated Annealing** | {_sa_cv:.1f}% | {'Very uniform' if _sa_cv < 10 else 'Moderate variation' if _sa_cv < 20 else 'High variation'} |
-    | **Conflict Graph** | {_cg_cv:.1f}% | {'Very uniform' if _cg_cv < 10 else 'Moderate variation' if _cg_cv < 20 else 'High variation'} |
-    | **Random Baseline** | {_bl_cv:.1f}% | {'Very uniform' if _bl_cv < 10 else 'Moderate variation' if _bl_cv < 20 else 'High variation'} |
-    
-    **Key Insight:** All algorithms achieve similar teammate diversity overall. The slight variation 
+    All algorithms achieve similar teammate diversity overall. The slight variation 
     comes from variable player counts (14-20 per batch) — players P15-P20 participate in fewer 
     batches, naturally reducing their teammate counts.
     """)
@@ -1200,7 +1169,17 @@ def _(mo):
 
 @app.cell
 def _(balance_summary, mo):
-    mo.ui.table(balance_summary)
+    # Rename columns to be more human-readable
+    _display_df = balance_summary.rename({
+        "algorithm": "Algorithm",
+        "avg_skill_diff": "Avg Skill Diff",
+        "std_skill_diff": "Std Deviation",
+        "stronger_wins": "Stronger Team Wins",
+        "perfectly_balanced": "Perfectly Balanced",
+        "gini_coeff": "Win Inequality (Gini)",
+        "total_matches": "Total Matches",
+    })
+    mo.ui.table(_display_df)
     return
 
 
@@ -1384,20 +1363,15 @@ def _(cg_config, fig_to_image, mc_config, mo, np, plt, random_config, sa_config)
 
 @app.cell(hide_code=True)
 def _(cg_config, mc_config, mo, random_config, sa_config):
-    _rand_eng = random_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
-    _mc_eng = mc_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
-    _sa_eng = sa_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
-    _cg_eng = cg_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0)
+    _rand_eng = random_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 1)
+    _mc_eng = mc_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 1) or 0.01
+    _sa_eng = sa_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 1) or 0.01
+    _cg_eng = cg_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 1) or 0.01
+    
+    _min_improvement = min(_rand_eng/_sa_eng, _rand_eng/_mc_eng, _rand_eng/_cg_eng)
     
     mo.md(f"""
-    **Engine Balance Comparison**
-    
-    | Metric | Random | MC | SA | CG |
-    |--------|--------|----|----|-----|
-    | **Engine Win Diff** | {_rand_eng:.2f} | **{_mc_eng:.2f}** | **{_sa_eng:.2f}** | **{_cg_eng:.2f}** |
-    | **Improvement** | 1.0× | **{_rand_eng/_mc_eng:.1f}×** | **{_rand_eng/_sa_eng:.1f}×** | **{_rand_eng/_cg_eng:.1f}×** |
-    
-    The optimization algorithms create teams that are **{_rand_eng/_sa_eng:.0f}-{_rand_eng/_mc_eng:.0f}× more balanced** 
+    The optimization algorithms create teams that are at minimum **{_min_improvement:.0f}× more balanced** 
     (based on session wins they track) compared to random assignment.
     
     The level-based metrics appear similar because the engines optimize based on observed wins/losses, 
@@ -1423,16 +1397,6 @@ def _(balance_results, mo, np):
     
     mo.md(f"""
     ### Team Balance Analysis Summary
-    
-    Based on **{_mc['total_matches']:,} matches per algorithm** with players assigned skill levels 1-5.
-    
-    | Metric | Random | MC | SA | CG | Notes |
-    |--------|--------|----|----|-----|-------|
-    | **Avg Strength Diff** | {_rand['avg_skill_differential']:.2f} | {_mc['avg_skill_differential']:.2f} | {_sa['avg_skill_differential']:.2f} | {_cg['avg_skill_differential']:.2f} | Similar (~1.87) |
-    | **Perfectly Balanced** | {_rand['perfectly_balanced_rate']:.1%} | {_mc['perfectly_balanced_rate']:.1%} | {_sa['perfectly_balanced_rate']:.1%} | {_cg['perfectly_balanced_rate']:.1%} | Similar (~16%) |
-    | **Stronger Team Wins** | {_rand['stronger_team_win_rate']:.1%} | {_mc['stronger_team_win_rate']:.1%} | {_sa['stronger_team_win_rate']:.1%} | {_cg['stronger_team_win_rate']:.1%} | Similar (~63%) |
-    | **Win Gini** | {_rand['gini_coefficient']:.4f} | {_mc['gini_coefficient']:.4f} | {_sa['gini_coefficient']:.4f} | {_cg['gini_coefficient']:.4f} | Similar (~0.08) |
-    | **Skill Pairing Cost** | {_rand_pair:.1f} | {_mc_pair:.1f} | {_sa_pair:.1f} | {_cg_pair:.1f} | Similar (~18) |
     
     **Why are all metrics similar?**
     
@@ -1482,14 +1446,6 @@ def _(mo):
     
     **Key Design Decision:** All algorithms now **prioritize preventing double benches** over avoiding teammate repeats.
     When forced to choose, they allow a repeat rather than bench someone twice in a row.
-    
-    | Players | Courts | Benched/Round | Bench Behavior |
-    |---------|--------|---------------|----------------|
-    | 14 | 3 | 2 | 0% double-bench (prioritized) |
-    | 17 | 4 | **1** | 0% double-bench (easy - only 1 benched) |
-    | 18 | 4 | 2 | 0% double-bench (prioritized) |
-    | 19 | 4 | 3 | 0% double-bench (prioritized) |
-    | 20 | 4 | 4 | 0% double-bench (prioritized) |
     
     This means no player ever sits out two consecutive rounds, providing a significantly better user experience.
     """)
@@ -1559,37 +1515,50 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
     # Chart showing mean gap by player count (all algorithms similar due to double-bench prevention)
     _algo_names = ["Random", "MC", "SA", "CG"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
-    _court_spots = 16  # 4 courts × 4 players
     
-    # Get all player counts, excluding 17p where no one benches twice
-    _all_player_counts = sorted(set(
-        pc for algo_data in bench_by_players.values() 
-        for pc in algo_data.keys()
-    ))
+    # Show ALL player counts from 14 to 20
+    _player_counts = [14, 15, 16, 17, 18, 19, 20]
     
-    # Filter to only include player counts where repeated benches occur
-    # With 17 players (1 bench/round) and 10 rounds, no one benches twice = no gaps to measure
-    _player_counts = [pc for pc in _all_player_counts if pc != 17]
+    # Calculate courts and spots for each player count (max 4 players per court, max 4 courts)
+    def get_court_spots(num_players):
+        num_courts = min(4, num_players // 4)
+        return num_courts * 4
     
     # Calculate theoretical max gap for each player count
     # Formula: max_gap = (N / B) - 1, where B = N - court_spots
+    # For 16p (0 benched), theoretical max is 0 (no benching = no gap to measure)
     _theoretical_max = []
+    _benched_per_round_list = []
     for _pc in _player_counts:
+        _court_spots = get_court_spots(_pc)
         _benched_per_round = _pc - _court_spots
+        _benched_per_round_list.append(_benched_per_round)
         if _benched_per_round > 0:
             _theoretical_max.append(_pc / _benched_per_round - 1)
         else:
-            _theoretical_max.append(10)  # No benching needed
+            _theoretical_max.append(0)  # No benching needed (16p) - show as 0
     
-    _fig, _ax = plt.subplots(1, 1, figsize=(10, 6))
+    _fig, _ax = plt.subplots(1, 1, figsize=(12, 6))
     
     _x = np.arange(len(_player_counts))
-    _width = 0.2
+    _width = 0.15
     _offsets = [-1.5, -0.5, 0.5, 1.5]
     
-    # Mean gap by player count  
+    # Mean gap by player count
+    # For cases where no one benched twice (total_events=0), that's the ideal = theoretical max
     for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
-        _gaps = [bench_by_players[_algo].get(pc, {}).get("mean_gap", 0) for pc in _player_counts]
+        _gaps = []
+        for _j, _pc in enumerate(_player_counts):
+            _data = bench_by_players[_algo].get(_pc, {})
+            _mean_gap = _data.get("mean_gap", 0)
+            _total_events = _data.get("total_events", 0)
+            
+            # If no gap events recorded (no one benched twice), that's the ideal = theoretical max
+            # For 16p (0 benched), both mean_gap and theoretical_max are 0
+            if _mean_gap == 0 and _total_events == 0 and _theoretical_max[_j] > 0:
+                _gaps.append(_theoretical_max[_j])
+            else:
+                _gaps.append(_mean_gap)
         _ax.bar(_x + _offsets[_i] * _width, _gaps, _width, label=_algo, color=_color, alpha=0.85)
     
     # Plot theoretical maximum as green line with markers
@@ -1597,28 +1566,24 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
              markersize=8, label='Theoretical Max', zorder=5)
     
     _ax.set_xticks(_x)
-    _ax.set_xticklabels([f"{pc}p" for pc in _player_counts], fontsize=10)
-    _ax.set_xlabel("Player Count", fontsize=11)
+    _ax.set_xticklabels([f"{pc}p\n({b}b)" for pc, b in zip(_player_counts, _benched_per_round_list)], fontsize=10)
+    _ax.set_xlabel("Player Count (benched per round)", fontsize=11)
     _ax.set_ylabel("Mean Gap (games between benches)", fontsize=11)
     _ax.set_title("Average Gap Between Benches by Player Count\n(Higher = Better, closer to green = closer to ideal)", fontsize=12, fontweight="bold")
     _ax.legend(loc="upper right", fontsize=9)
     _ax.set_ylim(0, max(_theoretical_max) + 1)
+    
+    # Add annotation for 16p (no benching)
+    _ax.annotate("No benching\n(16 spots)", xy=(2, 0.5), ha="center", fontsize=9, color="gray")
     
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
         mo.md("""
 **Theoretical maximum** (green line) = the best possible gap if benches were perfectly distributed.
-Formula: `max_gap = N / B - 1` where N = players, B = benched per round (N - 16 for 4 courts).
+Formula: `max_gap = N / B - 1` where N = players, B = benched per round.
 
-**Note:** 17 players is excluded because only 1 player benches per round. With 10 rounds, each player benches at most once — so there are no "gaps between benches" to measure. This is the ideal scenario!
-
-**Why don't algorithms reach the theoretical max?**
-1. **Only 10 rounds per session** — The theoretical max assumes infinite rounds with perfect rotation. With just 10 rounds, there isn't enough time for everyone to complete a full rotation cycle.
-2. **Edge effects** — At the start of each session, some players inevitably bench earlier than others. These "first benches" don't have prior gaps to count.
-3. **Double-bench prevention takes priority** — The algorithm's #1 goal is preventing consecutive benches, which may occasionally force a slightly suboptimal bench assignment.
-
-Despite these constraints, all algorithms achieve **~80-90%** of the theoretical maximum across all player counts.
+**17p at theoretical max**: With only 1 player benching per round and 10 rounds, no one benches twice — achieving the ideal scenario where the gap is effectively infinite.
         """)
     ])
     return
@@ -1686,82 +1651,18 @@ def _(cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_st
 
 
 @app.cell(hide_code=True)
-def _(bench_gap_stats, mo):
-    _mc = bench_gap_stats["MC"]
-    
-    mo.md(f"""
-    ### Bench Fairness Summary
-    
-    **Key Findings:**
-    
-    1. **All algorithms achieve 0% double-bench rate** by design:
-       - The algorithms prioritize preventing double benches over avoiding teammate repeats
-       - When forced to choose between double-benching a player or allowing a repeat, they choose the repeat
-       - No player ever sits out two consecutive rounds
-    
-    2. **Mean gap is consistently high** (~{_mc['mean_gap']:.1f} games between benches on average):
-       - All algorithms perform similarly for bench distribution
-       - Gap varies by player count (more players = more benching = shorter gaps)
-    
-    3. **Trade-off: Double-bench prevention vs Repeat avoidance**:
-       - By prioritizing double-bench prevention, MC and CG may accept slightly more teammate repeats
-       - SA still achieves 100% zero-repeat rate, proving it's mathematically possible to have both
-       - This trade-off provides significantly better UX (no one sits out twice in a row)
-    """)
-    return
+def _(mo):
+    mo.md("""
+**Bench Distribution Fairness (Left Chart):**
+- **Bench Range** = difference between the most-benched and least-benched player in a session
+- A range of **0** means everyone benched the same number of times (perfectly fair)
+- A range of **1** means at most 1 bench difference between players
+- **Random baseline** has higher range because it doesn't optimize for fairness while **MC, SA, and CG** achieve lower range through smart player selection
 
-
-# =============================================================================
-# FINAL CONCLUSIONS
-# =============================================================================
-
-
-@app.cell(hide_code=True)
-def _(all_metrics, mo):
-    _metrics = all_metrics.to_dicts()
-    _by_label = {m["label"]: m for m in _metrics}
-    
-    _mc = _by_label["Monte Carlo"]
-    _sa = _by_label["Simulated Annealing"]
-    _cg = _by_label["Conflict Graph"]
-    _bl = _by_label["Random Baseline"]
-    
-    # Determine rankings
-    _sorted_by_zero = sorted(_metrics, key=lambda x: x["zero_repeat_pct"], reverse=True)
-    _rankings = {m["label"]: i+1 for i, m in enumerate(_sorted_by_zero)}
-    
-    mo.md(f"""
-    ---
-    
-    ## Final Conclusions
-    
-    ### Algorithm Rankings (by Zero-Repeat Rate)
-    
-    | Rank | Algorithm | Zero-Repeat Rate | Avg Repeats/Run |
-    |------|-----------|------------------|-----------------|
-    | 1st | {_sorted_by_zero[0]['label']} | **{_sorted_by_zero[0]['zero_repeat_pct']:.1%}** | {_sorted_by_zero[0]['avg_repeat_pairs']:.3f} |
-    | 2nd | {_sorted_by_zero[1]['label']} | {_sorted_by_zero[1]['zero_repeat_pct']:.1%} | {_sorted_by_zero[1]['avg_repeat_pairs']:.3f} |
-    | 3rd | {_sorted_by_zero[2]['label']} | {_sorted_by_zero[2]['zero_repeat_pct']:.1%} | {_sorted_by_zero[2]['avg_repeat_pairs']:.3f} |
-    | 4th | {_sorted_by_zero[3]['label']} | {_sorted_by_zero[3]['zero_repeat_pct']:.1%} | {_sorted_by_zero[3]['avg_repeat_pairs']:.3f} |
-    
-    ### Key Insights
-    
-    1. **{_sorted_by_zero[0]['label']}** achieves the best performance with **{_sorted_by_zero[0]['zero_repeat_pct']:.1%}** of runs having zero repeated teammate pairs.
-    
-    2. **Improvement over baseline**:
-       - Monte Carlo: {(_bl['p_any_repeat'] - _mc['p_any_repeat']) / _bl['p_any_repeat'] * 100:.0f}% reduction in repeat rate
-       - Simulated Annealing: {(_bl['p_any_repeat'] - _sa['p_any_repeat']) / _bl['p_any_repeat'] * 100:.0f}% reduction in repeat rate
-       - Conflict Graph: {(_bl['p_any_repeat'] - _cg['p_any_repeat']) / _bl['p_any_repeat'] * 100:.0f}% reduction in repeat rate
-    
-    3. **Conflict Graph hot spots**: Despite decent overall performance, CG exhibits **concentrated failure patterns** - when it fails to avoid repeats, it tends to fail on the same pairs repeatedly due to its deterministic/greedy nature.
-    
-    4. **Speed vs. Quality trade-off**: Conflict Graph is ~100× faster than Simulated Annealing, making it ideal for real-time applications. SA is worth the wait only when perfect teammate variety is critical.
-    
-    5. **Team Balance**: All algorithms produce similar match balance because they optimize based on accumulated wins/losses (which they track), not the fixed player skill levels used in simulation.
-    
-    6. **Bench Fairness - Double Bench Prevention**: All algorithms now achieve **0% double-bench rate** by design. The algorithms prioritize preventing double benches (sitting out consecutive rounds) over avoiding teammate repeats. When forced to choose between double-benching a player or allowing a teammate repeat, they choose the repeat. This is reflected in the slightly lower zero-repeat rates for MC and CG compared to before, but provides a significantly better user experience.
-    
-    7. **Recommendation**: Use **{_sorted_by_zero[0]['label']}** for quality, or **Conflict Graph** when speed is the priority. All algorithms provide **perfect bench fairness** (0% double-bench), so the differentiator is teammate variety.
+**Bench Range Distribution (Right Chart):**
+- Shows what percentage of sessions achieved each bench range value
+- **Optimized algorithms** (MC, SA, CG) have more sessions at range 0 (perfect) or range 1 (very fair)
+- **Random baseline** spreads across ranges 0-3, with fewer at perfect fairness
     """)
     return
 

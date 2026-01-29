@@ -55,3 +55,25 @@ Then open:
 - http://localhost:8765/analysis
 - http://localhost:8765/algorithm_docs
 - http://localhost:8765/bench_analysis
+- http://localhost:8765/engine_analysis
+
+## Export notebooks to static HTML
+
+Export all notebooks without code cells (output only):
+
+```bash
+cd analysis
+mkdir -p html
+uv run marimo export html --no-include-code algorithm_docs.py -o html/algorithm_docs.html
+uv run marimo export html --no-include-code analysis.py -o html/analysis.html
+uv run marimo export html --no-include-code bench_analysis.py -o html/bench_analysis.html
+uv run marimo export html --no-include-code engine_analysis.py -o html/engine_analysis.html
+```
+
+Then prerender for the main app (from project root):
+
+```bash
+npx tsx script/prerender-notebooks.ts
+```
+
+This generates static HTML files in `public/analysis/` that render without JavaScript execution.
