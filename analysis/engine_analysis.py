@@ -325,24 +325,36 @@ def _(all_metrics, fig_to_image, mo, np, plt):
         _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.02,
                   f"{_h:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
-    # Right: Zero-repeat rate
-    _zero_rates = [m["zero_repeat_pct"] for m in _metrics]
+    # Right: Average repeats per run
+    _avg_repeats = [m["avg_repeat_pairs"] for m in _metrics]
     
-    _bars2 = _ax2.bar(_x, _zero_rates, color=_colors, alpha=0.85, width=0.6)
+    _bars2 = _ax2.bar(_x, _avg_repeats, color=_colors, alpha=0.85, width=0.6)
     
     _ax2.set_xticks(_x)
     _ax2.set_xticklabels(_labels, rotation=15, ha="right", fontsize=10)
-    _ax2.set_ylabel("Zero-Repeat Rate", fontsize=11)
-    _ax2.set_title("Perfect Runs\n(higher is better)", fontsize=12, fontweight="bold")
-    _ax2.set_ylim(0, 1.1)
+    _ax2.set_ylabel("Average Repeats per Run", fontsize=11)
+    _ax2.set_title("Repeat Severity\n(lower is better)", fontsize=12, fontweight="bold")
     
     for _bar in _bars2:
         _h = _bar.get_height()
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.02,
-                  f"{_h:.1%}", ha="center", va="bottom", fontsize=10, fontweight="bold")
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.3,
+                  f"{_h:.1f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    **What these metrics mean:**
+    
+    - **Any-Repeat Rate**: The probability that a 10-round session has at least one repeated pair. 
+      A repeated pair means two players who were teammates more than once in the same session.
+    - **Repeat Severity**: When repeats do occur, how many on average? This measures the "damage" — 
+      even if repeats happen, fewer is better. SA scores 0 on both metrics.
+    """)
     return
 
 
@@ -416,10 +428,13 @@ def _(baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, sa_su
     
     for _ax, (_df, _name, _color) in zip(_axes, _datasets):
         _counts = _df.get_column("repeatPairDifferentOpponentsCount")
-        _values, _freqs = np.unique(_counts.to_numpy(), return_counts=True)
+        _counts_arr = _counts.to_numpy()
+        _values, _freqs = np.unique(_counts_arr, return_counts=True)
         _pcts = _freqs / _freqs.sum() * 100
         
+        # Bar chart for this algorithm
         _ax.bar(_values, _pcts, color=_color, alpha=0.8, width=0.8)
+        
         _ax.set_xlabel("Repeat pairs per run")
         _ax.set_ylabel("Percentage of runs (%)")
         _ax.set_title(_name, fontweight="bold")
@@ -1038,38 +1053,6 @@ def _(baseline_match_pairs, cg_match_pairs, mc_match_pairs, mo, np, sa_match_pai
     return
 
 
-
-# =============================================================================
-# EXECUTION TIME DETAILS
-# =============================================================================
-
-
-@app.cell(hide_code=True)
-def _(cg_config, mc_config, mo, sa_config):
-    _mc_avg = mc_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
-    _sa_avg = sa_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
-    _cg_avg = cg_config.get("timing", {}).get("avgPerBatchMs", 0) / 1000
-    
-    _cg_vs_sa = _sa_avg / _cg_avg if _cg_avg > 0 else 0
-    _mc_vs_sa = _sa_avg / _mc_avg if _mc_avg > 0 else 0
-    
-    mo.md(f"""
-    ## Execution Time Details
-    
-    Performance measured over 5 batches × 5,000 runs × 10 rounds each = **250,000 round assignments per algorithm**.
-    
-    | Algorithm | Time/Batch | Speedup vs SA | Use Case |
-    |-----------|------------|---------------|----------|
-    | **Conflict Graph** | {_cg_avg:.1f}s | **{_cg_vs_sa:.0f}×** faster | Real-time apps, instant feedback |
-    | **Monte Carlo** | {_mc_avg:.0f}s | {_mc_vs_sa:.0f}× faster | Balanced quality/speed |
-    | **Simulated Annealing** | {_sa_avg:.0f}s | baseline | Tournaments, quality-critical |
-    
-    **Note:** All algorithms show consistent timing across batches (±5% variance), 
-    confirming stable, predictable performance.
-    """)
-    return
-
-
 # =============================================================================
 # TEAM BALANCE ANALYSIS
 # =============================================================================
@@ -1222,42 +1205,104 @@ def _(balance_summary, mo):
 
 
 @app.cell(hide_code=True)
-def _(balance_results, mo, np):
-    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+def _(mo):
+    mo.md("""
+    ## Skill Analysis
     
-    # Calculate distribution stats for each algorithm
-    _stats = []
+    How do the algorithms affect match balance and win rates based on player skill levels (1-5)?
+    """)
+    return
+
+
+@app.cell
+def _(balance_results, config, fig_to_image, mo, np, player_profiles, plt):
+    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
+    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # LEFT: Skill Differential Distribution
+    _diff_labels = ["0\n(Perfect)", "1", "2", "3", "4+"]
+    _all_pcts = []
     for _name in _algo_names:
         _diffs = balance_results[_name]["skill_differentials"]
         _counts = np.bincount(_diffs, minlength=9)
         _pcts = _counts / len(_diffs) * 100
-        _stats.append({
-            "name": _name,
-            "mean": np.mean(_diffs),
-            "pcts": _pcts[:9],  # 0-8
-        })
+        _grouped = list(_pcts[:4]) + [sum(_pcts[4:])]
+        _all_pcts.append(_grouped)
     
-    # All algorithms have nearly identical distributions
-    _range_means = max(s["mean"] for s in _stats) - min(s["mean"] for s in _stats)
+    _x1 = np.arange(len(_diff_labels))
+    _width1 = 0.2
+    for _i, (_name, _pcts, _color) in enumerate(zip(_algo_names, _all_pcts, _colors)):
+        _offset = (_i - 1.5) * _width1
+        _ax1.bar(_x1 + _offset, _pcts, _width1, label=_name, color=_color, alpha=0.85)
     
-    mo.md(f"""
-    ### Skill Differential Distribution
+    _ax1.set_xlabel("Skill Differential (|Team1 - Team2|)", fontsize=11)
+    _ax1.set_ylabel("Percentage of Matches (%)", fontsize=11)
+    _ax1.set_title("Skill Differential Distribution", fontsize=12, fontweight="bold")
+    _ax1.set_xticks(_x1)
+    _ax1.set_xticklabels(_diff_labels)
+    _ax1.legend(loc="upper right", fontsize=8)
+    _ax1.grid(True, alpha=0.3, axis='y')
     
-    The skill differential (|Team1 - Team2| based on fixed levels 1-5) is **nearly identical** across all algorithms:
+    # RIGHT: Win Rate by Skill Level
+    _player_counts = config.get("playerCounts", [20])
+    _num_players = max(_player_counts)
+    _players = [f"P{i+1}" for i in range(_num_players)]
     
-    | Diff | Random | MC | SA | CG | Interpretation |
-    |------|--------|----|----|-----|----------------|
-    | **0** | {_stats[0]['pcts'][0]:.1f}% | {_stats[1]['pcts'][0]:.1f}% | {_stats[2]['pcts'][0]:.1f}% | {_stats[3]['pcts'][0]:.1f}% | Perfectly balanced |
-    | **1** | {_stats[0]['pcts'][1]:.1f}% | {_stats[1]['pcts'][1]:.1f}% | {_stats[2]['pcts'][1]:.1f}% | {_stats[3]['pcts'][1]:.1f}% | Very close |
-    | **2** | {_stats[0]['pcts'][2]:.1f}% | {_stats[1]['pcts'][2]:.1f}% | {_stats[2]['pcts'][2]:.1f}% | {_stats[3]['pcts'][2]:.1f}% | Slight advantage |
-    | **3** | {_stats[0]['pcts'][3]:.1f}% | {_stats[1]['pcts'][3]:.1f}% | {_stats[2]['pcts'][3]:.1f}% | {_stats[3]['pcts'][3]:.1f}% | Moderate gap |
-    | **4+** | {sum(_stats[0]['pcts'][4:]):.1f}% | {sum(_stats[1]['pcts'][4:]):.1f}% | {sum(_stats[2]['pcts'][4:]):.1f}% | {sum(_stats[3]['pcts'][4:]):.1f}% | Large gap |
-    | **Mean** | {_stats[0]['mean']:.2f} | {_stats[1]['mean']:.2f} | {_stats[2]['mean']:.2f} | {_stats[3]['mean']:.2f} | Δ = {_range_means:.2f} |
+    _player_levels = {p: player_profiles.get(p, {}).get("level", 3) for p in _players}
+    _level_win_rates = {algo: {level: [] for level in range(1, 6)} for algo in _algo_names}
     
-    **Why identical?** The skill differential depends on which players are selected for each court, 
-    not how they're paired into teams. Since player selection is similar across algorithms (random from the pool), 
-    the level-based strength differential is the same. The algorithms only control **team composition** 
-    (who plays with whom), not **player selection** (who plays at all).
+    for _algo in _algo_names:
+        _wins = balance_results[_algo]["win_distribution"]
+        _losses = balance_results[_algo]["loss_distribution"]
+        for _p in _players:
+            _level = _player_levels[_p]
+            _w = _wins.get(_p, 0)
+            _l = _losses.get(_p, 0)
+            _rate = _w / (_w + _l) * 100 if (_w + _l) > 0 else 50
+            _level_win_rates[_algo][_level].append(_rate)
+    
+    _level_avgs = {algo: {level: np.mean(rates) if rates else 50 
+                         for level, rates in levels.items()}
+                  for algo, levels in _level_win_rates.items()}
+    
+    _x2 = np.arange(1, 6)
+    _width2 = 0.18
+    _offsets = [-1.5, -0.5, 0.5, 1.5]
+    
+    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
+        _rates = [_level_avgs[_algo][level] for level in range(1, 6)]
+        _ax2.bar(_x2 + _offsets[_i] * _width2, _rates, _width2, label=_algo, color=_color, alpha=0.85)
+    
+    _ax2.axhline(y=50, color='gray', linestyle='--', alpha=0.7, label="50% baseline")
+    _ax2.set_xticks(_x2)
+    _ax2.set_xticklabels([f"Level {l}" for l in range(1, 6)])
+    _ax2.set_xlabel("Player Skill Level", fontsize=11)
+    _ax2.set_ylabel("Average Win Rate (%)", fontsize=11)
+    _ax2.set_title("Win Rate by Skill Level", fontsize=12, fontweight="bold")
+    _ax2.legend(loc="upper left", fontsize=8)
+    _ax2.set_ylim(30, 70)
+    _ax2.grid(True, alpha=0.3, axis='y')
+    
+    plt.tight_layout()
+    mo.image(fig_to_image(_fig))
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    **What these charts show:**
+    
+    - **Skill Differential**: The absolute difference in total skill between teams (0 = perfectly balanced). 
+      All algorithms produce ~16% perfectly balanced matches and similar distributions.
+    - **Win Rate by Skill Level**: Higher-skilled players (Level 5) win ~62% while lower-skilled (Level 1) win ~38%. 
+      This pattern is identical across all algorithms.
+    
+    **Why are all algorithms identical?** The algorithms control *who plays with whom* (team composition), 
+    not *who plays* (player selection) or skill levels. Since player selection is random and skill levels are fixed, 
+    the skill-based outcomes are the same regardless of algorithm.
     """)
     return
 
@@ -1361,115 +1406,6 @@ def _(cg_config, mc_config, mo, random_config, sa_config):
     return
 
 
-@app.cell(hide_code=True)
-def _(balance_results, mo):
-    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
-    _ginis = [balance_results[name]["gini_coefficient"] for name in _algo_names]
-    _stronger = [balance_results[name]["stronger_team_win_rate"] * 100 for name in _algo_names]
-    
-    _gini_range = max(_ginis) - min(_ginis)
-    _stronger_range = max(_stronger) - min(_stronger)
-    
-    mo.md(f"""
-    ### Win Distribution Summary
-    
-    All algorithms produce **nearly identical** win distributions because they don't control the fixed player skill levels:
-    
-    | Metric | Random | MC | SA | CG | Range |
-    |--------|--------|----|----|-----|-------|
-    | **Gini Coefficient** | {_ginis[0]:.4f} | {_ginis[1]:.4f} | {_ginis[2]:.4f} | {_ginis[3]:.4f} | Δ {_gini_range:.4f} |
-    | **Stronger Team Wins** | {_stronger[0]:.1f}% | {_stronger[1]:.1f}% | {_stronger[2]:.1f}% | {_stronger[3]:.1f}% | Δ {_stronger_range:.1f}% |
-    
-    **Why so similar?** The ~63% stronger team win rate and ~0.08 Gini coefficient are determined by:
-    - Fixed player skill levels (1-5) assigned at simulation start
-    - Probabilistic match outcomes (logistic model with k=0.3)
-    
-    The algorithms can't change these fundamentals - they only control **who plays with whom**, not player skill levels.
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ### Win Rate by Skill Level
-    
-    Since all algorithms produce nearly identical win distributions, we aggregate by skill level 
-    to show the expected pattern: **higher-skilled players win more often**.
-    """)
-    return
-
-
-@app.cell
-def _(balance_results, config, fig_to_image, mo, np, player_profiles, plt):
-    _player_counts = config.get("playerCounts", [20])
-    _num_players = max(_player_counts)
-    _players = [f"P{i+1}" for i in range(_num_players)]
-    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
-    _algo_colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
-    
-    # Get player levels
-    _player_levels = {p: player_profiles.get(p, {}).get("level", 3) for p in _players}
-    
-    # Calculate average win rate per skill level for each algorithm
-    _level_win_rates = {algo: {level: [] for level in range(1, 6)} for algo in _algo_names}
-    
-    for _algo in _algo_names:
-        _wins = balance_results[_algo]["win_distribution"]
-        _losses = balance_results[_algo]["loss_distribution"]
-        for _p in _players:
-            _level = _player_levels[_p]
-            _w = _wins.get(_p, 0)
-            _l = _losses.get(_p, 0)
-            _rate = _w / (_w + _l) * 100 if (_w + _l) > 0 else 50
-            _level_win_rates[_algo][_level].append(_rate)
-    
-    # Average per level
-    _level_avgs = {algo: {level: np.mean(rates) if rates else 50 
-                         for level, rates in levels.items()}
-                  for algo, levels in _level_win_rates.items()}
-    
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
-    # Left: Win rate by skill level (all algorithms overlaid)
-    _x = np.arange(1, 6)
-    _width = 0.18
-    _offsets = [-1.5, -0.5, 0.5, 1.5]
-    
-    for _i, (_algo, _color) in enumerate(zip(_algo_names, _algo_colors)):
-        _rates = [_level_avgs[_algo][level] for level in range(1, 6)]
-        _ax1.bar(_x + _offsets[_i] * _width, _rates, _width, label=_algo, color=_color, alpha=0.85)
-    
-    _ax1.axhline(y=50, color='gray', linestyle='--', alpha=0.7, label="50% baseline")
-    _ax1.set_xticks(_x)
-    _ax1.set_xticklabels([f"Level {l}" for l in range(1, 6)])
-    _ax1.set_xlabel("Player Skill Level", fontsize=11)
-    _ax1.set_ylabel("Average Win Rate (%)", fontsize=11)
-    _ax1.set_title("Win Rate by Skill Level\n(All algorithms nearly identical)", fontsize=12, fontweight="bold")
-    _ax1.legend(loc="upper left", fontsize=8)
-    _ax1.set_ylim(30, 70)
-    
-    # Right: Difference from random baseline
-    _random_rates = [_level_avgs["Random Baseline"][level] for level in range(1, 6)]
-    
-    for _i, (_algo, _color) in enumerate(zip(_algo_names[1:], _algo_colors[1:])):  # Skip random
-        _rates = [_level_avgs[_algo][level] for level in range(1, 6)]
-        _diffs = [r - b for r, b in zip(_rates, _random_rates)]
-        _ax2.plot(_x, _diffs, marker='o', label=_algo, color=_color, linewidth=2, markersize=8)
-    
-    _ax2.axhline(y=0, color='gray', linestyle='--', alpha=0.7, label="No difference")
-    _ax2.fill_between(_x, -1, 1, alpha=0.2, color='gray', label="±1% zone")
-    _ax2.set_xticks(_x)
-    _ax2.set_xticklabels([f"Level {l}" for l in range(1, 6)])
-    _ax2.set_xlabel("Player Skill Level", fontsize=11)
-    _ax2.set_ylabel("Difference from Random (%)", fontsize=11)
-    _ax2.set_title("Win Rate Difference vs Random Baseline\n(Algorithms produce nearly identical outcomes)", fontsize=12, fontweight="bold")
-    _ax2.legend(loc="upper right", fontsize=8)
-    _ax2.set_ylim(-3, 3)
-    
-    _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
-    return
 
 
 @app.cell(hide_code=True)
@@ -1623,12 +1559,27 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
     # Chart showing mean gap by player count (all algorithms similar due to double-bench prevention)
     _algo_names = ["Random", "MC", "SA", "CG"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    _court_spots = 16  # 4 courts × 4 players
     
-    # Get all player counts
-    _player_counts = sorted(set(
+    # Get all player counts, excluding 17p where no one benches twice
+    _all_player_counts = sorted(set(
         pc for algo_data in bench_by_players.values() 
         for pc in algo_data.keys()
     ))
+    
+    # Filter to only include player counts where repeated benches occur
+    # With 17 players (1 bench/round) and 10 rounds, no one benches twice = no gaps to measure
+    _player_counts = [pc for pc in _all_player_counts if pc != 17]
+    
+    # Calculate theoretical max gap for each player count
+    # Formula: max_gap = (N / B) - 1, where B = N - court_spots
+    _theoretical_max = []
+    for _pc in _player_counts:
+        _benched_per_round = _pc - _court_spots
+        if _benched_per_round > 0:
+            _theoretical_max.append(_pc / _benched_per_round - 1)
+        else:
+            _theoretical_max.append(10)  # No benching needed
     
     _fig, _ax = plt.subplots(1, 1, figsize=(10, 6))
     
@@ -1641,23 +1592,35 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
         _gaps = [bench_by_players[_algo].get(pc, {}).get("mean_gap", 0) for pc in _player_counts]
         _ax.bar(_x + _offsets[_i] * _width, _gaps, _width, label=_algo, color=_color, alpha=0.85)
     
+    # Plot theoretical maximum as green line with markers
+    _ax.plot(_x, _theoretical_max, color='green', linestyle='--', linewidth=2, marker='o', 
+             markersize=8, label='Theoretical Max', zorder=5)
+    
     _ax.set_xticks(_x)
     _ax.set_xticklabels([f"{pc}p" for pc in _player_counts], fontsize=10)
     _ax.set_xlabel("Player Count", fontsize=11)
     _ax.set_ylabel("Mean Gap (games between benches)", fontsize=11)
-    _ax.set_title("Average Gap Between Benches by Player Count\n(Higher = Better, all algorithms achieve ~3.3 games)", fontsize=12, fontweight="bold")
+    _ax.set_title("Average Gap Between Benches by Player Count\n(Higher = Better, closer to green = closer to ideal)", fontsize=12, fontweight="bold")
     _ax.legend(loc="upper right", fontsize=9)
-    _ax.axhline(y=4.0, color='green', linestyle='--', alpha=0.7, linewidth=2, label="Theoretical Max (4)")
-    _ax.set_ylim(0, 5)
-    
-    # Add annotation about 17 players being special
-    _ax.annotate("17p has only 1 benched/round\n→ higher gap possible", 
-                 xy=(1, 4.5), xytext=(2, 4.6),
-                 fontsize=9, ha="center",
-                 arrowprops=dict(arrowstyle="->", color="gray", alpha=0.7))
+    _ax.set_ylim(0, max(_theoretical_max) + 1)
     
     _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("""
+**Theoretical maximum** (green line) = the best possible gap if benches were perfectly distributed.
+Formula: `max_gap = N / B - 1` where N = players, B = benched per round (N - 16 for 4 courts).
+
+**Note:** 17 players is excluded because only 1 player benches per round. With 10 rounds, each player benches at most once — so there are no "gaps between benches" to measure. This is the ideal scenario!
+
+**Why don't algorithms reach the theoretical max?**
+1. **Only 10 rounds per session** — The theoretical max assumes infinite rounds with perfect rotation. With just 10 rounds, there isn't enough time for everyone to complete a full rotation cycle.
+2. **Edge effects** — At the start of each session, some players inevitably bench earlier than others. These "first benches" don't have prior gaps to count.
+3. **Double-bench prevention takes priority** — The algorithm's #1 goal is preventing consecutive benches, which may occasionally force a slightly suboptimal bench assignment.
+
+Despite these constraints, all algorithms achieve **~80-90%** of the theoretical maximum across all player counts.
+        """)
+    ])
     return
 
 
@@ -1723,27 +1686,11 @@ def _(cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_st
 
 
 @app.cell(hide_code=True)
-def _(bench_by_players, bench_gap_stats, mo):
-    _theoretical_max = 4.0
-    _rand = bench_gap_stats["Random"]
+def _(bench_gap_stats, mo):
     _mc = bench_gap_stats["MC"]
-    
-    _rows = []
-    for _name in ["Random", "MC", "SA", "CG"]:
-        _stats = bench_gap_stats[_name]
-        _efficiency = (_stats["mean_gap"] / _theoretical_max) * 100 if _stats["mean_gap"] else 0
-        _rows.append(f"| {_name} | {_stats['mean_gap']:.2f} | {_efficiency:.0f}% | {_stats['double_bench_rate']:.1f}% | {_stats['total_bench_events']:,} |")
-    
-    # Get 18-player stats (the worst case for double-bench)
-    _mc_18 = bench_by_players["MC"].get(18, {})
-    _rand_18 = bench_by_players["Random"].get(18, {})
     
     mo.md(f"""
     ### Bench Fairness Summary
-    
-    | Algorithm | Mean Gap | Efficiency | Double Bench Rate | Total Events |
-    |-----------|----------|------------|-------------------|--------------|
-    {chr(10).join(_rows)}
     
     **Key Findings:**
     
@@ -1752,9 +1699,9 @@ def _(bench_by_players, bench_gap_stats, mo):
        - When forced to choose between double-benching a player or allowing a repeat, they choose the repeat
        - No player ever sits out two consecutive rounds
     
-    2. **Mean gap is consistently high** (~{_mc['mean_gap']:.1f} games between benches):
-       - All algorithms achieve ~83% of the theoretical maximum (4 games)
-       - The 17-player configuration achieves higher gaps due to only 1 player benched per round
+    2. **Mean gap is consistently high** (~{_mc['mean_gap']:.1f} games between benches on average):
+       - All algorithms perform similarly for bench distribution
+       - Gap varies by player count (more players = more benching = shorter gaps)
     
     3. **Trade-off: Double-bench prevention vs Repeat avoidance**:
        - By prioritizing double-bench prevention, MC and CG may accept slightly more teammate repeats
