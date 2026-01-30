@@ -9,6 +9,10 @@
 import { chromium } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const INPUT_DIR = path.resolve(__dirname, '../analysis/html');
 const OUTPUT_DIR = path.resolve(__dirname, '../public/analysis');
