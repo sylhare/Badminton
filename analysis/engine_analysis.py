@@ -378,14 +378,32 @@ def _(cg_config, mc_config, mo, sa_config):
 
 
 # =============================================================================
-# MAIN COMPARISON CHART
+# REPEAT ANALYSIS
 # =============================================================================
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ## Head-to-Head Comparison
+    ---
+    
+    ## Repeat Analysis
+    
+    This section analyzes how well each algorithm avoids **teammate repeats** — situations where 
+    the same two players are paired together multiple times within a session. We examine:
+    
+    1. **Overall repeat rates** — How often do repeats occur?
+    2. **Repeat distribution** — When repeats happen, how are they distributed across pairs?
+    3. **Repeat patterns & bias** — Are certain pairs more likely to repeat?
+    4. **Teammate diversity** — How uniformly are partners distributed?
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Repeat Metrics Overview
     
     Visual comparison of repeat rates and zero-repeat percentages across all algorithms.
     """)
@@ -701,7 +719,7 @@ no player ever has the same partner twice in a row."""
     
     - **Simulated Annealing**: Perfectly uniform (lightest) — zero repeat events across all {_sa_total} simulations, regardless of player count. The algorithm finds valid non-repeating assignments for 14, 17, 18, 19, and 20 player batches alike.
     - **Monte Carlo**: Fairly uniform distribution with ~{_mc_total:,} repeat events spread across many pairs
-    - **Conflict Graph**: Shows **concentrated hotspots** on specific pairs ({_cg_total:,} events). Its deterministic/greedy nature causes it to fail on the same pairs repeatedly when it does fail
+    - **Conflict Graph**: Shows **concentrated hotspots** on specific pairs ({_cg_total:,} events). Its deterministic/greedy nature causes it to fail on the same pairs repeatedly when it does fail. The next section explains why these hotspots appear on adjacent player pairs.
     - **Random Baseline**: {_bl_total:,} repeat events with a clear **gradient** — the P1-P5 region has {_bl_p1_p5:,} events vs P16-P20 region has {_bl_p16_p20:,} events ({_bl_ratio:.1f}× more). This reflects the variable player counts where P1-P14 play in all batches while P15-P20 only play in larger batches.
     
     **Impact of variable player counts (14-20 per batch):**
@@ -711,91 +729,6 @@ no player ever has the same partner twice in a row."""
     """)
     return
 
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ### Teammate Repeats Over Time
-    """)
-    return
-
-
-@app.cell
-def _(baseline_match_pairs, cg_match_pairs, fig_to_image, mc_match_pairs, mo, np, plt, sa_match_pairs):
-    def get_teammate_distribution(df):
-        """Get min, max, mean, std for teammate frequency."""
-        if df.height == 0:
-            return {"min": 0, "max": 0, "mean": 0, "std": 0, "range": 0}
-        vals = df.get_column("asTeammate").to_numpy()
-        return {
-            "min": int(vals.min()),
-            "max": int(vals.max()),
-            "mean": vals.mean(),
-            "std": vals.std(),
-            "range": int(vals.max() - vals.min()),
-            "vals": vals,
-        }
-    
-    _mc_dist = get_teammate_distribution(mc_match_pairs)
-    _sa_dist = get_teammate_distribution(sa_match_pairs)
-    _cg_dist = get_teammate_distribution(cg_match_pairs)
-    _bl_dist = get_teammate_distribution(baseline_match_pairs)
-    
-    _algorithms = ['Monte Carlo', 'Simulated\nAnnealing', 'Conflict\nGraph', 'Random\nBaseline']
-    _colors = ['#2ecc71', '#3498db', '#9b59b6', '#95a5a6']
-    
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(13, 5))
-    
-    # Left: Box plot showing distribution of teammate counts
-    _data = [_mc_dist['vals'], _sa_dist['vals'], _cg_dist['vals'], _bl_dist['vals']]
-    _bp = _ax1.boxplot(_data, tick_labels=_algorithms, patch_artist=True)
-    for patch, color in zip(_bp['boxes'], _colors):
-        patch.set_facecolor(color)
-        patch.set_alpha(0.7)
-    _ax1.set_ylabel('Teammate Count per Pair', fontsize=11)
-    _ax1.set_title('Distribution of Teammate Repeats', fontsize=12, fontweight='bold')
-    _ax1.grid(True, alpha=0.3, axis='y')
-    
-    # Add mean markers
-    _means = [_mc_dist['mean'], _sa_dist['mean'], _cg_dist['mean'], _bl_dist['mean']]
-    for i, mean in enumerate(_means, 1):
-        _ax1.scatter(i, mean, color='red', s=50, zorder=5, marker='D', label='Mean' if i == 1 else '')
-    _ax1.legend(loc='upper right')
-    
-    # Right: Range comparison (max - min)
-    _ranges = [_mc_dist['range'], _sa_dist['range'], _cg_dist['range'], _bl_dist['range']]
-    _bars = _ax2.bar(_algorithms, _ranges, color=_colors, edgecolor='black', linewidth=0.5)
-    _ax2.set_ylabel('Range (Max - Min Teammate Count)', fontsize=11)
-    _ax2.set_title('Repeat Balance', fontsize=12, fontweight='bold')
-    _ax2.set_ylim(0, max(_ranges) * 1.2)
-    for _bar, _range in zip(_bars, _ranges):
-        _ax2.annotate(f'{_range}', xy=(_bar.get_x() + _bar.get_width()/2, _bar.get_height()),
-                      ha='center', va='bottom', fontsize=10, fontweight='bold')
-    
-    # Add horizontal line at optimized algorithms' average
-    _opt_avg = np.mean(_ranges[:3])  # MC, SA, CG average
-    _ax2.axhline(y=_opt_avg, color='green', linestyle='--', alpha=0.7, label=f'Optimized avg: {_opt_avg:.0f}')
-    _ax2.axhline(y=_ranges[3], color='gray', linestyle=':', alpha=0.7, label=f'Baseline: {_ranges[3]}')
-    _ax2.legend(loc='upper left')
-    
-    _fig.suptitle('Teammate Repeats Across All Sessions', fontsize=13, fontweight='bold', y=1.02)
-    plt.tight_layout()
-    
-    mo.image(fig_to_image(_fig))
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    **How to read this chart:**
-    
-    - **Left (Distribution):** All algorithms have players being teammates multiple times across sessions — that's expected. 
-      A narrower box means more balanced distribution (all pairs repeat roughly equally).
-    - **Right (Balance):** Lower range = more uniform repeats. Optimized algorithms (MC, SA, CG) distribute 
-      repeats evenly across all pairs, while the baseline shows larger spread (some pairs repeat much more than others).
-    """)
-    return
 
 # =============================================================================
 # ADJACENT PLAYER BIAS ANALYSIS
@@ -947,6 +880,95 @@ def _(adjacency_bias_data, mo):
     """)
     return
 
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Teammate Distribution Analysis
+    
+    How uniformly are teammates distributed across all pairs? This analysis shows whether 
+    some pairs play together much more often than others.
+    """)
+    return
+
+
+@app.cell
+def _(baseline_match_pairs, cg_match_pairs, fig_to_image, mc_match_pairs, mo, np, plt, sa_match_pairs):
+    def get_teammate_distribution(df):
+        """Get min, max, mean, std for teammate frequency."""
+        if df.height == 0:
+            return {"min": 0, "max": 0, "mean": 0, "std": 0, "range": 0}
+        vals = df.get_column("asTeammate").to_numpy()
+        return {
+            "min": int(vals.min()),
+            "max": int(vals.max()),
+            "mean": vals.mean(),
+            "std": vals.std(),
+            "range": int(vals.max() - vals.min()),
+            "vals": vals,
+        }
+    
+    _mc_dist = get_teammate_distribution(mc_match_pairs)
+    _sa_dist = get_teammate_distribution(sa_match_pairs)
+    _cg_dist = get_teammate_distribution(cg_match_pairs)
+    _bl_dist = get_teammate_distribution(baseline_match_pairs)
+    
+    _algorithms = ['Monte Carlo', 'Simulated\nAnnealing', 'Conflict\nGraph', 'Random\nBaseline']
+    _colors = ['#2ecc71', '#3498db', '#9b59b6', '#95a5a6']
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    
+    # Left: Box plot showing distribution of teammate counts
+    _data = [_mc_dist['vals'], _sa_dist['vals'], _cg_dist['vals'], _bl_dist['vals']]
+    _bp = _ax1.boxplot(_data, tick_labels=_algorithms, patch_artist=True)
+    for patch, color in zip(_bp['boxes'], _colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+    _ax1.set_ylabel('Teammate Count per Pair', fontsize=11)
+    _ax1.set_title('Distribution of Teammate Repeats', fontsize=12, fontweight='bold')
+    _ax1.grid(True, alpha=0.3, axis='y')
+    
+    # Add mean markers
+    _means = [_mc_dist['mean'], _sa_dist['mean'], _cg_dist['mean'], _bl_dist['mean']]
+    for i, mean in enumerate(_means, 1):
+        _ax1.scatter(i, mean, color='red', s=50, zorder=5, marker='D', label='Mean' if i == 1 else '')
+    _ax1.legend(loc='upper right')
+    
+    # Right: Range comparison (max - min)
+    _ranges = [_mc_dist['range'], _sa_dist['range'], _cg_dist['range'], _bl_dist['range']]
+    _bars = _ax2.bar(_algorithms, _ranges, color=_colors, edgecolor='black', linewidth=0.5)
+    _ax2.set_ylabel('Range (Max - Min Teammate Count)', fontsize=11)
+    _ax2.set_title('Repeat Balance', fontsize=12, fontweight='bold')
+    _ax2.set_ylim(0, max(_ranges) * 1.2)
+    for _bar, _range in zip(_bars, _ranges):
+        _ax2.annotate(f'{_range}', xy=(_bar.get_x() + _bar.get_width()/2, _bar.get_height()),
+                      ha='center', va='bottom', fontsize=10, fontweight='bold')
+    
+    # Add horizontal line at optimized algorithms' average
+    _opt_avg = np.mean(_ranges[:3])  # MC, SA, CG average
+    _ax2.axhline(y=_opt_avg, color='green', linestyle='--', alpha=0.7, label=f'Optimized avg: {_opt_avg:.0f}')
+    _ax2.axhline(y=_ranges[3], color='gray', linestyle=':', alpha=0.7, label=f'Baseline: {_ranges[3]}')
+    _ax2.legend(loc='upper left')
+    
+    _fig.suptitle('Teammate Repeats Across All Sessions', fontsize=13, fontweight='bold', y=1.02)
+    plt.tight_layout()
+    
+    mo.image(fig_to_image(_fig))
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    **How to read this chart:**
+    
+    - **Left (Distribution):** All algorithms have players being teammates multiple times across sessions — that's expected. 
+      A narrower box means more balanced distribution (all pairs repeat roughly equally).
+    - **Right (Balance):** Lower range = more uniform repeats. Optimized algorithms (MC, SA, CG) distribute 
+      repeats evenly across all pairs, while the baseline shows larger spread (some pairs repeat much more than others).
+    """)
+    return
+
 # =============================================================================
 # TEAMMATE DIVERSITY BY PLAYER COUNT
 # =============================================================================
@@ -1076,7 +1098,7 @@ def _(baseline_match_pairs, cg_match_pairs, mc_match_pairs, mo, np, sa_match_pai
 
 
 # =============================================================================
-# TEAM BALANCE ANALYSIS
+# FAIRNESS & BALANCE ANALYSIS
 # =============================================================================
 
 
@@ -1085,14 +1107,28 @@ def _(mo):
     mo.md("""
     ---
     
-    ## Team Balance Analysis
+    ## Fairness & Balance
     
-    Beyond avoiding teammate repetitions, a good court assignment algorithm should create **balanced matches**.
-    This section analyzes real simulation data from each engine, measuring:
+    Beyond avoiding teammate repetitions, a good court assignment algorithm should ensure **fair play**:
     
-    1. **Skill Differential**: The difference in total skill (levels 1-5) between opposing teams
-    2. **Win Distribution**: How evenly wins are distributed across players based on skill levels
-    3. **Stronger Team Win Rate**: How often the higher-skilled team wins (with probabilistic outcomes)
+    1. **Team Balance** — Are opposing teams evenly matched in skill?
+    2. **Bench Fairness** — Does everyone get equal playing time?
+    
+    This section analyzes both dimensions across all algorithms.
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Team Balance Analysis
+    
+    How well do algorithms create **balanced matches**? We measure:
+    
+    - **Skill Differential**: The difference in total skill (levels 1-5) between opposing teams
+    - **Win Distribution**: How evenly wins are distributed across players based on skill levels
+    - **Stronger Team Win Rate**: How often the higher-skilled team wins (with probabilistic outcomes)
     
     Players are assigned skill levels 1-5, and match outcomes are determined probabilistically 
     (stronger teams win more often, but upsets can happen ~8-43% of the time depending on skill gap).
@@ -1504,9 +1540,7 @@ def _(balance_results, mo, np):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ---
-    
-    ## Bench Fairness Analysis
+    ### Bench Fairness Analysis
     
     When there are more players than court spots, some must sit out ("bench") each round.
     **Bench fairness** measures how many games a player gets to play between bench periods.
