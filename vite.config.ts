@@ -12,4 +12,6 @@ export default defineConfig(({ command }) => ({
       ignored: ['**/analysis/**'],
     },
   },
+  // Handle SPA routing - serve index.html for /analysis route
+  appType: 'spa',
 }));

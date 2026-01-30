@@ -95,3 +95,4 @@ eng.traineddata
 **/.tmp
 **/__pycache__
 **/**.egg-info
+analysis/html/**
