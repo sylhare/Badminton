@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import './NotebookPage.css';
 
-function AnalysisPage(): React.ReactElement {
+function AlgorithmPage(): React.ReactElement {
   const [isLoading, setIsLoading] = useState(true);
   const [isAvailable, setIsAvailable] = useState(false);
 
   const basePath = import.meta.env.BASE_URL || '/';
-  const notebookUrl = `${basePath}analysis/engine_analysis.html`;
+  const notebookUrl = `${basePath}analysis/algorithm_docs.html`;
 
   useEffect(() => {
     const checkAvailability = async () => {
@@ -33,7 +33,7 @@ function AnalysisPage(): React.ReactElement {
         <a href={`${basePath}stats`} className="back-link" data-testid="back-to-stats">
           ← Back to Stats
         </a>
-        <h1>⚙️ Engine Comparison</h1>
+        <h1>📐 Algorithm Documentation</h1>
       </header>
 
       {isLoading && (
@@ -47,7 +47,7 @@ function AnalysisPage(): React.ReactElement {
         <div className="notebook-unavailable" data-testid="notebook-unavailable">
           <div className="unavailable-icon">📓</div>
           <h2>Notebook Not Generated</h2>
-          <p>The engine analysis notebook hasn't been generated yet.</p>
+          <p>The algorithm documentation notebook hasn't been generated yet.</p>
           <div className="instructions">
             <p>To generate it, run the following commands:</p>
             <ol>
@@ -74,7 +74,7 @@ function AnalysisPage(): React.ReactElement {
         <iframe
           src={notebookUrl}
           className="notebook-iframe"
-          title="Engine Comparison Analysis"
+          title="Algorithm Documentation"
           onLoad={handleIframeLoad}
           data-testid="notebook-iframe"
         />
@@ -83,4 +83,4 @@ function AnalysisPage(): React.ReactElement {
   );
 }
 
-export default AnalysisPage;
+export default AlgorithmPage;
