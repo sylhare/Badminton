@@ -22,16 +22,14 @@ def _():
 
 @app.cell
 def _(Path, json, pl):
-    data_dir = Path(__file__).parent / "data" / "initial_analysis"
-    
-    # Load OLD algorithm data (original)
-    old_algo_dir = data_dir / "old_algo"
+    # Load OLD algorithm data (original Monte Carlo)
+    old_algo_dir = Path(__file__).parent / "data" / "old_mc_algo"
     summary = pl.read_csv(old_algo_dir / "summary.csv")
     pair_events = pl.read_csv(old_algo_dir / "pair_events.csv")
     config = json.loads((old_algo_dir / "config.json").read_text())
     
-    # Load NEW algorithm data (updated shuffle)
-    new_algo_dir = data_dir / "new_algo"
+    # Load NEW algorithm data (Monte Carlo algorithm)
+    new_algo_dir = Path(__file__).parent / "data" / "mc_algo"
     new_algo_summary = pl.read_csv(new_algo_dir / "summary.csv")
     new_algo_pair_events = pl.read_csv(new_algo_dir / "pair_events.csv")
     new_algo_config = json.loads((new_algo_dir / "config.json").read_text())
