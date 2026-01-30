@@ -1874,7 +1874,13 @@ This means that if players A and B were teammates in any round, they must not be
 
 With **{_n} players**, the total number of possible unique teammate pairs is given by the binomial coefficient:
 
-$$\\binom{{{_n}}}{{2}} = \\frac{{{_n}!}}{{2!({_n}-2)!}} = \\frac{{{_n} \\times {_n - 1}}}{{2}} = {_total_possible_pairs} \\text{{ possible pairs}}$$
+$$
+\\begin{{aligned}}
+\\binom{{{_n}}}{{2}} &= \\frac{{{_n}!}}{{2!({_n}-2)!}} \\\\
+&= \\frac{{{_n} \\times {_n - 1}}}{{2}} \\\\
+&= {_total_possible_pairs} \\text{{ possible pairs}}
+\\end{{aligned}}
+$$
 
 Each round uses **{_c} courts** with 4 players each, forming **{_pairs_per_round} teammate pairs** per round (2 pairs per court).
 
@@ -1976,7 +1982,7 @@ where controlled cooling allows atoms to settle into a low-energy crystalline st
 4. **Accept** the new solution based on the Metropolis criterion:
    - If $\\Delta C < 0$ (improvement): always accept
    - If $\\Delta C \\geq 0$ (worsening): accept with probability $P = e^{{-\\Delta C / T}}$
-5. **Cool** the temperature: $T_{{\\text{{new}}}} = \\alpha \\cdot T_{{\\text{{old}}}}$ where $\\alpha = 0.9995$
+5. **Cool** the temperature: $T_{{\\text{{new}}}} = \\alpha \\cdot T_{{\\text{{old}}}}$ where $\\alpha = 0.995$
 6. **Repeat** for 1500 iterations (with early termination on perfect solution)
 
 #### The Temperature Schedule
@@ -1990,7 +1996,7 @@ The cooling schedule follows:
 
 $$T(t) = T_0 \\cdot \\alpha^t$$
 
-where $T_0 = 100$ (initial temperature) and $\\alpha = 0.9995$ (cooling rate).
+where $T_0 = 100$ (initial temperature) and $\\alpha = 0.995$ (cooling rate).
 
 #### The Cost Function
 
