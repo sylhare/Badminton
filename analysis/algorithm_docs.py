@@ -227,7 +227,7 @@ def _(mo):
     - $\mathcal{C}_{\text{skill-pair}}(c)$ = penalty for similar-skill players on same team
     - $\mathcal{C}_{\text{balance}}(c)$ = penalty for unbalanced teams
 
-    **Note**: All components are additive with equal weight (1.0). Lower cost = better assignment.
+    **Note**: All components are additive. Monte Carlo uses equal weights (1.0). Simulated Annealing uses a hard constraint for teammate repeats (weight = 10000) and different weights for other components. Conflict Graph uses opponent weight = 10 and balance weight = 2. Lower cost = better assignment.
 
     **Important**: The algorithms maintain **separate** tracking maps for teammate and opponent history. A pair like (Alice, Bob) can have different counts in each map (e.g., teammates 5 times, opponents 3 times).
     """)
@@ -448,7 +448,7 @@ def _(mo):
     |-----------|----------|-------------|---------------------|
     | **Monte Carlo** | Random sampling + greedy selection | Global (stochastic) | Probabilistic |
     | **Simulated Annealing** | Iterative improvement + controlled randomness | Local → Global | Asymptotic |
-    | **Conflict Graph** | Greedy construction with conflict avoidance | Local (deterministic) | None |
+    | **Conflict Graph** | Randomized search + greedy fallback | Randomized greedy | None |
 
     ### 3.2 When to Use Each Algorithm
 
@@ -476,7 +476,7 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
         ('Monte Carlo\nGreedy Search', '#4C78A8', 1.5, 
          '• Random sampling\n• K=300 iterations\n• Best-of-K selection'),
         ('Simulated\nAnnealing', '#54A24B', 5.5,
-         '• Iterative improvement\n• Temperature schedule\n• Escape local minima'),
+         '• Iterative improvement\n• 1500 iterations\n• Escape local minima'),
         ('Conflict Graph\nEngine', '#F58518', 9.5,
          '• Greedy construction\n• Explicit conflict tracking\n• Single-pass algorithm'),
     ]
@@ -707,7 +707,10 @@ def _(mo):
     **Why only 3?** The number of ways to partition 4 items into 2 unordered groups of 2:
 
     $$
-    \frac{\binom{4}{2}}{2!} = \frac{6}{2} = 3
+    \begin{aligned}
+    \frac{\binom{4}{2}}{2!} &= \frac{6}{2} \\
+    &= 3
+    \end{aligned}
     $$
 
     ### 4.4 Convergence Theorem
@@ -944,7 +947,7 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
     _arrow2 = FancyArrowPatch((10.1, 3.4), (11.4, 3.4), arrowstyle='->', mutation_scale=15,
                               color='#555', linewidth=2)
     _ax_anneal.add_patch(_arrow2)
-    _ax_anneal.text(10.75, 3.8, '5000\niters', ha='center', fontsize=8, color='#555')
+    _ax_anneal.text(10.75, 3.8, '1500\niters', ha='center', fontsize=8, color='#555')
     
     # Low T box
     _low_t_box = FancyBboxPatch((11.5, 2.5), 2.2, 1.8, boxstyle="round,pad=0.1",
@@ -993,29 +996,29 @@ def _(fig_to_image, mo, np, plt):
     _ax_m1.set_ylim(0, 1.05)
 
     # Right: Temperature schedule over iterations
-    _iterations = np.arange(0, 5001)
+    _iterations = np.arange(0, 1501)
     _T0 = 100
-    _alpha = 0.9995
+    _alpha = 0.995
     _temp_schedule = _T0 * (_alpha ** _iterations)
 
     _ax_m2.plot(_iterations, _temp_schedule, color='#E74C3C', linewidth=2)
     _ax_m2.fill_between(_iterations, 0, _temp_schedule, alpha=0.2, color='#E74C3C')
 
     # Annotate phases
-    _ax_m2.axvspan(0, 500, alpha=0.1, color='red', label='Exploration')
-    _ax_m2.axvspan(3500, 5000, alpha=0.1, color='blue', label='Exploitation')
+    _ax_m2.axvspan(0, 200, alpha=0.1, color='red', label='Exploration')
+    _ax_m2.axvspan(1200, 1500, alpha=0.1, color='blue', label='Exploitation')
 
     _ax_m2.set_xlabel('Iteration', fontsize=11)
     _ax_m2.set_ylabel('Temperature', fontsize=11)
-    _ax_m2.set_title('Exponential Cooling: T(t) = T₀ · αᵗ', fontsize=11)
-    _ax_m2.set_xlim(0, 5000)
+    _ax_m2.set_title('Exponential Cooling: T(t) = T₀ · αᵗ (α=0.995)', fontsize=11)
+    _ax_m2.set_xlim(0, 1500)
     _ax_m2.grid(True, alpha=0.3)
     _ax_m2.legend(loc='upper right', fontsize=9)
 
     # Add annotations
-    _ax_m2.annotate('High T: Explore', xy=(250, 90), fontsize=10, color='#C0392B',
+    _ax_m2.annotate('High T: Explore', xy=(100, 90), fontsize=10, color='#C0392B',
                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-    _ax_m2.annotate('Low T: Exploit', xy=(4000, 10), fontsize=10, color='#2980B9',
+    _ax_m2.annotate('Low T: Exploit', xy=(1200, 5), fontsize=10, color='#2980B9',
                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
     _fig_metro.tight_layout()
@@ -1030,7 +1033,7 @@ def _(mo):
 
     ```
     Algorithm: SimulatedAnnealingAssignment
-    Input: Players P, Courts C, InitialTemp T₀=100, CoolingRate α=0.9995, MaxIter=5000
+    Input: Players P, Courts C, InitialTemp T₀=100, CoolingRate α=0.995, MaxIter=1500
     Output: Assignment A* with minimum cost
 
     1. Generate initial random assignment A
@@ -1054,7 +1057,7 @@ def _(mo):
     - $P$ = set of all players
     - $C$ = number of courts
     - $T_0$ = initial temperature (controls initial exploration, default 100)
-    - $\alpha$ = cooling rate (how fast temperature decreases, default 0.9995)
+    - $\alpha$ = cooling rate (how fast temperature decreases, default 0.995)
     - $A$ = current court assignment
     - $A'$ = proposed new assignment (neighbor)
     - $\Delta E$ = change in cost when switching from $A$ to $A'$
@@ -1219,9 +1222,9 @@ def _(mo):
 
     Our implementation uses:
     - **Initial temperature**: $T_0 = 100$ (allows ~63% acceptance of moves with $\Delta E = 100$)
-    - **Cooling rate**: $\alpha = 0.9995$
-    - **Final temperature**: $T_{5000} = 100 \cdot 0.9995^{5000} \approx 8.2$
-    - **Iterations**: 5000
+    - **Cooling rate**: $\alpha = 0.995$
+    - **Final temperature**: $T_{1500} = 100 \cdot 0.995^{1500} \approx 0.055$
+    - **Iterations**: 1500 (with early termination on perfect solution)
 
     The exponential schedule:
 
@@ -1232,13 +1235,13 @@ def _(mo):
     **Variable definitions**:
     - $T(t)$ = temperature at iteration $t$
     - $T_0$ = initial temperature (100 in our implementation)
-    - $\alpha$ = cooling rate (0.9995 in our implementation)
-    - $t$ = current iteration number (0 to 5000)
+    - $\alpha$ = cooling rate (0.995 in our implementation)
+    - $t$ = current iteration number (0 to 1500)
 
     **What this formula calculates**: The temperature value at any given iteration. For example:
-    - At $t=0$: $T = 100 \cdot 0.9995^0 = 100$ (hot, exploratory)
-    - At $t=2500$: $T = 100 \cdot 0.9995^{2500} ≈ 28.6$ (medium)
-    - At $t=5000$: $T = 100 \cdot 0.9995^{5000} ≈ 8.2$ (cold, selective)
+    - At $t=0$: $T = 100 \cdot 0.995^0 = 100$ (hot, exploratory)
+    - At $t=750$: $T = 100 \cdot 0.995^{750} ≈ 2.3$ (medium)
+    - At $t=1500$: $T = 100 \cdot 0.995^{1500} ≈ 0.055$ (cold, selective)
 
     This provides a smooth transition from exploration to exploitation.
     """)
@@ -1425,57 +1428,53 @@ def _(mo):
     mo.md(r"""
     ### 6.3 Algorithm Description
 
+    The actual implementation uses a **randomized search + greedy approach**:
+
     ```
     Algorithm: ConflictGraphAssignment
     Input: Players P, Courts C, History H
     Output: Assignment A*
 
-    1. Build conflict graph G from player pairs
-    2. Compute conflict scores for each pair:
-       score(i,j) = w₁·H_teammate(i,j) + w₂·H_opponent(i,j) + w₃·|skill_i - skill_j|
+    1. Build conflict graph G where edges = "already been teammates"
+    2. For each court:
+       a. Try to find 4 conflict-free players using randomized search (100 attempts)
+       b. Shuffle players randomly, then greedily select players with no conflicts
+       c. Also try greedy approach: sort by fewest conflicts, then select
+       d. If no conflict-free group exists, find minimum-conflict group
 
-    3. Sort pairs by conflict score (ascending)
-    4. selected ← ∅
+    3. For each court, evaluate all 3 team splits and choose best
+       - Minimize opponent repetition (weight = 10)
+       - Balance skill levels (weight = 2)
 
-    5. For each pair (i,j) in sorted order:
-       a. If (i,j) doesn't conflict with any pair in selected:
-          - Add (i,j) to selected
-       b. If |selected| = 2C: break  (enough pairs for all courts)
-
-    6. Group selected pairs into courts (2 pairs per court)
-    7. For each court, evaluate team split and choose best
-
-    8. Return assignment
+    4. Return assignment
     ```
 
-    ### 6.4 Conflict Score Function
+    **Key insight**: The algorithm tries multiple random orderings to find conflict-free groups (players who have never been teammates). If no such group exists, it falls back to minimizing total conflicts.
 
-    The conflict score determines selection priority:
+    ### 6.4 Conflict Detection
+
+    A **conflict** exists between two players if they have been teammates before:
 
     $$
-    \text{score}(p_i, p_j) = w_1 \cdot H_{\text{teammate}}(i,j) + w_2 \cdot H_{\text{opponent}}(i,j) + w_3 \cdot \Delta_{\text{skill}}(i,j)
+    \text{hasConflict}(p_i, p_j) = \begin{cases}
+    \text{true} & \text{if } H_{\text{teammate}}(i,j) > 0 \\
+    \text{false} & \text{otherwise}
+    \end{cases}
     $$
 
     **Variable definitions**:
-    - $\text{score}(p_i, p_j)$ = how "bad" it is to pair players $i$ and $j$ as teammates
-    - $w_1$ = weight for teammate history (e.g., 1.0)
-    - $w_2$ = weight for opponent history (e.g., 0.5)
-    - $w_3$ = weight for skill difference (e.g., 0.2)
+    - $\text{hasConflict}(p_i, p_j)$ = whether players $i$ and $j$ are connected in the conflict graph
     - $H_{\text{teammate}}(i,j)$ = times players $i$ and $j$ were teammates before
-    - $H_{\text{opponent}}(i,j)$ = times players $i$ and $j$ were opponents before
-    - $\Delta_{\text{skill}}(i,j)$ = $|W_i - W_j| + |L_i - L_j|$ = skill difference between players
 
-    **What this formula calculates**: A priority score for each possible player pair. Lower score = better pair = selected first.
+    **What this formula calculates**: A binary check for whether two players should be avoided as teammates.
 
-    **Example**: Alice and Bob have been teammates 3 times, opponents 2 times, and have similar skills ($\Delta = 1$):
-    $$\text{score} = 1.0 \times 3 + 0.5 \times 2 + 0.2 \times 1 = 3 + 1 + 0.2 = 4.2$$
+    For team splits, the algorithm uses a cost function:
 
-    Carol and Dave have never played together and have different skills ($\Delta = 5$):
-    $$\text{score} = 1.0 \times 0 + 0.5 \times 0 + 0.2 \times 5 = 0 + 0 + 1 = 1.0$$
+    $$
+    \text{splitCost} = 10 \cdot \sum_{p_i \in T_1, p_j \in T_2} H_{\text{opponent}}(i,j) + 2 \cdot |W_{T_1} - W_{T_2}| + 2 \cdot |L_{T_1} - L_{T_2}|
+    $$
 
-    → Carol-Dave pair (score 1.0) gets selected before Alice-Bob (score 4.2).
-
-    **Selection criterion**: Lower score → higher priority → selected first.
+    **Selection criterion**: Find 4 players with zero conflicts (independent set), then choose the team split with lowest cost.
     """)
     return
 
@@ -1503,30 +1502,30 @@ def _(mo):
 
     **Empirical finding**: CG achieves comparable results to Monte Carlo on teammate diversity metrics, with faster execution time for small groups (< 20 players).
 
-    ### 6.7 Determinism and Reproducibility
+    ### 6.7 Randomization in CG
 
-    Unlike MC and SA, the Conflict Graph algorithm is **deterministic**:
-    - Same input → same output (given fixed tie-breaking rules)
-    - Easier to debug and verify
-    - No variance in solution quality across runs
+    Despite being called "greedy", the CG algorithm uses **randomized search**:
+    - Shuffles players randomly before greedy selection (100 attempts)
+    - Falls back to sorted-by-conflicts greedy if random search fails
+    - Results may vary slightly between runs
 
-    **Trade-off**: Determinism means CG cannot escape suboptimal configurations through randomness. If the greedy choice is wrong, it cannot recover.
+    **Trade-off**: The randomization helps find conflict-free groups when they exist, but adds some variance to results. The algorithm is more robust than pure greedy but less exploratory than SA.
     """)
     return
 
 
 @app.cell
 def _(fig_to_image, mo, np, plt):
-    # Visual diagram: CG Determinism Effect
+    # Visual diagram: CG Randomization Effect
     _fig_det, (_ax_d1, _ax_d2) = plt.subplots(1, 2, figsize=(12, 5))
-    _fig_det.suptitle('Determinism: Strength and Weakness of Conflict Graph', fontsize=14, fontweight='bold')
+    _fig_det.suptitle('Algorithm Variance: All Three Use Randomization', fontsize=14, fontweight='bold')
 
     # Left: Multiple runs comparison
     np.random.seed(42)
     _runs = 10
     _mc_costs = np.random.normal(45, 8, _runs)
     _sa_costs = np.random.normal(38, 5, _runs)
-    _cg_costs = np.array([42] * _runs)  # Deterministic
+    _cg_costs = np.random.normal(42, 3, _runs)  # CG also has variance (randomized search)
 
     _x = np.arange(_runs)
     _width = 0.25
@@ -1535,10 +1534,9 @@ def _(fig_to_image, mo, np, plt):
     _ax_d1.bar(_x, _sa_costs, _width, label='Simulated Annealing', color='#54A24B', alpha=0.8)
     _ax_d1.bar(_x + _width, _cg_costs, _width, label='Conflict Graph', color='#F58518', alpha=0.8)
 
-    _ax_d1.axhline(y=42, color='#F58518', linestyle='--', alpha=0.5)
     _ax_d1.set_xlabel('Run Number', fontsize=11)
     _ax_d1.set_ylabel('Solution Cost', fontsize=11)
-    _ax_d1.set_title('Cost Across Multiple Runs\n(CG = constant, others vary)', fontsize=11)
+    _ax_d1.set_title('Cost Across Multiple Runs\n(All algorithms have some variance)', fontsize=11)
     _ax_d1.legend(loc='upper right', fontsize=9)
     _ax_d1.set_xticks(_x)
     _ax_d1.set_xticklabels([f'#{i+1}' for i in range(_runs)])
@@ -1616,9 +1614,9 @@ def _(mo):
     | Generate neighbor | $O(1)$ | Single player swap |
     | Evaluate cost change | $O(1)$ | Incremental update [[9]](#ref-9) |
     | Single iteration | $O(1)$ | Constant work per iteration |
-    | Full algorithm | $O(I)$ | I=5000 iterations |
+    | Full algorithm | $O(I)$ | I=1500 iterations (with early termination) |
 
-    **Total**: $O(5000) = O(1)$ - constant time regardless of player count!
+    **Total**: $O(1500) = O(1)$ - constant time regardless of player count!
 
     #### Conflict Graph Engine
 
@@ -1639,12 +1637,12 @@ def _(mo):
 
     | Property | Monte Carlo | Simulated Annealing | Conflict Graph |
     |----------|-------------|---------------------|----------------|
-    | **Search type** | Global (random sampling) | Local → Global (iterative) | Local (greedy) |
+    | **Search type** | Global (random sampling) | Local → Global (iterative) | Randomized greedy |
     | **Optimality** | Probabilistic | Asymptotic [[4]](#ref-4) | None |
-    | **Deterministic** | No | No | Yes |
+    | **Deterministic** | No | No | No (uses random shuffle) |
     | **Time complexity** | $O(Kn)$ | $O(I)$ | $O(n^2 \log n)$ |
     | **Space complexity** | $O(n^2)$ | $O(n^2)$ | $O(n^2)$ |
-    | **Tuning required** | K iterations | T₀, α, iterations | Weights only |
+    | **Tuning required** | K iterations | T₀, α, iterations | None |
 
     **Monte Carlo** is best when:
     - Simple implementation is valued
@@ -1657,9 +1655,9 @@ def _(mo):
     - Large player pools (> 30 players)
 
     **Conflict Graph** is best when:
-    - Deterministic behavior is required
+    - Hard constraint on teammate repeats is required
     - Fastest execution is needed (< 5ms)
-    - Debugging/verification is important
+    - Priority is avoiding any teammate repetition when possible
 
     ### 7.4 Empirical Results Summary
 
@@ -1827,7 +1825,7 @@ def _(mo):
 
     - **For production use**: Consider **Simulated Annealing** for best solution quality
     - **For simplicity**: **Monte Carlo** offers good results with minimal tuning
-    - **For debugging**: **Conflict Graph** provides deterministic, reproducible behavior
+    - **For hard constraints**: **Conflict Graph** guarantees no teammate repeats when possible
 
     ### 9.3 Future Work
 
