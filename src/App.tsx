@@ -272,6 +272,15 @@ function App(): React.ReactElement {
 
       <footer className="app-footer">
         <p>
+          <a
+            href={`${import.meta.env.BASE_URL || '/'}stats`}
+            className="analysis-link"
+            data-testid="stats-link"
+          >
+            📊 View Statistics & Analysis
+          </a>
+        </p>
+        <p>
           Have feedback? Found a bug or want to suggest a feature?
           {' '}
           <a

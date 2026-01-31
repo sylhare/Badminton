@@ -17,6 +17,9 @@ const __dirname = path.dirname(__filename);
 const INPUT_DIR = path.resolve(__dirname, '../analysis/html');
 const OUTPUT_DIR = path.resolve(__dirname, '../public/analysis');
 
+// Only these notebooks are included in the app
+const NOTEBOOKS_TO_PRERENDER = ['algorithm_docs.html', 'engine_analysis.html'];
+
 async function prerenderNotebook(inputPath: string, outputPath: string): Promise<void> {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
@@ -48,12 +51,22 @@ async function main(): Promise<void> {
 
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  const htmlFiles = fs.readdirSync(INPUT_DIR).filter((f) => f.endsWith('.html'));
+  // Check which notebooks exist and need to be prerendered
+  const existingFiles = fs.readdirSync(INPUT_DIR).filter((f) => f.endsWith('.html'));
+  const htmlFiles = NOTEBOOKS_TO_PRERENDER.filter((f) => existingFiles.includes(f));
+  const missingFiles = NOTEBOOKS_TO_PRERENDER.filter((f) => !existingFiles.includes(f));
 
   if (htmlFiles.length === 0) {
     console.error('No HTML files found in analysis/html/');
-    console.error('Run "uv run export-html" in the analysis/ directory first.');
+    console.error('Run the following in the analysis/ directory first:');
+    console.error('  uv run marimo export html --no-include-code algorithm_docs.py -o html/algorithm_docs.html');
+    console.error('  uv run marimo export html --no-include-code engine_analysis.py -o html/engine_analysis.html');
     process.exit(1);
+  }
+
+  if (missingFiles.length > 0) {
+    console.warn(`Warning: Missing notebooks: ${missingFiles.join(', ')}`);
+    console.warn('These will be skipped.\n');
   }
 
   console.log(`Found ${htmlFiles.length} notebook(s) to pre-render:\n`);

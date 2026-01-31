@@ -1746,3 +1746,18 @@ h1 {
     opacity: 0.8;
 }
 
+.app-footer .analysis-link {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.app-footer .analysis-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+    opacity: 1;
+    transform: translateY(-2px);
+}
