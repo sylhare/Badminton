@@ -343,11 +343,9 @@ describe('PlayerList Component', () => {
       const resetButton = screen.getByTestId('reset-algorithm-button');
       await user.click(resetButton);
 
-      // Check that the confirmation modal appears
       expect(screen.getByRole('heading', { name: 'Reset Algorithm' })).toBeInTheDocument();
       expect(screen.getByText(/reset the algorithm's memory/)).toBeInTheDocument();
 
-      // Click confirm
       const confirmButton = screen.getByTestId('confirm-modal-confirm');
       await user.click(confirmButton);
 
@@ -370,7 +368,6 @@ describe('PlayerList Component', () => {
       const resetButton = screen.getByTestId('reset-algorithm-button');
       await user.click(resetButton);
 
-      // Click cancel
       const cancelButton = screen.getByRole('button', { name: 'Cancel' });
       await user.click(cancelButton);
 
