@@ -5,6 +5,7 @@ if (typeof HTMLCanvasElement !== 'undefined') {
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     value: vi.fn(() => ({
       clearRect: vi.fn(),
+      fillRect: vi.fn(),
       fillStyle: '',
       globalAlpha: 1,
       save: vi.fn(),

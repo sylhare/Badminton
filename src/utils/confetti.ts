@@ -1,179 +1,214 @@
-interface ConfettiParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  gravity: number;
-  life: number;
-  maxLife: number;
-  color: string;
-  width: number;
-  height: number;
-  rotation: number;
-  rotationSpeed: number;
-  oscillation: number;
-  oscillationSpeed: number;
-  curliness: number;
+const MAX_PARTICLES = 80;
+const GRAVITY = 0.18;
+const DRAG = 0.995;
+
+const COLORS = [
+  '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+  '#FECA57', '#FF9FF3', '#54A0FF', '#F8B500', '#A8E6CF',
+];
+
+class Particle {
+  x = 0;
+  y = 0;
+  vx = 0;
+  vy = 0;
+  life = 0;
+  maxLife = 0;
+  color = '';
+  size = 0;
+  active = false;
+
+  init(x: number, y: number): void {
+    const angle = -Math.PI + Math.random() * Math.PI;
+    const speed = 5 + Math.random() * 7;
+    const spread = 8;
+
+    this.x = x + (Math.random() - 0.5) * spread;
+    this.y = y + (Math.random() - 0.5) * spread;
+    this.vx = Math.cos(angle) * speed * (0.6 + Math.random() * 0.4);
+    this.vy = Math.sin(angle) * speed - 2;
+    this.life = 0;
+    this.maxLife = 45 + Math.random() * 35;
+    this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    this.size = 5 + Math.random() * 5;
+    this.active = true;
+  }
+
+  update(): boolean {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += GRAVITY;
+    this.vx *= DRAG;
+    this.life++;
+
+    if (this.life >= this.maxLife) {
+      this.active = false;
+      return false;
+    }
+    return true;
+  }
+
+  getAlpha(): number {
+    return 1 - this.life / this.maxLife;
+  }
 }
 
 class ConfettiEffect {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private particles: ConfettiParticle[] = [];
+  private pool: Particle[];
+  private activeCount = 0;
   private animationId: number | null = null;
+  private isAttached = false;
+  private resizeHandler: () => void;
+  private width = 0;
+  private height = 0;
 
   constructor() {
     this.canvas = document.createElement('canvas');
-    this.canvas.style.position = 'fixed';
-    this.canvas.style.top = '0';
-    this.canvas.style.left = '0';
-    this.canvas.style.width = '100%';
-    this.canvas.style.height = '100%';
-    this.canvas.style.pointerEvents = 'none';
-    this.canvas.style.zIndex = '9999';
-
-    const ctx = this.canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Could not get canvas context');
-    }
-    this.ctx = ctx;
-
-    this.updateCanvasSize();
-    window.addEventListener('resize', () => this.updateCanvasSize());
-  }
-
-  private updateCanvasSize() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
-  }
-
-  private getRandomColor(): string {
-    const colors = [
-      '#FFD700', // Gold
-      '#FF6B6B', // Red
-      '#4ECDC4', // Teal
-      '#45B7D1', // Blue
-      '#96CEB4', // Green
-      '#FECA57', // Yellow
-      '#FF9FF3', // Pink
-      '#54A0FF', // Light Blue
-      '#F8B500', // Orange
-      '#A8E6CF', // Mint
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  }
-
-  private createParticle(x: number, y: number): ConfettiParticle {
-    const angle = Math.random() * Math.PI * 2;
-    const velocity = 1 + Math.random() * 4; // Slower initial velocity
-
-    return {
-      x,
-      y,
-      vx: Math.cos(angle) * velocity,
-      vy: Math.sin(angle) * velocity - Math.random() * 3, // Less upward bias
-      gravity: 0.08 + Math.random() * 0.04, // Much slower gravity
-      life: 0,
-      maxLife: 180 + Math.random() * 120, // Longer life (3-5 seconds at 60fps)
-      color: this.getRandomColor(),
-      width: 3 + Math.random() * 4, // Width for rectangular confetti
-      height: 8 + Math.random() * 12, // Height - makes it longer like paper strips
-      rotation: Math.random() * Math.PI * 2,
-      rotationSpeed: (Math.random() - 0.5) * 0.15, // Slower rotation
-      oscillation: 0,
-      oscillationSpeed: 0.02 + Math.random() * 0.03, // Speed of side-to-side motion
-      curliness: 0.5 + Math.random() * 1.5, // How much it curves side to side
-    };
-  }
-
-  public burst(x: number, y: number, particleCount: number = 50): void {
-    for (let i = 0; i < particleCount; i++) {
-      this.particles.push(this.createParticle(x, y));
-    }
-
-    if (!this.animationId) {
-      document.body.appendChild(this.canvas);
-      this.animate();
-    }
-  }
-
-  private animate = () => {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    this.particles = this.particles.filter(particle => {
-      particle.oscillation += particle.oscillationSpeed;
-
-      particle.x += particle.vx + Math.sin(particle.oscillation) * particle.curliness;
-      particle.y += particle.vy;
-      particle.vy += particle.gravity;
-
-      particle.rotation += particle.rotationSpeed;
-
-      particle.vx *= 0.995;
-
-      particle.life++;
-
-      const alpha = Math.max(0, 1 - particle.life / particle.maxLife);
-
-      if (alpha <= 0) {
-        return false;
-      }
-      this.ctx.save();
-      this.ctx.translate(particle.x, particle.y);
-      this.ctx.rotate(particle.rotation);
-      this.ctx.globalAlpha = alpha;
-      this.ctx.fillStyle = particle.color;
-
-      const halfWidth = particle.width / 2;
-      const halfHeight = particle.height / 2;
-
-      this.ctx.beginPath();
-      this.ctx.roundRect(-halfWidth, -halfHeight, particle.width, particle.height, 1);
-      this.ctx.fill();
-
-      this.ctx.globalAlpha = alpha * 0.3;
-      this.ctx.fillStyle = '#ffffff';
-      this.ctx.beginPath();
-      this.ctx.roundRect(-halfWidth, -halfHeight, particle.width, particle.height / 3, 1);
-      this.ctx.fill();
-
-      this.ctx.restore();
-
-      return true;
+    Object.assign(this.canvas.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: '9999',
     });
 
-    if (this.particles.length > 0) {
+    const ctx = this.canvas.getContext('2d', { alpha: true, desynchronized: true });
+    if (!ctx) throw new Error('Could not get canvas context');
+    this.ctx = ctx;
+
+    this.pool = Array.from({ length: MAX_PARTICLES }, () => new Particle());
+
+    this.updateSize();
+    this.resizeHandler = () => this.updateSize();
+    window.addEventListener('resize', this.resizeHandler);
+
+    document.body.appendChild(this.canvas);
+    this.isAttached = true;
+  }
+
+  private updateSize(): void {
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
+  }
+
+  burst(x: number, y: number, count = 30): void {
+    if (!this.isAttached) {
+      document.body.appendChild(this.canvas);
+      this.isAttached = true;
+    }
+
+    let activated = 0;
+
+    for (const p of this.pool) {
+      if (activated >= count) break;
+      if (!p.active) {
+        p.init(x, y);
+        activated++;
+      }
+    }
+
+    if (activated < count) {
+      for (const p of this.pool) {
+        if (activated >= count) break;
+        if (p.life > p.maxLife * 0.3) {
+          p.init(x, y);
+          activated++;
+        }
+      }
+    }
+
+    this.activeCount = this.pool.filter(p => p.active).length;
+
+    if (!this.animationId && this.activeCount > 0) {
+      this.render();
+      this.animationId = requestAnimationFrame(this.animate);
+    }
+  }
+
+  private render(): void {
+    const { ctx, pool, width, height } = this;
+    ctx.clearRect(0, 0, width, height);
+
+    for (const p of pool) {
+      if (!p.active) continue;
+      const alpha = p.getAlpha();
+      if (alpha <= 0) continue;
+
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size * 1.5);
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  private animate = (): void => {
+    let activeCount = 0;
+
+    for (const p of this.pool) {
+      if (p.active && p.update()) {
+        activeCount++;
+      }
+    }
+
+    this.activeCount = activeCount;
+
+    if (activeCount > 0) {
+      this.render();
       this.animationId = requestAnimationFrame(this.animate);
     } else {
       this.stop();
     }
   };
 
-  public stop(): void {
+  stop(): void {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
-    if (this.canvas.parentNode) {
-      this.canvas.parentNode.removeChild(this.canvas);
-    }
-    this.particles = [];
+    for (const p of this.pool) p.active = false;
+    this.activeCount = 0;
+    this.ctx.clearRect(0, 0, this.width, this.height);
+  }
+
+  destroy(): void {
+    this.stop();
+    window.removeEventListener('resize', this.resizeHandler);
+    this.canvas.parentNode?.removeChild(this.canvas);
+    this.isAttached = false;
+  }
+
+  getParticleCount(): number {
+    return this.activeCount;
   }
 }
 
-let confettiInstance: ConfettiEffect | null = null;
+let instance: ConfettiEffect | null = null;
 
-export const triggerConfetti = (x: number, y: number, particleCount?: number): void => {
-  if (!confettiInstance) {
-    confettiInstance = new ConfettiEffect();
+const init = (): void => {
+  if (!instance && typeof window !== 'undefined') {
+    instance = new ConfettiEffect();
   }
-  confettiInstance.burst(x, y, particleCount);
 };
 
+export const triggerConfetti = (x: number, y: number, count?: number): void => {
+  if (!instance) instance = new ConfettiEffect();
+  instance.burst(x, y, count);
+};
+
+export const getParticleCount = (): number => instance?.getParticleCount() ?? 0;
+
 if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    if (confettiInstance) {
-      confettiInstance.stop();
-    }
-  });
+  if (document.readyState === 'complete') {
+    init();
+  } else {
+    window.addEventListener('load', init);
+  }
+  window.addEventListener('beforeunload', () => instance?.destroy());
 }
