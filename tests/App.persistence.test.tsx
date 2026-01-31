@@ -130,13 +130,11 @@ describe('App Persistence Integration', () => {
         await user.click(screen.getAllByTestId('add-bulk-button')[0]);
       });
 
-      // Step 1 should be automatically collapsed after adding players
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const collapsedStep = document.querySelector('.step.collapsed');
       expect(collapsedStep).toBeTruthy();
 
-      // Verify it's specifically Step 1 that's collapsed (shows "Add Players" without "Step 1:")
       const addPlayersText = screen.getByText('Add Players');
       expect(addPlayersText).toBeInTheDocument();
 
@@ -168,7 +166,6 @@ describe('App Persistence Integration', () => {
 
       expect(localStorage.getItem('badminton-app-state')).toBeTruthy();
 
-      // Expand the Manage Players step to access the clear button
       const managePlayersHeader = screen.getAllByText('Manage Players')[0];
       await user.click(managePlayersHeader);
 
@@ -329,7 +326,6 @@ describe('App Persistence Integration', () => {
       const winCountsBeforeReset = CourtAssignmentEngine.getWinCounts();
       expect(winCountsBeforeReset.size).toBeGreaterThan(0);
 
-      // Expand the Manage Players step to access the reset button
       const managePlayersHeader = screen.getAllByText('Manage Players')[0];
       await user.click(managePlayersHeader);
 

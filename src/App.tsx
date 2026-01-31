@@ -24,6 +24,7 @@ function App(): React.ReactElement {
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
 
   const isInitialLoad = useRef(true);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     CourtAssignmentEngine.loadState();
@@ -39,6 +40,11 @@ function App(): React.ReactElement {
   useEffect(() => {
     if (isInitialLoad.current) return;
 
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
       saveAppState({
         players,
         numberOfCourts,
@@ -46,8 +52,15 @@ function App(): React.ReactElement {
         collapsedSteps,
         manualCourt: manualCourtSelection,
       });
-    CourtAssignmentEngine.saveState();
-    }, [players, numberOfCourts, assignments, collapsedSteps, manualCourtSelection]);
+      CourtAssignmentEngine.saveState();
+    }, 100);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [players, numberOfCourts, assignments, collapsedSteps, manualCourtSelection]);
 
   const handlePlayersExtracted = (extractedNames: string[]) => {
     const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
@@ -157,7 +170,6 @@ function App(): React.ReactElement {
 
   const handleToggleStep = (stepNumber: number, event?: React.MouseEvent) => {
     if (event?.target !== event?.currentTarget) {
-      // Only toggle if clicking directly on the header area, not on children
       const target = event?.target as HTMLElement;
       const isHeaderClick = target.closest('.step-header') !== null;
       if (!isHeaderClick) return;
