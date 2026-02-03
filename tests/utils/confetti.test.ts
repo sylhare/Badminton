@@ -18,9 +18,6 @@ describe('Confetti', () => {
 
   describe('particle accumulation', () => {
     it('should not accumulate unlimited particles when triggered multiple times rapidly', async () => {
-
-      const MAX_EXPECTED_PARTICLES = 80; // Reasonable cap for smooth animation
-
       for (let i = 0; i < 10; i++) {
         triggerConfetti(100, 100, 50); // 50 particles per click = 500 total without cap
       }
@@ -68,8 +65,6 @@ describe('Confetti', () => {
       triggerConfetti(100, 100, MAX_PARTICLES);
 
       vi.advanceTimersByTime(500);
-
-      const beforeBurst = confettiModule.getParticleCount?.() ?? 0;
 
       triggerConfetti(200, 200, 30);
 

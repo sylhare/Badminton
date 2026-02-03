@@ -282,7 +282,7 @@ export class CourtAssignmentEngineSA {
       this.incrementMapCount(this.benchCountMap, p.id);
       this.lastRoundBenchedSet.add(p.id);
     });
-    
+
     finalCourts.forEach(court => {
       if (!court.teams) return;
 
@@ -577,9 +577,9 @@ export class CourtAssignmentEngineSA {
 
   /**
    * Selects players to be benched based on historical bench counts.
-   * 
+   *
    * CRITICAL: Players who were benched in the previous round are strongly avoided
-   * to prevent "double benches" (sitting out consecutive rounds). This takes 
+   * to prevent "double benches" (sitting out consecutive rounds). This takes
    * priority over all other considerations including teammate repeat avoidance.
    */
   private static selectBenchedPlayers(players: Player[], benchSpots: number): Player[] {

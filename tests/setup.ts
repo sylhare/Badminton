@@ -22,10 +22,14 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'requestAnimationFrame', {
     value: vi.fn((cb) => setTimeout(cb, 16)),
+    writable: true,
+    configurable: true,
   });
 
   Object.defineProperty(window, 'cancelAnimationFrame', {
     value: vi.fn((id) => clearTimeout(id)),
+    writable: true,
+    configurable: true,
   });
 
   Object.defineProperty(window, 'innerWidth', {
