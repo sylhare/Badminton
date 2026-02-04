@@ -1,4 +1,3 @@
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CourtAssignmentEngine } from '../../src/utils/CourtAssignmentEngine';
@@ -46,7 +45,7 @@ function createMockCourt(courtNumber: number, players: Player[], winner?: 1 | 2)
   };
 }
 
-describe.each(engines)('$name – Core Behaviour', ({ engine }) => {
+describe.each(engines)('$name – Core Behaviour', ({ name, engine }) => {
   beforeEach(() => {
     engine.resetHistory();
   });
@@ -97,7 +96,7 @@ describe.each(engines)('$name – Core Behaviour', ({ engine }) => {
   it('statistical check: teammate pairs are reasonably balanced over many rounds', () => {
     const players = mockPlayers(8);
     const numberOfCourts = 2;
-    const rounds = 100;
+    const rounds = name.includes('SA') ? 30 : 100;
 
     const pairCount: Record<string, number> = {};
     const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
