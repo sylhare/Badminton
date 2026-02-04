@@ -307,7 +307,6 @@ describe('CourtAssignment Engine – core behaviour', () => {
       isPresent: true,
     }));
 
-    // Create scenario: P0=50 wins, P1=50 wins, P2=0 wins, P3=0 wins
     const trainingCourt: Court = {
       courtNumber: 1,
       players,
@@ -332,8 +331,6 @@ describe('CourtAssignment Engine – core behaviour', () => {
       const teams = assignments[0].teams!;
       const winCounts = CourtAssignmentEngine.getWinCounts();
 
-      // Check team balance: each team should have similar total wins
-      // Allow tolerance of 10 for Monte Carlo randomness (50±10 is acceptable balance)
       const team1WinSum = teams.team1.reduce((acc, p) => acc + (winCounts.get(p.id) ?? 0), 0);
       const team2WinSum = teams.team2.reduce((acc, p) => acc + (winCounts.get(p.id) ?? 0), 0);
       expect(Math.abs(team1WinSum - team2WinSum)).toBeLessThanOrEqual(10);
@@ -346,8 +343,6 @@ describe('CourtAssignment Engine – core behaviour', () => {
       }
     }
 
-    // Note: The skill pairing penalty currently doesn't strongly enforce splitting
-    // high-win players. Team balance works well, but player splitting is weak.
     expect(splitCount).toBeGreaterThanOrEqual(testRuns * 0.2);
   });
 
