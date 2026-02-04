@@ -46,6 +46,8 @@ def _(Path, json, pl):
 def _(config, mo, random_config):
     _rand_double_bench = random_config.get("benchFairness", {}).get("doubleBenchRate", 31)
     mo.md(f"""
+    # Badminton Engine Analysis
+
 
     **Comparing Four Algorithms:**
     - **Monte Carlo (MC)**: Random sampling with greedy cost evaluation (300 candidates per round)
@@ -84,11 +86,10 @@ def _():
     return np, plt
 
 @app.cell
-def _(data_dir, pl):
+def _(data_dir, json, pl):
     baseline_dir = data_dir / "random_baseline"
     baseline_summary = pl.read_csv(baseline_dir / "summary.csv")
     baseline_pair_events = pl.read_csv(baseline_dir / "pair_events.csv")
-    
     def pair_key(a: str, b: str) -> str:
         return f"{a}|{b}" if a < b else f"{b}|{a}"
     
@@ -192,6 +193,15 @@ def _(adjacency_bias_data, all_metrics, cg_config, mc_config, mo, pl, random_con
     def get_adjacent_bias(label):
         return _bias_by_label.get(label, {}).get("bias_ratio", 1.0)
     
+    def get_singles_fairness(cfg):
+        """Score singles fairness: 50% no double-singles + 50% no repeat opponents."""
+        singles = cfg.get("singlesFairness", {})
+        double_rate = singles.get("doubleSinglesRate", 40)  # Default to bad if no data
+        repeat_rate = singles.get("repeatOpponentRate", 30)
+        no_double_score = max(0, 100 - double_rate * 2.5)
+        no_repeat_score = max(0, 100 - repeat_rate * 3.33)
+        return (no_double_score + no_repeat_score) / 2
+    
     for _m in _sorted_by_zero:
         _cfg = _configs_by_label[_m["label"]]
         _m["time_per_round"] = get_time_per_round(_cfg)
@@ -199,6 +209,7 @@ def _(adjacency_bias_data, all_metrics, cg_config, mc_config, mo, pl, random_con
         _m["balance_pct"] = get_balance_pct(_cfg)
         _m["bench_fairness"] = get_bench_fairness(_cfg)
         _m["adjacent_bias"] = get_adjacent_bias(_m["label"])
+        _m["singles_fairness"] = get_singles_fairness(_cfg)
     
     _rankings_df = pl.DataFrame({
         "Rank": ["1st", "2nd", "3rd", "4th"],
@@ -207,14 +218,14 @@ def _(adjacency_bias_data, all_metrics, cg_config, mc_config, mo, pl, random_con
         "Repeats/Run": [round(m["avg_repeat_pairs"], 2) for m in _sorted_by_zero],
         "Time/Round (ms)": [round(m["time_per_round"], 2) for m in _sorted_by_zero],
         "Balance": [f"{m['balance_pct']:.0f}%" for m in _sorted_by_zero],
-        "Adjacent Bias": [f"{(m['adjacent_bias'] - 1) * 100:.0f}%" if m['adjacent_bias'] > 0 else "0%" for m in _sorted_by_zero],
         "Bench Fairness": [f"{m['bench_fairness']:.0f}%" for m in _sorted_by_zero],
+        "Singles Fair": [f"{m['singles_fairness']:.0f}%" for m in _sorted_by_zero],
     })
     
     mo.vstack([
         mo.ui.table(_rankings_df),
         mo.md("""
-*Zero-Repeat: % of runs with no repeated pairs. Balance: Team win balance (100% = 0 differential, ideal case). Adjacent Bias: Bias toward adjacent pairs (0% = none). Bench Fairness: Compound of no double benches + fair distribution.* (100% everyone bench exactly the same number of times)
+*Zero-Repeat: % of runs with no repeated pairs. Balance: Team win balance (100% = 0 differential). Bench Fairness: Compound of no double benches + fair distribution. Singles Fair: Compound of no consecutive singles + no repeat opponents (for 18+ player sessions).*
         """),
     ])
     return
@@ -274,9 +285,19 @@ def _(adjacency_bias_data, all_metrics, cg_config, fig_to_image, mc_config, mo, 
     
     _adjacent_bias = [_get_bias_score(name) for name in _algo_names]
     
-    _consistency = [90, 100, 90, 70]  # MC, SA, CG, Random
+    def _get_singles_fairness(cfg):
+        """Score singles fairness: 50% no double-singles + 50% no repeat opponents."""
+        singles = cfg.get("singlesFairness", {})
+        double_rate = singles.get("doubleSinglesRate", 40)  # Default to bad if no data
+        repeat_rate = singles.get("repeatOpponentRate", 30)
+        # Lower is better, so invert: 0% rate = 100 score, 40% rate = 0 score
+        no_double_score = max(0, 100 - double_rate * 2.5)
+        no_repeat_score = max(0, 100 - repeat_rate * 3.33)
+        return (no_double_score + no_repeat_score) / 2
     
-    _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Balance", "No Adjacent\nBias", "Consistency"]
+    _singles_fair = [_get_singles_fairness(cfg) for cfg in _configs]
+    
+    _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Balance", "Singles\nFairness", "No Adjacent\nBias"]
     _n_cats = len(_categories)
     _angles = [n / float(_n_cats) * 2 * np.pi for n in range(_n_cats)]
     _angles += _angles[:1]  # Close the polygon
@@ -284,7 +305,7 @@ def _(adjacency_bias_data, all_metrics, cg_config, fig_to_image, mc_config, mo, 
     _fig, _ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(projection='polar'))
     
     for _i, (_name, _color) in enumerate(zip(_algo_names, _colors)):
-        _values = [_repeat_score[_i], _speed[_i], _bench_fair[_i], _balance[_i], _adjacent_bias[_i], _consistency[_i]]
+        _values = [_repeat_score[_i], _speed[_i], _bench_fair[_i], _balance[_i], _singles_fair[_i], _adjacent_bias[_i]]
         _values += _values[:1]  # Close the polygon
         
         _ax.plot(_angles, _values, '-', linewidth=1.5, label=_name, color=_color)
@@ -611,7 +632,7 @@ no player ever has the same partner twice in a row."""
     - **Darker/Hotspots** = more repeat events (algorithm failed to avoid that pair repeating)
     {_sa_note}
     
-    For algorithm with repeats, there is a gradient in the heatmaps, because sessions have a variable number of players (14-20).
+    For algorithm with repeats, there is a gradient in the heatmaps, because sessions have a variable number of players (14-22).
     If a pair is a "hotspot" (redder square in the heatmap), it means that the algorithm has a bias pairing those players across the sessions.
 
     We limit the hotspot effects for the algorithms with a better shuffling mechanism before the engine makes the final assignment.
@@ -743,89 +764,160 @@ def _(adjacency_bias_data, mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ## Teammate Diversity
+    ### Teammate Diversity
     
-    How uniformly are teammates distributed? 
+    How many **different** teammates does each player get to play with in a single 10-round session?
+    More unique teammates = more variety and social mixing. This metric captures the diversity of 
+    partner assignments within a single session.
     """)
     return
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    How uniformly are teammates distributed across all pairs? This analysis shows whether 
-    some pairs play together much more often than others.
-    """)
-    return
 
 @app.cell
-def _(baseline_match_pairs, cg_match_pairs, fig_to_image, mc_match_pairs, mo, np, plt, sa_match_pairs):
-    def get_teammate_distribution(df):
-        """Get min, max, mean, std for teammate frequency."""
-        if df.height == 0:
-            return {"min": 0, "max": 0, "mean": 0, "std": 0, "range": 0}
-        vals = df.get_column("asTeammate").to_numpy()
+def _(data_dir, pl):
+    # Load match events for all algorithms
+    random_match_events_div = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
+    mc_match_events_div = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
+    sa_match_events_div = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
+    cg_match_events_div = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
+    return random_match_events_div, mc_match_events_div, sa_match_events_div, cg_match_events_div
+
+@app.cell
+def _(np):
+    def compute_teammate_diversity(match_events_df) -> dict:
+        """Compute unique teammate counts per player per session."""
+        # Build a dict: (batch, simId) -> {player: set of teammates}
+        session_teammates = {}
+        
+        # Single pass through all rows
+        for row in match_events_df.iter_rows(named=True):
+            session_key = (row["batch"], row["simulationId"])
+            if session_key not in session_teammates:
+                session_teammates[session_key] = {}
+            
+            player_map = session_teammates[session_key]
+            
+            team1 = row["team1Players"].split("|")
+            team2 = row["team2Players"].split("|")
+            
+            # Process team1 (only doubles - 2 players are teammates)
+            if len(team1) == 2:
+                p1, p2 = team1
+                player_map.setdefault(p1, set()).add(p2)
+                player_map.setdefault(p2, set()).add(p1)
+            
+            # Process team2 (only doubles)
+            if len(team2) == 2:
+                p1, p2 = team2
+                player_map.setdefault(p1, set()).add(p2)
+                player_map.setdefault(p2, set()).add(p1)
+        
+        # Calculate diversity metrics per session
+        session_diversity = []
+        for (batch, sim_id), player_teammates in session_teammates.items():
+            if player_teammates:
+                unique_counts = [len(teammates) for teammates in player_teammates.values()]
+                session_diversity.append({
+                    "batch": batch,
+                    "simulationId": sim_id,
+                    "avg_unique_teammates": np.mean(unique_counts),
+                    "min_unique_teammates": min(unique_counts),
+                    "max_unique_teammates": max(unique_counts),
+                    "all_unique_counts": unique_counts,
+                })
+        
+        # Aggregate across all sessions
+        if not session_diversity:
+            return {"avg": 0, "min": 0, "max": 0, "all_player_counts": []}
+        
+        all_player_counts = [c for s in session_diversity for c in s["all_unique_counts"]]
         return {
-            "min": int(vals.min()),
-            "max": int(vals.max()),
-            "mean": vals.mean(),
-            "std": vals.std(),
-            "range": int(vals.max() - vals.min()),
-            "vals": vals,
+            "avg": np.mean([s["avg_unique_teammates"] for s in session_diversity]),
+            "min": np.mean([s["min_unique_teammates"] for s in session_diversity]),
+            "max": np.mean([s["max_unique_teammates"] for s in session_diversity]),
+            "all_player_counts": all_player_counts,
+            "session_avgs": [s["avg_unique_teammates"] for s in session_diversity],
         }
+    return (compute_teammate_diversity,)
+
+@app.cell
+def _(cg_match_events_div, compute_teammate_diversity, mc_match_events_div, random_match_events_div, sa_match_events_div):
+    random_diversity = compute_teammate_diversity(random_match_events_div)
+    mc_diversity = compute_teammate_diversity(mc_match_events_div)
+    sa_diversity = compute_teammate_diversity(sa_match_events_div)
+    cg_diversity = compute_teammate_diversity(cg_match_events_div)
+    return random_diversity, mc_diversity, sa_diversity, cg_diversity
+
+@app.cell
+def _(cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random_diversity, sa_diversity):
+    _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph"]
+    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    _diversities = [random_diversity, mc_diversity, sa_diversity, cg_diversity]
     
-    _mc_dist = get_teammate_distribution(mc_match_pairs)
-    _sa_dist = get_teammate_distribution(sa_match_pairs)
-    _cg_dist = get_teammate_distribution(cg_match_pairs)
-    _bl_dist = get_teammate_distribution(baseline_match_pairs)
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
     
-    _algorithms = ['Monte Carlo', 'Simulated\nAnnealing', 'Conflict\nGraph', 'Random\nBaseline']
-    _colors = ['#2ecc71', '#3498db', '#9b59b6', '#95a5a6']
+    # Left: Average unique teammates per player per session
+    _avgs = [d["avg"] for d in _diversities]
+    _x = np.arange(len(_algo_names))
+    _bars = _ax1.bar(_x, _avgs, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _ax1.set_xticks(_x)
+    _ax1.set_xticklabels(_algo_names, fontsize=10)
+    _ax1.set_ylabel("Avg Unique Teammates per Player", fontsize=11)
+    _ax1.set_title("Partner Variety per Session\n(Higher = More Diverse)", fontsize=12, fontweight="bold")
+    _ax1.set_ylim(0, max(_avgs) * 1.2)
     
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    for _bar in _bars:
+        _h = _bar.get_height()
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.1, f"{_h:.2f}", 
+                  ha="center", va="bottom", fontsize=11, fontweight="bold")
     
-    _data = [_mc_dist['vals'], _sa_dist['vals'], _cg_dist['vals'], _bl_dist['vals']]
-    _bp = _ax1.boxplot(_data, tick_labels=_algorithms, patch_artist=True)
-    for patch, color in zip(_bp['boxes'], _colors):
-        patch.set_facecolor(color)
-        patch.set_alpha(0.7)
-    _ax1.set_ylabel('Teammate Count per Pair', fontsize=11)
-    _ax1.set_title('Distribution of Teammate Repeats', fontsize=12, fontweight='bold')
-    _ax1.grid(True, alpha=0.3, axis='y')
+    # Add theoretical maximum line (depends on rounds played and team size)
+    # In 10 rounds, max unique teammates = 10 (one per round if no repeats)
+    _ax1.axhline(y=10, color='green', linestyle='--', alpha=0.7, linewidth=2, label="Max (10 rounds)")
+    _ax1.legend(loc="upper right")
     
-    _means = [_mc_dist['mean'], _sa_dist['mean'], _cg_dist['mean'], _bl_dist['mean']]
-    for i, mean in enumerate(_means, 1):
-        _ax1.scatter(i, mean, color='red', s=50, zorder=5, marker='D', label='Mean' if i == 1 else '')
-    _ax1.legend(loc='upper right')
+    # Right: Distribution of unique teammate counts across all players/sessions
+    _data = [d["all_player_counts"] for d in _diversities]
+    _bp = _ax2.boxplot(_data, tick_labels=_algo_names, patch_artist=True)
+    for _patch, _color in zip(_bp['boxes'], _colors):
+        _patch.set_facecolor(_color)
+        _patch.set_alpha(0.7)
+    _ax2.set_ylabel("Unique Teammates per Player", fontsize=11)
+    _ax2.set_title("Distribution of Partner Variety\n(Higher & Tighter = Better)", fontsize=12, fontweight="bold")
+    _ax2.grid(True, alpha=0.3, axis='y')
     
-    _ranges = [_mc_dist['range'], _sa_dist['range'], _cg_dist['range'], _bl_dist['range']]
-    _bars = _ax2.bar(_algorithms, _ranges, color=_colors, edgecolor='black', linewidth=0.5)
-    _ax2.set_ylabel('Range (Max - Min Teammate Count)', fontsize=11)
-    _ax2.set_title('Repeat Balance', fontsize=12, fontweight='bold')
-    _ax2.set_ylim(0, max(_ranges) * 1.2)
-    for _bar, _range in zip(_bars, _ranges):
-        _ax2.annotate(f'{_range}', xy=(_bar.get_x() + _bar.get_width()/2, _bar.get_height()),
-                      ha='center', va='bottom', fontsize=10, fontweight='bold')
+    # Mark means
+    _means = [np.mean(d["all_player_counts"]) for d in _diversities]
+    for _i, _mean in enumerate(_means, 1):
+        _ax2.scatter(_i, _mean, color='red', s=50, zorder=5, marker='D', label='Mean' if _i == 1 else '')
+    _ax2.legend(loc='lower right')
     
-    _opt_avg = np.mean(_ranges[:3])  # MC, SA, CG average
-    _ax2.axhline(y=_opt_avg, color='green', linestyle='--', alpha=0.7, label=f'Optimized avg: {_opt_avg:.0f}')
-    _ax2.axhline(y=_ranges[3], color='gray', linestyle=':', alpha=0.7, label=f'Baseline: {_ranges[3]}')
-    _ax2.legend(loc='upper left')
-    
-    _fig.suptitle('Teammate Repeats Across All Sessions', fontsize=13, fontweight='bold', y=1.02)
+    _fig.suptitle("Teammate Diversity: Unique Partners per 10-Round Session", fontsize=13, fontweight="bold", y=1.02)
     plt.tight_layout()
     
-    mo.image(fig_to_image(_fig))
+    mo.output.replace(mo.image(fig_to_image(_fig)))
     return
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    - **Left (Distribution):** All algorithms have players being teammates multiple times across sessions — that's expected. 
-      A narrower box means more balanced distribution (all pairs repeat roughly equally).
-    - **Right (Balance):** Lower range = more uniform repeats. Optimized algorithms (MC, SA, CG) distribute 
-      repeats evenly across all pairs, while the baseline shows larger spread (some pairs repeat much more than others).
+def _(cg_diversity, mc_diversity, mo, random_diversity, sa_diversity):
+    _rand_avg = random_diversity["avg"]
+    _mc_avg = mc_diversity["avg"]
+    _sa_avg = sa_diversity["avg"]
+    _cg_avg = cg_diversity["avg"]
+    
+    _best = max(_mc_avg, _sa_avg, _cg_avg)
+    _best_name = "SA" if _sa_avg == _best else ("MC" if _mc_avg == _best else "CG")
+    _improvement = ((_best - _rand_avg) / _rand_avg * 100) if _rand_avg > 0 else 0
+    
+    mo.md(f"""
+Why optimized algorithms provide more variety?
+- They actively avoid repeating teammate pairs, which naturally maximizes unique combinations
+- SA's exhaustive search finds configurations that spread partners most evenly
+- The tight distribution (narrow box) shows consistent variety for ALL players, not just some
+
+*Note: Players assigned to singles courts have no teammate that round, which slightly reduces their unique teammate count compared to players who only play doubles.*
     """)
-    return    
+    return
 
 @app.cell(hide_code=True)
 def _(mo):
@@ -839,16 +931,60 @@ def _(mo):
     """)
     return
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ### Team Balance Analysis
-
-    Players are assigned skill levels 1-5, and match outcomes are determined probabilistically 
-    (stronger teams win more often, but upsets can happen ~8-43% of the time depending on skill gap).
-    This is built-in to the simulation, not an algorithm feature.
-    The algorithm is not aware of it and will optimize based on the win/loss distribution only.
-    """)
+@app.cell
+def _(cg_config, fig_to_image, mc_config, mo, np, plt, random_config, sa_config):
+    _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph"]
+    _configs = [random_config, mc_config, sa_config, cg_config]
+    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    
+    # Get perfectly balanced rates
+    _balanced_rates = [cfg.get("engineTrackedBalance", {}).get("perfectlyBalancedRate", 0) for cfg in _configs]
+    
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5), gridspec_kw={'width_ratios': [2, 1]})
+    
+    # Left: Main bar chart
+    _x = np.arange(len(_algo_names))
+    _bars = _ax1.bar(_x, _balanced_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _ax1.set_xticks(_x)
+    _ax1.set_xticklabels(_algo_names, fontsize=11)
+    _ax1.set_ylabel("Evenly Matched Games (%)", fontsize=12)
+    _ax1.set_title("Percentage of Evenly Matched Games", fontsize=13, fontweight="bold")
+    _ax1.set_ylim(0, 100)
+    _ax1.grid(True, alpha=0.3, axis='y')
+    
+    for _bar, _rate in zip(_bars, _balanced_rates):
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _rate + 2, f"{_rate:.0f}%", 
+                  ha="center", va="bottom", fontsize=13, fontweight="bold")
+    
+    # Right: Visual explanation of "evenly matched"
+    _ax2.set_xlim(0, 10)
+    _ax2.set_ylim(0, 10)
+    _ax2.axis('off')
+    _ax2.set_title("What is 'Evenly Matched'?", fontsize=11, fontweight="bold")
+    
+    # Example 1: Evenly matched (green)
+    _ax2.add_patch(plt.Rectangle((0.5, 6.5), 4, 2.5, facecolor='#d4edda', edgecolor='#28a745', linewidth=2))
+    _ax2.text(2.5, 8.3, "EVEN", ha='center', va='center', fontsize=10, fontweight='bold', color='#155724')
+    _ax2.text(1.2, 7.3, "Team A", ha='center', va='center', fontsize=9)
+    _ax2.text(1.2, 6.9, "5 wins", ha='center', va='center', fontsize=8, color='gray')
+    _ax2.text(3.8, 7.3, "Team B", ha='center', va='center', fontsize=9)
+    _ax2.text(3.8, 6.9, "5 wins", ha='center', va='center', fontsize=8, color='gray')
+    _ax2.text(2.5, 7.1, "vs", ha='center', va='center', fontsize=9)
+    
+    # Example 2: Uneven (red)
+    _ax2.add_patch(plt.Rectangle((0.5, 3), 4, 2.5, facecolor='#f8d7da', edgecolor='#dc3545', linewidth=2))
+    _ax2.text(2.5, 4.8, "UNEVEN", ha='center', va='center', fontsize=10, fontweight='bold', color='#721c24')
+    _ax2.text(1.2, 3.8, "Team A", ha='center', va='center', fontsize=9)
+    _ax2.text(1.2, 3.4, "8 wins", ha='center', va='center', fontsize=8, color='gray')
+    _ax2.text(3.8, 3.8, "Team B", ha='center', va='center', fontsize=9)
+    _ax2.text(3.8, 3.4, "2 wins", ha='center', va='center', fontsize=8, color='gray')
+    _ax2.text(2.5, 3.6, "vs", ha='center', va='center', fontsize=9)
+    
+    # Explanation text
+    _ax2.text(2.5, 1.5, "Based on cumulative\nwins in session", ha='center', va='center', fontsize=9, style='italic', color='gray')
+    
+    _fig.tight_layout()
+    mo.image(fig_to_image(_fig))
     return
 
 @app.cell
@@ -896,13 +1032,20 @@ def _(cg_config, data_dir, mc_config, np, pl, random_config, sa_config):
         gini = (2 * np.sum((np.arange(1, n+1)) * wins_sorted) - (n + 1) * np.sum(wins_sorted)) / (n * np.sum(wins_sorted)) if np.sum(wins_sorted) > 0 else 0
         
         # Calculate skill pairing cost from match events
-        # For each match, compute product of teammate levels
+        # For each match, compute product of teammate levels (singles have 1 player per team)
         pairing_costs = []
         for row in match_df.iter_rows(named=True):
             t1_players = row["team1Players"].split("|")
             t2_players = row["team2Players"].split("|")
-            t1_cost = player_profiles.get(t1_players[0], {}).get("level", 3) * player_profiles.get(t1_players[1], {}).get("level", 3)
-            t2_cost = player_profiles.get(t2_players[0], {}).get("level", 3) * player_profiles.get(t2_players[1], {}).get("level", 3)
+            # Handle singles (1 player per team) vs doubles (2 players per team)
+            if len(t1_players) >= 2:
+                t1_cost = player_profiles.get(t1_players[0], {}).get("level", 3) * player_profiles.get(t1_players[1], {}).get("level", 3)
+            else:
+                t1_cost = player_profiles.get(t1_players[0], {}).get("level", 3) ** 2  # Single player
+            if len(t2_players) >= 2:
+                t2_cost = player_profiles.get(t2_players[0], {}).get("level", 3) * player_profiles.get(t2_players[1], {}).get("level", 3)
+            else:
+                t2_cost = player_profiles.get(t2_players[0], {}).get("level", 3) ** 2  # Single player
             pairing_costs.append(t1_cost + t2_cost)
         
         return {
@@ -954,231 +1097,117 @@ def _(cg_config, data_dir, mc_config, np, pl, random_config, sa_config):
         sa_player_stats,
     )
 
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ### Skill Analysis
+    ### Singles Fairness Analysis
     
-    Does the algorithms affect match balance based on player skill levels (1-5)?
+    When the number of players isn't divisible by 4, a **singles court** (1v1) is used 
+    for the 2 leftover players. For example: 14 players = 3 doubles courts (12) + 1 singles (2).
+    
+    **Key metrics:**
+    - **Double-Singles Rate**: Same player playing singles in consecutive rounds (unfair)
+    - **Repeat Opponent Rate**: Same two players facing each other in singles twice (reduces variety)
     """)
     return
 
 @app.cell
-def _(balance_results, config, fig_to_image, mo, np, player_profiles, plt):
-    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
-    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
-    
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
-    _diff_labels = ["0\n(Perfect)", "1", "2", "3", "4+"]
-    _all_pcts = []
-    for _name in _algo_names:
-        _diffs = balance_results[_name]["skill_differentials"]
-        _counts = np.bincount(_diffs, minlength=9)
-        _pcts = _counts / len(_diffs) * 100
-        _grouped = list(_pcts[:4]) + [sum(_pcts[4:])]
-        _all_pcts.append(_grouped)
-    
-    _x1 = np.arange(len(_diff_labels))
-    _width1 = 0.2
-    for _i, (_name, _pcts, _color) in enumerate(zip(_algo_names, _all_pcts, _colors)):
-        _offset = (_i - 1.5) * _width1
-        _ax1.bar(_x1 + _offset, _pcts, _width1, label=_name, color=_color, alpha=0.85)
-    
-    _ax1.set_xlabel("Skill Differential (|Team1 - Team2|)", fontsize=11)
-    _ax1.set_ylabel("Percentage of Matches (%)", fontsize=11)
-    _ax1.set_title("Skill Differential Distribution", fontsize=12, fontweight="bold")
-    _ax1.set_xticks(_x1)
-    _ax1.set_xticklabels(_diff_labels)
-    _ax1.legend(loc="upper right", fontsize=8)
-    _ax1.grid(True, alpha=0.3, axis='y')
-    
-    _player_counts = config.get("playerCounts", [20])
-    _num_players = max(_player_counts)
-    _players = [f"P{i+1}" for i in range(_num_players)]
-    
-    _player_levels = {p: player_profiles.get(p, {}).get("level", 3) for p in _players}
-    _level_win_rates = {algo: {level: [] for level in range(1, 6)} for algo in _algo_names}
-    
-    for _algo in _algo_names:
-        _wins = balance_results[_algo]["win_distribution"]
-        _losses = balance_results[_algo]["loss_distribution"]
-        for _p in _players:
-            _level = _player_levels[_p]
-            _w = _wins.get(_p, 0)
-            _l = _losses.get(_p, 0)
-            _rate = _w / (_w + _l) * 100 if (_w + _l) > 0 else 50
-            _level_win_rates[_algo][_level].append(_rate)
-    
-    _level_avgs = {algo: {level: np.mean(rates) if rates else 50 
-                         for level, rates in levels.items()}
-                  for algo, levels in _level_win_rates.items()}
-    
-    _x2 = np.arange(1, 6)
-    _width2 = 0.18
-    _offsets = [-1.5, -0.5, 0.5, 1.5]
-    
-    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
-        _rates = [_level_avgs[_algo][level] for level in range(1, 6)]
-        _ax2.bar(_x2 + _offsets[_i] * _width2, _rates, _width2, label=_algo, color=_color, alpha=0.85)
-    
-    _ax2.axhline(y=50, color='gray', linestyle='--', alpha=0.7, label="50% baseline")
-    _ax2.set_xticks(_x2)
-    _ax2.set_xticklabels([f"Level {l}" for l in range(1, 6)])
-    _ax2.set_xlabel("Player Skill Level", fontsize=11)
-    _ax2.set_ylabel("Average Win Rate (%)", fontsize=11)
-    _ax2.set_title("Win Rate by Skill Level", fontsize=12, fontweight="bold")
-    _ax2.legend(loc="upper left", fontsize=8)
-    _ax2.set_ylim(30, 70)
-    _ax2.grid(True, alpha=0.3, axis='y')
-    
-    plt.tight_layout()
-    mo.image(fig_to_image(_fig))
-    return
-
-@app.cell(hide_code=True)
-def _(balance_summary, mo):
-    _perfect_bal = balance_summary.get_column("perfectly_balanced").mean() * 100
-    mo.md(f"""
-- Skill Differential: The absolute difference in total skill between teams (0 = perfectly balanced).
-- Win Rate by Skill Level: Higher-skilled players win more, lower-skilled win less. This pattern is identical across all algorithms.
-    """)
-    return
-
-@app.cell(hide_code=True)
-def _(mo, sa_config):
-    _best_diff = sa_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 0.3)
-    _best_balance = max(0, 100 * (1 - _best_diff / 2.0))
-    mo.md(f"""
-    ### Engine-Tracked Balance
-    
-    The algorithms optimize team balance based on **accumulated wins/losses they track** during the session,
-    not the fixed player levels. This chart shows how effectively the engines balance teams from their perspective.
-    """)
-    return
+def _(data_dir, pl):
+    # Load singles stats for all algorithms
+    random_singles_stats = pl.read_csv(data_dir / "random_baseline" / "singles_stats.csv")
+    mc_singles_stats = pl.read_csv(data_dir / "mc_algo" / "singles_stats.csv")
+    sa_singles_stats = pl.read_csv(data_dir / "sa_algo" / "singles_stats.csv")
+    cg_singles_stats = pl.read_csv(data_dir / "cg_algo" / "singles_stats.csv")
+    return random_singles_stats, mc_singles_stats, sa_singles_stats, cg_singles_stats
 
 @app.cell
-def _(cg_config, fig_to_image, mc_config, mo, np, plt, random_config, sa_config):
-    _algo_names = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph"]
-    _configs = [random_config, mc_config, sa_config, cg_config]
+def _(cg_singles_stats, fig_to_image, mc_singles_stats, mo, np, pl, plt, random_singles_stats, sa_singles_stats):
+    _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    _singles_dfs = [random_singles_stats, mc_singles_stats, sa_singles_stats, cg_singles_stats]
     
-    _engine_win_diffs = []
-    _level_win_diffs = []
-    for _cfg in _configs:
-        _engine = _cfg.get("engineTrackedBalance", {})
-        _level = _cfg.get("levelBasedBalance", _cfg.get("balanceStats", {}))
-        _engine_win_diffs.append(_engine.get("avgEngineWinDifferential", 0))
-        _level_win_diffs.append(_level.get("avgStrengthDifferential", 0))
+    # Filter to sessions with singles matches only (18+ players)
+    def get_singles_metrics(df):
+        singles_sessions = df.filter(pl.col("totalSinglesMatches") > 0)
+        if singles_sessions.height == 0:
+            return {"double_rate": 0, "repeat_rate": 0, "total_matches": 0}
+        total_matches = singles_sessions.get_column("totalSinglesMatches").sum()
+        double_singles = singles_sessions.get_column("doubleSinglesCount").sum()
+        repeat_opponent = singles_sessions.get_column("repeatSinglesOpponentCount").sum()
+        return {
+            "double_rate": (double_singles / total_matches * 100) if total_matches > 0 else 0,
+            "repeat_rate": (repeat_opponent / singles_sessions.height * 100) if singles_sessions.height > 0 else 0,
+            "total_matches": total_matches,
+        }
+    
+    _metrics = [get_singles_metrics(df) for df in _singles_dfs]
     
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # Double-singles rate chart
+    _double_rates = [m["double_rate"] for m in _metrics]
     _x = np.arange(len(_algo_names))
-    _width = 0.35
-    
-    _bars1 = _ax1.bar(_x - _width/2, _level_win_diffs, _width, label="Level-Based (fixed 1-5)", 
-                      color=[c for c in _colors], alpha=0.5, edgecolor='black', hatch='//')
-    _bars2 = _ax1.bar(_x + _width/2, _engine_win_diffs, _width, label="Engine-Tracked (optimized)", 
-                      color=_colors, alpha=0.9, edgecolor='black')
-    
+    _bars1 = _ax1.bar(_x, _double_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
     _ax1.set_xticks(_x)
-    _ax1.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
-    _ax1.set_ylabel("Average Win Differential", fontsize=11)
-    _ax1.set_title("Level-Based vs Engine-Tracked Balance", fontsize=12, fontweight="bold")
-    _ax1.legend(loc="upper right")
-    _ax1.set_ylim(0, 2.5)
-    
-    for _i, (_b1, _b2) in enumerate(zip(_bars1, _bars2)):
-        _ax1.text(_b1.get_x() + _b1.get_width()/2, _b1.get_height() + 0.05, f"{_level_win_diffs[_i]:.2f}",
-                  ha="center", va="bottom", fontsize=8)
-        _ax1.text(_b2.get_x() + _b2.get_width()/2, _b2.get_height() + 0.05, f"{_engine_win_diffs[_i]:.2f}",
-                  ha="center", va="bottom", fontsize=9, fontweight="bold")
-    
-    _random_engine = _engine_win_diffs[0]
-    _improvements = [_random_engine / d if d > 0 else 0 for d in _engine_win_diffs]
-    
-    _bars3 = _ax2.bar(_x, _improvements, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
-    _ax2.axhline(y=1, color='gray', linestyle='--', alpha=0.7, label="Random baseline")
-    _ax2.set_xticks(_x)
-    _ax2.set_xticklabels([n.replace(" ", "\n") for n in _algo_names], fontsize=9)
-    _ax2.set_ylabel("Improvement Ratio vs Random", fontsize=11)
-    _ax2.set_title("Engine Balance Optimization\n(Higher = Better optimization)", fontsize=12, fontweight="bold")
-    _ax2.legend(loc="upper left")
-    
-    for _bar in _bars3:
+    _ax1.set_xticklabels(_algo_names, fontsize=10)
+    _ax1.set_ylabel("Double-Singles Rate (%)", fontsize=11)
+    _ax1.set_title("Consecutive Singles for Same Player\n(Lower = Better)", fontsize=12, fontweight="bold")
+    _ax1.axhline(y=min([r for r in _double_rates if r > 0]), color='green', linestyle='--', alpha=0.5, label="Best optimized")
+    for _bar in _bars1:
         _h = _bar.get_height()
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.1, f"{_h:.1f}×",
-                  ha="center", va="bottom", fontsize=11, fontweight="bold")
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.5, f"{_h:.1f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
+    
+    # Repeat opponent rate chart
+    _repeat_rates = [m["repeat_rate"] for m in _metrics]
+    _bars2 = _ax2.bar(_x, _repeat_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _ax2.set_xticks(_x)
+    _ax2.set_xticklabels(_algo_names, fontsize=10)
+    _ax2.set_ylabel("Repeat Opponent Rate (%)", fontsize=11)
+    _ax2.set_title("Same Opponents in Singles Twice\n(Lower = Better)", fontsize=12, fontweight="bold")
+    for _bar in _bars2:
+        _h = _bar.get_height()
+        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.3, f"{_h:.1f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
     mo.image(fig_to_image(_fig))
     return
 
 @app.cell(hide_code=True)
-def _(cg_config, mc_config, mo, random_config, sa_config):
-    _rand_eng = random_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 1)
-    _mc_eng = mc_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 1) or 0.01
-    _sa_eng = sa_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 1) or 0.01
-    _cg_eng = cg_config.get("engineTrackedBalance", {}).get("avgEngineWinDifferential", 1) or 0.01
+def _(cg_singles_stats, mc_singles_stats, mo, pl, random_singles_stats, sa_singles_stats):
+    def _get_metrics(df):
+        singles_sessions = df.filter(pl.col("totalSinglesMatches") > 0)
+        if singles_sessions.height == 0:
+            return {"double_rate": 0, "repeat_rate": 0}
+        total = singles_sessions.get_column("totalSinglesMatches").sum()
+        double = singles_sessions.get_column("doubleSinglesCount").sum()
+        repeat = singles_sessions.get_column("repeatSinglesOpponentCount").sum()
+        return {
+            "double_rate": (double / total * 100) if total > 0 else 0,
+            "repeat_rate": (repeat / singles_sessions.height * 100) if singles_sessions.height > 0 else 0,
+        }
     
-    _min_improvement = min(_rand_eng/_sa_eng, _rand_eng/_mc_eng, _rand_eng/_cg_eng)
+    _rand = _get_metrics(random_singles_stats)
+    _mc = _get_metrics(mc_singles_stats)
+    _sa = _get_metrics(sa_singles_stats)
+    _cg = _get_metrics(cg_singles_stats)
+    
+    _best_double = min(_mc["double_rate"], _sa["double_rate"], _cg["double_rate"])
+    _best_repeat = min(_mc["repeat_rate"], _sa["repeat_rate"], _cg["repeat_rate"])
+    _rand_double_improvement = (_rand["double_rate"] - _best_double) / _rand["double_rate"] * 100 if _rand["double_rate"] > 0 else 0
+    _rand_repeat_improvement = (_rand["repeat_rate"] - _best_repeat) / _rand["repeat_rate"] * 100 if _rand["repeat_rate"] > 0 else 0
     
     mo.md(f"""
-    The optimization algorithms create teams that are at minimum **{_min_improvement:.0f}× more balanced** 
-    (based on session wins they track) compared to random assignment.
-    
-    The level-based metrics appear similar because the engines optimize based on observed wins/losses, 
-    not the fixed skill levels used in this simulation.
+- Double-Singles: Random baseline has {_rand["double_rate"]:.1f}% rate, while optimized algorithms achieve ~{_best_double:.1f}% (**{_rand_double_improvement:.0f}% improvement**)
+- Repeat Opponents: Random baseline has {_rand["repeat_rate"]:.1f}% rate, while SA achieves only {_sa["repeat_rate"]:.1f}% (**{_rand_repeat_improvement:.0f}% improvement**)
+
+Why optimized algorithms are better?
+- They track singles history and prioritize players who haven't played singles recently
+- SA's exhaustive search finds configurations that minimize repeat opponents
+- MC samples many candidates and selects the one with fairest singles distribution
     """)
     return
 
-@app.cell(hide_code=True)
-def _(balance_results, mo, np):
-    _rand = balance_results["Random Baseline"]
-    _mc = balance_results["Monte Carlo"]
-    _sa = balance_results["Simulated Annealing"]
-    _cg = balance_results["Conflict Graph"]
-    
-    _rand_pair = np.mean(_rand['pairing_costs']) if _rand['pairing_costs'] else 0
-    _mc_pair = np.mean(_mc['pairing_costs']) if _mc['pairing_costs'] else 0
-    _sa_pair = np.mean(_sa['pairing_costs']) if _sa['pairing_costs'] else 0
-    _cg_pair = np.mean(_cg['pairing_costs']) if _cg['pairing_costs'] else 0
-    
-    _avg_stronger_wins = (_rand['stronger_team_win_rate'] + _mc['stronger_team_win_rate'] + _sa['stronger_team_win_rate'] + _cg['stronger_team_win_rate']) / 4
-    _avg_perfect_bal = (_rand['perfectly_balanced_rate'] + _mc['perfectly_balanced_rate'] + _sa['perfectly_balanced_rate'] + _cg['perfectly_balanced_rate']) / 4
-    _avg_pairing = (_rand_pair + _mc_pair + _sa_pair + _cg_pair) / 4
-    
-    mo.md(f"""
-    ### Team Balance Analysis Summary
-    
-    **Why are all metrics similar?**
-    
-    The algorithms optimize based on **session wins/losses** they track, but our simulation measures 
-    "strength" using **fixed player levels (1-5)** that the engines don't know about.
-    
-    - **Engine's view**: "Player X has won 3 times, Player Y has won 1 time → balance them"
-    - **Simulation's view**: "Player X is Level 5, Player Y is Level 2 → strength diff = 3"
-    
-    Since player selection is random and skill levels are fixed, all algorithms produce similar 
-    level-based outcomes. The {_avg_stronger_wins:.0f}% stronger-team win rate and {_avg_perfect_bal:.0f}% perfect balance are mathematical properties
-    of the level distribution and logistic probability model, not algorithm performance.
-    
-    **Why don't all skill levels have 50% win rate even with balanced teams?**
-    
-    "Team balance" means opposing teams have similar **total** strength (e.g., Level 5 + Level 1 vs Level 3 + Level 3), 
-    making each **match** roughly 50/50. However, this does NOT equalize individual win rates because:
-    
-    - Higher-skilled players **contribute more** to their team's success
-    - When a balanced team wins, the Level 5 player on that team still gets the win
-    - Level 5 players end up on winning teams more often than Level 1 players
-    
-    The only ways to achieve 50% win rate for ALL skill levels would be: (1) make skill irrelevant to outcomes, 
-    or (2) use compensatory pairing that always pairs strong with weak. Neither is desirable for competitive play.
-    
-    **Skill Pairing Cost** (teammate Level₁ × Level₂): All algorithms average {_avg_pairing:.0f}, meaning teammates 
-    are paired randomly with respect to fixed levels. The engines CAN'T optimize for this because 
-    they don't know the levels - they only see wins/losses.
-    """)
-    return
 
 @app.cell(hide_code=True)
 def _(mo):
@@ -1195,10 +1224,10 @@ def _(mo):
 
 @app.cell
 def _(data_dir, np, pl):
-    random_bench_stats = pl.read_csv(data_dir / "random_baseline" / "bench_stats.csv")
-    mc_bench_stats = pl.read_csv(data_dir / "mc_algo" / "bench_stats.csv")
-    sa_bench_stats = pl.read_csv(data_dir / "sa_algo" / "bench_stats.csv")
-    cg_bench_stats = pl.read_csv(data_dir / "cg_algo" / "bench_stats.csv")
+    random_bench_stats = pl.read_csv(data_dir / "random_baseline" / "bench_stats.csv", infer_schema_length=10000)
+    mc_bench_stats = pl.read_csv(data_dir / "mc_algo" / "bench_stats.csv", infer_schema_length=10000)
+    sa_bench_stats = pl.read_csv(data_dir / "sa_algo" / "bench_stats.csv", infer_schema_length=10000)
+    cg_bench_stats = pl.read_csv(data_dir / "cg_algo" / "bench_stats.csv", infer_schema_length=10000)
     
     def aggregate_bench_stats(df: pl.DataFrame) -> dict:
         """Aggregate pre-computed bench gap statistics."""
@@ -1254,7 +1283,7 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
     _algo_names = ["Random", "MC", "SA", "CG"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
     
-    _player_counts = [14, 15, 16, 17, 18, 19, 20]
+    _player_counts = [14, 15, 16, 17, 18, 19, 20, 21, 22]
     
     def get_court_spots(num_players):
         num_courts = min(4, num_players // 4)
