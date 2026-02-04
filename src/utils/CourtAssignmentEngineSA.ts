@@ -38,6 +38,8 @@ import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 export class CourtAssignmentEngineSA {
   /** Tracks how many times each player has been benched across all sessions */
   private static benchCountMap: Map<string, number> = new Map();
+  /** Tracks how many times each player has played singles matches across all sessions */
+  private static singleCountMap: Map<string, number> = new Map();
   /** Tracks pairwise teammate frequency to encourage variety */
   private static teammateCountMap: Map<string, number> = new Map();
   /** Tracks pairwise opponent frequency to encourage variety */
@@ -90,6 +92,7 @@ export class CourtAssignmentEngineSA {
 
   static resetHistory(): void {
     this.benchCountMap.clear();
+    this.singleCountMap.clear();
     this.teammateCountMap.clear();
     this.opponentCountMap.clear();
     this.winCountMap.clear();
@@ -105,6 +108,7 @@ export class CourtAssignmentEngineSA {
   static prepareStateForSaving(): CourtEngineState {
     return {
       benchCountMap: Object.fromEntries(this.benchCountMap),
+      singleCountMap: Object.fromEntries(this.singleCountMap),
       teammateCountMap: Object.fromEntries(this.teammateCountMap),
       opponentCountMap: Object.fromEntries(this.opponentCountMap),
       winCountMap: Object.fromEntries(this.winCountMap),
@@ -121,6 +125,9 @@ export class CourtAssignmentEngineSA {
 
     if (state.benchCountMap) {
       this.benchCountMap = new Map(Object.entries(state.benchCountMap));
+    }
+    if (state.singleCountMap) {
+      this.singleCountMap = new Map(Object.entries(state.singleCountMap));
     }
     if (state.teammateCountMap) {
       this.teammateCountMap = new Map(Object.entries(state.teammateCountMap));
@@ -285,6 +292,10 @@ export class CourtAssignmentEngineSA {
     benchedPlayers.forEach(p => this.incrementMapCount(this.benchCountMap, p.id));
     finalCourts.forEach(court => {
       if (!court.teams) return;
+
+      if (court.players.length === 2) {
+        court.players.forEach(p => this.incrementMapCount(this.singleCountMap, p.id));
+      }
 
       const addTeamPairs = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
@@ -500,11 +511,21 @@ export class CourtAssignmentEngineSA {
    * Evaluates total cost of an assignment.
    * Uses HARD penalties for teammate repetition.
    */
+  /** Penalty for repeated singles play (high to ensure fair rotation) */
+  private static readonly SINGLES_REPEAT_PENALTY = 100;
+
   private static evaluateTotalCost(courts: Court[]): number {
     let totalCost = 0;
 
     for (const court of courts) {
       if (!court.teams) continue;
+
+      // === SINGLES REPETITION (ensure fair singles rotation) ===
+      if (court.players.length === 2) {
+        const player1SinglesCount = this.singleCountMap.get(court.players[0].id) ?? 0;
+        const player2SinglesCount = this.singleCountMap.get(court.players[1].id) ?? 0;
+        totalCost += (player1SinglesCount + player2SinglesCount) * this.SINGLES_REPEAT_PENALTY;
+      }
 
       // === TEAMMATE REPETITION (HARD CONSTRAINT) ===
       const addTeammateCost = (team: Player[]): void => {
