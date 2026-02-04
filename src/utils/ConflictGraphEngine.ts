@@ -36,6 +36,8 @@ import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 export class ConflictGraphEngine {
   /** Tracks how many times each player has been benched across all sessions */
   private static benchCountMap: Map<string, number> = new Map();
+  /** Tracks how many times each player has played singles matches across all sessions */
+  private static singleCountMap: Map<string, number> = new Map();
   /** Tracks pairwise teammate frequency - THIS IS THE CONFLICT GRAPH */
   private static teammateCountMap: Map<string, number> = new Map();
   /** Tracks pairwise opponent frequency */
@@ -76,6 +78,7 @@ export class ConflictGraphEngine {
 
   static resetHistory(): void {
     this.benchCountMap.clear();
+    this.singleCountMap.clear();
     this.teammateCountMap.clear();
     this.opponentCountMap.clear();
     this.winCountMap.clear();
@@ -91,6 +94,7 @@ export class ConflictGraphEngine {
   static prepareStateForSaving(): CourtEngineState {
     return {
       benchCountMap: Object.fromEntries(this.benchCountMap),
+      singleCountMap: Object.fromEntries(this.singleCountMap),
       teammateCountMap: Object.fromEntries(this.teammateCountMap),
       opponentCountMap: Object.fromEntries(this.opponentCountMap),
       winCountMap: Object.fromEntries(this.winCountMap),
@@ -107,6 +111,9 @@ export class ConflictGraphEngine {
 
     if (state.benchCountMap) {
       this.benchCountMap = new Map(Object.entries(state.benchCountMap));
+    }
+    if (state.singleCountMap) {
+      this.singleCountMap = new Map(Object.entries(state.singleCountMap));
     }
     if (state.teammateCountMap) {
       this.teammateCountMap = new Map(Object.entries(state.teammateCountMap));
@@ -267,6 +274,10 @@ export class ConflictGraphEngine {
     finalCourts.forEach(court => {
       if (!court.teams) return;
 
+      if (court.players.length === 2) {
+        court.players.forEach(p => this.incrementMapCount(this.singleCountMap, p.id));
+      }
+
       const addTeamPairs = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
@@ -310,11 +321,8 @@ export class ConflictGraphEngine {
           courtPlayers = this.findMinimumConflictGroup(availablePlayers, 4);
         }
       } else if (availablePlayers.length >= 2) {
-        // Not enough for 4, try 2
-        courtPlayers = this.findConflictFreeGroup(availablePlayers, 2);
-        if (!courtPlayers) {
-          courtPlayers = availablePlayers.slice(0, 2);
-        }
+        // Not enough for 4, try 2 - prefer players who've played singles less
+        courtPlayers = this.selectBestSinglesPair(availablePlayers);
       }
 
       if (!courtPlayers || courtPlayers.length < 2) break;
@@ -417,6 +425,22 @@ export class ConflictGraphEngine {
     }
 
     return bestGroup;
+  }
+
+  /**
+   * Selects the best pair for singles, preferring players who've played singles less often.
+   * This ensures fair singles rotation across all players.
+   */
+  private static selectBestSinglesPair(players: Player[]): Player[] {
+    if (players.length < 2) return players;
+
+    const sorted = [...players].sort((a, b) => {
+      const aSingles = this.singleCountMap.get(a.id) ?? 0;
+      const bSingles = this.singleCountMap.get(b.id) ?? 0;
+      return aSingles - bSingles;
+    });
+
+    return sorted.slice(0, 2);
   }
 
   /**

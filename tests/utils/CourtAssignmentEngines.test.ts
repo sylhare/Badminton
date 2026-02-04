@@ -655,3 +655,73 @@ describe.each(engines)('$name – Skill Balancing', ({ engine }) => {
     expect(splitCount).toBeGreaterThanOrEqual(testRuns * 0.2);
   });
 });
+
+describe.each(engines)('$name – Singles Rotation Fairness', ({ engine }) => {
+  beforeEach(() => {
+    engine.resetHistory();
+  });
+
+  it('should track singles matches in state', () => {
+    const players = mockPlayers(2);
+
+    engine.generate(players, 1);
+
+    const state = engine.prepareStateForSaving();
+    expect(state).toHaveProperty('singleCountMap');
+    expect(typeof state.singleCountMap).toBe('object');
+  });
+
+  it('should increment singles count when 2 players are assigned', () => {
+    const players = mockPlayers(2);
+
+    engine.generate(players, 1);
+
+    const state = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+    const singlesPlayed = Object.values(state.singleCountMap).filter(v => v > 0).length;
+    expect(singlesPlayed).toBe(2);
+  });
+
+  it('should not increment singles count for doubles matches', () => {
+    const players = mockPlayers(4);
+
+    engine.generate(players, 1);
+
+    const state = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+    const singlesPlayed = Object.values(state.singleCountMap).filter(v => v > 0).length;
+    expect(singlesPlayed).toBe(0);
+  });
+
+  it('should prefer players with fewer singles matches for fair rotation', () => {
+    const players = mockPlayers(4);
+
+    const twoPlayers = players.slice(0, 2);
+    engine.generate(twoPlayers, 1);
+
+    const stateAfterFirst = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+    expect(stateAfterFirst.singleCountMap['P0']).toBe(1);
+    expect(stateAfterFirst.singleCountMap['P1']).toBe(1);
+    expect(stateAfterFirst.singleCountMap['P2'] ?? 0).toBe(0);
+    expect(stateAfterFirst.singleCountMap['P3'] ?? 0).toBe(0);
+
+    const anotherTwoPlayers = players.slice(2, 4);
+    engine.generate(anotherTwoPlayers, 1);
+
+    const stateAfterSecond = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+    expect(stateAfterSecond.singleCountMap['P2']).toBe(1);
+    expect(stateAfterSecond.singleCountMap['P3']).toBe(1);
+  });
+
+  it('should clear singles count on resetHistory', () => {
+    const players = mockPlayers(2);
+
+    engine.generate(players, 1);
+
+    const stateBefore = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+    expect(Object.values(stateBefore.singleCountMap).some(v => v > 0)).toBe(true);
+
+    engine.resetHistory();
+
+    const stateAfter = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+    expect(Object.values(stateAfter.singleCountMap).every(v => v === 0)).toBe(true);
+  });
+});
