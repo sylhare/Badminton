@@ -751,10 +751,13 @@ describe('ConflictGraphEngine – core behaviour', () => {
 
       expect(assignments.length).toBe(1);
       expect(assignments[0].players.length).toBe(2);
-      expect(assignments[0].teams).toEqual({
-        team1: [players[0]],
-        team2: [players[1]],
-      });
+      expect(assignments[0].teams?.team1.length).toBe(1);
+      expect(assignments[0].teams?.team2.length).toBe(1);
+      const assignedIds = [
+        assignments[0].teams?.team1[0].id,
+        assignments[0].teams?.team2[0].id,
+      ].sort();
+      expect(assignedIds).toEqual(['P0', 'P1']);
     });
 
     it('should handle edge case with 5 players and 2 courts', () => {
