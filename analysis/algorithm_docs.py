@@ -179,6 +179,14 @@ def _(Circle, FancyBboxPatch, fig_to_image, mo, mpatches, plt):
     return
 
 
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 1: Visual representation of the court assignment problem. Shows 8 players where 6 are present (Alice through Frank), 2 are absent (Grace, Henry). The diagram illustrates how 4 players are assigned to Court 1 and split into two teams (Team 1: Alice, Bob; Team 2: Carol, Dave), while 2 players (Eve, Frank) are benched.*
+    """)
+    return
+
+
 # =============================================================================
 # SECTION 2: COST FUNCTION
 # =============================================================================
@@ -285,6 +293,14 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
 
     _fig2.tight_layout()
     mo.image(fig_to_image(_fig2))
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 2: The four components that make up the total cost function. Each colored box represents a different optimization objective: Teammate Repetition (red) penalizes frequent pairings, Opponent Repetition (blue) penalizes repeated matchups, Skill Pairing (green) discourages similar skill levels on the same team, and Team Balance (purple) ensures competitive matches. All components are summed to produce the total court cost.*
+    """)
     return
 
 
@@ -428,6 +444,14 @@ def _(fig_to_image, mo, np, plt):
     return
 
 
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 3: Left panel shows a heatmap of the skill pairing penalty (W₁ × W₂) — the darker red region indicates higher penalties when two strong players are paired together. Right panel compares two different team configurations with the same 4 players: pairing similar-skill players (Alice+Bob, Carol+Dave) yields a total penalty of 22, while mixing skill levels (Alice+Carol, Bob+Dave) reduces the penalty to 13.*
+    """)
+    return
+
+
 # =============================================================================
 # SECTION 3: ALGORITHM OVERVIEW
 # =============================================================================
@@ -536,6 +560,14 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
 
     _fig_overview.tight_layout()
     mo.image(fig_to_image(_fig_overview))
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 4: High-level comparison of the three court assignment algorithms. Monte Carlo (blue) uses random sampling with K=300 iterations, Simulated Annealing (green) performs iterative improvement with 1500 iterations and temperature-based exploration, and Conflict Graph (orange) uses greedy construction with explicit conflict tracking. The table below shows speed, quality, and tuning requirements for each approach.*
+    """)
     return
 
 
@@ -694,6 +726,14 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
 @app.cell
 def _(mo):
     mo.md(r"""
+    *Figure 5: Flowchart of the Monte Carlo Greedy Search algorithm. The main loop (dashed blue box) runs K=300 times: each iteration shuffles players randomly, assigns them to courts sequentially, evaluates all 3 possible team splits per court, and updates the best solution if the new cost is lower. The algorithm returns the best assignment found across all iterations.*
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
     ### 4.3 Team Split Enumeration
 
     For 4 players $\{p_0, p_1, p_2, p_3\}$, there are exactly 3 unique 2v2 configurations:
@@ -807,6 +847,14 @@ def _(fig_to_image, mo, np, plt):
 
     _fig_mc_conv.tight_layout()
     mo.image(fig_to_image(_fig_mc_conv))
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 6: Monte Carlo convergence analysis. Left panel shows failure probability decreasing exponentially as iterations increase, with different curves for various p* values (probability of sampling a good solution). Right panel uses log scale to show the rapid convergence — with K=300 iterations and p*=2%, failure probability drops to approximately 0.24%.*
+    """)
     return
 
 
@@ -973,6 +1021,14 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
 
 
 @app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 7: Analogy between physical annealing in metallurgy and the court assignment algorithm. In physical annealing (left), metal starts hot with freely moving atoms and slowly cools to form an optimal crystal structure. In the algorithm (right), high temperature allows accepting almost any player swap for exploration, while low temperature restricts changes to only improvements, ultimately finding optimal court assignments.*
+    """)
+    return
+
+
+@app.cell
 def _(fig_to_image, mo, np, plt):
     # Visual diagram: Metropolis Acceptance Probability
     _fig_metro, (_ax_m1, _ax_m2) = plt.subplots(1, 2, figsize=(12, 5))
@@ -1023,6 +1079,14 @@ def _(fig_to_image, mo, np, plt):
 
     _fig_metro.tight_layout()
     mo.image(fig_to_image(_fig_metro))
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 8: Metropolis criterion visualization. Left panel shows acceptance probability curves for different temperatures — at high T (red), worse solutions are readily accepted; at low T (blue), only small cost increases are tolerated. Right panel shows the exponential cooling schedule T(t) = T₀·αᵗ over 1500 iterations, transitioning from exploration phase (high T, red region) to exploitation phase (low T, blue region).*
+    """)
     return
 
 
@@ -1198,6 +1262,14 @@ def _(Circle, FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, np, plt):
 @app.cell
 def _(mo):
     mo.md(r"""
+    *Figure 9: Simulated Annealing move operators. Left panel shows a Player Swap between courts (swapping D and G). Middle panel shows a Team Swap within a single court (swapping B and C between teams). Right panel illustrates the energy landscape concept — SA can escape local minima by accepting "uphill" moves at high temperature, enabling discovery of the global minimum.*
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
     ### 5.6 Convergence Theory
 
     **Theorem (SA Asymptotic Convergence)** [[4]](#ref-4): If the cooling schedule satisfies:
@@ -1277,6 +1349,14 @@ def _(fig_to_image, mo, np, plt):
 
     _fig_scaling.tight_layout()
     mo.image(fig_to_image(_fig_scaling))
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 10: Algorithm scaling comparison as player count increases. Monte Carlo scales linearly O(Kn), Simulated Annealing has near-constant time O(I) since iteration count is fixed, and Conflict Graph scales quadratically O(n² log n). For small groups (<20 players), all algorithms are fast; for larger groups, SA maintains consistent performance while CG becomes slower.*
+    """)
     return
 
 
@@ -1420,6 +1500,14 @@ def _(Circle, FancyBboxPatch, fig_to_image, mo, mpatches, np, plt):
 
     _fig_cg.tight_layout()
     mo.image(fig_to_image(_fig_cg))
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 11: Conflict Graph structure and selection process. Left panel shows how 4 players (A, B, C, D) generate 6 possible pair vertices, with red edges connecting pairs that share a player (conflicts). Right panel illustrates greedy selection: pairs AC and BD are selected (no conflict between them), while AB and CD are rejected because they conflict with the selected pairs. Result: Court 1 has teams (A,C) vs (B,D).*
+    """)
     return
 
 
@@ -1580,6 +1668,14 @@ def _(fig_to_image, mo, np, plt):
     return
 
 
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 12: Algorithm variance comparison. Left panel shows solution costs across 10 runs for each algorithm — all three exhibit some variance due to randomization, with SA achieving consistently lower costs. Right panel illustrates the CG "greedy lock-in" failure mode: CG commits to the first available path (cost 42) and cannot backtrack, while SA/MC can explore alternatives to find the optimal path (cost 35).*
+    """)
+    return
+
+
 # =============================================================================
 # SECTION 7: COMPARATIVE ANALYSIS
 # =============================================================================
@@ -1736,6 +1832,14 @@ def _(fig_to_image, mo, np, plt):
 
     _fig_compare.tight_layout()
     mo.image(fig_to_image(_fig_compare))
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    *Figure 13: Empirical performance comparison. Left panel shows zero-repeat rates (higher is better): SA achieves 99%, MC 85%, CG 80%, Random baseline 40%. Middle panel shows execution times (lower is better): CG is fastest at 5ms, MC at 8ms, SA at 15ms. Right panel plots the quality-speed trade-off, with the Pareto frontier connecting CG and SA as the best options depending on whether speed or quality is prioritized.*
+    """)
     return
 
 
