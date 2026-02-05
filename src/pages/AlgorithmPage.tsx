@@ -47,7 +47,7 @@ function AlgorithmPage(): React.ReactElement {
         <div className="notebook-unavailable" data-testid="notebook-unavailable">
           <div className="unavailable-icon">📓</div>
           <h2>Notebook Not Generated</h2>
-          <p>The algorithm documentation notebook hasn't been generated yet.</p>
+          <p>The algorithm documentation notebook has not been generated yet.</p>
           <div className="instructions">
             <p>To generate it, run the following commands:</p>
             <ol>
