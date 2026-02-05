@@ -7,26 +7,30 @@
 
 .notebook-header {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 24px;
-  padding: 12px 20px;
+  min-height: 56px;
+  padding: 0 20px;
   background: linear-gradient(135deg, #161b22 0%, #21262d 100%);
   border-bottom: 1px solid rgba(48, 54, 61, 0.8);
   flex-shrink: 0;
 }
 
 .notebook-header .back-link {
+  position: fixed;
+  top: 8px;
+  left: 20px;
+  z-index: 100;
   color: #8b949e;
   text-decoration: none;
   font-size: 0.9rem;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 6px;
   background: rgba(139, 148, 158, 0.1);
   border: 1px solid rgba(139, 148, 158, 0.2);
   transition: all 0.2s ease;
   white-space: nowrap;
-  margin-left: auto;
-  order: 1;
 }
 
 .notebook-header .back-link:hover {
@@ -38,7 +42,8 @@
 .notebook-header h1 {
   color: #f0f6fc;
   font-size: 1.2rem;
-  margin: 0;
+  margin: 0 !important;
+  margin-left: auto !important;
   font-weight: 600;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
@@ -170,20 +175,12 @@
 /* Responsive */
 @media (max-width: 768px) {
   .notebook-header {
-    flex-direction: row;
-    flex-wrap: wrap;
     gap: 12px;
     padding: 12px 16px;
   }
 
   .notebook-header h1 {
     font-size: 1.1rem;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .notebook-header .back-link {
-    order: 1;
   }
 
   .notebook-unavailable {

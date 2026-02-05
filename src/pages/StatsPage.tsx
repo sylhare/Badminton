@@ -47,7 +47,7 @@ function StatsPage(): React.ReactElement {
           <a href={basePath} className="back-link" data-testid="back-to-app">
             ← Back to App
           </a>
-          <h1>📊 Statistics & Analysis</h1>
+          <h1>Statistics & Analysis</h1>
           <p className="stats-subtitle">
             Explore the algorithms and view your session statistics
           </p>
