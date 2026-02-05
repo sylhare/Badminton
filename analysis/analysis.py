@@ -23,19 +23,40 @@ def _():
 @app.cell
 def _(Path, json, pl):
     # Load OLD algorithm data (original Monte Carlo)
+    # Fall back to mc_algo if old_mc_algo data files don't exist
     old_algo_dir = Path(__file__).parent / "data" / "old_mc_algo"
-    summary = pl.read_csv(old_algo_dir / "summary.csv")
-    pair_events = pl.read_csv(old_algo_dir / "pair_events.csv")
-    config = json.loads((old_algo_dir / "config.json").read_text())
+    mc_algo_dir = Path(__file__).parent / "data" / "mc_algo"
+    
+    # Check if old_mc_algo has the required CSV files
+    old_summary_path = old_algo_dir / "summary.csv"
+    old_pair_events_path = old_algo_dir / "pair_events.csv"
+    
+    if old_summary_path.exists() and old_pair_events_path.exists():
+        summary = pl.read_csv(old_summary_path)
+        pair_events = pl.read_csv(old_pair_events_path)
+        config = json.loads((old_algo_dir / "config.json").read_text())
+    else:
+        # Fall back to mc_algo data for "old" algorithm comparison
+        summary = pl.read_csv(mc_algo_dir / "summary.csv")
+        pair_events = pl.read_csv(mc_algo_dir / "pair_events.csv")
+        config = json.loads((mc_algo_dir / "config.json").read_text())
+        # Add numPlayers/numCourts from mc_algo config format
+        if "numPlayers" not in config and "playerCounts" in config:
+            config["numPlayers"] = max(config["playerCounts"])
+        if "numCourts" not in config and "maxCourts" in config:
+            config["numCourts"] = config["maxCourts"]
     
     # Load NEW algorithm data (Monte Carlo algorithm)
-    new_algo_dir = Path(__file__).parent / "data" / "mc_algo"
+    new_algo_dir = mc_algo_dir
     new_algo_summary = pl.read_csv(new_algo_dir / "summary.csv")
     new_algo_pair_events = pl.read_csv(new_algo_dir / "pair_events.csv")
     new_algo_config = json.loads((new_algo_dir / "config.json").read_text())
     
-    # Derive batch info from the embedded batch column (old algo has batches)
-    batch_ids = sorted(summary.get_column("batch").unique().to_list())
+    # Derive batch info from the embedded batch column
+    if "batch" in summary.columns:
+        batch_ids = sorted(summary.get_column("batch").unique().to_list())
+    else:
+        batch_ids = ["1"]  # Default single batch
     num_batches = len(batch_ids)
     
     # Add batch info to config for compatibility with downstream cells
@@ -54,6 +75,8 @@ def _(Path, json, pl):
 
 @app.cell(hide_code=True)
 def _(config, mo):
+    _num_batches = config.get("numBatches", 1)
+    _total_sims = config.get("totalSimulations", config["runs"] * _num_batches)
     mo.md(f"""
     # Court Assignment Repeat Analysis
 
@@ -63,7 +86,7 @@ def _(config, mo):
     - **New Algorithm**: Updated shuffle for player pairs
 
     **Configuration** (same for all)
-    - Runs: {config['runs']} per batch (5 batches each)
+    - Total simulations: {_total_sims} ({config['runs']} per batch × {_num_batches} batch{'es' if _num_batches > 1 else ''})
     - Rounds: {config['rounds']} (consecutive assignments per run)
     - Players: {config['numPlayers']} (total pool size)
     - Courts: {config['numCourts']} (matches per round)

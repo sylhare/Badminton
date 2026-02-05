@@ -63,11 +63,7 @@ Export all notebooks without code cells (output only):
 
 ```bash
 cd analysis
-mkdir -p html
-uv run marimo export html --no-include-code algorithm_docs.py -o html/algorithm_docs.html
-uv run marimo export html --no-include-code analysis.py -o html/analysis.html
-uv run marimo export html --no-include-code bench_analysis.py -o html/bench_analysis.html
-uv run marimo export html --no-include-code engine_analysis.py -o html/engine_analysis.html
+uv run export-html
 ```
 
 Then prerender for the main app (from project root):
