@@ -1,1 +1,1 @@
-batch,simulationId,fromRound,toRound,pairId,opponentFrom,opponentTo,opponentChanged
+simulationId,fromRound,toRound,pairId,opponentFrom,opponentTo,opponentChanged
