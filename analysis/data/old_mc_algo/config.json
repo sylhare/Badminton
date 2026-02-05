@@ -1,5 +1,5 @@
 {
-  "runs": 5000,
+  "runs": 300,
   "rounds": 10,
   "numPlayers": 20,
   "numCourts": 4,
