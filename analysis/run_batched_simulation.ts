@@ -50,26 +50,26 @@ class RandomBaselineEngine {
     const shuffled = [...presentPlayers].sort(() => Math.random() - 0.5);
     const capacity = numberOfCourts * 4;
     const onCourt = shuffled.slice(0, Math.min(shuffled.length, capacity));
-    
+
     const courts: Court[] = [];
     let idx = 0;
-    
+
     for (let courtNum = 1; courtNum <= numberOfCourts && idx + 3 < onCourt.length; courtNum++) {
       const courtPlayers = onCourt.slice(idx, idx + 4);
       idx += 4;
-      
+
       if (courtPlayers.length < 4) break;
-      
+
       const splits = [
         { team1: [courtPlayers[0], courtPlayers[1]], team2: [courtPlayers[2], courtPlayers[3]] },
         { team1: [courtPlayers[0], courtPlayers[2]], team2: [courtPlayers[1], courtPlayers[3]] },
         { team1: [courtPlayers[0], courtPlayers[3]], team2: [courtPlayers[1], courtPlayers[2]] },
       ];
       const teams = splits[Math.floor(Math.random() * 3)];
-      
+
       courts.push({ courtNumber: courtNum, players: courtPlayers, teams });
     }
-    
+
     return courts;
   }
 }
@@ -114,7 +114,7 @@ const MAX_PLAYERS = Math.max(...PLAYER_COUNTS);
 const generatePlayerLevels = (count: number): Map<string, number> => {
   const levels = new Map<string, number>();
   const distribution = [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5];
-  
+
   for (let i = 0; i < count; i++) {
     const playerId = `P${i + 1}`;
     const level = distribution[i % distribution.length];
@@ -267,11 +267,11 @@ const toCsv = (rows: Array<Record<string, string | number | boolean>>, defaultHe
     }
     return raw;
   };
-  
+
   if (rows.length === 0) {
     return defaultHeaders ? defaultHeaders.join(',') : '';
   }
-  
+
   const headers = Object.keys(rows[0]);
   const lines = [headers.join(',')];
   for (const row of rows) {
@@ -289,10 +289,10 @@ const toCsv = (rows: Array<Record<string, string | number | boolean>>, defaultHe
  * Records wins to the engine for skill balancing in subsequent rounds.
  */
 const extractRoundPairs = (
-  roundIndex: number, 
-  courts: Court[], 
+  roundIndex: number,
+  courts: Court[],
   simulationId: number,
-  Engine: EngineType
+  Engine: EngineType,
 ): RoundResult => {
   const pairToOpponent = new Map<string, string>();
   const matchEvents: MatchEvent[] = [];
@@ -374,7 +374,7 @@ const evaluateRepeats = (rounds: RoundResult[], simulationId: number) => {
   const events: PairEvent[] = [];
 
   const pairOccurrences = new Map<string, { roundIndex: number; opponent: string }[]>();
-  
+
   for (const round of rounds) {
     for (const [pairId, opponent] of round.pairToOpponent.entries()) {
       const occurrences = pairOccurrences.get(pairId) ?? [];
@@ -387,11 +387,11 @@ const evaluateRepeats = (rounds: RoundResult[], simulationId: number) => {
     if (occurrences.length <= 1) continue;
 
     const firstOccurrence = occurrences[0];
-    
+
     for (let i = 1; i < occurrences.length; i++) {
       const repeat = occurrences[i];
       repeatPairCount += 1;
-      
+
       const opponentChanged = firstOccurrence.opponent !== repeat.opponent;
       if (opponentChanged) {
         repeatPairDifferentOpponentsCount += 1;
@@ -418,8 +418,8 @@ const evaluateRepeats = (rounds: RoundResult[], simulationId: number) => {
  * Runs multiple simulation sessions for a single engine with a specific player count.
  * Each session consists of multiple rounds with the engine making court assignments.
  */
-const runSimulation = (Engine: EngineType, numPlayers: number): { 
-  summaries: SimulationSummary[]; 
+const runSimulation = (Engine: EngineType, numPlayers: number): {
+  summaries: SimulationSummary[];
   pairEvents: PairEvent[];
   matchEvents: MatchEvent[];
   matchPairEvents: MatchPairEvent[];
@@ -434,37 +434,37 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
 
   for (let simId = 1; simId <= RUNS; simId++) {
     Engine.resetHistory();
-    
+
     const sessionBenchCounts = new Map<string, number>();
     const lastBenchRound = new Map<string, number>();
     players.forEach(p => {
       sessionBenchCounts.set(p.id, 0);
       lastBenchRound.set(p.id, 0);
     });
-    
+
     const sessionGaps: number[] = [];
     const rounds: RoundResult[] = [];
-    
+
     for (let round = 0; round < ROUNDS; round++) {
       const courts = Engine.generate(players, MAX_COURTS);
-      
+
       const roundResult = extractRoundPairs(round + 1, courts, simId, Engine);
       rounds.push(roundResult);
       for (const m of roundResult.matchEvents) matchEvents.push(m);
       for (const mp of roundResult.matchPairEvents) matchPairEvents.push(mp);
-      
+
       const playersOnCourt = new Set<string>();
       for (const court of courts) {
         for (const p of court.players) {
           playersOnCourt.add(p.id);
         }
       }
-      
+
       for (const player of players) {
         const wasBenched = !playersOnCourt.has(player.id);
         if (wasBenched) {
           sessionBenchCounts.set(player.id, (sessionBenchCounts.get(player.id) ?? 0) + 1);
-          
+
           const lastRound = lastBenchRound.get(player.id) ?? 0;
           if (lastRound > 0) {
             const gap = (round + 1) - lastRound - 1;
@@ -472,18 +472,18 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
           }
           lastBenchRound.set(player.id, round + 1);
         }
-        
+
         // Removed detailed bench events - only aggregate stats are needed
       }
     }
-    
+
     const benchCounts = Array.from(sessionBenchCounts.values());
     const maxBench = Math.max(...benchCounts);
     const minBench = Math.min(...benchCounts);
     const avgBench = benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length;
     const meanGap = sessionGaps.length > 0 ? sessionGaps.reduce((a, b) => a + b, 0) / sessionGaps.length : 0;
     const doubleBenchCount = sessionGaps.filter(g => g === 0).length;
-    
+
     benchStats.push({
       simulationId: simId,
       numPlayers,
@@ -529,14 +529,14 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   console.log(`${'='.repeat(60)}`);
 
   const startTime = Date.now();
-  
+
   // Aggregate results across all player counts
   const allSummaries: SimulationSummary[] = [];
   const allPairEvents: PairEvent[] = [];
   const allMatchEvents: MatchEvent[] = [];
   const allMatchPairEvents: MatchPairEvent[] = [];
   const allBenchStats: SessionBenchStats[] = [];
-  
+
   for (const numPlayers of PLAYER_COUNTS) {
     const { summaries, pairEvents, matchEvents, matchPairEvents, benchStats } = runSimulation(engine, numPlayers);
     allSummaries.push(...summaries);
@@ -545,24 +545,24 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
     allMatchPairEvents.push(...matchPairEvents);
     allBenchStats.push(...benchStats);
   }
-  
+
   const summaries = allSummaries;
   const pairEvents = allPairEvents;
   const matchEvents = allMatchEvents;
   const matchPairEvents = allMatchPairEvents;
   const benchStats = allBenchStats;
-  
+
   const elapsed = Date.now() - startTime;
 
   const pairEventHeaders = ['simulationId', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
   const matchEventHeaders = ['simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
   const benchStatsHeaders = ['simulationId', 'numPlayers', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
-  
+
   writeFileSync(resolve(engineDir, 'summary.csv'), toCsv(summaries));
   writeFileSync(resolve(engineDir, 'pair_events.csv'), toCsv(pairEvents, pairEventHeaders));
   writeFileSync(resolve(engineDir, 'match_events.csv'), toCsv(matchEvents, matchEventHeaders));
   writeFileSync(resolve(engineDir, 'bench_stats.csv'), toCsv(benchStats, benchStatsHeaders));
-  
+
   const matchPairCounts = new Map<string, { total: number; asTeammate: number; asOpponent: number }>();
   for (const mp of matchPairEvents) {
     const existing = matchPairCounts.get(mp.pairId) ?? { total: 0, asTeammate: 0, asOpponent: 0 };
@@ -587,11 +587,11 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const strongerTeamWins = matchEvents.filter(m => m.strongerTeamWon).length;
   const avgStrengthDiff = matchEvents.reduce((acc, m) => acc + m.strengthDifferential, 0) / totalMatches;
   const perfectlyBalanced = matchEvents.filter(m => m.strengthDifferential === 0).length;
-  
+
   const engineBalancedWins = matchEvents.filter(m => m.engineBalancedTeamWon).length;
   const avgEngineWinDiff = matchEvents.reduce((acc, m) => acc + m.engineWinDifferential, 0) / totalMatches;
   const enginePerfectBalance = matchEvents.filter(m => m.engineWinDifferential === 0).length;
-  
+
   const avgBenchRange = benchStats.reduce((acc, bs) => acc + bs.benchRange, 0) / benchStats.length;
   const avgMeanGap = benchStats.reduce((acc, bs) => acc + bs.meanGap, 0) / benchStats.length;
   const totalDoubleBench = benchStats.reduce((acc, bs) => acc + bs.doubleBenchCount, 0);
@@ -601,13 +601,13 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const playerWins = new Map<string, number>();
   const playerLosses = new Map<string, number>();
   const playerGames = new Map<string, number>();
-  
+
   for (const match of matchEvents) {
     const team1Players = match.team1Players.split('|');
     const team2Players = match.team2Players.split('|');
     const winners = match.winner === 1 ? team1Players : team2Players;
     const losers = match.winner === 1 ? team2Players : team1Players;
-    
+
     for (const p of winners) {
       playerWins.set(p, (playerWins.get(p) ?? 0) + 1);
       playerGames.set(p, (playerGames.get(p) ?? 0) + 1);
@@ -640,7 +640,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
     playerProfiles: Object.fromEntries(
       Array.from(PLAYER_LEVELS.entries())
         .filter(([id]) => parseInt(id.slice(1)) <= MAX_PLAYERS)
-        .map(([id, level]) => [id, { level }])
+        .map(([id, level]) => [id, { level }]),
     ),
     aggregateStats: {
       repeatRate: totalRepeatRate,
@@ -679,10 +679,10 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   console.log(`  Zero-repeat rate: ${engineConfigFile.aggregateStats.zeroRepeatRate.toFixed(2)}%`);
   console.log(`  Bench fairness: avg gap ${avgMeanGap.toFixed(2)}, double-bench rate ${doubleBenchRate.toFixed(1)}%`);
 
-  return { 
-    summaries, 
-    durationMs: elapsed, 
-    stats: engineConfigFile.aggregateStats, 
+  return {
+    summaries,
+    durationMs: elapsed,
+    stats: engineConfigFile.aggregateStats,
     levelBasedBalance: engineConfigFile.levelBasedBalance,
     engineTrackedBalance: engineConfigFile.engineTrackedBalance,
     benchFairness: engineConfigFile.benchFairness,

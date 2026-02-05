@@ -272,15 +272,6 @@ function App(): React.ReactElement {
 
       <footer className="app-footer">
         <p>
-          <a
-            href={`${import.meta.env.BASE_URL || '/'}stats`}
-            className="analysis-link"
-            data-testid="stats-link"
-          >
-            📊 View Statistics & Analysis
-          </a>
-        </p>
-        <p>
           Have feedback? Found a bug or want to suggest a feature?
           {' '}
           <a
@@ -289,6 +280,15 @@ function App(): React.ReactElement {
             rel="noopener noreferrer"
           >
             Let us know on GitHub
+          </a>
+        </p>
+        <p>
+          <a
+            href={`${import.meta.env.BASE_URL || '/'}stats`}
+            className="analysis-link"
+            data-testid="stats-link"
+          >
+            View Statistics & Analysis
           </a>
         </p>
       </footer>
