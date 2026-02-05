@@ -34,13 +34,20 @@ def _(Path, json, pl):
     new_algo_pair_events = pl.read_csv(new_algo_dir / "pair_events.csv")
     new_algo_config = json.loads((new_algo_dir / "config.json").read_text())
     
-    # Derive batch info from the embedded batch column
+    # Derive batch info from the embedded batch column (old algo has batches)
     batch_ids = sorted(summary.get_column("batch").unique().to_list())
     num_batches = len(batch_ids)
     
     # Add batch info to config for compatibility with downstream cells
     config["numBatches"] = num_batches
     config["batchIds"] = [str(b) for b in batch_ids]
+    
+    # Normalize new algo config to match old format (for display purposes)
+    # New format has playerCounts array, old has numPlayers scalar
+    if "numPlayers" not in new_algo_config and "playerCounts" in new_algo_config:
+        new_algo_config["numPlayers"] = max(new_algo_config["playerCounts"])
+    if "numCourts" not in new_algo_config and "maxCourts" in new_algo_config:
+        new_algo_config["numCourts"] = new_algo_config["maxCourts"]
     
     return config, new_algo_config, new_algo_pair_events, new_algo_summary, pair_events, summary
 
@@ -755,13 +762,16 @@ def _(mo, pair_frequency):
 
 
 @app.cell
-def _(baseline_pair_events, config, fig_to_image, mo, new_algo_pair_events, np, pair_events, pl, plt):
+def _(baseline_pair_events, config, fig_to_image, mo, new_algo_config, new_algo_pair_events, np, pair_events, pl, plt):
     # Build matrices for all three: Old Algorithm, Baseline, New Algorithm
-    _num_players = config["numPlayers"]
+    # Use the max player count across all configs to handle varying player counts
+    _old_num_players = config["numPlayers"]
+    _new_num_players = new_algo_config.get("numPlayers", _old_num_players)
+    _num_players = max(_old_num_players, _new_num_players)
     _players = [f"P{i + 1}" for i in range(_num_players)]
 
-    def build_matrix(events_df):
-        _matrix = np.zeros((_num_players, _num_players))
+    def build_matrix(events_df, matrix_size):
+        _matrix = np.zeros((matrix_size, matrix_size))
         _pair_counts = (
             events_df.group_by("pairId")
             .agg(pl.len().alias("count"))
@@ -773,13 +783,15 @@ def _(baseline_pair_events, config, fig_to_image, mo, new_algo_pair_events, np, 
             _parts = _pair_id.split("|")
             _p1_idx = int(_parts[0][1:]) - 1
             _p2_idx = int(_parts[1][1:]) - 1
-            _matrix[_p1_idx, _p2_idx] = _count
-            _matrix[_p2_idx, _p1_idx] = _count
+            # Skip if player index exceeds matrix size (shouldn't happen with proper sizing)
+            if _p1_idx < matrix_size and _p2_idx < matrix_size:
+                _matrix[_p1_idx, _p2_idx] = _count
+                _matrix[_p2_idx, _p1_idx] = _count
         return _matrix
 
-    _old_algo_matrix = build_matrix(pair_events)
-    _baseline_matrix = build_matrix(baseline_pair_events)
-    _new_algo_matrix = build_matrix(new_algo_pair_events)
+    _old_algo_matrix = build_matrix(pair_events, _num_players)
+    _baseline_matrix = build_matrix(baseline_pair_events, _num_players)
+    _new_algo_matrix = build_matrix(new_algo_pair_events, _num_players)
 
     # Normalize to SAME TOTAL SUM for pattern comparison
     # (baseline has more events per run, so raw counts would dominate the scale)
@@ -848,9 +860,10 @@ def _(baseline_pair_events, config, fig_to_image, mo, new_algo_pair_events, np, 
 
 
 @app.cell(hide_code=True)
-def _(algo_pair_matrix, baseline_pair_matrix, config, mo, new_algo_pair_matrix, np):
+def _(algo_pair_matrix, baseline_pair_matrix, config, mo, new_algo_config, new_algo_pair_matrix, np):
     # Compute statistics for all three algorithms
-    _num_players = config["numPlayers"]
+    # Use the matrix size (which may be larger than config numPlayers if new algo has more players)
+    _num_players = algo_pair_matrix.shape[0]
 
     # Get non-diagonal elements (actual pairs)
     _old_upper = algo_pair_matrix[np.triu_indices(_num_players, k=1)]
@@ -1247,7 +1260,7 @@ def _(has_batches, mo):
 
 
 @app.cell
-def _(batch_summaries, has_batches, mo, new_algo_batch_summaries, pl):
+def _(batch_summaries, has_batches, mo, new_algo_batch_summaries, new_algo_summary, pl):
     mo.stop(not has_batches)
 
     # Compute per-batch statistics for OLD algorithm
@@ -1263,18 +1276,32 @@ def _(batch_summaries, has_batches, mo, new_algo_batch_summaries, pl):
             "zero_repeat_pct": (_diff_opponent == 0).sum() / _diff_opponent.len(),
         })
 
-    # Compute per-batch statistics for NEW algorithm
+    # Compute statistics for NEW algorithm - use batches if available, otherwise compute from full dataset
     _new_batch_stats = []
-    for _bid, _df in new_algo_batch_summaries.items():
-        _any_repeat = _df.get_column("repeatAnyPair").sum() / _df.height
-        _diff_opponent = _df.get_column("repeatPairDifferentOpponentsCount")
-        _new_batch_stats.append({
-            "batch": _bid,
-            "runs": _df.height,
-            "p_any_repeat": _any_repeat,
-            "avg_repeat_pairs": _diff_opponent.mean(),
-            "zero_repeat_pct": (_diff_opponent == 0).sum() / _diff_opponent.len(),
-        })
+    if len(new_algo_batch_summaries) > 0:
+        for _bid, _df in new_algo_batch_summaries.items():
+            _any_repeat = _df.get_column("repeatAnyPair").sum() / _df.height
+            _diff_opponent = _df.get_column("repeatPairDifferentOpponentsCount")
+            _new_batch_stats.append({
+                "batch": _bid,
+                "runs": _df.height,
+                "p_any_repeat": _any_repeat,
+                "avg_repeat_pairs": _diff_opponent.mean(),
+                "zero_repeat_pct": (_diff_opponent == 0).sum() / _diff_opponent.len(),
+            })
+    else:
+        # No batch column - compute aggregate stats from full dataset
+        _df = new_algo_summary
+        if _df.height > 0:
+            _any_repeat = _df.get_column("repeatAnyPair").sum() / _df.height
+            _diff_opponent = _df.get_column("repeatPairDifferentOpponentsCount")
+            _new_batch_stats.append({
+                "batch": "all",
+                "runs": _df.height,
+                "p_any_repeat": _any_repeat,
+                "avg_repeat_pairs": _diff_opponent.mean(),
+                "zero_repeat_pct": (_diff_opponent == 0).sum() / _diff_opponent.len(),
+            })
 
     batch_stats_df = pl.DataFrame(_old_batch_stats)
     new_algo_batch_stats_df = pl.DataFrame(_new_batch_stats)
@@ -1565,7 +1592,7 @@ def _(batch_stats_df, baseline_batch_stats, has_batches, fig_to_image, mo, new_a
     _baseline_any = baseline_batch_stats.get_column("p_any_repeat").to_list()
     _baseline_avg = baseline_batch_stats.get_column("avg_repeat_pairs").to_list()
 
-    # Get NEW algorithm batch stats
+    # Get NEW algorithm stats (always available now, computed from full dataset if no batches)
     _new_any = new_algo_batch_stats_df.get_column("p_any_repeat").to_list()
     _new_avg = new_algo_batch_stats_df.get_column("avg_repeat_pairs").to_list()
 
@@ -1582,7 +1609,7 @@ def _(batch_stats_df, baseline_batch_stats, has_batches, fig_to_image, mo, new_a
     _bars1 = _ax1.bar(_x, _any_vals, _width, color=_colors)
     _ax1.set_xticks(_x)
     _ax1.set_xticklabels(_labels)
-    _ax1.set_ylabel("Any-repeat rate (avg across batches)")
+    _ax1.set_ylabel("Any-repeat rate")
     _ax1.set_title("Any-Repeat Rate: All Algorithms")
     _ax1.set_ylim(0, 1.1)
 
@@ -1614,20 +1641,20 @@ def _(batch_stats_df, baseline_batch_stats, has_batches, mo, new_algo_batch_stat
     # OLD algorithm stats
     _old_any_mean = batch_stats_df.get_column("p_any_repeat").mean()
     _old_avg_mean = batch_stats_df.get_column("avg_repeat_pairs").mean()
-    _old_any_std = batch_stats_df.get_column("p_any_repeat").std()
-    _old_avg_std = batch_stats_df.get_column("avg_repeat_pairs").std()
+    _old_any_std = batch_stats_df.get_column("p_any_repeat").std() or 0
+    _old_avg_std = batch_stats_df.get_column("avg_repeat_pairs").std() or 0
 
     # Baseline stats
     _baseline_any_mean = baseline_batch_stats.get_column("p_any_repeat").mean()
     _baseline_avg_mean = baseline_batch_stats.get_column("avg_repeat_pairs").mean()
-    _baseline_any_std = baseline_batch_stats.get_column("p_any_repeat").std()
-    _baseline_avg_std = baseline_batch_stats.get_column("avg_repeat_pairs").std()
+    _baseline_any_std = baseline_batch_stats.get_column("p_any_repeat").std() or 0
+    _baseline_avg_std = baseline_batch_stats.get_column("avg_repeat_pairs").std() or 0
 
-    # NEW algorithm stats
+    # NEW algorithm stats (may be single row if no batches, so std could be None)
     _new_any_mean = new_algo_batch_stats_df.get_column("p_any_repeat").mean()
     _new_avg_mean = new_algo_batch_stats_df.get_column("avg_repeat_pairs").mean()
-    _new_any_std = new_algo_batch_stats_df.get_column("p_any_repeat").std()
-    _new_avg_std = new_algo_batch_stats_df.get_column("avg_repeat_pairs").std()
+    _new_any_std = new_algo_batch_stats_df.get_column("p_any_repeat").std() or 0
+    _new_avg_std = new_algo_batch_stats_df.get_column("avg_repeat_pairs").std() or 0
 
     # Improvements vs baseline
     _old_improvement_any = (_baseline_any_mean - _old_any_mean) / _baseline_any_mean * 100
@@ -1639,16 +1666,19 @@ def _(batch_stats_df, baseline_batch_stats, has_batches, mo, new_algo_batch_stat
     _new_vs_old_any = (_old_any_mean - _new_any_mean) / _old_any_mean * 100 if _old_any_mean > 0 else 0
     _new_vs_old_avg = (_old_avg_mean - _new_avg_mean) / _old_avg_mean * 100 if _old_avg_mean > 0 else 0
 
+    _old_batches = batch_stats_df.height
+    _new_batches = new_algo_batch_stats_df.height
+
     mo.md(
         f"""
     ### Ensemble Performance Summary (All Three Algorithms)
 
-    All algorithms averaged across **{batch_stats_df.height} independent batches** each.
+    Old algorithm: **{_old_batches} batches**, New algorithm: **{_new_batches} {'batch' if _new_batches == 1 else 'batches'}**
 
     | Metric | Old Algo | Baseline | New Algo | Old vs Base | New vs Base | New vs Old |
     |--------|----------|----------|----------|-------------|-------------|------------|
-    | Any-repeat rate | {_old_any_mean:.1%} ± {_old_any_std:.1%} | {_baseline_any_mean:.1%} ± {_baseline_any_std:.1%} | {_new_any_mean:.1%} ± {_new_any_std:.1%} | **{_old_improvement_any:.1f}%** | **{_new_improvement_any:.1f}%** | {_new_vs_old_any:+.1f}% |
-    | Avg repeat pairs | {_old_avg_mean:.2f} ± {_old_avg_std:.2f} | {_baseline_avg_mean:.2f} ± {_baseline_avg_std:.2f} | {_new_avg_mean:.2f} ± {_new_avg_std:.2f} | **{_old_improvement_avg:.1f}%** | **{_new_improvement_avg:.1f}%** | {_new_vs_old_avg:+.1f}% |
+    | Any-repeat rate | {_old_any_mean:.1%} ± {_old_any_std:.1%} | {_baseline_any_mean:.1%} ± {_baseline_any_std:.1%} | {_new_any_mean:.1%} | **{_old_improvement_any:.1f}%** | **{_new_improvement_any:.1f}%** | {_new_vs_old_any:+.1f}% |
+    | Avg repeat pairs | {_old_avg_mean:.2f} ± {_old_avg_std:.2f} | {_baseline_avg_mean:.2f} ± {_baseline_avg_std:.2f} | {_new_avg_mean:.2f} | **{_old_improvement_avg:.1f}%** | **{_new_improvement_avg:.1f}%** | {_new_vs_old_avg:+.1f}% |
 
     **Conclusions:**
 
