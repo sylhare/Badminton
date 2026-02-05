@@ -194,10 +194,12 @@ def _(adjacency_bias_data, all_metrics, cg_config, mc_config, mo, pl, random_con
         return _bias_by_label.get(label, {}).get("bias_ratio", 1.0)
     
     def get_singles_fairness(cfg):
-        """Score singles fairness: 50% no double-singles + 50% no repeat opponents."""
+        """Score singles fairness: 50% no back-to-back singles + 50% no repeat opponents."""
         singles = cfg.get("singlesFairness", {})
-        double_rate = singles.get("doubleSinglesRate", 40)  # Default to bad if no data
-        repeat_rate = singles.get("repeatOpponentRate", 30)
+        if not singles or singles.get("totalSinglesMatches", 0) == 0:
+            return None  # No singles matches in this simulation
+        double_rate = singles.get("doubleSinglesRate", 0)
+        repeat_rate = singles.get("repeatOpponentRate", 0)
         no_double_score = max(0, 100 - double_rate * 2.5)
         no_repeat_score = max(0, 100 - repeat_rate * 3.33)
         return (no_double_score + no_repeat_score) / 2
@@ -211,7 +213,10 @@ def _(adjacency_bias_data, all_metrics, cg_config, mc_config, mo, pl, random_con
         _m["adjacent_bias"] = get_adjacent_bias(_m["label"])
         _m["singles_fairness"] = get_singles_fairness(_cfg)
     
-    _rankings_df = pl.DataFrame({
+    # Check if any algorithm has valid singles data
+    _has_singles_data = any(m['singles_fairness'] is not None for m in _sorted_by_zero)
+    
+    _table_data = {
         "Rank": ["1st", "2nd", "3rd", "4th"],
         "Algorithm": [m["label"] for m in _sorted_by_zero],
         "Zero-Repeat": [f"{m['zero_repeat_pct']:.1%}" for m in _sorted_by_zero],
@@ -219,14 +224,21 @@ def _(adjacency_bias_data, all_metrics, cg_config, mc_config, mo, pl, random_con
         "Time/Round (ms)": [round(m["time_per_round"], 2) for m in _sorted_by_zero],
         "Balance": [f"{m['balance_pct']:.0f}%" for m in _sorted_by_zero],
         "Bench Fairness": [f"{m['bench_fairness']:.0f}%" for m in _sorted_by_zero],
-        "Singles Fair": [f"{m['singles_fairness']:.0f}%" for m in _sorted_by_zero],
-    })
+    }
+    # Only add Singles Fair column when we have valid calculated values
+    if _has_singles_data:
+        _table_data["Singles Fair"] = [f"{m['singles_fairness']:.0f}%" if m['singles_fairness'] is not None else "-" for m in _sorted_by_zero]
+    
+    _rankings_df = pl.DataFrame(_table_data)
+    
+    _footer = "*Zero-Repeat: % of runs with no repeated pairs. Balance: Team win balance (100% = 0 differential). Bench Fairness: Compound of no back-to-back benches + fair distribution."
+    if _has_singles_data:
+        _footer += " Singles Fair: Compound of no back-to-back singles + no repeat opponents."
+    _footer += "*"
     
     mo.vstack([
         mo.ui.table(_rankings_df),
-        mo.md("""
-*Zero-Repeat: % of runs with no repeated pairs. Balance: Team win balance (100% = 0 differential). Bench Fairness: Compound of no double benches + fair distribution. Singles Fair: Compound of no consecutive singles + no repeat opponents (for 18+ player sessions).*
-        """),
+        mo.md(_footer),
     ])
     return
 
@@ -286,18 +298,24 @@ def _(adjacency_bias_data, all_metrics, cg_config, fig_to_image, mc_config, mo, 
     _adjacent_bias = [_get_bias_score(name) for name in _algo_names]
     
     def _get_singles_fairness(cfg):
-        """Score singles fairness: 50% no double-singles + 50% no repeat opponents."""
+        """Score singles fairness: 50% no back-to-back singles + 50% no repeat opponents."""
         singles = cfg.get("singlesFairness", {})
-        double_rate = singles.get("doubleSinglesRate", 40)  # Default to bad if no data
-        repeat_rate = singles.get("repeatOpponentRate", 30)
-        # Lower is better, so invert: 0% rate = 100 score, 40% rate = 0 score
+        if not singles or singles.get("totalSinglesMatches", 0) == 0:
+            return None  # No valid data
+        double_rate = singles.get("doubleSinglesRate", 0)
+        repeat_rate = singles.get("repeatOpponentRate", 0)
         no_double_score = max(0, 100 - double_rate * 2.5)
         no_repeat_score = max(0, 100 - repeat_rate * 3.33)
         return (no_double_score + no_repeat_score) / 2
     
     _singles_fair = [_get_singles_fairness(cfg) for cfg in _configs]
+    _has_singles_data = any(s is not None for s in _singles_fair)
     
-    _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Balance", "Singles\nFairness", "No Adjacent\nBias"]
+    # Only include Singles Fairness when we have valid calculated values
+    if _has_singles_data:
+        _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Balance", "Singles\nFairness", "No Adjacent\nBias"]
+    else:
+        _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Balance", "No Adjacent\nBias"]
     _n_cats = len(_categories)
     _angles = [n / float(_n_cats) * 2 * np.pi for n in range(_n_cats)]
     _angles += _angles[:1]  # Close the polygon
@@ -305,7 +323,10 @@ def _(adjacency_bias_data, all_metrics, cg_config, fig_to_image, mc_config, mo, 
     _fig, _ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(projection='polar'))
     
     for _i, (_name, _color) in enumerate(zip(_algo_names, _colors)):
-        _values = [_repeat_score[_i], _speed[_i], _bench_fair[_i], _balance[_i], _singles_fair[_i], _adjacent_bias[_i]]
+        if _has_singles_data:
+            _values = [_repeat_score[_i], _speed[_i], _bench_fair[_i], _balance[_i], _singles_fair[_i] or 0, _adjacent_bias[_i]]
+        else:
+            _values = [_repeat_score[_i], _speed[_i], _bench_fair[_i], _balance[_i], _adjacent_bias[_i]]
         _values += _values[:1]  # Close the polygon
         
         _ax.plot(_angles, _values, '-', linewidth=1.5, label=_name, color=_color)
@@ -786,12 +807,12 @@ def _(data_dir, pl):
 def _(np):
     def compute_teammate_diversity(match_events_df) -> dict:
         """Compute unique teammate counts per player per session."""
-        # Build a dict: (batch, simId) -> {player: set of teammates}
+        # Build a dict: simId -> {player: set of teammates}
         session_teammates = {}
         
         # Single pass through all rows
         for row in match_events_df.iter_rows(named=True):
-            session_key = (row["batch"], row["simulationId"])
+            session_key = row["simulationId"]
             if session_key not in session_teammates:
                 session_teammates[session_key] = {}
             
@@ -814,11 +835,10 @@ def _(np):
         
         # Calculate diversity metrics per session
         session_diversity = []
-        for (batch, sim_id), player_teammates in session_teammates.items():
+        for sim_id, player_teammates in session_teammates.items():
             if player_teammates:
                 unique_counts = [len(teammates) for teammates in player_teammates.values()]
                 session_diversity.append({
-                    "batch": batch,
                     "simulationId": sim_id,
                     "avg_unique_teammates": np.mean(unique_counts),
                     "min_unique_teammates": min(unique_counts),
@@ -910,12 +930,10 @@ def _(cg_diversity, mc_diversity, mo, random_diversity, sa_diversity):
     _improvement = ((_best - _rand_avg) / _rand_avg * 100) if _rand_avg > 0 else 0
     
     mo.md(f"""
-Why optimized algorithms provide more variety?
-- They actively avoid repeating teammate pairs, which naturally maximizes unique combinations
-- SA's exhaustive search finds configurations that spread partners most evenly
-- The tight distribution (narrow box) shows consistent variety for ALL players, not just some
+They actively avoid repeating teammate pairs, which naturally maximizes unique combinations and partner variety.The tight distribution (narrow box) shows consistent variety for ALL players, not just some
+Players assigned to singles courts have no teammate that round, which slightly reduces their unique teammate count compared to players who only play doubles.
 
-*Note: Players assigned to singles courts have no teammate that round, which slightly reduces their unique teammate count compared to players who only play doubles.*
+*Note: The circles below the boxes in the distribution chart are **outliers** — data points that fall outside 1.5× the interquartile range (IQR) from the quartiles.*
     """)
     return
 
@@ -924,10 +942,11 @@ def _(mo):
     mo.md("""
     ## Fairness & Balance
     
-    Beyond avoiding teammate repetitions, a good court assignment algorithm should ensure **fair play**.
-    Are opposing teams evenly matched in skill? Does everyone get equal playing time?
-    
-    This section analyzes both dimensions across all algorithms.
+    Beyond avoiding teammate repetitions, does the algorithm setup fair matches, does everyone get equal playing time?
+
+    ### Evenly Matched Games
+
+    The algorithm should setup matches where the teams are evenly matched, it does so by looking at the cumulative wins of the players.
     """)
     return
 
@@ -1097,127 +1116,58 @@ def _(cg_config, data_dir, mc_config, np, pl, random_config, sa_config):
         sa_player_stats,
     )
 
-
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ### Singles Fairness Analysis
+def _(cg_singles_stats, has_singles_data, mc_singles_stats, mo, pl, random_singles_stats, sa_singles_stats):
+    _output = None
     
-    When the number of players isn't divisible by 4, a **singles court** (1v1) is used 
-    for the 2 leftover players. For example: 14 players = 3 doubles courts (12) + 1 singles (2).
-    
-    **Key metrics:**
-    - **Double-Singles Rate**: Same player playing singles in consecutive rounds (unfair)
-    - **Repeat Opponent Rate**: Same two players facing each other in singles twice (reduces variety)
-    """)
-    return
-
-@app.cell
-def _(data_dir, pl):
-    # Load singles stats for all algorithms
-    random_singles_stats = pl.read_csv(data_dir / "random_baseline" / "singles_stats.csv")
-    mc_singles_stats = pl.read_csv(data_dir / "mc_algo" / "singles_stats.csv")
-    sa_singles_stats = pl.read_csv(data_dir / "sa_algo" / "singles_stats.csv")
-    cg_singles_stats = pl.read_csv(data_dir / "cg_algo" / "singles_stats.csv")
-    return random_singles_stats, mc_singles_stats, sa_singles_stats, cg_singles_stats
-
-@app.cell
-def _(cg_singles_stats, fig_to_image, mc_singles_stats, mo, np, pl, plt, random_singles_stats, sa_singles_stats):
-    _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph"]
-    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
-    _singles_dfs = [random_singles_stats, mc_singles_stats, sa_singles_stats, cg_singles_stats]
-    
-    # Filter to sessions with singles matches only (18+ players)
-    def get_singles_metrics(df):
-        singles_sessions = df.filter(pl.col("totalSinglesMatches") > 0)
-        if singles_sessions.height == 0:
-            return {"double_rate": 0, "repeat_rate": 0, "total_matches": 0}
-        total_matches = singles_sessions.get_column("totalSinglesMatches").sum()
-        double_singles = singles_sessions.get_column("doubleSinglesCount").sum()
-        repeat_opponent = singles_sessions.get_column("repeatSinglesOpponentCount").sum()
-        return {
-            "double_rate": (double_singles / total_matches * 100) if total_matches > 0 else 0,
-            "repeat_rate": (repeat_opponent / singles_sessions.height * 100) if singles_sessions.height > 0 else 0,
-            "total_matches": total_matches,
-        }
-    
-    _metrics = [get_singles_metrics(df) for df in _singles_dfs]
-    
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
-    # Double-singles rate chart
-    _double_rates = [m["double_rate"] for m in _metrics]
-    _x = np.arange(len(_algo_names))
-    _bars1 = _ax1.bar(_x, _double_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
-    _ax1.set_xticks(_x)
-    _ax1.set_xticklabels(_algo_names, fontsize=10)
-    _ax1.set_ylabel("Double-Singles Rate (%)", fontsize=11)
-    _ax1.set_title("Consecutive Singles for Same Player\n(Lower = Better)", fontsize=12, fontweight="bold")
-    _ax1.axhline(y=min([r for r in _double_rates if r > 0]), color='green', linestyle='--', alpha=0.5, label="Best optimized")
-    for _bar in _bars1:
-        _h = _bar.get_height()
-        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.5, f"{_h:.1f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
-    
-    # Repeat opponent rate chart
-    _repeat_rates = [m["repeat_rate"] for m in _metrics]
-    _bars2 = _ax2.bar(_x, _repeat_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
-    _ax2.set_xticks(_x)
-    _ax2.set_xticklabels(_algo_names, fontsize=10)
-    _ax2.set_ylabel("Repeat Opponent Rate (%)", fontsize=11)
-    _ax2.set_title("Same Opponents in Singles Twice\n(Lower = Better)", fontsize=12, fontweight="bold")
-    for _bar in _bars2:
-        _h = _bar.get_height()
-        _ax2.text(_bar.get_x() + _bar.get_width()/2, _h + 0.3, f"{_h:.1f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
-    
-    _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
-    return
-
-@app.cell(hide_code=True)
-def _(cg_singles_stats, mc_singles_stats, mo, pl, random_singles_stats, sa_singles_stats):
-    def _get_metrics(df):
-        singles_sessions = df.filter(pl.col("totalSinglesMatches") > 0)
-        if singles_sessions.height == 0:
-            return {"double_rate": 0, "repeat_rate": 0}
-        total = singles_sessions.get_column("totalSinglesMatches").sum()
-        double = singles_sessions.get_column("doubleSinglesCount").sum()
-        repeat = singles_sessions.get_column("repeatSinglesOpponentCount").sum()
-        return {
-            "double_rate": (double / total * 100) if total > 0 else 0,
-            "repeat_rate": (repeat / singles_sessions.height * 100) if singles_sessions.height > 0 else 0,
-        }
-    
-    _rand = _get_metrics(random_singles_stats)
-    _mc = _get_metrics(mc_singles_stats)
-    _sa = _get_metrics(sa_singles_stats)
-    _cg = _get_metrics(cg_singles_stats)
-    
-    _best_double = min(_mc["double_rate"], _sa["double_rate"], _cg["double_rate"])
-    _best_repeat = min(_mc["repeat_rate"], _sa["repeat_rate"], _cg["repeat_rate"])
-    _rand_double_improvement = (_rand["double_rate"] - _best_double) / _rand["double_rate"] * 100 if _rand["double_rate"] > 0 else 0
-    _rand_repeat_improvement = (_rand["repeat_rate"] - _best_repeat) / _rand["repeat_rate"] * 100 if _rand["repeat_rate"] > 0 else 0
-    
-    mo.md(f"""
-- Double-Singles: Random baseline has {_rand["double_rate"]:.1f}% rate, while optimized algorithms achieve ~{_best_double:.1f}% (**{_rand_double_improvement:.0f}% improvement**)
+    if has_singles_data:
+        def _get_metrics(df):
+            if df.height == 0 or "totalSinglesMatches" not in df.columns:
+                return {"double_rate": 0, "repeat_rate": 0}
+            singles_sessions = df.filter(pl.col("totalSinglesMatches") > 0)
+            if singles_sessions.height == 0:
+                return {"double_rate": 0, "repeat_rate": 0}
+            total = singles_sessions.get_column("totalSinglesMatches").sum()
+            double = singles_sessions.get_column("doubleSinglesCount").sum()
+            repeat = singles_sessions.get_column("repeatSinglesOpponentCount").sum()
+            return {
+                "double_rate": (double / total * 100) if total > 0 else 0,
+                "repeat_rate": (repeat / singles_sessions.height * 100) if singles_sessions.height > 0 else 0,
+            }
+        
+        _rand = _get_metrics(random_singles_stats)
+        _mc = _get_metrics(mc_singles_stats)
+        _sa = _get_metrics(sa_singles_stats)
+        _cg = _get_metrics(cg_singles_stats)
+        
+        _best_b2b = min(_mc["double_rate"], _sa["double_rate"], _cg["double_rate"])
+        _best_repeat = min(_mc["repeat_rate"], _sa["repeat_rate"], _cg["repeat_rate"])
+        _rand_b2b_improvement = (_rand["double_rate"] - _best_b2b) / _rand["double_rate"] * 100 if _rand["double_rate"] > 0 else 0
+        _rand_repeat_improvement = (_rand["repeat_rate"] - _best_repeat) / _rand["repeat_rate"] * 100 if _rand["repeat_rate"] > 0 else 0
+        
+        _output = mo.md(f"""
+- Back-to-Back Singles: Random baseline has {_rand["double_rate"]:.1f}% rate, while optimized algorithms achieve ~{_best_b2b:.1f}% (**{_rand_b2b_improvement:.0f}% improvement**)
 - Repeat Opponents: Random baseline has {_rand["repeat_rate"]:.1f}% rate, while SA achieves only {_sa["repeat_rate"]:.1f}% (**{_rand_repeat_improvement:.0f}% improvement**)
 
 Why optimized algorithms are better?
 - They track singles history and prioritize players who haven't played singles recently
 - SA's exhaustive search finds configurations that minimize repeat opponents
 - MC samples many candidates and selects the one with fairest singles distribution
-    """)
+        """)
+    
+    _output
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    ### Bench Fairness Analysis
+    ### Bench Fairness
     
     When there are more players than court spots, some must sit out ("bench") each round.
     **Bench fairness** measures how many games a player gets to play between bench periods.
     
-    **Key Design Decision:** The optimized algorithms (MC, SA, CG) **prioritize preventing double benches** over avoiding teammate repeats.
+    The algorithms (MC, SA, CG) **prioritize preventing double benches** over avoiding teammate repeats.
     When forced to choose, they allow a repeat rather than bench someone twice in a row.
     """)
     return
@@ -1279,11 +1229,16 @@ def _(data_dir, np, pl):
     return bench_gap_stats, bench_by_players, random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats
 
 @app.cell
-def _(bench_by_players, fig_to_image, mo, np, plt):
+def _(bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats):
     _algo_names = ["Random", "MC", "SA", "CG"]
     _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
+    _bench_dfs = [random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats]
     
-    _player_counts = [14, 15, 16, 17, 18, 19, 20, 21, 22]
+    # Get player counts from actual data
+    _all_player_counts = set()
+    for _algo in _algo_names:
+        _all_player_counts.update(bench_by_players[_algo].keys())
+    _player_counts = sorted(_all_player_counts) if _all_player_counts else [20]
     
     def get_court_spots(num_players):
         num_courts = min(4, num_players // 4)
@@ -1298,13 +1253,14 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
         if _benched_per_round > 0:
             _theoretical_max.append(_pc / _benched_per_round - 1)
         else:
-            _theoretical_max.append(0)  # No benching needed (16p) - show as 0
+            _theoretical_max.append(0)
     
-    _fig, _ax = plt.subplots(1, 1, figsize=(12, 6))
+    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(15, 5))
     
-    _x = np.arange(len(_player_counts))
-    _width = 0.15
-    _offsets = [-1.5, -0.5, 0.5, 1.5]
+    # Left chart: Average Gap Between Benches by Player Count
+    _x1 = np.arange(len(_player_counts))
+    _width1 = 0.15
+    _offsets1 = [-1.5, -0.5, 0.5, 1.5]
     
     for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
         _gaps = []
@@ -1314,67 +1270,24 @@ def _(bench_by_players, fig_to_image, mo, np, plt):
             _total_events = _data.get("total_events", 0)
             
             # If no gap events recorded (no one benched twice), that's the ideal = theoretical max
-            # For 16p (0 benched), both mean_gap and theoretical_max are 0
             if _mean_gap == 0 and _total_events == 0 and _theoretical_max[_j] > 0:
                 _gaps.append(_theoretical_max[_j])
             else:
                 _gaps.append(_mean_gap)
-        _ax.bar(_x + _offsets[_i] * _width, _gaps, _width, label=_algo, color=_color, alpha=0.85)
+        _ax1.bar(_x1 + _offsets1[_i] * _width1, _gaps, _width1, label=_algo, color=_color, alpha=0.85)
     
-    _ax.plot(_x, _theoretical_max, color='green', linestyle='--', linewidth=2, marker='o', 
-             markersize=8, label='Theoretical Max', zorder=5)
+    _ax1.plot(_x1, _theoretical_max, color='green', linestyle='--', linewidth=2, marker='o', 
+              markersize=8, label='Theoretical Max', zorder=5)
     
-    _ax.set_xticks(_x)
-    _ax.set_xticklabels([f"{pc}p\n({b}b)" for pc, b in zip(_player_counts, _benched_per_round_list)], fontsize=10)
-    _ax.set_xlabel("Player Count (benched per round)", fontsize=11)
-    _ax.set_ylabel("Mean Gap (games between benches)", fontsize=11)
-    _ax.set_title("Average Gap Between Benches by Player Count\n(Higher = Better, closer to green = closer to ideal)", fontsize=12, fontweight="bold")
-    _ax.legend(loc="upper right", fontsize=9)
-    _ax.set_ylim(0, max(_theoretical_max) + 1)
+    _ax1.set_xticks(_x1)
+    _ax1.set_xticklabels([f"{pc}p\n({b}b)" for pc, b in zip(_player_counts, _benched_per_round_list)], fontsize=9)
+    _ax1.set_xlabel("Player Count (benched per round)", fontsize=10)
+    _ax1.set_ylabel("Mean Gap (games between benches)", fontsize=10)
+    _ax1.set_title("Average Gap Between Benches\n(Higher = Better)", fontsize=11, fontweight="bold")
+    _ax1.legend(loc="upper right", fontsize=8)
+    _ax1.set_ylim(0, max(_theoretical_max) + 1)
     
-    _ax.annotate("No benching\n(16 spots)", xy=(2, 0.5), ha="center", fontsize=9, color="gray")
-    
-    _fig.tight_layout()
-    mo.vstack([
-        mo.image(fig_to_image(_fig)),
-        mo.md("""
-**Theoretical maximum** (green line) = the best possible gap if benches were perfectly distributed.
-Formula: `max_gap = N / B - 1` where N = players, B = benched per round.
-
-**17p at theoretical max**: With only 1 player benching per round and 10 rounds, no one benches twice — achieving the ideal scenario where the gap is effectively infinite.
-        """)
-    ])
-    return
-
-@app.cell
-def _(cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats):
-    _algo_names = ["Random", "MC", "SA", "CG"]
-    _colors = ["#E45756", "#4C78A8", "#54A24B", "#F58518"]
-    _bench_dfs = [random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats]
-    
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
-    _avg_ranges = []
-    for _df in _bench_dfs:
-        if "benchRange" in _df.columns:
-            _avg_ranges.append(_df.get_column("benchRange").mean())
-        else:
-            _avg_ranges.append(0)
-    
-    _x = np.arange(len(_algo_names))
-    _bars1 = _ax1.bar(_x, _avg_ranges, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
-    _ax1.set_xticks(_x)
-    _ax1.set_xticklabels(_algo_names, fontsize=11)
-    _ax1.set_ylabel("Average Bench Range (max - min)", fontsize=11)
-    _ax1.set_title("Bench Distribution Fairness\n(Lower = More Even Distribution)", fontsize=12, fontweight="bold")
-    _ax1.axhline(y=0, color='green', linestyle='--', alpha=0.7, linewidth=2, label="Perfect (0)")
-    _ax1.legend(loc="upper right")
-    
-    for _bar in _bars1:
-        _h = _bar.get_height()
-        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.02,
-                  f"{_h:.2f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
-    
+    # Right chart: Bench Range Distribution
     _range_counts = {}
     for _algo, _df in zip(_algo_names, _bench_dfs):
         if "benchRange" in _df.columns:
@@ -1383,39 +1296,31 @@ def _(cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_st
             _range_counts[_algo] = dict(zip(_unique, _counts / len(_ranges) * 100))
     
     _all_ranges = sorted(set(r for d in _range_counts.values() for r in d.keys()))
-    _width = 0.2
-    _offsets = [-1.5, -0.5, 0.5, 1.5]
-    _x = np.arange(len(_all_ranges))
+    _width2 = 0.2
+    _offsets2 = [-1.5, -0.5, 0.5, 1.5]
+    _x2 = np.arange(len(_all_ranges))
     
     for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
         _pcts = [_range_counts.get(_algo, {}).get(r, 0) for r in _all_ranges]
-        _ax2.bar(_x + _offsets[_i] * _width, _pcts, _width, label=_algo, color=_color, alpha=0.85)
+        _ax2.bar(_x2 + _offsets2[_i] * _width2, _pcts, _width2, label=_algo, color=_color, alpha=0.85)
     
-    _ax2.set_xticks(_x)
+    _ax2.set_xticks(_x2)
     _ax2.set_xticklabels([str(int(r)) for r in _all_ranges], fontsize=10)
-    _ax2.set_xlabel("Bench Range (max benches - min benches in session)", fontsize=11)
-    _ax2.set_ylabel("% of Sessions", fontsize=11)
-    _ax2.set_title("Bench Range Distribution\n(Higher % at 0-1 = Better fairness)", fontsize=12, fontweight="bold")
-    _ax2.legend(loc="upper right", fontsize=9)
+    _ax2.set_xlabel("Bench Range (max - min benches per session)", fontsize=10)
+    _ax2.set_ylabel("% of Sessions", fontsize=10)
+    _ax2.set_title("Bench Range Distribution\n(Higher % at 0-1 = Better)", fontsize=11, fontweight="bold")
+    _ax2.legend(loc="upper right", fontsize=8)
     
     _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
-    return
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-**Bench Distribution Fairness (Left Chart):**
-- **Bench Range** = difference between the most-benched and least-benched player in a session
-- A range of **0** means everyone benched the same number of times (perfectly fair)
-- A range of **1** means at most 1 bench difference between players
-- **Random baseline** has higher range because it doesn't optimize for fairness while **MC, SA, and CG** achieve lower range through smart player selection
-
-**Bench Range Distribution (Right Chart):**
-- Shows what percentage of sessions achieved each bench range value
-- **Optimized algorithms** (MC, SA, CG) have more sessions at range 0 (perfect) or range 1 (very fair)
-- **Random baseline** spreads across ranges 0-3, with fewer at perfect fairness
-    """)
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md(f"""
+- **Average Gap (Left):** Mean games between bench periods per player count. Green line = theoretical maximum ($N/B - 1$).
+Optimized algorithms achieve close to theoretical max; Random baseline falls significantly short.
+- **Bench Range (Right):** Distribution of max-min bench count difference per session. Range 0 = perfectly fair (everyone benched equally).
+Optimized algorithms concentrate at 0-1; Random spreads across higher ranges.
+        """)
+    ])
     return
 
 @app.cell(hide_code=True)

@@ -85,16 +85,22 @@ const CONFIG_PATH = resolve(DATA_DIR, 'config.json');
 /** Loads simulation configuration from config.json or returns defaults. */
 const loadConfig = () => {
   if (!existsSync(CONFIG_PATH)) {
-    return { runs: 100, rounds: 10, numPlayers: 20, numCourts: 4 };
+    return { runs: 100, rounds: 10, playerCounts: [20], numCourts: 4 };
   }
-  return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+  const raw = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+  // Support both old `numPlayers` and new `playerCounts` format
+  if (!raw.playerCounts && raw.numPlayers) {
+    raw.playerCounts = [raw.numPlayers];
+  }
+  return raw;
 };
 
 const config = loadConfig();
 const RUNS = config.runs;
 const ROUNDS = config.rounds;
-const NUM_PLAYERS = config.numPlayers;
+const PLAYER_COUNTS: number[] = config.playerCounts ?? [20];
 const MAX_COURTS = config.numCourts;
+const MAX_PLAYERS = Math.max(...PLAYER_COUNTS);
 
 // ============================================================================
 // Player Skill Levels & Match Outcome Simulation
@@ -117,7 +123,7 @@ const generatePlayerLevels = (count: number): Map<string, number> => {
   return levels;
 };
 
-const PLAYER_LEVELS = generatePlayerLevels(NUM_PLAYERS);
+const PLAYER_LEVELS = generatePlayerLevels(MAX_PLAYERS);
 
 /** Calculates team strength as sum of player levels. */
 const calculateTeamStrength = (players: Player[]): number => {
@@ -180,6 +186,7 @@ type BenchEvent = {
 /** Aggregate bench fairness statistics for a session. */
 type SessionBenchStats = {
   simulationId: number;
+  numPlayers: number;
   maxBenchCount: number;
   minBenchCount: number;
   benchRange: number;
@@ -417,10 +424,10 @@ const evaluateRepeats = (rounds: RoundResult[], simulationId: number) => {
 };
 
 /**
- * Runs multiple simulation sessions for a single engine.
+ * Runs multiple simulation sessions for a single engine with a specific player count.
  * Each session consists of multiple rounds with the engine making court assignments.
  */
-const runSimulation = (Engine: EngineType): { 
+const runSimulation = (Engine: EngineType, numPlayers: number): { 
   summaries: SimulationSummary[]; 
   pairEvents: PairEvent[];
   matchEvents: MatchEvent[];
@@ -428,7 +435,7 @@ const runSimulation = (Engine: EngineType): {
   benchEvents: BenchEvent[];
   benchStats: SessionBenchStats[];
 } => {
-  const players = toPlayerList(NUM_PLAYERS);
+  const players = toPlayerList(numPlayers);
   const summaries: SimulationSummary[] = [];
   const pairEvents: PairEvent[] = [];
   const matchEvents: MatchEvent[] = [];
@@ -498,6 +505,7 @@ const runSimulation = (Engine: EngineType): {
     
     benchStats.push({
       simulationId: simId,
+      numPlayers,
       maxBenchCount: maxBench,
       minBenchCount: minBench,
       benchRange: maxBench - minBench,
@@ -527,6 +535,7 @@ const runSimulation = (Engine: EngineType): {
 
 /**
  * Runs simulation for a single engine configuration and writes results to disk.
+ * Runs batches for each player count in PLAYER_COUNTS.
  * @param engineConfig - Engine configuration from ALL_ENGINES
  */
 const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
@@ -539,13 +548,38 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   console.log(`${'='.repeat(60)}`);
 
   const startTime = Date.now();
-  const { summaries, pairEvents, matchEvents, matchPairEvents, benchEvents, benchStats } = runSimulation(engine);
+  
+  // Aggregate results across all player counts
+  const allSummaries: SimulationSummary[] = [];
+  const allPairEvents: PairEvent[] = [];
+  const allMatchEvents: MatchEvent[] = [];
+  const allMatchPairEvents: MatchPairEvent[] = [];
+  const allBenchEvents: BenchEvent[] = [];
+  const allBenchStats: SessionBenchStats[] = [];
+  
+  for (const numPlayers of PLAYER_COUNTS) {
+    const { summaries, pairEvents, matchEvents, matchPairEvents, benchEvents, benchStats } = runSimulation(engine, numPlayers);
+    allSummaries.push(...summaries);
+    allPairEvents.push(...pairEvents);
+    allMatchEvents.push(...matchEvents);
+    allMatchPairEvents.push(...matchPairEvents);
+    allBenchEvents.push(...benchEvents);
+    allBenchStats.push(...benchStats);
+  }
+  
+  const summaries = allSummaries;
+  const pairEvents = allPairEvents;
+  const matchEvents = allMatchEvents;
+  const matchPairEvents = allMatchPairEvents;
+  const benchEvents = allBenchEvents;
+  const benchStats = allBenchStats;
+  
   const elapsed = Date.now() - startTime;
 
   const pairEventHeaders = ['simulationId', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
   const matchEventHeaders = ['simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
   const benchEventHeaders = ['simulationId', 'roundIndex', 'playerId', 'benchedThisRound', 'totalBenchCount'];
-  const benchStatsHeaders = ['simulationId', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
+  const benchStatsHeaders = ['simulationId', 'numPlayers', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
   
   writeFileSync(resolve(engineDir, 'summary.csv'), toCsv(summaries));
   writeFileSync(resolve(engineDir, 'pair_events.csv'), toCsv(pairEvents, pairEventHeaders));
@@ -609,7 +643,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   }
 
   const playerStats: PlayerStats[] = [];
-  for (let i = 0; i < NUM_PLAYERS; i++) {
+  for (let i = 0; i < MAX_PLAYERS; i++) {
     const playerId = `P${i + 1}`;
     playerStats.push({
       playerId,
@@ -624,12 +658,12 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const engineConfigFile = {
     runs: RUNS,
     rounds: ROUNDS,
-    numPlayers: NUM_PLAYERS,
+    playerCounts: PLAYER_COUNTS,
     maxCourts: MAX_COURTS,
     totalSimulations: summaries.length,
     playerProfiles: Object.fromEntries(
       Array.from(PLAYER_LEVELS.entries())
-        .filter(([id]) => parseInt(id.slice(1)) <= NUM_PLAYERS)
+        .filter(([id]) => parseInt(id.slice(1)) <= MAX_PLAYERS)
         .map(([id, level]) => [id, { level }])
     ),
     aggregateStats: {
@@ -687,9 +721,9 @@ console.log('╔═════════════════════�
 console.log('║           ENGINE COMPARISON SIMULATION                     ║');
 console.log('╚════════════════════════════════════════════════════════════╝');
 console.log(`\nConfiguration (from ${CONFIG_PATH}):`);
-console.log(`  Runs: ${RUNS}`);
+console.log(`  Runs per player count: ${RUNS}`);
 console.log(`  Rounds per run: ${ROUNDS}`);
-console.log(`  Players: ${NUM_PLAYERS}`);
+console.log(`  Player counts: ${PLAYER_COUNTS.join(', ')}`);
 console.log(`  Max courts: ${MAX_COURTS}`);
 
 const allResults: Record<string, ReturnType<typeof runEngine>> = {};
