@@ -1,17 +1,16 @@
 {
-  "runs": 2000,
+  "runs": 50,
   "rounds": 10,
   "playerCounts": [
-    14,
-    15,
-    16,
     17,
     18,
     19,
-    20
+    20,
+    21,
+    22
   ],
-  "numBatches": 7,
-  "totalSimulations": 14000,
+  "maxCourts": 4,
+  "totalSimulations": 300,
   "playerProfiles": {
     "P1": {
       "level": 1
@@ -20,119 +19,94 @@
       "level": 1
     },
     "P3": {
-      "level": 2
+      "level": 1
     },
     "P4": {
-      "level": 2
+      "level": 1
     },
     "P5": {
-      "level": 2
+      "level": 1
     },
     "P6": {
-      "level": 2
+      "level": 1
     },
     "P7": {
       "level": 2
     },
     "P8": {
-      "level": 3
+      "level": 2
     },
     "P9": {
-      "level": 3
+      "level": 2
     },
     "P10": {
-      "level": 3
+      "level": 2
     },
     "P11": {
-      "level": 3
+      "level": 2
     },
     "P12": {
-      "level": 3
+      "level": 2
     },
     "P13": {
-      "level": 3
+      "level": 2
     },
     "P14": {
-      "level": 4
+      "level": 3
     },
     "P15": {
-      "level": 4
+      "level": 3
     },
     "P16": {
-      "level": 4
+      "level": 3
     },
     "P17": {
       "level": 4
     },
     "P18": {
-      "level": 4
+      "level": 5
     },
     "P19": {
       "level": 5
     },
     "P20": {
       "level": 5
+    },
+    "P21": {
+      "level": 1
+    },
+    "P22": {
+      "level": 1
     }
   },
   "aggregateStats": {
-    "repeatRate": 97.60714285714286,
-    "avgRepeatsPerRun": 3.4395,
-    "zeroRepeatRate": 2.392857142857143
+    "repeatRate": 93.66666666666667,
+    "avgRepeatsPerRun": 2.77,
+    "zeroRepeatRate": 6.333333333333334
   },
   "levelBasedBalance": {
-    "totalMatches": 520000,
-    "strongerTeamWinRate": 61.54615384615385,
-    "avgStrengthDifferential": 1.6331519230769231,
-    "perfectlyBalancedMatches": 96239,
-    "perfectlyBalancedRate": 18.5075
+    "totalMatches": 12000,
+    "strongerTeamWinRate": 63.74999999999999,
+    "avgStrengthDifferential": 2.0063333333333335,
+    "perfectlyBalancedMatches": 1911,
+    "perfectlyBalancedRate": 15.925
   },
   "engineTrackedBalance": {
-    "totalMatches": 520000,
-    "engineBalancedWinRate": 49.971730769230774,
-    "avgEngineWinDifferential": 0.5204903846153847,
-    "perfectlyBalancedMatches": 273206,
-    "perfectlyBalancedRate": 52.53961538461539
+    "totalMatches": 12000,
+    "engineBalancedWinRate": 49.5,
+    "avgEngineWinDifferential": 0.5304166666666666,
+    "perfectlyBalancedMatches": 6128,
+    "perfectlyBalancedRate": 51.06666666666667
   },
   "benchFairness": {
-    "avgBenchRange": 0.5714285714285714,
-    "avgMeanGap": 2.9518441558441655,
-    "doubleBenchRate": 0,
-    "totalSessions": 14000,
-    "totalGapEvents": 108000
+    "avgBenchRange": 0.8333333333333334,
+    "avgMeanGap": 2.9321038882472603,
+    "doubleBenchRate": 7.3999999999999995,
+    "totalSessions": 300,
+    "totalGapEvents": 5000
   },
   "timing": {
-    "totalMs": 11451,
-    "avgPerBatchMs": 1635.857142857143,
-    "batchTimings": [
-      {
-        "batch": 1,
-        "durationMs": 1749
-      },
-      {
-        "batch": 2,
-        "durationMs": 957
-      },
-      {
-        "batch": 3,
-        "durationMs": 2440
-      },
-      {
-        "batch": 4,
-        "durationMs": 1305
-      },
-      {
-        "batch": 5,
-        "durationMs": 1386
-      },
-      {
-        "batch": 6,
-        "durationMs": 2337
-      },
-      {
-        "batch": 7,
-        "durationMs": 1277
-      }
-    ]
+    "totalMs": 127
   },
-  "timestamp": "2026-01-29T18:40:46.079Z"
+  "timestamp": "2026-02-05T13:43:15.300Z"
 }
