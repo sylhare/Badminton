@@ -89,48 +89,33 @@ def _(bench_stats_df, player_counts, calc_theoretical_max, num_courts, has_data,
 
 
 @app.cell
-def _(data_dir, player_counts, has_data, pl):
-    # Compute gap distribution from bench_events.csv
-    # This computes the histogram of games between bench periods
+def _(bench_stats_df, player_counts, has_data, pl):
+    # Compute approximate gap distributions from bench_stats.csv aggregate data
+    # Since detailed bench_events.csv is no longer generated, we approximate
+    # the distribution using the meanGap and totalGapEvents per simulation
     gap_distributions = {}
     
-    if has_data:
-        _bench_events_file = data_dir / "bench_events.csv"
-        if _bench_events_file.exists():
-            # Read the bench events file with polars lazy API for efficiency
-            _bench_events = pl.scan_csv(_bench_events_file)
+    if has_data and len(bench_stats_df) > 0:
+        for _np in player_counts:
+            _subset = bench_stats_df.filter(pl.col("numPlayers") == _np)
+            if len(_subset) == 0:
+                continue
             
-            # Process each player count
-            for _np in player_counts:
-                # Filter to this player count and where player was benched
-                _benched = _bench_events.filter(
-                    (pl.col("numPlayers") == _np) & 
-                    (pl.col("benchedThisRound") == True)
-                ).select(["batch", "simulationId", "playerId", "roundIndex"]).collect()
-                
-                if len(_benched) == 0:
-                    continue
-                
-                # Group by simulation and player, get bench rounds as list
-                _grouped = _benched.group_by(["batch", "simulationId", "playerId"]).agg(
-                    pl.col("roundIndex").sort()
-                )
-                
-                # Calculate gaps between consecutive bench rounds
-                _gaps = []
-                for _row in _grouped.iter_rows(named=True):
-                    _rounds = _row["roundIndex"]
-                    if len(_rounds) >= 2:
-                        for _i in range(1, len(_rounds)):
-                            _gap = _rounds[_i] - _rounds[_i-1] - 1
-                            _gaps.append(_gap)
-                
-                # Convert to histogram distribution
-                if _gaps:
-                    _max_gap = max(_gaps)
+            # Use aggregate stats to approximate distribution
+            # We can't reconstruct exact histogram, but we can show the distribution
+            # of mean gaps across simulations
+            _mean_gaps = _subset.get_column("meanGap").to_list()
+            _valid_gaps = [g for g in _mean_gaps if g is not None and g > 0]
+            
+            if _valid_gaps:
+                # Create histogram of mean gaps (rounded to integers)
+                _rounded = [round(g) for g in _valid_gaps]
+                _max_gap = max(_rounded) if _rounded else 0
+                if _max_gap > 0:
                     _distribution = [0] * (_max_gap + 1)
-                    for _g in _gaps:
-                        _distribution[_g] += 1
+                    for _g in _rounded:
+                        if 0 <= _g <= _max_gap:
+                            _distribution[_g] += 1
                     gap_distributions[_np] = _distribution
     
     return (gap_distributions,)

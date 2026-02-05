@@ -174,15 +174,6 @@ type PlayerStats = {
   gamesPlayed: number;
 };
 
-/** Records bench status for a player in a specific round. */
-type BenchEvent = {
-  simulationId: number;
-  roundIndex: number;
-  playerId: string;
-  benchedThisRound: boolean;
-  totalBenchCount: number;
-};
-
 /** Aggregate bench fairness statistics for a session. */
 type SessionBenchStats = {
   simulationId: number;
@@ -432,7 +423,6 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
   pairEvents: PairEvent[];
   matchEvents: MatchEvent[];
   matchPairEvents: MatchPairEvent[];
-  benchEvents: BenchEvent[];
   benchStats: SessionBenchStats[];
 } => {
   const players = toPlayerList(numPlayers);
@@ -440,7 +430,6 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
   const pairEvents: PairEvent[] = [];
   const matchEvents: MatchEvent[] = [];
   const matchPairEvents: MatchPairEvent[] = [];
-  const benchEvents: BenchEvent[] = [];
   const benchStats: SessionBenchStats[] = [];
 
   for (let simId = 1; simId <= RUNS; simId++) {
@@ -484,15 +473,7 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
           lastBenchRound.set(player.id, round + 1);
         }
         
-        if (simId <= 10) {
-          benchEvents.push({
-            simulationId: simId,
-            roundIndex: round + 1,
-            playerId: player.id,
-            benchedThisRound: wasBenched,
-            totalBenchCount: sessionBenchCounts.get(player.id) ?? 0,
-          });
-        }
+        // Removed detailed bench events - only aggregate stats are needed
       }
     }
     
@@ -530,7 +511,7 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
     });
   }
 
-  return { summaries, pairEvents, matchEvents, matchPairEvents, benchEvents, benchStats };
+  return { summaries, pairEvents, matchEvents, matchPairEvents, benchStats };
 };
 
 /**
@@ -554,16 +535,14 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const allPairEvents: PairEvent[] = [];
   const allMatchEvents: MatchEvent[] = [];
   const allMatchPairEvents: MatchPairEvent[] = [];
-  const allBenchEvents: BenchEvent[] = [];
   const allBenchStats: SessionBenchStats[] = [];
   
   for (const numPlayers of PLAYER_COUNTS) {
-    const { summaries, pairEvents, matchEvents, matchPairEvents, benchEvents, benchStats } = runSimulation(engine, numPlayers);
+    const { summaries, pairEvents, matchEvents, matchPairEvents, benchStats } = runSimulation(engine, numPlayers);
     allSummaries.push(...summaries);
     allPairEvents.push(...pairEvents);
     allMatchEvents.push(...matchEvents);
     allMatchPairEvents.push(...matchPairEvents);
-    allBenchEvents.push(...benchEvents);
     allBenchStats.push(...benchStats);
   }
   
@@ -571,20 +550,17 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const pairEvents = allPairEvents;
   const matchEvents = allMatchEvents;
   const matchPairEvents = allMatchPairEvents;
-  const benchEvents = allBenchEvents;
   const benchStats = allBenchStats;
   
   const elapsed = Date.now() - startTime;
 
   const pairEventHeaders = ['simulationId', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
   const matchEventHeaders = ['simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
-  const benchEventHeaders = ['simulationId', 'roundIndex', 'playerId', 'benchedThisRound', 'totalBenchCount'];
   const benchStatsHeaders = ['simulationId', 'numPlayers', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
   
   writeFileSync(resolve(engineDir, 'summary.csv'), toCsv(summaries));
   writeFileSync(resolve(engineDir, 'pair_events.csv'), toCsv(pairEvents, pairEventHeaders));
   writeFileSync(resolve(engineDir, 'match_events.csv'), toCsv(matchEvents, matchEventHeaders));
-  writeFileSync(resolve(engineDir, 'bench_events.csv'), toCsv(benchEvents, benchEventHeaders));
   writeFileSync(resolve(engineDir, 'bench_stats.csv'), toCsv(benchStats, benchStatsHeaders));
   
   const matchPairCounts = new Map<string, { total: number; asTeammate: number; asOpponent: number }>();
@@ -783,6 +759,6 @@ for (const row of comparisonData) {
 }
 
 console.log(`\n✓ Data saved to ${DATA_DIR}`);
-console.log(`  Files per engine: summary.csv, pair_events.csv, match_events.csv, bench_events.csv, bench_stats.csv, player_stats.csv, config.json`);
+console.log(`  Files per engine: summary.csv, pair_events.csv, match_events.csv, bench_stats.csv, match_pair_summary.csv, player_stats.csv, config.json`);
 console.log(`  - random_baseline/, mc_algo/, sa_algo/, cg_algo/`);
 console.log(`  - comparison_summary.csv`);
