@@ -33,7 +33,7 @@ function AlgorithmPage(): React.ReactElement {
         <a href={`${basePath}stats`} className="back-link" data-testid="back-to-stats">
           ← Back to Stats
         </a>
-        <h1>📐 Algorithm Documentation</h1>
+        <h1 style={{ marginLeft: 'auto' }}>Algorithm Documentation</h1>
       </header>
 
       {isLoading && (
