@@ -131,6 +131,34 @@
   transform: translateX(4px);
 }
 
+/* Warnings Section */
+.warnings-section {
+  margin-bottom: 30px;
+}
+
+.warnings-section h2 {
+  color: #d29922;
+  font-size: 1.3rem;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.warnings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.warning-item {
+  background: rgba(210, 153, 34, 0.15);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  border-left: 4px solid #d29922;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #e3b341;
+  font-size: 0.95rem;
+}
+
 /* Session Stats Section */
 .session-stats {
   margin-bottom: 50px;
@@ -162,6 +190,15 @@
 .stat-card:hover {
   border-color: rgba(88, 166, 255, 0.3);
   background: rgba(33, 38, 45, 1);
+}
+
+.stat-card.highlight-warning[data-warning="true"] {
+  border-color: rgba(210, 153, 34, 0.5);
+  background: rgba(210, 153, 34, 0.1);
+}
+
+.stat-card.highlight-warning[data-warning="true"] .stat-value {
+  color: #d29922;
 }
 
 .stat-value {
@@ -213,71 +250,267 @@
   border-color: rgba(56, 139, 253, 0.5);
 }
 
-/* Detailed Stats */
-.detailed-stats {
+/* Diagnostic Sections */
+.diagnostic-section {
   background: rgba(33, 38, 45, 0.5);
   border: 1px solid rgba(48, 54, 61, 0.8);
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
 }
 
-.detailed-stats h3 {
+.diagnostic-section h3 {
   color: #f0f6fc;
   font-size: 1.1rem;
   margin: 0 0 16px 0;
   font-weight: 600;
 }
 
-.player-table-wrapper {
-  overflow-x: auto;
-  margin: 0 -12px;
-  padding: 0 12px;
+/* Bench Summary */
+.bench-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.player-table {
-  width: 100%;
-  border-collapse: collapse;
+.bench-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(22, 27, 34, 0.5);
+  border-radius: 6px;
+}
+
+.bench-label {
+  color: #8b949e;
+  font-size: 0.9rem;
+}
+
+.bench-value {
+  font-weight: 600;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bench-value.good {
+  color: #3fb950;
+}
+
+.bench-value.neutral {
+  color: #58a6ff;
+}
+
+.bench-value.warning {
+  color: #d29922;
+}
+
+.bench-value small {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: #6e7681;
+  margin-left: 4px;
+}
+
+/* Collapsible Sections */
+.collapsible-section {
+  margin-top: 16px;
+  border: 1px solid rgba(48, 54, 61, 0.6);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.collapsible-section summary {
+  padding: 12px 16px;
+  background: rgba(22, 27, 34, 0.5);
+  color: #8b949e;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.collapsible-section summary:hover {
+  background: rgba(22, 27, 34, 0.8);
+  color: #c9d1d9;
+}
+
+.collapsible-section[open] summary {
+  border-bottom: 1px solid rgba(48, 54, 61, 0.6);
+}
+
+/* Player Chips */
+.player-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.chip.low {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.chip.medium {
+  background: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+  border: 1px solid rgba(210, 153, 34, 0.3);
+}
+
+.chip.medium-high {
+  background: rgba(240, 136, 62, 0.15);
+  color: #f0883e;
+  border: 1px solid rgba(240, 136, 62, 0.3);
+}
+
+.chip.high {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.chip.neutral {
+  background: rgba(139, 148, 158, 0.15);
+  color: #8b949e;
+  border: 1px solid rgba(139, 148, 158, 0.3);
+}
+
+.chip.warning {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+/* Teammate Graph */
+.teammate-graph {
+  margin-bottom: 16px;
+}
+
+.graph-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 12px;
+  padding: 8px 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8b949e;
+  font-size: 0.85rem;
+}
+
+.legend-line {
+  display: inline-block;
+  border-radius: 2px;
+}
+
+.legend-line.thin {
+  width: 24px;
+  height: 2px;
+}
+
+.legend-line.medium {
+  width: 24px;
+  height: 4px;
+}
+
+.legend-line.thick {
+  width: 24px;
+  height: 8px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+/* Singles Graph */
+.singles-graph {
+  margin-bottom: 16px;
+}
+
+/* Bench Graph */
+.bench-graph {
+  margin-bottom: 16px;
+}
+
+/* Pairs List */
+.pairs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pair-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(22, 27, 34, 0.5);
+  border-radius: 6px;
+  border: 1px solid rgba(48, 54, 61, 0.4);
+}
+
+.pair-item.high {
+  border-color: rgba(210, 153, 34, 0.4);
+  background: rgba(210, 153, 34, 0.08);
+}
+
+.pair-names {
+  color: #c9d1d9;
   font-size: 0.95rem;
 }
 
-.player-table th {
-  text-align: left;
-  padding: 12px 16px;
+.pair-count {
   color: #8b949e;
-  font-weight: 500;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid rgba(48, 54, 61, 0.8);
-}
-
-.player-table td {
-  padding: 12px 16px;
-  color: #c9d1d9;
-  border-bottom: 1px solid rgba(48, 54, 61, 0.4);
-}
-
-.player-table tbody tr:hover {
-  background: rgba(56, 139, 253, 0.05);
-}
-
-.player-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.player-table .wins {
-  color: #3fb950;
+  font-size: 0.9rem;
   font-weight: 600;
+  background: rgba(139, 148, 158, 0.15);
+  padding: 4px 10px;
+  border-radius: 12px;
 }
 
-.player-table .losses {
-  color: #f85149;
-  font-weight: 600;
-}
-
-.player-table .benched {
+.pair-item.high .pair-count {
   color: #d29922;
-  font-weight: 600;
+  background: rgba(210, 153, 34, 0.15);
+}
+
+/* No Issues Message */
+.no-issues {
+  color: #3fb950;
+  font-size: 0.95rem;
+  margin: 0;
+  padding: 8px 0;
+}
+
+/* Singles Summary */
+.singles-summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  color: #c9d1d9;
+  font-size: 0.95rem;
+}
+
+.warning-text {
+  color: #d29922;
+  font-size: 0.85rem;
 }
 
 /* Footer */
@@ -338,7 +571,7 @@
   }
 
   .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
 
@@ -354,7 +587,13 @@
     font-size: 0.75rem;
   }
 
-  .detailed-stats {
+  .diagnostic-section {
     padding: 16px;
+  }
+
+  .bench-stat {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }
