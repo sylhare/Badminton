@@ -99,7 +99,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             className={`manual-court-button ${hasManualSelection ? 'has-selection' : ''}`}
             data-testid="manual-court-button"
           >
-            ⚙️ Court 1{hasManualSelection ? ` (${manualCourtSelection!.players.length})` : ''}
+            ⚙️ Manual assignment{hasManualSelection ? ` (${manualCourtSelection!.players.length})` : ''}
           </button>
         )}
       </div>
