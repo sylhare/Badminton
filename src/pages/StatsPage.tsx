@@ -5,26 +5,38 @@ import { loadAppState } from '../utils/storageUtils';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
 import BenchGraph from '../components/BenchGraph';
+import PairsGraph from '../components/PairsGraph';
 import type { CourtEngineState, Player } from '../types';
 import './StatsPage.css';
 
+/**
+ * Diagnostic statistics for the current session.
+ * Provides insights into algorithm fairness and player distribution.
+ */
 interface DiagnosticStats {
   totalPlayers: number;
   totalRounds: number;
-  // Bench stats
+  /** Number of players benched exactly once */
   benchedOnce: number;
+  /** Number of players benched more than once */
   benchedMultiple: number;
+  /** Number of players never benched */
   neverBenched: number;
+  /** Maximum bench count among all players */
   maxBenchCount: number;
+  /** Minimum bench count among all players */
   minBenchCount: number;
-  benchFairnessScore: number; // Lower is better (0 = perfectly fair)
-  // Repeated games
+  /** Standard deviation of bench counts. Lower is better (0 = perfectly fair) */
+  benchFairnessScore: number;
+  /** Top 10 pairs who have teamed up more than once */
   repeatedTeammates: Array<{ pair: string; count: number }>;
+  /** Top 10 pairs who have faced each other more than once */
   repeatedOpponents: Array<{ pair: string; count: number }>;
-  // Singles
+  /** Players who have played singles matches, sorted by count */
   singlesPlayers: Array<{ player: string; count: number }>;
+  /** Number of players who played singles more than once */
   playersWithMultipleSingles: number;
-  // Warnings
+  /** Context-aware warnings about algorithm fairness */
   warnings: string[];
 }
 
@@ -35,8 +47,7 @@ function StatsPage(): React.ReactElement {
   useEffect(() => {
     CourtAssignmentEngine.loadState();
     setEngineState(CourtAssignmentEngine.prepareStateForSaving());
-    
-    // Load players to get name mapping
+
     const appState = loadAppState();
     if (appState.players) {
       setPlayers(appState.players);
@@ -51,18 +62,56 @@ function StatsPage(): React.ReactElement {
 
   const basePath = import.meta.env.BASE_URL || '/';
 
-  // Create a lookup function to get player name from ID
+  /**
+   * Resolves a player ID to their display name.
+   * @param playerId - The unique identifier for the player
+   * @returns The player's name, or the ID if not found
+   */
   const getPlayerName = (playerId: string): string => {
     const player = players.find(p => p.id === playerId);
     return player?.name || playerId;
   };
 
-  // Format a pair key (e.g., "id1|id2") to use names
+  /**
+   * Formats a pair key (e.g., "id1|id2") using player names.
+   * @param pairKey - The pipe-separated pair of player IDs
+   * @param separator - The separator to use between names (e.g., " & " or " vs ")
+   * @returns Formatted string with player names
+   */
   const formatPair = (pairKey: string, separator: string): string => {
     const [id1, id2] = pairKey.split('|');
     return `${getPlayerName(id1)}${separator}${getPlayerName(id2)}`;
   };
 
+  /**
+   * Returns the CSS class for fairness score styling.
+   * @param score - The fairness score (standard deviation of bench counts)
+   * @returns CSS class name: 'good' (<1), 'neutral' (<2), or 'warning'
+   */
+  const getFairnessClass = (score: number): string => {
+    if (score < 1) return 'good';
+    if (score < 2) return 'neutral';
+    return 'warning';
+  };
+
+  /**
+   * Returns the CSS class for bench count chip styling.
+   * @param count - The number of times a player has been benched
+   * @returns CSS class name based on severity: 'low', 'medium', 'medium-high', or 'high'
+   */
+  const getChipClass = (count: number): string => {
+    if (count >= 4) return 'high';
+    if (count === 3) return 'medium-high';
+    if (count === 2) return 'medium';
+    return 'low';
+  };
+
+  /**
+   * Computes comprehensive diagnostic statistics from the engine state.
+   * Analyzes bench distribution, teammate/opponent repetitions, singles matches,
+   * and generates context-aware warnings when fairness thresholds are exceeded.
+   * @returns DiagnosticStats object or null if no data available
+   */
   const getDiagnostics = (): DiagnosticStats | null => {
     if (!engineState) return null;
 
@@ -73,14 +122,13 @@ function StatsPage(): React.ReactElement {
     const winMap = engineState.winCountMap || {};
     const lossMap = engineState.lossCountMap || {};
 
-    // Get all unique players from teammate map (most reliable source)
     const playersFromTeammates = new Set<string>();
     Object.keys(teammateMap).forEach(pair => {
       const [id1, id2] = pair.split('|');
       playersFromTeammates.add(id1);
       playersFromTeammates.add(id2);
     });
-    
+
     const allPlayers = new Set([
       ...playersFromTeammates,
       ...Object.keys(benchMap),
@@ -92,87 +140,67 @@ function StatsPage(): React.ReactElement {
     const totalPlayers = allPlayers.size;
     if (totalPlayers === 0) return null;
 
-    // Calculate total rounds from teammate pairings (more reliable than wins)
-    // Each doubles match creates 2 teammate pairs, each singles creates 0
     const totalTeammatePairingsRecorded = Object.values(teammateMap).reduce((a, b) => a + b, 0);
-    const totalSinglesMatches = Object.values(singleMap).reduce((a, b) => a + b, 0) / 2; // 2 players per singles
-    const totalDoublesMatches = totalTeammatePairingsRecorded / 2; // 2 pairs per doubles match
-    
-    // Estimate rounds: each round typically has (players - benched) / 4 doubles matches + some singles
-    // We can estimate from max bench count (indicates minimum rounds played)
+    const totalSinglesMatches = Object.values(singleMap).reduce((a, b) => a + b, 0) / 2;
+    const totalDoublesMatches = totalTeammatePairingsRecorded / 2;
+
     const maxBenchFromData = Object.values(benchMap).length > 0 ? Math.max(...Object.values(benchMap)) : 0;
     const totalMatchesEstimate = totalDoublesMatches + totalSinglesMatches;
-    
-    // Better round estimate: use the higher of bench-based or match-based estimates
-    const playersPerRound = Math.max(4, totalPlayers - 1); // At least 4 players per round, minus ~1 benched
+
+    const playersPerRound = Math.max(4, totalPlayers - 1);
     const matchesPerRound = Math.max(1, Math.floor(playersPerRound / 4) + (playersPerRound % 4 >= 2 ? 1 : 0));
     const roundsFromMatches = matchesPerRound > 0 ? Math.ceil(totalMatchesEstimate / matchesPerRound) : 0;
     const totalRounds = Math.max(maxBenchFromData, roundsFromMatches, 1);
 
-    // Bench statistics
     const benchCounts = Object.values(benchMap);
     const benchedOnce = benchCounts.filter(c => c === 1).length;
     const benchedMultiple = benchCounts.filter(c => c > 1).length;
     const neverBenched = totalPlayers - Object.keys(benchMap).length;
     const maxBenchCount = benchCounts.length > 0 ? Math.max(...benchCounts) : 0;
     const minBenchCount = benchCounts.length > 0 ? Math.min(...benchCounts) : 0;
-    
-    // Fairness score: standard deviation of bench counts (lower = more fair)
-    const avgBench = benchCounts.length > 0 
-      ? benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length 
+
+    const avgBench = benchCounts.length > 0
+      ? benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length
       : 0;
     const benchVariance = benchCounts.length > 0
       ? benchCounts.reduce((sum, c) => sum + Math.pow(c - avgBench, 2), 0) / benchCounts.length
       : 0;
     const benchFairnessScore = Math.round(Math.sqrt(benchVariance) * 100) / 100;
 
-    // Repeated teammates (count > 1)
     const repeatedTeammates = Object.entries(teammateMap)
       .filter(([, count]) => count > 1)
       .map(([pair, count]) => ({ pair: formatPair(pair, ' & '), count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // Repeated opponents (count > 1)
     const repeatedOpponents = Object.entries(opponentMap)
       .filter(([, count]) => count > 1)
       .map(([pair, count]) => ({ pair: formatPair(pair, ' vs '), count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // Singles players
     const singlesPlayers = Object.entries(singleMap)
       .map(([playerId, count]) => ({ player: getPlayerName(playerId), count }))
       .sort((a, b) => b.count - a.count);
     const playersWithMultipleSingles = singlesPlayers.filter(p => p.count > 1).length;
 
-    // Generate context-aware warnings
     const warnings: string[] = [];
-    
-    // Calculate expected values from ACTUAL recorded data
     const possiblePairs = totalPlayers > 1 ? (totalPlayers * (totalPlayers - 1)) / 2 : 1;
-    
-    // Use actual teammate pairings to calculate expected average
-    // expectedTeammateAvg = total pairings recorded / number of possible pairs
+
     const actualTeammatePairings = Object.values(teammateMap).reduce((a, b) => a + b, 0);
     const expectedTeammateAvg = possiblePairs > 0 ? actualTeammatePairings / possiblePairs : 0;
-    
-    // Same for opponents
+
     const actualOpponentPairings = Object.values(opponentMap).reduce((a, b) => a + b, 0);
     const expectedOpponentAvg = possiblePairs > 0 ? actualOpponentPairings / possiblePairs : 0;
-    
-    // Expected singles per player if distributed evenly
+
     const totalSinglesPlayed = Object.values(singleMap).reduce((a, b) => a + b, 0);
     const expectedSinglesPerPlayer = totalPlayers > 0 ? totalSinglesPlayed / totalPlayers : 0;
-    
-    // Bench imbalance: warn if spread > expected spread + 2
-    // Expected spread increases with rounds (roughly sqrt of rounds for random distribution)
+
     const expectedBenchSpread = Math.ceil(Math.sqrt(totalRounds)) + 1;
     if (maxBenchCount - minBenchCount > expectedBenchSpread + 2) {
       warnings.push(`Bench imbalance: spread of ${maxBenchCount - minBenchCount} (expected ~${expectedBenchSpread} for ${totalRounds} rounds)`);
     }
-    
-    // Singles: warn only if someone has significantly more than the expected average
+
     const maxSingles = singlesPlayers.length > 0 ? singlesPlayers[0].count : 0;
     if (maxSingles > expectedSinglesPerPlayer + 1.5 && totalSinglesPlayed > 0) {
       const overPlayedSingles = singlesPlayers.filter(p => p.count > expectedSinglesPerPlayer + 1);
@@ -180,9 +208,7 @@ function StatsPage(): React.ReactElement {
         warnings.push(`${overPlayedSingles.length} player(s) played singles ${Math.round(expectedSinglesPerPlayer + 1.5)}+ times (expected ~${expectedSinglesPerPlayer.toFixed(1)} each)`);
       }
     }
-    
-    // Teammates: warn if max repetition significantly exceeds the expected average
-    // Threshold: at least 2x the average OR average + 3, but minimum 4 to avoid noise
+
     const maxTeammateRepeat = repeatedTeammates.length > 0 ? repeatedTeammates[0].count : 0;
     const teammateWarningThreshold = Math.max(4, Math.ceil(expectedTeammateAvg * 2), Math.ceil(expectedTeammateAvg) + 3);
     const highRepeatTeammates = repeatedTeammates.filter(t => t.count >= teammateWarningThreshold);
@@ -190,7 +216,6 @@ function StatsPage(): React.ReactElement {
       warnings.push(`${highRepeatTeammates.length} pair(s) teamed up ${teammateWarningThreshold}+ times (avg is ${expectedTeammateAvg.toFixed(1)})`);
     }
 
-    // Opponents: similar logic
     const maxOpponentRepeat = repeatedOpponents.length > 0 ? repeatedOpponents[0].count : 0;
     const opponentWarningThreshold = Math.max(4, Math.ceil(expectedOpponentAvg * 2), Math.ceil(expectedOpponentAvg) + 3);
     const highRepeatOpponents = repeatedOpponents.filter(o => o.count >= opponentWarningThreshold);
@@ -218,8 +243,8 @@ function StatsPage(): React.ReactElement {
   const diagnostics = getDiagnostics();
   const hasData = diagnostics !== null;
 
-  // Get raw bench data for the bench distribution table
-  const benchData = engineState?.benchCountMap 
+  /** Raw bench data sorted by count for the distribution table */
+  const benchData = engineState?.benchCountMap
     ? Object.entries(engineState.benchCountMap)
         .map(([playerId, count]) => ({ player: getPlayerName(playerId), count }))
         .sort((a, b) => b.count - a.count)
@@ -335,12 +360,12 @@ function StatsPage(): React.ReactElement {
                   </div>
                   <div className="bench-stat">
                     <span className="bench-label">Fairness score:</span>
-                    <span className={`bench-value ${diagnostics.benchFairnessScore < 1 ? 'good' : diagnostics.benchFairnessScore < 2 ? 'neutral' : 'warning'}`}>
+                    <span className={`bench-value ${getFairnessClass(diagnostics.benchFairnessScore)}`}>
                       {diagnostics.benchFairnessScore} <small>(lower is better)</small>
                     </span>
                   </div>
                 </div>
-                
+
                 {benchData.length > 0 && (
                   <details className="collapsible-section">
                     <summary>View bench counts per player ({benchData.length})</summary>
@@ -351,7 +376,7 @@ function StatsPage(): React.ReactElement {
                       />
                       <div className="player-chips" style={{ marginTop: '16px' }}>
                         {benchData.map(({ player, count }) => (
-                          <span key={player} className={`chip ${count >= 4 ? 'high' : count === 3 ? 'medium-high' : count === 2 ? 'medium' : 'low'}`}>
+                          <span key={player} className={`chip ${getChipClass(count)}`}>
                             {player}: {count}
                           </span>
                         ))}
@@ -366,20 +391,15 @@ function StatsPage(): React.ReactElement {
                 <h3>👥 Teammate Connections</h3>
                 {Object.keys(engineState?.teammateCountMap || {}).length > 0 ? (
                   <>
-                    <TeammateGraph 
-                      teammateData={engineState?.teammateCountMap || {}} 
+                    <TeammateGraph
+                      teammateData={engineState?.teammateCountMap || {}}
                       getPlayerName={getPlayerName}
                     />
                     {diagnostics.repeatedTeammates.length > 0 && (
                       <details className="collapsible-section">
-                        <summary>View repeated pairs list ({diagnostics.repeatedTeammates.length})</summary>
-                        <div className="pairs-list" style={{ padding: '12px 16px' }}>
-                          {diagnostics.repeatedTeammates.map(({ pair, count }) => (
-                            <div key={pair} className={`pair-item ${count >= 3 ? 'high' : ''}`}>
-                              <span className="pair-names">{pair}</span>
-                              <span className="pair-count">{count}x</span>
-                            </div>
-                          ))}
+                        <summary>View repeated pairs ({diagnostics.repeatedTeammates.length})</summary>
+                        <div style={{ padding: '16px' }}>
+                          <PairsGraph pairsData={diagnostics.repeatedTeammates} />
                         </div>
                       </details>
                     )}
@@ -394,21 +414,16 @@ function StatsPage(): React.ReactElement {
                 <h3>⚔️ Opponent Matchups</h3>
                 {Object.keys(engineState?.opponentCountMap || {}).length > 0 ? (
                   <>
-                    <TeammateGraph 
-                      teammateData={engineState?.opponentCountMap || {}} 
+                    <TeammateGraph
+                      teammateData={engineState?.opponentCountMap || {}}
                       getPlayerName={getPlayerName}
                       variant="opponent"
                     />
                     {diagnostics.repeatedOpponents.length > 0 && (
                       <details className="collapsible-section">
-                        <summary>View repeated matchups list ({diagnostics.repeatedOpponents.length})</summary>
-                        <div className="pairs-list" style={{ padding: '12px 16px' }}>
-                          {diagnostics.repeatedOpponents.map(({ pair, count }) => (
-                            <div key={pair} className={`pair-item ${count >= 3 ? 'high' : ''}`}>
-                              <span className="pair-names">{pair}</span>
-                              <span className="pair-count">{count}x</span>
-                            </div>
-                          ))}
+                        <summary>View repeated matchups ({diagnostics.repeatedOpponents.length})</summary>
+                        <div style={{ padding: '16px' }}>
+                          <PairsGraph pairsData={diagnostics.repeatedOpponents} />
                         </div>
                       </details>
                     )}
