@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import { CourtAssignmentEngine } from '../utils/CourtAssignmentEngine';
 import { loadAppState } from '../utils/storageUtils';
@@ -8,6 +8,28 @@ import BenchGraph from '../components/BenchGraph';
 import PairsGraph from '../components/PairsGraph';
 import type { CourtEngineState, Player } from '../types';
 import './StatsPage.css';
+
+type CountMap = Record<string, number>;
+
+/** Sums all values in a count map */
+const sumValues = (map: CountMap): number =>
+  Object.values(map).reduce((a, b) => a + b, 0);
+
+/** Checks if a count map has any entries */
+const hasEntries = (map: CountMap): boolean =>
+  Object.keys(map).length > 0;
+
+/** Gets min value from count map, or 0 if empty */
+const getMin = (map: CountMap): number => {
+  const values = Object.values(map);
+  return values.length > 0 ? Math.min(...values) : 0;
+};
+
+/** Gets max value from count map, or 0 if empty */
+const getMax = (map: CountMap): number => {
+  const values = Object.values(map);
+  return values.length > 0 ? Math.max(...values) : 0;
+};
 
 /**
  * Diagnostic statistics for the current session.
@@ -106,6 +128,37 @@ function StatsPage(): React.ReactElement {
     return 'low';
   };
 
+  /** Extracts engine state maps with defaults */
+  const maps = useMemo(() => ({
+    bench: engineState?.benchCountMap || {},
+    teammate: engineState?.teammateCountMap || {},
+    opponent: engineState?.opponentCountMap || {},
+    single: engineState?.singleCountMap || {},
+    win: engineState?.winCountMap || {},
+    loss: engineState?.lossCountMap || {},
+  }), [engineState]);
+
+  /**
+   * Extracts repeated pairs from a count map.
+   * @param map - The count map (teammate or opponent)
+   * @param separator - The separator for display (' & ' or ' vs ')
+   * @returns Top 10 pairs with count > 1, sorted descending
+   */
+  const getRepeatedPairs = (map: CountMap, separator: string) =>
+    Object.entries(map)
+      .filter(([, count]) => count > 1)
+      .map(([pair, count]) => ({ pair: formatPair(pair, separator), count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+  /**
+   * Calculates warning threshold for repeated pairings.
+   * @param expectedAvg - The expected average pairings
+   * @returns Threshold: max of 4, 2x average, or average + 3
+   */
+  const getWarningThreshold = (expectedAvg: number): number =>
+    Math.max(4, Math.ceil(expectedAvg * 2), Math.ceil(expectedAvg) + 3);
+
   /**
    * Computes comprehensive diagnostic statistics from the engine state.
    * Analyzes bench distribution, teammate/opponent repetitions, singles matches,
@@ -115,15 +168,8 @@ function StatsPage(): React.ReactElement {
   const getDiagnostics = (): DiagnosticStats | null => {
     if (!engineState) return null;
 
-    const benchMap = engineState.benchCountMap || {};
-    const teammateMap = engineState.teammateCountMap || {};
-    const opponentMap = engineState.opponentCountMap || {};
-    const singleMap = engineState.singleCountMap || {};
-    const winMap = engineState.winCountMap || {};
-    const lossMap = engineState.lossCountMap || {};
-
     const playersFromTeammates = new Set<string>();
-    Object.keys(teammateMap).forEach(pair => {
+    Object.keys(maps.teammate).forEach(pair => {
       const [id1, id2] = pair.split('|');
       playersFromTeammates.add(id1);
       playersFromTeammates.add(id2);
@@ -131,20 +177,19 @@ function StatsPage(): React.ReactElement {
 
     const allPlayers = new Set([
       ...playersFromTeammates,
-      ...Object.keys(benchMap),
-      ...Object.keys(winMap),
-      ...Object.keys(lossMap),
-      ...Object.keys(singleMap),
+      ...Object.keys(maps.bench),
+      ...Object.keys(maps.win),
+      ...Object.keys(maps.loss),
+      ...Object.keys(maps.single),
     ]);
 
     const totalPlayers = allPlayers.size;
     if (totalPlayers === 0) return null;
 
-    const totalTeammatePairingsRecorded = Object.values(teammateMap).reduce((a, b) => a + b, 0);
-    const totalSinglesMatches = Object.values(singleMap).reduce((a, b) => a + b, 0) / 2;
-    const totalDoublesMatches = totalTeammatePairingsRecorded / 2;
-
-    const maxBenchFromData = Object.values(benchMap).length > 0 ? Math.max(...Object.values(benchMap)) : 0;
+    const totalTeammatePairings = sumValues(maps.teammate);
+    const totalSinglesMatches = sumValues(maps.single) / 2;
+    const totalDoublesMatches = totalTeammatePairings / 2;
+    const maxBenchFromData = getMax(maps.bench);
     const totalMatchesEstimate = totalDoublesMatches + totalSinglesMatches;
 
     const playersPerRound = Math.max(4, totalPlayers - 1);
@@ -152,12 +197,12 @@ function StatsPage(): React.ReactElement {
     const roundsFromMatches = matchesPerRound > 0 ? Math.ceil(totalMatchesEstimate / matchesPerRound) : 0;
     const totalRounds = Math.max(maxBenchFromData, roundsFromMatches, 1);
 
-    const benchCounts = Object.values(benchMap);
+    const benchCounts = Object.values(maps.bench);
     const benchedOnce = benchCounts.filter(c => c === 1).length;
     const benchedMultiple = benchCounts.filter(c => c > 1).length;
-    const neverBenched = totalPlayers - Object.keys(benchMap).length;
-    const maxBenchCount = benchCounts.length > 0 ? Math.max(...benchCounts) : 0;
-    const minBenchCount = benchCounts.length > 0 ? Math.min(...benchCounts) : 0;
+    const neverBenched = totalPlayers - Object.keys(maps.bench).length;
+    const maxBenchCount = getMax(maps.bench);
+    const minBenchCount = getMin(maps.bench);
 
     const avgBench = benchCounts.length > 0
       ? benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length
@@ -167,19 +212,10 @@ function StatsPage(): React.ReactElement {
       : 0;
     const benchFairnessScore = Math.round(Math.sqrt(benchVariance) * 100) / 100;
 
-    const repeatedTeammates = Object.entries(teammateMap)
-      .filter(([, count]) => count > 1)
-      .map(([pair, count]) => ({ pair: formatPair(pair, ' & '), count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    const repeatedTeammates = getRepeatedPairs(maps.teammate, ' & ');
+    const repeatedOpponents = getRepeatedPairs(maps.opponent, ' vs ');
 
-    const repeatedOpponents = Object.entries(opponentMap)
-      .filter(([, count]) => count > 1)
-      .map(([pair, count]) => ({ pair: formatPair(pair, ' vs '), count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-
-    const singlesPlayers = Object.entries(singleMap)
+    const singlesPlayers = Object.entries(maps.single)
       .map(([playerId, count]) => ({ player: getPlayerName(playerId), count }))
       .sort((a, b) => b.count - a.count);
     const playersWithMultipleSingles = singlesPlayers.filter(p => p.count > 1).length;
@@ -187,13 +223,9 @@ function StatsPage(): React.ReactElement {
     const warnings: string[] = [];
     const possiblePairs = totalPlayers > 1 ? (totalPlayers * (totalPlayers - 1)) / 2 : 1;
 
-    const actualTeammatePairings = Object.values(teammateMap).reduce((a, b) => a + b, 0);
-    const expectedTeammateAvg = possiblePairs > 0 ? actualTeammatePairings / possiblePairs : 0;
-
-    const actualOpponentPairings = Object.values(opponentMap).reduce((a, b) => a + b, 0);
-    const expectedOpponentAvg = possiblePairs > 0 ? actualOpponentPairings / possiblePairs : 0;
-
-    const totalSinglesPlayed = Object.values(singleMap).reduce((a, b) => a + b, 0);
+    const expectedTeammateAvg = possiblePairs > 0 ? totalTeammatePairings / possiblePairs : 0;
+    const expectedOpponentAvg = possiblePairs > 0 ? sumValues(maps.opponent) / possiblePairs : 0;
+    const totalSinglesPlayed = sumValues(maps.single);
     const expectedSinglesPerPlayer = totalPlayers > 0 ? totalSinglesPlayed / totalPlayers : 0;
 
     const expectedBenchSpread = Math.ceil(Math.sqrt(totalRounds)) + 1;
@@ -209,18 +241,16 @@ function StatsPage(): React.ReactElement {
       }
     }
 
-    const maxTeammateRepeat = repeatedTeammates.length > 0 ? repeatedTeammates[0].count : 0;
-    const teammateWarningThreshold = Math.max(4, Math.ceil(expectedTeammateAvg * 2), Math.ceil(expectedTeammateAvg) + 3);
-    const highRepeatTeammates = repeatedTeammates.filter(t => t.count >= teammateWarningThreshold);
-    if (highRepeatTeammates.length > 0 && maxTeammateRepeat >= teammateWarningThreshold) {
-      warnings.push(`${highRepeatTeammates.length} pair(s) teamed up ${teammateWarningThreshold}+ times (avg is ${expectedTeammateAvg.toFixed(1)})`);
+    const teammateThreshold = getWarningThreshold(expectedTeammateAvg);
+    const highRepeatTeammates = repeatedTeammates.filter(t => t.count >= teammateThreshold);
+    if (highRepeatTeammates.length > 0) {
+      warnings.push(`${highRepeatTeammates.length} pair(s) teamed up ${teammateThreshold}+ times (avg is ${expectedTeammateAvg.toFixed(1)})`);
     }
 
-    const maxOpponentRepeat = repeatedOpponents.length > 0 ? repeatedOpponents[0].count : 0;
-    const opponentWarningThreshold = Math.max(4, Math.ceil(expectedOpponentAvg * 2), Math.ceil(expectedOpponentAvg) + 3);
-    const highRepeatOpponents = repeatedOpponents.filter(o => o.count >= opponentWarningThreshold);
-    if (highRepeatOpponents.length > 0 && maxOpponentRepeat >= opponentWarningThreshold) {
-      warnings.push(`${highRepeatOpponents.length} pair(s) faced each other ${opponentWarningThreshold}+ times (avg is ${expectedOpponentAvg.toFixed(1)})`);
+    const opponentThreshold = getWarningThreshold(expectedOpponentAvg);
+    const highRepeatOpponents = repeatedOpponents.filter(o => o.count >= opponentThreshold);
+    if (highRepeatOpponents.length > 0) {
+      warnings.push(`${highRepeatOpponents.length} pair(s) faced each other ${opponentThreshold}+ times (avg is ${expectedOpponentAvg.toFixed(1)})`);
     }
 
     return {
@@ -244,8 +274,8 @@ function StatsPage(): React.ReactElement {
   const hasData = diagnostics !== null;
 
   /** Raw bench data sorted by count for the distribution table */
-  const benchData = engineState?.benchCountMap
-    ? Object.entries(engineState.benchCountMap)
+  const benchData = hasEntries(maps.bench)
+    ? Object.entries(maps.bench)
         .map(([playerId, count]) => ({ player: getPlayerName(playerId), count }))
         .sort((a, b) => b.count - a.count)
     : [];
@@ -371,7 +401,7 @@ function StatsPage(): React.ReactElement {
                     <summary>View bench counts per player ({benchData.length})</summary>
                     <div style={{ padding: '16px' }}>
                       <BenchGraph
-                        benchData={engineState?.benchCountMap || {}}
+                        benchData={maps.bench}
                         getPlayerName={getPlayerName}
                       />
                       <div className="player-chips" style={{ marginTop: '16px' }}>
@@ -389,10 +419,10 @@ function StatsPage(): React.ReactElement {
               {/* Repeated Teammates */}
               <div className="diagnostic-section">
                 <h3>👥 Teammate Connections</h3>
-                {Object.keys(engineState?.teammateCountMap || {}).length > 0 ? (
+                {hasEntries(maps.teammate) ? (
                   <>
                     <TeammateGraph
-                      teammateData={engineState?.teammateCountMap || {}}
+                      teammateData={maps.teammate}
                       getPlayerName={getPlayerName}
                     />
                     {diagnostics.repeatedTeammates.length > 0 && (
@@ -412,10 +442,10 @@ function StatsPage(): React.ReactElement {
               {/* Repeated Opponents */}
               <div className="diagnostic-section">
                 <h3>⚔️ Opponent Matchups</h3>
-                {Object.keys(engineState?.opponentCountMap || {}).length > 0 ? (
+                {hasEntries(maps.opponent) ? (
                   <>
                     <TeammateGraph
-                      teammateData={engineState?.opponentCountMap || {}}
+                      teammateData={maps.opponent}
                       getPlayerName={getPlayerName}
                       variant="opponent"
                     />
@@ -436,7 +466,7 @@ function StatsPage(): React.ReactElement {
               {/* Singles Distribution */}
               <div className="diagnostic-section">
                 <h3>🎯 Singles Matches</h3>
-                {Object.keys(engineState?.singleCountMap || {}).length > 0 ? (
+                {hasEntries(maps.single) ? (
                   <>
                     <div className="singles-summary">
                       <span>{diagnostics.singlesPlayers.length} players have played singles</span>
@@ -447,7 +477,7 @@ function StatsPage(): React.ReactElement {
                       )}
                     </div>
                     <SinglesGraph
-                      singlesData={engineState?.singleCountMap || {}}
+                      singlesData={maps.single}
                       getPlayerName={getPlayerName}
                     />
                     <details className="collapsible-section">

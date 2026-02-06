@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 
+import { GRAPH_COLORS, getColorForCount, getGlowColorForCount } from '../constants/graphColors';
+
 /**
  * Props for the PairsGraph component
  */
@@ -28,26 +30,6 @@ const CELL_SIZE = 120;
 /** Maximum characters to display in bubble labels */
 const MAX_PAIR_LENGTH = 16;
 
-/**
- * Returns bubble color based on count.
- * Color scale: blue (1×) → yellow (2×) → orange (3×) → red (4×+)
- */
-function getBubbleColor(count: number): string {
-  if (count >= 4) return '#f85149';
-  if (count === 3) return '#f0883e';
-  if (count === 2) return '#d29922';
-  return '#58a6ff';
-}
-
-/**
- * Returns bubble border/glow color based on count.
- */
-function getBubbleBorder(count: number): string {
-  if (count >= 4) return 'rgba(248, 81, 73, 0.5)';
-  if (count === 3) return 'rgba(240, 136, 62, 0.5)';
-  if (count === 2) return 'rgba(210, 153, 34, 0.5)';
-  return 'rgba(88, 166, 255, 0.5)';
-}
 
 /**
  * Truncates pair names for display in bubbles.
@@ -130,7 +112,7 @@ export function PairsGraph({ pairsData }: PairsGraphProps): React.ReactElement |
                 cy={bubble.y}
                 r={bubble.radius + 3}
                 fill="none"
-                stroke={getBubbleBorder(bubble.count)}
+                stroke={getGlowColorForCount(bubble.count)}
                 strokeWidth={4}
                 opacity={0.5}
               />
@@ -138,8 +120,8 @@ export function PairsGraph({ pairsData }: PairsGraphProps): React.ReactElement |
                 cx={bubble.x}
                 cy={bubble.y}
                 r={bubble.radius}
-                fill="#21262d"
-                stroke={getBubbleColor(bubble.count)}
+                fill={GRAPH_COLORS.nodeFill}
+                stroke={getColorForCount(bubble.count)}
                 strokeWidth={3}
               />
               <text
@@ -173,7 +155,7 @@ export function PairsGraph({ pairsData }: PairsGraphProps): React.ReactElement |
                 y={bubble.y + (line2 ? 14 : 10)}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fill={getBubbleColor(bubble.count)}
+                fill={getColorForCount(bubble.count)}
                 fontSize={14}
                 fontWeight={700}
                 style={{ pointerEvents: 'none' }}
@@ -187,19 +169,19 @@ export function PairsGraph({ pairsData }: PairsGraphProps): React.ReactElement |
 
       <div className="graph-legend">
         <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#58a6ff' }}></span>
+          <span className="legend-dot" style={{ background: GRAPH_COLORS.count1 }}></span>
           <span>1×</span>
         </div>
         <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#d29922' }}></span>
+          <span className="legend-dot" style={{ background: GRAPH_COLORS.count2 }}></span>
           <span>2×</span>
         </div>
         <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#f0883e' }}></span>
+          <span className="legend-dot" style={{ background: GRAPH_COLORS.count3 }}></span>
           <span>3×</span>
         </div>
         <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#f85149' }}></span>
+          <span className="legend-dot" style={{ background: GRAPH_COLORS.count4Plus }}></span>
           <span>4×+</span>
         </div>
       </div>

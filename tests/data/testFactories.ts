@@ -1,7 +1,38 @@
 import React from 'react';
-import { vi } from 'vitest';
+import { expect, vi } from 'vitest';
 
 import { Player } from '../../src/types';
+
+export { GRAPH_COLORS, GRAPH_LEGEND_LABELS } from '../../src/constants/graphColors';
+
+/** Standard player ID to name mapping for graph tests */
+export const GRAPH_PLAYER_NAMES: Record<string, string> = {
+  '1': 'Alice',
+  '2': 'Bob',
+  '3': 'Charlie',
+  '4': 'Diana',
+  '5': 'Eve',
+  '6': 'Frank',
+};
+
+/**
+ * Creates a mock getPlayerName function for graph tests.
+ * @param customNames - Optional custom name mapping to override defaults
+ * @returns A vi.fn() that resolves player IDs to names
+ */
+export function createMockGetPlayerName(customNames?: Record<string, string>) {
+  const names = customNames || GRAPH_PLAYER_NAMES;
+  return vi.fn((id: string) => names[id] || id);
+}
+
+/**
+ * Creates a mock getPlayerName function that returns a long name for testing truncation.
+ * @param longNameId - The ID that should return a long name (default: '1')
+ * @returns A function that returns 'AlexanderTheGreat' for longNameId, 'Bob' otherwise
+ */
+export function createLongNameGetter(longNameId = '1') {
+  return (id: string) => id === longNameId ? 'AlexanderTheGreat' : 'Bob';
+}
 
 export function createMockPlayer(overrides: Partial<Player> = {}): Player {
   return {

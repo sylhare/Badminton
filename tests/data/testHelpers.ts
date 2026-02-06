@@ -2,6 +2,7 @@ import { expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 
 import type { Player } from '../../src/types';
+import { GRAPH_COLORS, GRAPH_LEGEND_LABELS } from './testFactories';
 
 export function expectPlayersToBeRendered(players: Player[]): void {
   players.forEach(player => {
@@ -70,5 +71,71 @@ export const mockAssertions = {
 
   expectCalledTimes: (mockFn: MockFunction, times: number): void => {
     expect(mockFn).toHaveBeenCalledTimes(times);
+  },
+};
+
+/** Assertions and helpers for graph component tests */
+export const graphAssertions = {
+  /** Asserts that the container is empty (component returned null) */
+  expectEmptyGraph: (container: HTMLElement): void => {
+    expect(container).toBeEmptyDOMElement();
+  },
+
+  /** Asserts that an SVG element is rendered */
+  expectSvgRendered: (): SVGSVGElement => {
+    const svg = document.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+    return svg!;
+  },
+
+  /** Asserts that the legend contains all standard labels */
+  expectLegendRendered: (): void => {
+    const legend = document.querySelector('.graph-legend');
+    expect(legend).toBeInTheDocument();
+    GRAPH_LEGEND_LABELS.forEach(label => {
+      expect(legend?.textContent).toContain(label);
+    });
+  },
+
+  /** Asserts that all four count-based colors are present in circle strokes */
+  expectAllCountColors: (): void => {
+    const circles = document.querySelectorAll('circle');
+    const strokes = Array.from(circles)
+      .filter(c => c.getAttribute('fill') === GRAPH_COLORS.nodeFill)
+      .map(c => c.getAttribute('stroke'));
+
+    expect(strokes).toContain(GRAPH_COLORS.count1);
+    expect(strokes).toContain(GRAPH_COLORS.count2);
+    expect(strokes).toContain(GRAPH_COLORS.count3);
+    expect(strokes).toContain(GRAPH_COLORS.count4Plus);
+  },
+
+  /** Asserts that a glow circle (fill='none') is rendered */
+  expectGlowCircle: (): void => {
+    const circles = document.querySelectorAll('circle');
+    const glowCircle = Array.from(circles).find(c => c.getAttribute('fill') === 'none');
+    expect(glowCircle).toBeInTheDocument();
+  },
+
+  /** Asserts minimum number of groups for grid layout */
+  expectGridLayout: (minGroups: number): void => {
+    const groups = document.querySelectorAll('g');
+    expect(groups.length).toBeGreaterThanOrEqual(minGroups);
+  },
+
+  /** Gets all line elements (edges) from the SVG */
+  getEdges: (): NodeListOf<SVGLineElement> => {
+    return document.querySelectorAll('line');
+  },
+
+  /** Gets all circle elements with the standard node fill color */
+  getNodeCircles: (): SVGCircleElement[] => {
+    return Array.from(document.querySelectorAll('circle'))
+      .filter(c => c.getAttribute('fill') === GRAPH_COLORS.nodeFill) as SVGCircleElement[];
+  },
+
+  /** Gets all stroke colors from node circles */
+  getNodeStrokes: (): (string | null)[] => {
+    return graphAssertions.getNodeCircles().map(c => c.getAttribute('stroke'));
   },
 };
