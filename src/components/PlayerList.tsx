@@ -131,8 +131,12 @@ const PlayerList: React.FC<PlayerListProps> = ({
               </div>
               {player.isPresent && (
                 <div className="player-bench-row">
-                  <span className="bench-count-label">
-                    🪑 Bench count: <strong>{benchCount}</strong>
+                  <span
+                    className="bench-count-emoji"
+                    title={`Bench count: ${benchCount}`}
+                    data-testid={`bench-count-${player.id}`}
+                  >
+                    🪑 {benchCount}
                   </span>
                   <label className="bench-next-toggle">
                     <span>Bench next</span>
