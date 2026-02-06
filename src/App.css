@@ -1744,3 +1744,10 @@ h1 {
     opacity: 0.8;
 }
 
+.app-footer .analysis-link {
+    text-decoration: underline;
+}
+
+.app-footer .analysis-link:hover {
+    opacity: 0.8;
+}
