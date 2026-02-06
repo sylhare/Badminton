@@ -1,111 +1,115 @@
 import React, { useState } from 'react';
+import { Camera, UserPlus } from '@phosphor-icons/react';
 
 import { validatePlayerNames } from '../utils/playerUtils';
 import { useAnalytics } from '../hooks/useAnalytics';
 
-import ImageUpload from './ImageUpload';
+import ImageUploadModal from './ImageUploadModal';
 
 interface ManualPlayerEntryProps {
   onPlayersAdded: (players: string[]) => void;
-  onPlayersExtracted: (players: string[]) => void;
 }
 
-const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded, onPlayersExtracted }) => {
+const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded }) => {
   const { trackPlayerAction } = useAnalytics();
-  const [playerText, setPlayerText] = useState('');
-  const [singlePlayerName, setSinglePlayerName] = useState('');
-  const [isImageUploadExpanded, setIsImageUploadExpanded] = useState(false);
+  const [playerInput, setPlayerInput] = useState('');
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-  const handleSubmit = (playerNames: string[], resetState: () => void) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!playerInput.trim()) return;
+
+    // Detect backticks for multi-player add
+    const hasBackticks = playerInput.includes('`');
+    let playerNames: string[];
+
+    if (hasBackticks) {
+      // Split by backticks and filter empty entries
+      playerNames = playerInput
+        .split('`')
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+    } else {
+      // Check if input contains commas or newlines for bulk add
+      const hasSeparators = /[,\n]/.test(playerInput);
+      if (hasSeparators) {
+        playerNames = playerInput.split(/[,\n]+/);
+      } else {
+        playerNames = [playerInput];
+      }
+    }
+
     const validNames = validatePlayerNames(playerNames);
     if (validNames.length > 0) {
+      const method = validNames.length > 1 ? 'manual-bulk' : 'manual-single';
+      trackPlayerAction('add_players', { method, count: validNames.length });
       onPlayersAdded(validNames);
-      resetState();
+      setPlayerInput('');
     }
   };
 
-  const handleBulkAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (playerText.trim()) {
-      const players = playerText.split(/[\n,]+/);
-      const validNames = validatePlayerNames(players);
-      trackPlayerAction('add_players', { method: 'manual-bulk', count: validNames.length });
-      handleSubmit(players, () => setPlayerText(''));
-    }
+  const handleImagePlayersAdded = (players: string[]) => {
+    onPlayersAdded(players);
   };
 
-  const handleSingleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (singlePlayerName.trim()) {
-      trackPlayerAction('add_player', { method: 'manual-single', count: 1 });
-      handleSubmit([singlePlayerName], () => setSinglePlayerName(''));
-    }
-  };
+  // Check if input suggests multiple players
+  const isMultiInput = playerInput.includes('`') || /[,\n]/.test(playerInput);
+  const playerCount = isMultiInput
+    ? playerInput.split(/[`\n,]+/).filter(s => s.trim()).length
+    : playerInput.trim() ? 1 : 0;
 
   return (
-    <div className="manual-entry-container">
-      <div className="image-upload-collapsible">
-        <div
-          className="collapsible-header"
-          onClick={() => setIsImageUploadExpanded(!isImageUploadExpanded)}
-          data-testid="image-upload-toggle"
-        >
-          <span>📸 Add users with a picture</span>
-          <span className="toggle-icon">{isImageUploadExpanded ? '−' : '+'}</span>
-        </div>
-        {isImageUploadExpanded && (
-          <div className="collapsible-content">
-            <ImageUpload onPlayersExtracted={onPlayersExtracted} />
-          </div>
-        )}
-      </div>
-
-      <div className="manual-entry-section">
-        <h3>✍️ Add Single Player</h3>
-        <form onSubmit={handleSingleAdd} className="single-player-form">
+    <div className="player-entry-container">
+      <form onSubmit={handleSubmit} className="player-entry-form">
+        <div className="player-input-wrapper">
           <input
             type="text"
-            value={singlePlayerName}
-            onChange={(e) => setSinglePlayerName(e.target.value)}
-            placeholder="Enter player name..."
-            className="single-player-input"
-            data-testid="single-player-input"
+            value={playerInput}
+            onChange={(e) => setPlayerInput(e.target.value)}
+            placeholder="Enter player name (use ` or , to add multiple)"
+            className="player-entry-input"
+            data-testid="player-entry-input"
             autoComplete="off"
             autoCapitalize="words"
             autoCorrect="off"
             spellCheck="false"
           />
-          <button type="submit" className="add-single-button" data-testid="add-single-button">
-            Add Player
+        </div>
+        <div className="player-entry-actions">
+          <button
+            type="button"
+            className="camera-button"
+            onClick={() => setIsImageModalOpen(true)}
+            title="Import players from image"
+            data-testid="open-image-modal-button"
+          >
+            <Camera size={20} weight="bold" />
           </button>
-        </form>
-      </div>
+          <button
+            type="submit"
+            className="add-player-button"
+            disabled={!playerInput.trim()}
+            data-testid="add-player-button"
+          >
+            <UserPlus size={18} weight="bold" />
+            {isMultiInput && playerCount > 1 ? `Add ${playerCount} Players` : 'Add Player'}
+          </button>
+        </div>
+      </form>
 
-      <div className="manual-entry-section">
-        <h3>📝 Add Multiple Players</h3>
-        <p className="instruction-text">
-          Enter multiple names separated by commas or new lines:
+      {isMultiInput && playerCount > 1 && (
+        <p className="multi-input-hint">
+          💡 Detected {playerCount} players separated by {playerInput.includes('`') ? 'backticks' : 'commas/newlines'}
         </p>
-        <form onSubmit={handleBulkAdd} className="bulk-add-form">
-          <textarea
-            value={playerText}
-            onChange={(e) => setPlayerText(e.target.value)}
-            placeholder="John Doe, Jane Smith, Mike Johnson&#10;Or one name per line:&#10;Alice Brown&#10;Bob Wilson&#10;Sarah Davis"
-            className="bulk-input"
-            rows={6}
-            data-testid="bulk-input"
-            autoComplete="off"
-            autoCapitalize="words"
-            autoCorrect="off"
-            spellCheck="false"
-          />
-          <button type="submit" className="add-bulk-button" data-testid="add-bulk-button">
-            Add All Players
-          </button>
-        </form>
-      </div>
+      )}
+
+      <ImageUploadModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        onPlayersAdded={handleImagePlayersAdded}
+      />
     </div>
   );
 };

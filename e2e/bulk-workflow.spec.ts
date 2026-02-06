@@ -45,6 +45,10 @@ test.describe('Bulk Player Workflow', () => {
     await expect(page.getByTestId('stats-total-count')).toHaveText('13');
     await expect(page.getByTestId('stats-present-count')).toHaveText('13');
 
+    // Set courts to 3 for 13 players
+    const courtInput = page.locator('#courts');
+    await courtInput.fill('3');
+
     await completeFullWorkflow(page, 13, 3);
   });
 });

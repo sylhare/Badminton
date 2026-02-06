@@ -16,7 +16,6 @@ test.describe('Single Player Workflow', () => {
   });
 
   test('Complete single player workflow - add one by one', async ({ page }) => {
-
     for (const playerName of BULK_PLAYERS.slice(0, 6)) {
       await addSinglePlayer(page, playerName);
     }

@@ -41,7 +41,7 @@ describe('StorageUtils', () => {
       players: mockPlayers,
       numberOfCourts: 6,
       assignments: mockAssignments,
-      collapsedSteps: new Set([1, 2]),
+      isManagePlayersCollapsed: true,
       manualCourt: null,
     };
 
@@ -55,7 +55,7 @@ describe('StorageUtils', () => {
       expect(parsed.players).toEqual(mockPlayers);
       expect(parsed.numberOfCourts).toBe(6);
       expect(parsed.assignments).toEqual(mockAssignments);
-      expect(parsed.collapsedSteps).toEqual([1, 2]);
+      expect(parsed.isManagePlayersCollapsed).toBe(true);
     });
 
     it('should load app state from localStorage', () => {
@@ -66,7 +66,7 @@ describe('StorageUtils', () => {
       expect(loaded.players).toEqual(mockPlayers);
       expect(loaded.numberOfCourts).toBe(6);
       expect(loaded.assignments).toEqual(mockAssignments);
-      expect(loaded.collapsedSteps).toEqual(new Set([1, 2]));
+      expect(loaded.isManagePlayersCollapsed).toBe(true);
     });
 
     it('should return default state when no saved state exists', () => {
@@ -89,11 +89,42 @@ describe('StorageUtils', () => {
 
       expect(() => saveAppState(mockAppState)).not.toThrow();
     });
+
+    it('should migrate old collapsedSteps format to isManagePlayersCollapsed', () => {
+      // Store old format data
+      localStorage.setItem('badminton-app-state', JSON.stringify({
+        players: mockPlayers,
+        numberOfCourts: 4,
+        assignments: [],
+        collapsedSteps: [1, 2], // Old format
+        manualCourt: null,
+      }));
+
+      const loaded = loadAppState();
+
+      // Should migrate to new format
+      expect(loaded.isManagePlayersCollapsed).toBe(true);
+    });
+
+    it('should set isManagePlayersCollapsed to false when old collapsedSteps does not include 1 or 2', () => {
+      localStorage.setItem('badminton-app-state', JSON.stringify({
+        players: mockPlayers,
+        numberOfCourts: 4,
+        assignments: [],
+        collapsedSteps: [3, 4], // Old format without 1 or 2
+        manualCourt: null,
+      }));
+
+      const loaded = loadAppState();
+
+      expect(loaded.isManagePlayersCollapsed).toBe(false);
+    });
   });
 
   describe('saveCourtEngineState and loadCourtEngineState', () => {
     const mockCourtEngineState = {
       benchCountMap: { 'player-1': 2, 'player-2': 1 },
+      singleCountMap: {},
       teammateCountMap: { 'player-1|player-2': 3 },
       opponentCountMap: { 'player-1|player-3': 2 },
       winCountMap: { 'player-1': 5, 'player-2': 3 },
