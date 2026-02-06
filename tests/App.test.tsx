@@ -16,12 +16,12 @@ describe('App', () => {
 
     it('renders Manage Players section', () => {
       render(<App />);
-      expect(screen.getByText('👥 Manage Players')).toBeInTheDocument();
+      expect(screen.getByText('Manage Players')).toBeInTheDocument();
     });
 
     it('renders Court Assignments section', () => {
       render(<App />);
-      expect(screen.getByText('🏟️ Court Assignments')).toBeInTheDocument();
+      expect(screen.getByText('Court Assignments')).toBeInTheDocument();
     });
 
     it('shows player list after adding players', async () => {
@@ -35,12 +35,10 @@ describe('App', () => {
     it('enables generate button after adding players', async () => {
       render(<App />);
 
-      // Initially disabled
       expect(screen.getByTestId('generate-assignments-button')).toBeDisabled();
 
       await addPlayers(user, 'Alice');
 
-      // Now enabled
       expect(screen.getByTestId('generate-assignments-button')).not.toBeDisabled();
     });
 

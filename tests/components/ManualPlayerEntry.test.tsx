@@ -141,7 +141,6 @@ describe('ManualPlayerEntry Component', () => {
       await user.type(input, '   ');
     });
 
-    // Button should still be disabled because trimmed input is empty
     expect(screen.getByTestId('add-player-button')).toBeDisabled();
   });
 
@@ -209,13 +208,11 @@ describe('ManualPlayerEntry Component', () => {
 
     const input = screen.getByTestId('player-entry-input');
 
-    // Single player
     await act(async () => {
       await user.type(input, 'John');
     });
     expect(screen.getByTestId('add-player-button')).toHaveTextContent('Add Player');
 
-    // Clear and add multiple
     await act(async () => {
       await user.clear(input);
       await user.type(input, 'John, Jane, Bob');

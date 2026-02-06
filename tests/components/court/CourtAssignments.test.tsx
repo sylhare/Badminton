@@ -8,9 +8,8 @@ import { CourtAssignments } from '../../../src/components/court';
 import { Court, Player } from '../../../src/types';
 import { TEST_COURTS, TEST_PLAYERS } from '../../data/testData';
 
-// Mock the ManualCourtSelection component
-vi.mock('../../../src/components/ManualCourtSelection', () => ({
-  default: () => <div data-testid="mock-manual-court-selection">Manual Court Selection</div>,
+vi.mock('../../../src/components/ManualCourtModal', () => ({
+  default: () => null,
 }));
 
 describe('CourtAssignments Component', () => {
@@ -58,7 +57,7 @@ describe('CourtAssignments Component', () => {
   it('renders court assignments correctly', () => {
     render(<CourtAssignments {...defaultProps} />);
 
-    expect(screen.getByText(/Court 1/)).toBeInTheDocument();
+    expect(screen.getByTestId('court-1')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('Charlie')).toBeInTheDocument();
@@ -80,7 +79,6 @@ describe('CourtAssignments Component', () => {
     const button = screen.getByTestId('generate-assignments-button');
     await user.click(button);
 
-    // Wait for the delayed callback (200ms timeout in the component)
     await waitFor(() => {
       expect(mockOnGenerateAssignments).toHaveBeenCalledTimes(1);
     }, { timeout: 500 });
@@ -113,7 +111,6 @@ describe('CourtAssignments Component', () => {
     render(<CourtAssignments {...defaultProps} />);
 
     const input = screen.getByTestId('court-count-input');
-    // Select all and replace the value
     await user.tripleClick(input);
     await user.keyboard('6');
 
@@ -242,8 +239,8 @@ describe('CourtAssignments Component', () => {
 
     render(<CourtAssignments {...propsWithMultipleCourts} />);
 
-    expect(screen.getByText(/Court 1/)).toBeInTheDocument();
-    expect(screen.getByText(/Court 2/)).toBeInTheDocument();
+    expect(screen.getByTestId('court-1')).toBeInTheDocument();
+    expect(screen.getByTestId('court-2')).toBeInTheDocument();
   });
 });
 
@@ -444,7 +441,7 @@ describe('Winner Selection', () => {
         />,
       );
 
-      expect(screen.getByText(/Court 1/)).toBeInTheDocument();
+      expect(screen.getByTestId('court-1')).toBeInTheDocument();
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.queryByText('👑')).not.toBeInTheDocument();
     });

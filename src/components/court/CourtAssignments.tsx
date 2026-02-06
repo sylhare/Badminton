@@ -5,7 +5,7 @@ import { useAnalytics } from '../../hooks/useAnalytics';
 
 import { CourtCard } from './card';
 import { TeamPlayerList } from './team';
-import ManualCourtSelectionComponent from '../ManualCourtSelection';
+import ManualCourtModal from '../ManualCourtModal';
 
 interface CourtAssignmentsProps {
   players: Player[];
@@ -37,9 +37,12 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   const { trackCourtAction } = useAnalytics();
   const [isAnimating, setIsAnimating] = useState(false);
   const [isButtonShaking, setIsButtonShaking] = useState(false);
+  const [isManualCourtModalOpen, setIsManualCourtModalOpen] = useState(false);
 
   const hasPlayers = players.some(p => p.isPresent);
   const hasAssignments = assignments.length > 0;
+  const presentPlayerCount = players.filter(p => p.isPresent).length;
+  const hasManualSelection = manualCourtSelection && manualCourtSelection.players.length > 0;
 
   const handleCourtsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);
@@ -75,7 +78,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
   return (
     <div className="court-assignments-container">
-      {/* Court Settings Section */}
       <div className="court-settings-inline">
         <div className="court-input-group">
           <label htmlFor="courts">Courts:</label>
@@ -91,24 +93,17 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           />
         </div>
 
-        <button
-          onClick={handleGenerateAssignments}
-          disabled={!hasPlayers || isButtonShaking}
-          className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
-          data-testid="generate-assignments-button"
-        >
-          🎲 {hasAssignments ? 'Regenerate' : 'Generate'} Assignments
-        </button>
+        {presentPlayerCount >= 2 && (
+          <button
+            onClick={() => setIsManualCourtModalOpen(true)}
+            className={`manual-court-button ${hasManualSelection ? 'has-selection' : ''}`}
+            data-testid="manual-court-button"
+          >
+            ⚙️ Court 1{hasManualSelection ? ` (${manualCourtSelection!.players.length})` : ''}
+          </button>
+        )}
       </div>
 
-      {/* Manual Court Override */}
-      <ManualCourtSelectionComponent
-        players={players}
-        onSelectionChange={onManualCourtSelectionChange}
-        currentSelection={manualCourtSelection}
-      />
-
-      {/* Assignments Grid */}
       {hasAssignments && (
         <>
           <div className="courts-grid">
@@ -152,6 +147,17 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
               team. Click again to remove the winner.
             </div>
           )}
+
+          <div className="regenerate-section">
+            <button
+              onClick={handleGenerateAssignments}
+              disabled={!hasPlayers || isButtonShaking}
+              className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
+              data-testid="generate-assignments-button"
+            >
+              🎲 Regenerate Assignments
+            </button>
+          </div>
         </>
       )}
 
@@ -162,14 +168,37 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             Doubles (4 players) is preferred, but singles (2 players) will be used for odd numbers.
             Extra players will be benched.
           </p>
+          <button
+            onClick={handleGenerateAssignments}
+            disabled={!hasPlayers || isButtonShaking}
+            className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
+            data-testid="generate-assignments-button"
+          >
+            🎲 Generate Assignments
+          </button>
         </div>
       )}
 
       {!hasPlayers && (
         <div className="no-players-hint">
           <p>Add some players above to start generating court assignments.</p>
+          <button
+            disabled
+            className="generate-button"
+            data-testid="generate-assignments-button"
+          >
+            🎲 Generate Assignments
+          </button>
         </div>
       )}
+
+      <ManualCourtModal
+        isOpen={isManualCourtModalOpen}
+        onClose={() => setIsManualCourtModalOpen(false)}
+        players={players}
+        currentSelection={manualCourtSelection}
+        onSelectionChange={onManualCourtSelectionChange}
+      />
     </div>
   );
 };

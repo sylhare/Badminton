@@ -125,8 +125,7 @@ describe('App Persistence Integration', () => {
 
       await generateAndWaitForAssignments(user);
 
-      // Expand the collapsed manage players section
-      await user.click(screen.getByText('👥 Manage Players'));
+      await user.click(screen.getByText('Manage Players'));
 
       await waitFor(() => {
         expect(screen.getByTestId('clear-all-button')).toBeInTheDocument();
@@ -170,8 +169,8 @@ describe('App Persistence Integration', () => {
 
       render(<App />);
 
-      expect(screen.getByText('👥 Manage Players')).toBeInTheDocument();
-      expect(screen.getByText('🏟️ Court Assignments')).toBeInTheDocument();
+      expect(screen.getByText('Manage Players')).toBeInTheDocument();
+      expect(screen.getByText('Court Assignments')).toBeInTheDocument();
     });
 
     it('should handle localStorage save errors gracefully', async () => {
@@ -220,8 +219,7 @@ describe('App Persistence Integration', () => {
 
       await generateAndWaitForAssignments(user);
 
-      // Expand manage players section
-      await user.click(screen.getByText('👥 Manage Players'));
+      await user.click(screen.getByText('Manage Players'));
 
       await waitFor(() => {
         expect(screen.getByTestId('reset-algorithm-button')).toBeInTheDocument();
@@ -233,7 +231,6 @@ describe('App Persistence Integration', () => {
       unmount();
       render(<App />);
 
-      // Alice should be visible (may appear in multiple places after restore)
       expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
     });
 
@@ -244,8 +241,7 @@ describe('App Persistence Integration', () => {
 
       await generateAndWaitForAssignments(user);
 
-      // Expand manage players section
-      await user.click(screen.getByText('👥 Manage Players'));
+      await user.click(screen.getByText('Manage Players'));
 
       await waitFor(() => {
         expect(screen.getByTestId('reset-algorithm-button')).toBeInTheDocument();
@@ -254,7 +250,6 @@ describe('App Persistence Integration', () => {
       await user.click(screen.getByTestId('reset-algorithm-button'));
       await user.click(screen.getByTestId('confirm-modal-confirm'));
 
-      // Alice appears in both player list and court assignments, use getAllByText
       expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
     });
 
@@ -266,7 +261,6 @@ describe('App Persistence Integration', () => {
       await user.click(screen.getByTestId('reset-algorithm-button'));
       await user.click(screen.getByTestId('confirm-modal-confirm'));
 
-      // Player list should still exist after reset
       expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
     });
   });
