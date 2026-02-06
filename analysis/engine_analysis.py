@@ -82,11 +82,13 @@ def _(config, mo, random_config):
     - **Conflict Graph (CG)**: Greedy construction avoiding known teammate conflicts
     - **Random Baseline**: No optimization (pure random pairing)
 
-    **Configuration** (same for all)
+    **Configuration**
     - Runs: {config.get('runs', 2000)} per batch (5 batches each)
     - Rounds: {config.get('rounds', 10)} (consecutive assignments per run)
     - Players: {', '.join(map(str, config.get('playerCounts', [20])))} per batch (variable)
     - Courts: 4 (Available courts for the players)
+
+    > **Note**: We reduced the number of runs to speed up the notebook and analysis.
     """)
     return
 
@@ -193,7 +195,7 @@ def _(
     
     _rankings_df = pl.DataFrame(_table_data)
     
-    _footer = "*Zero-Repeat: % of runs with no repeated pairs. Balance: Team win balance (100% = 0 differential). Bench Fairness: Compound of no back-to-back benches + fair distribution."
+    _footer = "*Zero-Repeat: % of runs with no repeated pairs. Balance: Average team fairness based on cumulative wins (100% = evenly matched, 0% = consistently lopsided). Bench Fairness: Compound of no back-to-back benches + fair distribution."
     if _has_singles_data:
         _footer += " Singles Fair: Compound of no back-to-back singles + no repeat opponents."
     _footer += "*"
@@ -278,17 +280,10 @@ def _(
     _ax.legend(loc='upper left', bbox_to_anchor=(-0.3, 1.15), fontsize=7, frameon=False)
     
     _fig.tight_layout()
-    mo.hstack([mo.image(fig_to_image(_fig))], justify="center")
-    return
-
-@app.cell(hide_code=True)
-def _(cg_config, get_bench_fairness, mc_config, mo, sa_config):
-    _avg_bench_fairness = (get_bench_fairness(mc_config) + get_bench_fairness(sa_config) + get_bench_fairness(cg_config)) / 3
-    
-    mo.md(f"""    
-    The optimized algorithms achieve **high bench fairness ({_avg_bench_fairness:.0f}%)** and similar team balance. 
-    The key differentiator is **repeat avoidance vs speed**.
-    """)
+    mo.vstack([
+        mo.hstack([mo.image(fig_to_image(_fig))], justify="center"),
+        mo.md("<center><i>Figure 1: Radar chart comparing algorithm performance across six dimensions. Higher values indicate better performance. Simulated Annealing excels at repeat avoidance while Random Baseline serves as the performance floor.</i></center>"),
+    ])
     return
 
 @app.cell(hide_code=True)
@@ -299,12 +294,9 @@ def _(mo):
     ## Repeat Analysis
     
     This section analyzes how well each algorithm avoids **teammate repeats** — situations where 
-    the same two players are paired together multiple times within a session. We examine:
+    the same two players are paired together multiple times within a session.
     
-    1. **Overall repeat rates** — How often do repeats occur?
-    2. **Repeat distribution** — When repeats happen, how are they distributed across pairs?
-    3. **Repeat patterns & bias** — Are certain pairs more likely to repeat?
-    4. **Teammate diversity** — How uniformly are partners distributed?
+    How often do repeats occur? When repeats happen, how are they distributed across pairs? Are certain pairs more likely to repeat? How uniformly are partners distributed?
     """)
     return
 
@@ -353,14 +345,15 @@ def _(ALGO_COLORS, all_metrics, fig_to_image, mo, np, plt):
                   f"{_h:.1f}", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 2: Repeat rate metrics across algorithms. Left: probability of any repeat occurring in a session. Right: average number of repeated pairs when repeats do occur.</i></center>"),
+    ])
     return
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    **What these metrics mean:**
-    
     - **Any-Repeat Rate**: The probability that a 10-round session has at least one repeated pair. 
       A repeated pair means two players who were teammates more than once in the same session.
     - **Repeat Severity**: When repeats do occur, how many on average? This measures the "damage" — 
@@ -433,7 +426,10 @@ def _(ALGO_COLORS, ALGO_NAMES, baseline_summary, cg_summary, fig_to_image, mc_su
                      bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
     
     _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 3: Distribution of repeat pair counts per simulation run. Each histogram shows what percentage of runs had 0, 1, 2, etc. repeated pairs. Algorithms concentrated at 0 repeats are more effective.</i></center>"),
+    ])
     return
 
 @app.cell(hide_code=True)
@@ -527,7 +523,10 @@ def _(
     _fig.suptitle("Teammate Repeat Frequency (red = multiple repeats)", 
                   fontsize=12, fontweight="bold", y=0.98)
     
-    mo.image(fig_to_image(_fig))
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 4: Heatmaps showing which player pairs repeated most often across all simulations. Darker cells indicate more repeat events. A uniform color indicates no algorithmic bias toward specific pairs.</i></center>"),
+    ])
     return
 
 @app.cell(hide_code=True)
@@ -539,13 +538,8 @@ def _(mo, sa_pair_events):
 no player ever has the same partner twice in a row."""
     
     mo.md(f"""
-    Each heatmap shows a the **repeat event counts**, we a pair played more than one time in a 10 games session:
-    - **Lighter** = fewer repeat events for that pair
-    - **Darker/Hotspots** = more repeat events (algorithm failed to avoid that pair repeating)
+    Each heatmap shows a the repeat event counts, we a pair played more than one time in a 10 games session.
     {_sa_note}
-    
-    For algorithm with repeats, there is a gradient in the heatmaps, because sessions have a variable number of players (14-22).
-    If a pair is a "hotspot" (redder square in the heatmap), it means that the algorithm has a bias pairing those players across the sessions.
 
     We limit the hotspot effects for the algorithms with a better shuffling mechanism before the engine makes the final assignment.
     """)
@@ -557,7 +551,7 @@ def _(mo):
     ### Pair Bias Analysis
     
     When repeats occur, are they distributed evenly or concentrated on specific pairs?
-    We analyze the bias towards adjacent pairs (P1|P2, P2|P3, P3|P4, etc.) and non-adjacent pairs (P1|P3, P1|P4, P2|P4, etc.).
+    We analyze the bias towards adjacent pairs (e.g. P1|P2) and non-adjacent pairs (e.g. P1|P3).
     """)
     return
 
@@ -611,7 +605,10 @@ def _(
         _ax2.text(_i, _pct + 1, f"{_pct:.0f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
     
     _fig.tight_layout()
-    mo.output.replace(mo.image(fig_to_image(_fig)))
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 5: Analysis of bias toward adjacent player IDs. Left: average repeats per pair type. Right: percentage bias toward adjacent pairs compared to uniform distribution.</i></center>"),
+    ])
     return (adjacency_bias_data,)
 
 @app.cell(hide_code=True)
@@ -681,7 +678,7 @@ def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random
     _ax1.legend(loc="upper right")
     
     _data = [d["all_player_counts"] for d in _diversities]
-    _bp = _ax2.boxplot(_data, tick_labels=_algo_names, patch_artist=True)
+    _bp = _ax2.boxplot(_data, labels=_algo_names, patch_artist=True)
     for _patch, _color in zip(_bp['boxes'], _colors):
         _patch.set_facecolor(_color)
         _patch.set_alpha(0.7)
@@ -697,13 +694,18 @@ def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random
     _fig.suptitle("Teammate Diversity: Unique Partners per 10-Round Session", fontsize=13, fontweight="bold", y=1.02)
     plt.tight_layout()
     
-    mo.output.replace(mo.image(fig_to_image(_fig)))
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 6: Teammate diversity metrics. Left: average number of unique partners per player. Right: boxplot showing distribution of diversity across all players.</i></center>"),
+    ])
     return
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(f"""
-They actively avoid repeating teammate pairs, which naturally maximizes unique combinations and partner variety.The tight distribution (narrow box) shows consistent variety for ALL players, not just some
+They actively avoid repeating teammate pairs, which naturally maximizes unique combinations and partner variety. 
+
+The tight distribution (narrow box) shows consistent variety for ALL players, not just some.
 Players assigned to singles courts have no teammate that round, which slightly reduces their unique teammate count compared to players who only play doubles.
 
 *Note: The circles below the boxes in the distribution chart are **outliers** — data points that fall outside 1.5× the interquartile range (IQR) from the quartiles.*
@@ -770,7 +772,10 @@ def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_confi
     _ax2.text(2.5, 1.5, "Based on cumulative\nwins in session", ha='center', va='center', fontsize=9, style='italic', color='gray')
     
     _fig.tight_layout()
-    mo.image(fig_to_image(_fig))
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 7: Percentage of games where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between evenly matched (equal wins) and uneven (lopsided) team compositions.</i></center>"),
+    ])
     return
 
 @app.cell
@@ -945,6 +950,7 @@ def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stat
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 8: Bench fairness metrics. Left: average games played between bench periods for different player counts. Right: distribution of bench count differences within sessions.</i></center>"),
         mo.md(f"""
 - **Average Gap (Left):** Mean games between bench periods per player count. Green line = theoretical maximum ($N/B - 1$).
 Optimized algorithms achieve close to theoretical max; Random baseline falls significantly short.
