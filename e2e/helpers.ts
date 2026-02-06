@@ -24,6 +24,12 @@ export async function goToApp(page: Page): Promise<void> {
   await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
 }
 
+export async function goToStatsPage(page: Page): Promise<void> {
+  const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+  await page.goto(`${targetUrl}/stats`);
+  await expect(page.locator('h1')).toContainText('Engine Diagnostics');
+}
+
 // Player management helpers
 export async function addBulkPlayers(page: Page, players: string[]): Promise<void> {
   const bulkTextarea = page.getByTestId('bulk-input');

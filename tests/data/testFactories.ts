@@ -1,5 +1,5 @@
 import React from 'react';
-import { expect, vi } from 'vitest';
+import { vi } from 'vitest';
 
 import { Player } from '../../src/types';
 

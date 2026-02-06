@@ -30,7 +30,6 @@ const CELL_SIZE = 120;
 /** Maximum characters to display in bubble labels */
 const MAX_PAIR_LENGTH = 16;
 
-
 /**
  * Truncates pair names for display in bubbles.
  * Splits on separator (&, vs) and truncates each name if needed.

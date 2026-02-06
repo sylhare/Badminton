@@ -64,7 +64,6 @@ function calculateCanvasSize(radius: number): number {
   return (radius * 2) + 50;
 }
 
-
 /**
  * Network graph visualization for teammate/opponent connections.
  * Displays players as nodes in a circle with edges showing pairing frequency.

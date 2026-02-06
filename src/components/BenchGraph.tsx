@@ -33,7 +33,6 @@ const CELL_SIZE = 100;
 /** Maximum characters to display in bubble labels */
 const MAX_NAME_LENGTH = 8;
 
-
 /**
  * Bubble chart visualization for bench count distribution.
  * Displays players as bubbles sized by how many times they've been benched.
