@@ -7,7 +7,6 @@ import '@testing-library/jest-dom';
 import ImageUploadModal from '../../src/components/ImageUploadModal';
 import { createMockFile, createMockFileList, createMockDragEvent, MOCK_FILES } from '../data/testFactories';
 
-// Mock the hooks
 vi.mock('../../src/hooks/useImageOcr', () => ({
   useImageOcr: vi.fn(() => ({
     isProcessing: false,
@@ -35,7 +34,6 @@ vi.mock('../../src/hooks/useAnalytics', () => ({
   }),
 }));
 
-// Import mocks after setup
 import { useImageOcr } from '../../src/hooks/useImageOcr';
 
 describe('ImageUploadModal', () => {
@@ -79,7 +77,7 @@ describe('ImageUploadModal', () => {
 
     it('should have a close button', () => {
       renderModal();
-      const closeButton = screen.getByRole('button', { name: '' }); // X icon
+      const closeButton = screen.getByRole('button', { name: '' });
       expect(closeButton).toHaveClass('modal-close');
     });
   });
@@ -173,12 +171,10 @@ describe('ImageUploadModal', () => {
 
       const { rerender } = renderModal();
 
-      // Simulate player extraction
       if (extractionCallback) {
         extractionCallback(['Alice', 'Bob', 'Charlie']);
       }
 
-      // Rerender to see the extracted players
       rerender(
         <ImageUploadModal
           isOpen={true}
@@ -204,7 +200,6 @@ describe('ImageUploadModal', () => {
 
       const { rerender } = renderModal();
 
-      // Simulate extraction
       if (extractionCallback) {
         extractionCallback(['Alice', 'Bob']);
       }

@@ -91,7 +91,6 @@ describe('StorageUtils', () => {
     });
 
     it('should migrate old collapsedSteps format to isManagePlayersCollapsed', () => {
-      // Store old format data
       localStorage.setItem('badminton-app-state', JSON.stringify({
         players: mockPlayers,
         numberOfCourts: 4,
@@ -102,7 +101,6 @@ describe('StorageUtils', () => {
 
       const loaded = loadAppState();
 
-      // Should migrate to new format
       expect(loaded.isManagePlayersCollapsed).toBe(true);
     });
 

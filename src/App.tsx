@@ -169,7 +169,7 @@ function App(): React.ReactElement {
             className="section-header"
             onClick={toggleManagePlayers}
           >
-            <h2>👥 Manage Players</h2>
+            <h2>Manage Players</h2>
             <span className="collapse-indicator">{isManagePlayersCollapsed ? '▶' : '▼'}</span>
           </div>
 
@@ -196,7 +196,7 @@ function App(): React.ReactElement {
         {/* Court Assignments Section - Never collapsed */}
         <div className="section" data-testid="court-assignments-section">
           <div className="section-header no-collapse">
-            <h2>🏟️ Court Assignments</h2>
+            <h2>Court Assignments</h2>
           </div>
 
           <div className="section-content">

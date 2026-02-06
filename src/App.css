@@ -944,6 +944,51 @@ h1 {
     cursor: not-allowed;
 }
 
+.manual-court-button {
+    background: #f7fafc;
+    color: #4a5568;
+    border: 2px solid #e2e8f0;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.manual-court-button:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+}
+
+.manual-court-button.has-selection {
+    background: #ebf8ff;
+    border-color: #63b3ed;
+    color: #2b6cb0;
+}
+
+.regenerate-section {
+    display: flex;
+    justify-content: center;
+    padding-top: 20px;
+    margin-top: 10px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.no-assignments-hint .generate-button {
+    margin-top: 16px;
+}
+
+.manual-court-modal-content {
+    max-width: 500px;
+}
+
+.manual-court-modal-content .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
 .button-shake {
     animation: shake 0.2s ease-in-out;
 }

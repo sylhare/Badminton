@@ -150,7 +150,6 @@ describe('PlayerRemovalModal Component', () => {
       const user = userEvent.setup();
       render(<PlayerRemovalModal {...defaultProps} />);
 
-      // Tab through elements
       await user.tab();
       expect(screen.getByTestId('player-removal-modal-close')).toHaveFocus();
 

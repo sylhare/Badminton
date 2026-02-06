@@ -30,7 +30,6 @@ describe('NoTeamsDisplay', () => {
     const { container } = render(<NoTeamsDisplay players={[]} />);
     expect(screen.getByText('Players on court:')).toBeInTheDocument();
 
-    // TeamPlayerList should still render but be empty
     const playerList = container.querySelector('.team-player-list');
     expect(playerList?.children.length || 0).toBe(0);
   });
@@ -59,7 +58,6 @@ describe('NoTeamsDisplay', () => {
     );
 
     const blurredElements = container.querySelectorAll('.animating-blur');
-    // Should have 2 elements with animating-blur class
     expect(blurredElements.length).toBe(2);
   });
 });
