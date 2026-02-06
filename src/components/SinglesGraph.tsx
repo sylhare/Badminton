@@ -33,7 +33,6 @@ const CELL_SIZE = 100;
 /** Maximum characters to display in bubble labels */
 const MAX_NAME_LENGTH = 8;
 
-
 /**
  * Bubble chart visualization for singles match distribution.
  * Displays players as bubbles sized by how many singles matches they've played.

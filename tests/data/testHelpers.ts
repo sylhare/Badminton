@@ -2,6 +2,7 @@ import { expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 
 import type { Player } from '../../src/types';
+
 import { GRAPH_COLORS, GRAPH_LEGEND_LABELS } from './testFactories';
 
 export function expectPlayersToBeRendered(players: Player[]): void {
