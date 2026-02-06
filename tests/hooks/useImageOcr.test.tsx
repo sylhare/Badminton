@@ -1,7 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
-import '@testing-library/jest-dom';
 
 import { useImageOcr } from '../../src/hooks/useImageOcr';
 import * as ocrEngine from '../../src/utils/ocrEngine';

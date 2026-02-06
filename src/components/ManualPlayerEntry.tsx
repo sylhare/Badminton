@@ -56,9 +56,13 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
 
   // Check if input suggests multiple players
   const isMultiInput = playerInput.includes('`') || /[,\n]/.test(playerInput);
-  const playerCount = isMultiInput
-    ? playerInput.split(/[`\n,]+/).filter(s => s.trim()).length
-    : playerInput.trim() ? 1 : 0;
+  const getPlayerCount = (): number => {
+    if (isMultiInput) {
+      return playerInput.split(/[`\n,]+/).filter(s => s.trim()).length;
+    }
+    return playerInput.trim() ? 1 : 0;
+  };
+  const playerCount = getPlayerCount();
 
   return (
     <div className="player-entry-container">

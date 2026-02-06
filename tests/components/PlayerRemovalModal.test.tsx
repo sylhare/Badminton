@@ -2,7 +2,6 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
 
 import PlayerRemovalModal from '../../src/components/PlayerRemovalModal';
 

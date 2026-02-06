@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 
 import type { Court, Player, WinnerSelection, ManualCourtSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import ManualCourtModal from '../ManualCourtModal';
 
 import { CourtCard } from './card';
 import { TeamPlayerList } from './team';
-import ManualCourtModal from '../ManualCourtModal';
 
 interface CourtAssignmentsProps {
   players: Player[];

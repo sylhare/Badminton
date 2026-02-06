@@ -20,7 +20,7 @@ export const GRAPH_PLAYER_NAMES: Record<string, string> = {
  * @param customNames - Optional custom name mapping to override defaults
  * @returns A vi.fn() that resolves player IDs to names
  */
-export function createMockGetPlayerName(customNames?: Record<string, string>) {
+export function createMockGetPlayerName(customNames?: Record<string, string>): ReturnType<typeof vi.fn<[string], string>> {
   const names = customNames || GRAPH_PLAYER_NAMES;
   return vi.fn((id: string) => names[id] || id);
 }
@@ -30,7 +30,7 @@ export function createMockGetPlayerName(customNames?: Record<string, string>) {
  * @param longNameId - The ID that should return a long name (default: '1')
  * @returns A function that returns 'AlexanderTheGreat' for longNameId, 'Bob' otherwise
  */
-export function createLongNameGetter(longNameId = '1') {
+export function createLongNameGetter(longNameId = '1'): (id: string) => string {
   return (id: string) => id === longNameId ? 'AlexanderTheGreat' : 'Bob';
 }
 
