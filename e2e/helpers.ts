@@ -192,13 +192,13 @@ export async function completeFullWorkflow(
   if (expectedCourts !== undefined) {
     await setCourtCount(page, expectedCourts);
   }
-  
+
   await generateCourtAssignments(page);
-  
+
   if (expectedCourts !== undefined) {
     await expect(page.locator('.court-card')).toHaveCount(expectedCourts);
   }
-  
+
   await selectWinnerOnFirstCourt(page);
   await generateNewAssignments(page);
   await verifyLeaderboard(page);

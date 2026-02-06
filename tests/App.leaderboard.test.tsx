@@ -2,7 +2,6 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
 
 import App from '../src/App';
 import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';

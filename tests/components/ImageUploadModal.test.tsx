@@ -1,11 +1,10 @@
 import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
 
 import ImageUploadModal from '../../src/components/ImageUploadModal';
-import { createMockFile, createMockFileList, createMockDragEvent, MOCK_FILES } from '../data/testFactories';
+import { useImageOcr } from '../../src/hooks/useImageOcr';
 
 vi.mock('../../src/hooks/useImageOcr', () => ({
   useImageOcr: vi.fn(() => ({
@@ -33,8 +32,6 @@ vi.mock('../../src/hooks/useAnalytics', () => ({
     trackPlayerAction: vi.fn(),
   }),
 }));
-
-import { useImageOcr } from '../../src/hooks/useImageOcr';
 
 describe('ImageUploadModal', () => {
   const mockOnClose = vi.fn();
@@ -156,36 +153,6 @@ describe('ImageUploadModal', () => {
   });
 
   describe('Extracted players list', () => {
-    const setupWithExtractedPlayers = () => {
-      const mockProcessImage = vi.fn();
-      let extractionCallback: ((players: string[]) => void) | undefined;
-
-      vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
-        extractionCallback = onPlayersExtracted;
-        return {
-          isProcessing: false,
-          progress: 0,
-          processImage: mockProcessImage,
-        };
-      });
-
-      const { rerender } = renderModal();
-
-      if (extractionCallback) {
-        extractionCallback(['Alice', 'Bob', 'Charlie']);
-      }
-
-      rerender(
-        <ImageUploadModal
-          isOpen={true}
-          onClose={mockOnClose}
-          onPlayersAdded={mockOnPlayersAdded}
-        />,
-      );
-
-      return { mockProcessImage, rerender };
-    };
-
     it('should display count of extracted players', async () => {
       let extractionCallback: ((players: string[]) => void) | undefined;
 
