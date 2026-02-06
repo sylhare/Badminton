@@ -99,9 +99,9 @@ export function SinglesGraph({ singlesData, getPlayerName }: SinglesGraphProps):
 
   return (
     <div className="singles-graph">
-      <svg 
-        viewBox={`0 0 ${width} ${height}`} 
-        width="100%" 
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        width="100%"
         height={Math.min(300, height)}
         style={{ maxWidth: '500px', margin: '0 auto', display: 'block' }}
       >

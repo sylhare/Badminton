@@ -143,16 +143,16 @@ export function TeammateGraph({ teammateData, getPlayerName, variant = 'teammate
 
   return (
     <div className="teammate-graph">
-      <div 
-        style={{ 
+      <div
+        style={{
           overflow: needsScroll ? 'auto' : 'visible',
           maxHeight: needsScroll ? '400px' : 'none',
           display: 'flex',
           justifyContent: 'center',
         }}
       >
-        <svg 
-          viewBox={`0 0 ${canvasSize} ${canvasSize}`} 
+        <svg
+          viewBox={`0 0 ${canvasSize} ${canvasSize}`}
           width={displaySize}
           height={displaySize}
           style={{ display: 'block', flexShrink: 0 }}
