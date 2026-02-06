@@ -1506,14 +1506,28 @@ h1 {
 }
 
 @media (max-width: 768px) {
-    .container {
-        padding: 10px;
-        margin: 0;
-        width: 100%;
+    .app {
+        background: white;
+        padding: 0;
+        min-height: 100vh;
     }
 
-    .app {
-        padding: 15px;
+    .main-container {
+        padding: 15px 0;
+        margin: 0;
+        width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .app-footer {
+        color: var(--color-primary);
+        margin-top: 0;
+        padding-top: 0;
+    }
+
+    .app-footer a {
+        color: var(--color-primary);
     }
 
     .modal-content {
@@ -2254,4 +2268,11 @@ h1 {
 
 .app-footer .analysis-link:hover {
     opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .app-footer {
+        margin: 0;
+        padding: 15px 0;
+    }
 }

@@ -156,7 +156,7 @@ function App(): React.ReactElement {
 
   return (
     <div className="app">
-      <div className="container">
+      <div className="container main-container">
         <h1>🏸 Badminton Court Manager</h1>
 
         {/* Manage Players Section - Collapsible */}
