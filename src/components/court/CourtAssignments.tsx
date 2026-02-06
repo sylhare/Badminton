@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import type { Court, Player, WinnerSelection, ManualCourtSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -38,6 +38,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [isButtonShaking, setIsButtonShaking] = useState(false);
   const [isManualCourtModalOpen, setIsManualCourtModalOpen] = useState(false);
+  const [courtInputValue, setCourtInputValue] = useState(String(numberOfCourts));
+
+  useEffect(() => {
+    setCourtInputValue(String(numberOfCourts));
+  }, [numberOfCourts]);
 
   const hasPlayers = players.some(p => p.isPresent);
   const hasAssignments = assignments.length > 0;
@@ -45,9 +50,23 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   const hasManualSelection = manualCourtSelection && manualCourtSelection.players.length > 0;
 
   const handleCourtsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (value > 0 && value <= 20) {
+    const inputValue = e.target.value;
+    setCourtInputValue(inputValue);
+
+    const value = parseInt(inputValue, 10);
+    if (!isNaN(value) && value > 0 && value <= 20) {
       onNumberOfCourtsChange(value);
+    }
+  };
+
+  const handleCourtsBlur = () => {
+    const value = parseInt(courtInputValue, 10);
+    if (isNaN(value) || value < 1) {
+      setCourtInputValue('1');
+      onNumberOfCourtsChange(1);
+    } else if (value > 20) {
+      setCourtInputValue('20');
+      onNumberOfCourtsChange(20);
     }
   };
 
@@ -86,8 +105,9 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             type="number"
             min="1"
             max="20"
-            value={numberOfCourts}
+            value={courtInputValue}
             onChange={handleCourtsChange}
+            onBlur={handleCourtsBlur}
             className="court-input"
             data-testid="court-count-input"
           />
