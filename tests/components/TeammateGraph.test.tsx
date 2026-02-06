@@ -1,19 +1,17 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import TeammateGraph from '../../src/components/TeammateGraph';
+import {
+  createMockGetPlayerName,
+  createLongNameGetter,
+  GRAPH_COLORS,
+} from '../data/testFactories';
+import { graphAssertions } from '../data/testHelpers';
 
 describe('TeammateGraph Component', () => {
-  const mockGetPlayerName = vi.fn((id: string) => {
-    const names: Record<string, string> = {
-      '1': 'Alice',
-      '2': 'Bob',
-      '3': 'Charlie',
-      '4': 'Diana',
-    };
-    return names[id] || id;
-  });
+  const mockGetPlayerName = createMockGetPlayerName();
 
   beforeEach(() => {
     mockGetPlayerName.mockClear();
@@ -23,7 +21,7 @@ describe('TeammateGraph Component', () => {
     const { container } = render(
       <TeammateGraph teammateData={{}} getPlayerName={mockGetPlayerName} />,
     );
-    expect(container).toBeEmptyDOMElement();
+    graphAssertions.expectEmptyGraph(container);
   });
 
   it('returns null when all counts are zero', () => {
@@ -31,16 +29,14 @@ describe('TeammateGraph Component', () => {
     const { container } = render(
       <TeammateGraph teammateData={data} getPlayerName={mockGetPlayerName} />,
     );
-    expect(container).toBeEmptyDOMElement();
+    graphAssertions.expectEmptyGraph(container);
   });
 
   it('renders SVG with nodes for each unique player', () => {
     const data = { '1|2': 1, '2|3': 2 };
     render(<TeammateGraph teammateData={data} getPlayerName={mockGetPlayerName} />);
 
-    const svg = document.querySelector('svg');
-    expect(svg).toBeInTheDocument();
-
+    graphAssertions.expectSvgRendered();
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('Charl…')).toBeInTheDocument();
@@ -50,7 +46,7 @@ describe('TeammateGraph Component', () => {
     const data = { '1|2': 1 };
     render(<TeammateGraph teammateData={data} getPlayerName={mockGetPlayerName} />);
 
-    const lines = document.querySelectorAll('line');
+    const lines = graphAssertions.getEdges();
     expect(lines.length).toBe(1);
   });
 
@@ -58,7 +54,7 @@ describe('TeammateGraph Component', () => {
     const data = { '1|2': 1, '2|3': 2, '1|3': 1 };
     render(<TeammateGraph teammateData={data} getPlayerName={mockGetPlayerName} />);
 
-    const lines = document.querySelectorAll('line');
+    const lines = graphAssertions.getEdges();
     expect(lines.length).toBe(3);
   });
 
@@ -76,12 +72,12 @@ describe('TeammateGraph Component', () => {
     const data = { '1|2': 1, '2|3': 2, '3|4': 4 };
     render(<TeammateGraph teammateData={data} getPlayerName={mockGetPlayerName} />);
 
-    const lines = document.querySelectorAll('line');
+    const lines = graphAssertions.getEdges();
     const strokes = Array.from(lines).map(line => line.getAttribute('stroke'));
 
-    expect(strokes).toContain('#58a6ff'); // blue for 1
-    expect(strokes).toContain('#d29922'); // yellow for 2
-    expect(strokes).toContain('#f85149'); // red for 4+
+    expect(strokes).toContain(GRAPH_COLORS.count1);
+    expect(strokes).toContain(GRAPH_COLORS.count2);
+    expect(strokes).toContain(GRAPH_COLORS.count4Plus);
   });
 
   it('uses purple node stroke for opponent variant', () => {
@@ -94,9 +90,8 @@ describe('TeammateGraph Component', () => {
       />,
     );
 
-    const circles = document.querySelectorAll('circle');
-    const nodeCircle = Array.from(circles).find(c => c.getAttribute('fill') === '#21262d');
-    expect(nodeCircle?.getAttribute('stroke')).toBe('#a371f7');
+    const nodeCircles = graphAssertions.getNodeCircles();
+    expect(nodeCircles[0]?.getAttribute('stroke')).toBe(GRAPH_COLORS.opponentStroke);
   });
 
   it('uses blue node stroke for teammate variant', () => {
@@ -109,15 +104,13 @@ describe('TeammateGraph Component', () => {
       />,
     );
 
-    const circles = document.querySelectorAll('circle');
-    const nodeCircle = Array.from(circles).find(c => c.getAttribute('fill') === '#21262d');
-    expect(nodeCircle?.getAttribute('stroke')).toBe('#58a6ff');
+    const nodeCircles = graphAssertions.getNodeCircles();
+    expect(nodeCircles[0]?.getAttribute('stroke')).toBe(GRAPH_COLORS.teammateStroke);
   });
 
   it('truncates long player names', () => {
-    const longNameGetter = (id: string) => id === '1' ? 'AlexanderTheGreat' : 'Bob';
     const data = { '1|2': 1 };
-    render(<TeammateGraph teammateData={data} getPlayerName={longNameGetter} />);
+    render(<TeammateGraph teammateData={data} getPlayerName={createLongNameGetter()} />);
 
     expect(screen.getByText('Alexa…')).toBeInTheDocument();
   });

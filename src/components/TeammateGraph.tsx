@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 
+import { GRAPH_COLORS, getColorForCount } from '../constants/graphColors';
+
 type GraphVariant = 'teammate' | 'opponent';
 
 /**
@@ -62,16 +64,6 @@ function calculateCanvasSize(radius: number): number {
   return (radius * 2) + 50;
 }
 
-/**
- * Returns stroke color based on pairing count.
- * Color scale: blue (1×) → yellow (2×) → orange (3×) → red (4×+)
- */
-function getStrokeColor(count: number): string {
-  if (count >= 4) return '#f85149';
-  if (count === 3) return '#f0883e';
-  if (count === 2) return '#d29922';
-  return '#58a6ff';
-}
 
 /**
  * Network graph visualization for teammate/opponent connections.
@@ -136,7 +128,7 @@ export function TeammateGraph({ teammateData, getPlayerName, variant = 'teammate
     return 0.3 + (count / maxCount) * 0.5;
   };
 
-  const nodeStrokeColor = variant === 'opponent' ? '#a371f7' : '#58a6ff';
+  const nodeStrokeColor = variant === 'opponent' ? GRAPH_COLORS.opponentStroke : GRAPH_COLORS.teammateStroke;
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
   const needsScroll = canvasSize > MAX_DISPLAY_SIZE;
   const displaySize = Math.min(canvasSize, MAX_DISPLAY_SIZE);
@@ -169,7 +161,7 @@ export function TeammateGraph({ teammateData, getPlayerName, variant = 'teammate
               y1={source.y}
               x2={target.x}
               y2={target.y}
-              stroke={getStrokeColor(edge.count)}
+              stroke={getColorForCount(edge.count)}
               strokeWidth={getStrokeWidth(edge.count)}
               opacity={getOpacity(edge.count)}
               strokeLinecap="round"
@@ -183,7 +175,7 @@ export function TeammateGraph({ teammateData, getPlayerName, variant = 'teammate
               cx={node.x}
               cy={node.y}
               r={NODE_RADIUS}
-              fill="#21262d"
+              fill={GRAPH_COLORS.nodeFill}
               stroke={nodeStrokeColor}
               strokeWidth={2}
             />
@@ -206,19 +198,19 @@ export function TeammateGraph({ teammateData, getPlayerName, variant = 'teammate
 
       <div className="graph-legend">
         <div className="legend-item">
-          <span className="legend-line thin" style={{ background: '#58a6ff' }}></span>
+          <span className="legend-line thin" style={{ background: GRAPH_COLORS.count1 }}></span>
           <span>1×</span>
         </div>
         <div className="legend-item">
-          <span className="legend-line" style={{ background: '#d29922', width: '24px', height: '3px' }}></span>
+          <span className="legend-line" style={{ background: GRAPH_COLORS.count2, width: '24px', height: '3px' }}></span>
           <span>2×</span>
         </div>
         <div className="legend-item">
-          <span className="legend-line" style={{ background: '#f0883e', width: '24px', height: '5px' }}></span>
+          <span className="legend-line" style={{ background: GRAPH_COLORS.count3, width: '24px', height: '5px' }}></span>
           <span>3×</span>
         </div>
         <div className="legend-item">
-          <span className="legend-line thick" style={{ background: '#f85149' }}></span>
+          <span className="legend-line thick" style={{ background: GRAPH_COLORS.count4Plus }}></span>
           <span>4×+</span>
         </div>
       </div>
