@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trash, SignOut } from '@phosphor-icons/react';
+import { X, Trash, Pause } from '@phosphor-icons/react';
 
 interface PlayerRemovalModalProps {
   isOpen: boolean;
@@ -45,7 +45,7 @@ const PlayerRemovalModal: React.FC<PlayerRemovalModalProps> = ({
             onClick={onMarkAbsent}
             data-testid="player-removal-modal-absent"
           >
-            <SignOut size={14} weight="bold" />
+            <Pause size={14} weight="bold" />
             Mark as Absent
           </button>
           <button

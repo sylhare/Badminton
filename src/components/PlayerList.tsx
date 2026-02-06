@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash, ArrowClockwise, SignIn, SignOut } from '@phosphor-icons/react';
+import { Trash, ArrowClockwise, Play, Pause } from '@phosphor-icons/react';
 
 import type { Player } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -117,7 +117,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
                     title={player.isPresent ? 'Mark as absent' : 'Mark as present'}
                     aria-label={player.isPresent ? 'Mark as absent' : 'Mark as present'}
                   >
-                    {player.isPresent ? <SignOut size={14} weight="bold" /> : <SignIn size={14} weight="bold" />}
+                    {player.isPresent ? <Pause size={14} weight="bold" /> : <Play size={14} weight="bold" />}
                   </button>
                   <button
                     onClick={() => handleRemoveClick(player)}

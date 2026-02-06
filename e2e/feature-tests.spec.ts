@@ -293,8 +293,8 @@ test.describe('Feature Tests', () => {
 
     for (const benchedPlayer of initialBenchedPlayers) {
       const playerItem = page.locator('.player-item').filter({ hasText: benchedPlayer.trim() });
-      const benchCount = playerItem.locator('.bench-count-label strong');
-      await expect(benchCount).toHaveText('1');
+      const benchCount = playerItem.locator('.bench-count-emoji');
+      await expect(benchCount).toContainText('1');
     }
 
     const aliceItem = page.locator('.player-item').filter({ hasText: 'Alice' });
