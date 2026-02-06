@@ -75,7 +75,7 @@ h1 {
 }
 
 .section-content {
-    padding: 0 20px 20px;
+    padding: 20px 20px 20px;
 }
 
 /* Legacy step styles for backwards compatibility */
@@ -989,6 +989,31 @@ h1 {
     overflow-y: auto;
 }
 
+.manual-court-modal-content .player-selection-grid {
+    margin-top: 15px;
+}
+
+.manual-court-modal-content .modal-footer {
+    padding-top: 15px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.manual-court-modal-content .modal-footer .modal-cancel-button {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.manual-court-modal-content .modal-footer .modal-cancel-button:hover {
+    background: var(--color-primary-hover);
+}
+
 .button-shake {
     animation: shake 0.2s ease-in-out;
 }
@@ -1655,7 +1680,7 @@ h1 {
     }
 
     .section-content {
-        padding: 0 15px 15px;
+        padding: 15px 15px 15px;
     }
 
     /* Player entry form mobile */
