@@ -380,6 +380,8 @@ describe('PlayerList Component', () => {
         />,
       );
 
+      expect(screen.getByTestId('bench-count-present-1')).toBeInTheDocument();
+      expect(screen.queryByTestId('bench-count-absent-1')).not.toBeInTheDocument();
       expect(screen.getAllByText('Bench next')).toHaveLength(1);
     });
 
