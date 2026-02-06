@@ -3,13 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
-import { CourtSettings, CourtAssignments } from './components/court';
-import ManualCourtSelectionComponent from './components/ManualCourtSelection';
+import { CourtAssignments } from './components/court';
 import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { saveAppState, loadAppState, clearAllStoredState } from './utils/storageUtils';
-import { useStepRegistry, StepCallbacks } from './hooks/useStepRegistry';
 import type { Player, Court, ManualCourtSelection, WinnerSelection } from './types';
 
 function App(): React.ReactElement {
@@ -17,13 +15,13 @@ function App(): React.ReactElement {
   const [players, setPlayers] = useState<Player[]>(loadedState.players ?? []);
   const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
-  const [collapsedSteps, setCollapsedSteps] = useState<Set<number>>(loadedState.collapsedSteps ?? new Set());
+  const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(loadedState.isManagePlayersCollapsed ?? false);
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
 
   const isInitialLoad = useRef(true);
-  const step2Ref = useRef<HTMLDivElement>(null);
+  const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     CourtAssignmentEngine.loadState();
@@ -39,38 +37,19 @@ function App(): React.ReactElement {
   useEffect(() => {
     if (isInitialLoad.current) return;
 
-      saveAppState({
-        players,
-        numberOfCourts,
-        assignments,
-        collapsedSteps,
-        manualCourt: manualCourtSelection,
-      });
-    CourtAssignmentEngine.saveState();
-    }, [players, numberOfCourts, assignments, collapsedSteps, manualCourtSelection]);
-
-  const handlePlayersExtracted = (extractedNames: string[]) => {
-    const newPlayers = createPlayersFromNames(extractedNames, 'extracted');
-    setPlayers(newPlayers);
-    setCollapsedSteps(prev => {
-      const next = new Set(prev);
-      next.add(1);
-      next.delete(2);
-      return next;
+    saveAppState({
+      players,
+      numberOfCourts,
+      assignments,
+      isManagePlayersCollapsed,
+      manualCourt: manualCourtSelection,
     });
-  };
+    CourtAssignmentEngine.saveState();
+  }, [players, numberOfCourts, assignments, isManagePlayersCollapsed, manualCourtSelection]);
 
-  const handleManualPlayersAdded = (newNames: string[]) => {
+  const handlePlayersAdded = (newNames: string[]) => {
     const newPlayers = createPlayersFromNames(newNames, 'manual');
     setPlayers(prev => [...prev, ...newPlayers]);
-    setCollapsedSteps(prev => {
-      const next = new Set(prev);
-      if (newNames.length > 1) {
-        next.add(1);
-      }
-      next.delete(2);
-      return next;
-    });
   };
 
   const handlePlayerToggle = (playerId: string) => {
@@ -99,7 +78,7 @@ function App(): React.ReactElement {
   const handleClearAllPlayers = () => {
     setPlayers([]);
     setAssignments([]);
-    setCollapsedSteps(new Set());
+    setIsManagePlayersCollapsed(false);
     setManualCourtSelection(null);
     CourtAssignmentEngine.resetHistory();
     setTimeout(() => clearAllStoredState(), 0);
@@ -130,7 +109,10 @@ function App(): React.ReactElement {
     }
 
     setAssignments(courts);
-    setCollapsedSteps(new Set([1, 2, 3]));
+    // Collapse manage players section after first assignment
+    if (!isManagePlayersCollapsed) {
+      setIsManagePlayersCollapsed(true);
+    }
     setManualCourtSelection(null);
     setForceBenchPlayerIds(new Set());
   };
@@ -154,118 +136,85 @@ function App(): React.ReactElement {
   };
 
   const handleViewBenchCounts = () => {
-    setCollapsedSteps(prev => {
-      const next = new Set(prev);
-      next.delete(2);
-      return next;
-    });
+    setIsManagePlayersCollapsed(false);
     setTimeout(() => {
-      step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      managePlayersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   };
 
-  const stepCallbacks: StepCallbacks = {
-    handlePlayersExtracted,
-    handleManualPlayersAdded,
-    handlePlayerToggle,
-    handleRemovePlayer,
-    handleClearAllPlayers,
-    handleResetAlgorithm,
-    generateAssignments,
-    handleWinnerChange,
-    setNumberOfCourts,
-    setManualCourtSelection,
-  };
-
-  const { steps, toggleStep: toggleStepFromRegistry } = useStepRegistry(
-    players,
-    assignments,
-    collapsedSteps,
-    stepCallbacks,
-  );
-
-  const handleToggleStep = (stepNumber: number, event?: React.MouseEvent) => {
-    if (event?.target !== event?.currentTarget) {
-      // Only toggle if clicking directly on the header area, not on children
-      const target = event?.target as HTMLElement;
-      const isHeaderClick = target.closest('.step-header') !== null;
+  const toggleManagePlayers = (event?: React.MouseEvent) => {
+    // Only toggle if clicking on the header, not its children (unless it's the header itself)
+    if (event) {
+      const target = event.target as HTMLElement;
+      const isHeaderClick = target.closest('.section-header') !== null;
       if (!isHeaderClick) return;
     }
-    toggleStepFromRegistry(stepNumber, setCollapsedSteps);
+    setIsManagePlayersCollapsed(prev => !prev);
   };
 
-  const renderStepContent = (stepId: number) => {
-    switch (stepId) {
-      case 1:
-        return (
-          <ManualPlayerEntry
-            onPlayersAdded={handleManualPlayersAdded}
-            onPlayersExtracted={handlePlayersExtracted}
-          />
-        );
-      case 2:
-        return (
-          <PlayerList
-            players={players}
-            onPlayerToggle={handlePlayerToggle}
-            onRemovePlayer={handleRemovePlayer}
-            onClearAllPlayers={handleClearAllPlayers}
-            onResetAlgorithm={handleResetAlgorithm}
-            benchCounts={CourtAssignmentEngine.getBenchCounts()}
-            forceBenchPlayerIds={forceBenchPlayerIds}
-            onToggleForceBench={handleToggleForceBench}
-          />
-        );
-      case 3:
-        return (
-          <CourtSettings
-            numberOfCourts={numberOfCourts}
-            onNumberOfCourtsChange={setNumberOfCourts}
-            onGenerateAssignments={generateAssignments}
-            hasPlayers={players.some(p => p.isPresent)}
-          />
-        );
-      case 4:
-        return (
-          <>
-            <ManualCourtSelectionComponent
-              players={players}
-              onSelectionChange={setManualCourtSelection}
-              currentSelection={manualCourtSelection}
-            />
-            <CourtAssignments
-              assignments={assignments}
-              benchedPlayers={getBenchedPlayers(assignments, players)}
-              onGenerateNewAssignments={generateAssignments}
-              onWinnerChange={handleWinnerChange}
-              hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
-              onViewBenchCounts={handleViewBenchCounts}
-            />
-          </>
-        );
-      default:
-        return null;
-    }
-  };
+  const hasPlayers = players.length > 0;
 
   return (
     <div className="app">
       <div className="container">
         <h1>🏸 Badminton Court Manager</h1>
 
-        {steps.map(step => (
+        {/* Manage Players Section - Collapsible */}
+        <div
+          ref={managePlayersRef}
+          className={`section ${isManagePlayersCollapsed ? 'collapsed' : ''}`}
+          data-testid="manage-players-section"
+        >
           <div
-            key={step.id}
-            ref={step.id === 2 ? step2Ref : undefined}
-            className={`step${step.isCollapsed ? ' collapsed' : ''}`}
-            onClick={(e) => handleToggleStep(step.id, e)}
+            className="section-header"
+            onClick={toggleManagePlayers}
           >
-            <div className="step-header">
-              <h2>{step.title}</h2>
-            </div>
-            {!step.isCollapsed && renderStepContent(step.id)}
+            <h2>👥 Manage Players</h2>
+            <span className="collapse-indicator">{isManagePlayersCollapsed ? '▶' : '▼'}</span>
           </div>
-        ))}
+
+          {!isManagePlayersCollapsed && (
+            <div className="section-content">
+              <ManualPlayerEntry onPlayersAdded={handlePlayersAdded} />
+
+              {hasPlayers && (
+                <PlayerList
+                  players={players}
+                  onPlayerToggle={handlePlayerToggle}
+                  onRemovePlayer={handleRemovePlayer}
+                  onClearAllPlayers={handleClearAllPlayers}
+                  onResetAlgorithm={handleResetAlgorithm}
+                  benchCounts={CourtAssignmentEngine.getBenchCounts()}
+                  forceBenchPlayerIds={forceBenchPlayerIds}
+                  onToggleForceBench={handleToggleForceBench}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Court Assignments Section - Never collapsed */}
+        <div className="section" data-testid="court-assignments-section">
+          <div className="section-header no-collapse">
+            <h2>🏟️ Court Assignments</h2>
+          </div>
+
+          <div className="section-content">
+            <CourtAssignments
+              players={players}
+              assignments={assignments}
+              benchedPlayers={getBenchedPlayers(assignments, players)}
+              numberOfCourts={numberOfCourts}
+              onNumberOfCourtsChange={setNumberOfCourts}
+              onGenerateAssignments={generateAssignments}
+              onWinnerChange={handleWinnerChange}
+              hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
+              onViewBenchCounts={handleViewBenchCounts}
+              manualCourtSelection={manualCourtSelection}
+              onManualCourtSelectionChange={setManualCourtSelection}
+            />
+          </div>
+        </div>
 
         <Leaderboard players={players} winCounts={CourtAssignmentEngine.getWinCounts()} />
       </div>

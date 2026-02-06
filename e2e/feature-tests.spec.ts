@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { goToApp, addSinglePlayer, addBulkPlayers } from './helpers';
+import { goToApp, addSinglePlayer, addBulkPlayers, expandSectionIfNeeded } from './helpers';
 
 test.describe('Feature Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -54,9 +54,10 @@ test.describe('Feature Tests', () => {
     await expect(page.locator('.selection-count')).toContainText('2/4 players selected');
     await expect(page.locator('.match-preview')).toContainText('Will create: Singles match');
 
-    const generateNewButton = page.getByTestId('generate-new-assignments-button');
-    await expect(generateNewButton).toBeVisible();
-    await generateNewButton.click();
+    // Button is now just the generate button (shows Regenerate after first generation)
+    const regenerateButton = page.getByTestId('generate-assignments-button');
+    await expect(regenerateButton).toBeVisible();
+    await regenerateButton.click();
 
     await page.waitForTimeout(500);
     const court1 = page.getByTestId('court-1');
@@ -165,6 +166,12 @@ test.describe('Feature Tests', () => {
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
 
+    // Set courts to 1 for this test
+    const courtInput = page.locator('#courts');
+    await courtInput.clear();
+    await courtInput.type('1');
+    await page.waitForTimeout(100);
+
     const generateButton = page.getByTestId('generate-assignments-button');
     await generateButton.click();
 
@@ -218,6 +225,12 @@ test.describe('Feature Tests', () => {
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
 
+    // Set courts to 1 for this test
+    const courtInput = page.locator('#courts');
+    await courtInput.clear();
+    await courtInput.type('1');
+    await page.waitForTimeout(100);
+
     const generateButton = page.getByTestId('generate-assignments-button');
     await generateButton.click();
 
@@ -229,8 +242,9 @@ test.describe('Feature Tests', () => {
 
     await expect(page.locator('.crown')).toHaveCount(1);
 
-    const generateNewButton = page.getByTestId('generate-new-assignments-button');
-    await generateNewButton.click();
+    // Regenerate button (same button, different text)
+    const regenerateButton = page.getByTestId('generate-assignments-button');
+    await regenerateButton.click();
 
     const leaderboard = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboard).toBeVisible();
@@ -252,6 +266,12 @@ test.describe('Feature Tests', () => {
     await expect(page.getByTestId('stats-present-count')).toHaveText('1');
 
     await addSinglePlayer(page, 'Second Player');
+
+    // Set courts to 1 for this test
+    const newCourtInput = page.locator('#courts');
+    await newCourtInput.clear();
+    await newCourtInput.type('1');
+    await page.waitForTimeout(100);
 
     const newGenerateButton = page.getByTestId('generate-assignments-button');
     await expect(newGenerateButton).toBeVisible();
@@ -314,8 +334,9 @@ test.describe('Feature Tests', () => {
     await expect(aliceItem.locator('.toggle-switch')).toHaveClass(/active/);
     await expect(bobItem.locator('.toggle-switch')).toHaveClass(/active/);
 
-    const generateNewButton = page.getByTestId('generate-new-assignments-button');
-    await generateNewButton.click();
+    // Regenerate button (same button)
+    const regenerateButton = page.getByTestId('generate-assignments-button');
+    await regenerateButton.click();
     await page.waitForTimeout(500);
 
     const newBenchSection = page.locator('.bench-section');
@@ -344,10 +365,10 @@ test.describe('Feature Tests', () => {
     const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
     await addBulkPlayers(page, players);
 
-    const managePlayersStep = page.locator('.step').filter({ hasText: 'Manage Players' });
-    await managePlayersStep.click();
-    await page.waitForTimeout(200);
+    // Wait for player list to be visible
+    await expect(page.locator('.player-list')).toBeVisible();
 
+    // Bench rows should be visible for present players
     const playerBenchRows = page.locator('.player-bench-row');
     await expect(playerBenchRows.first()).toBeVisible();
 

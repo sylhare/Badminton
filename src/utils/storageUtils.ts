@@ -9,7 +9,7 @@ export const saveAppState = (state: {
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
-  collapsedSteps: Set<number>;
+  isManagePlayersCollapsed: boolean;
   manualCourt: ManualCourtSelection | null;
 }): void => {
   try {
@@ -17,7 +17,7 @@ export const saveAppState = (state: {
       players: state.players,
       numberOfCourts: state.numberOfCourts,
       assignments: state.assignments,
-      collapsedSteps: Array.from(state.collapsedSteps),
+      isManagePlayersCollapsed: state.isManagePlayersCollapsed,
       manualCourt: state.manualCourt,
     };
     localStorage.setItem(STORAGE_KEYS.APP_STATE, JSON.stringify(stateToSave));
@@ -30,7 +30,7 @@ export const loadAppState = (): Partial<{
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
-  collapsedSteps: Set<number>;
+  isManagePlayersCollapsed: boolean;
   manualCourt: ManualCourtSelection | null;
 }> => {
   try {
@@ -53,11 +53,20 @@ export const loadAppState = (): Partial<{
       return {};
     }
 
+    // Migration: convert old collapsedSteps to isManagePlayersCollapsed
+    let isManagePlayersCollapsed = false;
+    if (typeof parsed.isManagePlayersCollapsed === 'boolean') {
+      isManagePlayersCollapsed = parsed.isManagePlayersCollapsed;
+    } else if (Array.isArray(parsed.collapsedSteps)) {
+      // Old format: steps 1 and 2 were the player-related steps
+      isManagePlayersCollapsed = parsed.collapsedSteps.includes(1) || parsed.collapsedSteps.includes(2);
+    }
+
     return {
       players: Array.isArray(parsed.players) ? parsed.players : [],
       numberOfCourts: typeof parsed.numberOfCourts === 'number' ? parsed.numberOfCourts : 4,
       assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
-      collapsedSteps: new Set(Array.isArray(parsed.collapsedSteps) ? parsed.collapsedSteps : []),
+      isManagePlayersCollapsed,
       manualCourt: parsed.manualCourt || null,
     };
   } catch (error) {

@@ -30,24 +30,41 @@ export async function goToStatsPage(page: Page): Promise<void> {
   await expect(page.locator('h1')).toContainText('Engine Diagnostics');
 }
 
-// Player management helpers
+// Player management helpers - now using unified input
+export async function addPlayers(page: Page, players: string[]): Promise<void> {
+  const input = page.getByTestId('player-entry-input');
+  await expect(input).toBeVisible();
+  await input.fill(players.join(','));
+  await page.getByTestId('add-player-button').click();
+  await page.waitForTimeout(100);
+}
+
+// Alias for backward compatibility
 export async function addBulkPlayers(page: Page, players: string[]): Promise<void> {
-  const bulkTextarea = page.getByTestId('bulk-input');
-  await expect(bulkTextarea).toBeVisible();
-  await bulkTextarea.fill(players.join('\n'));
-  await page.getByTestId('add-bulk-button').click();
+  await addPlayers(page, players);
 }
 
 export async function addSinglePlayer(page: Page, playerName: string): Promise<void> {
-  const singlePlayerInput = page.getByTestId('single-player-input');
-  await expect(singlePlayerInput).toBeVisible();
-  await singlePlayerInput.fill(playerName);
-  await page.getByTestId('add-single-button').click();
+  const input = page.getByTestId('player-entry-input');
+  await expect(input).toBeVisible();
+  await input.fill(playerName);
+  await page.getByTestId('add-player-button').click();
+  await page.waitForTimeout(100);
 }
 
+export async function expandSectionIfNeeded(page: Page, sectionName: string): Promise<void> {
+  const sectionHeader = page.locator('h2').filter({ hasText: new RegExp(sectionName) });
+  const section = sectionHeader.locator('..');
+  const isCollapsed = await section.evaluate(el => el.closest('.section')?.classList.contains('collapsed'));
+  if (isCollapsed) {
+    await sectionHeader.click();
+    await page.waitForTimeout(200);
+  }
+}
+
+// Legacy alias
 export async function expandStepIfNeeded(page: Page, stepName: string): Promise<void> {
-  const stepHeader = page.locator('h2').filter({ hasText: new RegExp(stepName) });
-  await stepHeader.click();
+  await expandSectionIfNeeded(page, stepName);
 }
 
 // Stats verification helpers
@@ -72,13 +89,22 @@ export async function toggleFirstPlayer(page: Page): Promise<void> {
 
 // Court management helpers
 export async function generateCourtAssignments(page: Page, expectedCourts?: number): Promise<void> {
-  await expect(page.locator('h2').filter({ hasText: /Court Settings/ })).toBeVisible();
+  // Court settings are now inline in Court Assignments section
+  await expect(page.locator('h2').filter({ hasText: /Court Assignments/ })).toBeVisible();
+
+  // If expected courts specified, set the court count first
+  if (expectedCourts !== undefined) {
+    const courtInput = page.locator('#courts');
+    await courtInput.clear();
+    await courtInput.type(expectedCourts.toString());
+    await page.waitForTimeout(100);
+  }
 
   const generateButton = page.getByTestId('generate-assignments-button');
   await expect(generateButton).toBeVisible();
   await generateButton.click();
 
-  await expect(page.locator('[data-testid^="court-"]').first()).toBeVisible();
+  await expect(page.locator('[data-testid^="court-"]').first()).toBeVisible({ timeout: 5000 });
 
   if (expectedCourts !== undefined) {
     await expect(page.locator('[data-testid^="court-"]')).toHaveCount(expectedCourts);
@@ -100,9 +126,10 @@ export async function selectWinnerOnFirstCourt(page: Page): Promise<void> {
 }
 
 export async function generateNewAssignments(page: Page): Promise<void> {
-  const generateNewButton = page.getByTestId('generate-new-assignments-button');
-  await generateNewButton.click();
-  await expect(page.locator('[data-testid^="court-"]').first()).toBeVisible();
+  // After first generation, button text changes to "Regenerate"
+  const generateButton = page.getByTestId('generate-assignments-button');
+  await generateButton.click();
+  await expect(page.locator('[data-testid^="court-"]').first()).toBeVisible({ timeout: 5000 });
 }
 
 export async function verifyLeaderboard(page: Page): Promise<void> {
@@ -121,6 +148,6 @@ export async function completeFullWorkflow(
   await generateNewAssignments(page);
   await verifyLeaderboard(page);
 
-  await expandStepIfNeeded(page, 'Manage Players');
+  await expandSectionIfNeeded(page, 'Manage Players');
   await verifyPlayerStats(page, finalPlayerCount, finalPlayerCount);
 }

@@ -8,8 +8,15 @@ import { CourtAssignments } from '../../../src/components/court';
 import { Court, Player } from '../../../src/types';
 import { TEST_COURTS, TEST_PLAYERS } from '../../data/testData';
 
+// Mock the ManualCourtSelection component
+vi.mock('../../../src/components/ManualCourtSelection', () => ({
+  default: () => <div data-testid="mock-manual-court-selection">Manual Court Selection</div>,
+}));
+
 describe('CourtAssignments Component', () => {
-  const mockOnGenerateNewAssignments = vi.fn();
+  const mockOnGenerateAssignments = vi.fn();
+  const mockOnNumberOfCourtsChange = vi.fn();
+  const mockOnManualCourtSelectionChange = vi.fn();
 
   const mockAssignments: Court[] = [
     {
@@ -25,14 +32,27 @@ describe('CourtAssignments Component', () => {
   const mockBenchedPlayers: Player[] = [TEST_PLAYERS[4], TEST_PLAYERS[5]];
 
   const defaultProps = {
+    players: TEST_PLAYERS,
     assignments: mockAssignments,
     benchedPlayers: mockBenchedPlayers,
-    onGenerateNewAssignments: mockOnGenerateNewAssignments,
+    numberOfCourts: 4,
+    onNumberOfCourtsChange: mockOnNumberOfCourtsChange,
+    onGenerateAssignments: mockOnGenerateAssignments,
+    manualCourtSelection: null,
+    onManualCourtSelectionChange: mockOnManualCourtSelectionChange,
   };
 
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  it('renders court settings inline', () => {
+    render(<CourtAssignments {...defaultProps} />);
+
+    expect(screen.getByText('Courts:')).toBeInTheDocument();
+    expect(screen.getByTestId('court-count-input')).toHaveValue(4);
+    expect(screen.getByTestId('generate-assignments-button')).toBeInTheDocument();
   });
 
   it('renders court assignments correctly', () => {
@@ -53,23 +73,16 @@ describe('CourtAssignments Component', () => {
     expect(screen.getByText('Frank')).toBeInTheDocument();
   });
 
-  it('renders generate new assignments button', () => {
-    render(<CourtAssignments {...defaultProps} />);
-
-    const button = screen.getByRole('button', { name: /generate new assignments/i });
-    expect(button).toBeInTheDocument();
-  });
-
-  it('calls onGenerateNewAssignments when generate button is clicked', async () => {
+  it('calls onGenerateAssignments when generate button is clicked', async () => {
     const user = userEvent.setup();
     render(<CourtAssignments {...defaultProps} />);
 
-    const button = screen.getByRole('button', { name: /generate new assignments/i });
+    const button = screen.getByTestId('generate-assignments-button');
     await user.click(button);
 
     // Wait for the delayed callback (200ms timeout in the component)
     await waitFor(() => {
-      expect(mockOnGenerateNewAssignments).toHaveBeenCalledTimes(1);
+      expect(mockOnGenerateAssignments).toHaveBeenCalledTimes(1);
     }, { timeout: 500 });
   });
 
@@ -81,7 +94,7 @@ describe('CourtAssignments Component', () => {
 
     render(<CourtAssignments {...propsWithoutBench} />);
 
-    expect(screen.queryByText(/bench/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/🪑 Bench/)).not.toBeInTheDocument();
   });
 
   it('handles singular bench player count correctly', () => {
@@ -93,6 +106,62 @@ describe('CourtAssignments Component', () => {
     render(<CourtAssignments {...propsWithOneBench} />);
 
     expect(screen.getByText('🪑 Bench (1 player)')).toBeInTheDocument();
+  });
+
+  it('calls onNumberOfCourtsChange when court input changes', async () => {
+    const user = userEvent.setup();
+    render(<CourtAssignments {...defaultProps} />);
+
+    const input = screen.getByTestId('court-count-input');
+    // Select all and replace the value
+    await user.tripleClick(input);
+    await user.keyboard('6');
+
+    expect(mockOnNumberOfCourtsChange).toHaveBeenCalledWith(6);
+  });
+
+  it('shows "Regenerate" text when assignments exist', () => {
+    render(<CourtAssignments {...defaultProps} />);
+
+    expect(screen.getByTestId('generate-assignments-button')).toHaveTextContent('Regenerate Assignments');
+  });
+
+  it('shows "Generate" text when no assignments', () => {
+    render(<CourtAssignments {...defaultProps} assignments={[]} benchedPlayers={[]} />);
+
+    expect(screen.getByTestId('generate-assignments-button')).toHaveTextContent('Generate Assignments');
+  });
+
+  it('disables generate button when no players present', () => {
+    const noPlayersProps = {
+      ...defaultProps,
+      players: TEST_PLAYERS.map(p => ({ ...p, isPresent: false })),
+      assignments: [],
+      benchedPlayers: [],
+    };
+
+    render(<CourtAssignments {...noPlayersProps} />);
+
+    expect(screen.getByTestId('generate-assignments-button')).toBeDisabled();
+  });
+
+  it('shows no-players hint when no players present', () => {
+    const noPlayersProps = {
+      ...defaultProps,
+      players: [],
+      assignments: [],
+      benchedPlayers: [],
+    };
+
+    render(<CourtAssignments {...noPlayersProps} />);
+
+    expect(screen.getByText(/Add some players above/)).toBeInTheDocument();
+  });
+
+  it('shows hint when players present but no assignments', () => {
+    render(<CourtAssignments {...defaultProps} assignments={[]} benchedPlayers={[]} />);
+
+    expect(screen.getByText(/How it works/)).toBeInTheDocument();
   });
 
   describe('View bench counts button', () => {
@@ -176,26 +245,14 @@ describe('CourtAssignments Component', () => {
     expect(screen.getByText(/Court 1/)).toBeInTheDocument();
     expect(screen.getByText(/Court 2/)).toBeInTheDocument();
   });
-
-  it('preserves player data when generating new assignments', async () => {
-    const user = userEvent.setup();
-    render(<CourtAssignments {...defaultProps} />);
-
-    expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('Eve')).toBeInTheDocument();
-
-    const button = screen.getByRole('button', { name: /generate new assignments/i });
-    await user.click(button);
-
-    // Wait for the delayed callback (200ms timeout in the component)
-    await waitFor(() => {
-      expect(mockOnGenerateNewAssignments).toHaveBeenCalledTimes(1);
-    }, { timeout: 500 });
-
-  });
 });
 
 describe('Winner Selection', () => {
+  const mockOnGenerateAssignments = vi.fn();
+  const mockOnNumberOfCourtsChange = vi.fn();
+  const mockOnManualCourtSelectionChange = vi.fn();
+  const mockOnWinnerChange = vi.fn();
+
   const doublesAssignment: Court[] = [TEST_COURTS.doublesWithTeams()];
   const singlesAssignment: Court[] = [TEST_COURTS.singlesWithTeams()];
   const multipleCourtAssignments: Court[] = [
@@ -210,8 +267,15 @@ describe('Winner Selection', () => {
     },
   ];
 
-  const mockOnGenerateNewAssignments = vi.fn();
-  const mockOnWinnerChange = vi.fn();
+  const baseProps = {
+    players: TEST_PLAYERS,
+    numberOfCourts: 4,
+    onNumberOfCourtsChange: mockOnNumberOfCourtsChange,
+    onGenerateAssignments: mockOnGenerateAssignments,
+    benchedPlayers: [],
+    manualCourtSelection: null,
+    onManualCourtSelectionChange: mockOnManualCourtSelectionChange,
+  };
 
   beforeEach(() => {
     cleanup();
@@ -224,9 +288,8 @@ describe('Winner Selection', () => {
 
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={doublesAssignment}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -244,9 +307,8 @@ describe('Winner Selection', () => {
 
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={singlesAssignment}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -262,9 +324,8 @@ describe('Winner Selection', () => {
     it('should display winner instructions', () => {
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={doublesAssignment}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -281,9 +342,8 @@ describe('Winner Selection', () => {
 
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={assignmentWithWinner}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -301,9 +361,8 @@ describe('Winner Selection', () => {
 
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={multipleCourtAssignments}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -329,9 +388,8 @@ describe('Winner Selection', () => {
 
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={assignmentsWithWinners}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -347,9 +405,8 @@ describe('Winner Selection', () => {
 
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={assignmentWithWinner}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -360,22 +417,18 @@ describe('Winner Selection', () => {
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 2);
     });
 
-    it('should handle click events correctly', async () => {
-      const user = userEvent.setup();
+    it('should display crown for winners', () => {
+      const assignmentWithWinner: Court[] = [TEST_COURTS.withWinner(1)];
 
       render(
         <CourtAssignments
-          assignments={doublesAssignment}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
+          {...baseProps}
+          assignments={assignmentWithWinner}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
 
-      const team1Element = screen.getByText('Team 1').closest('.team');
-      await user.click(team1Element!);
-
-      expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
+      expect(screen.getByText('👑')).toBeInTheDocument();
     });
   });
 
@@ -385,9 +438,8 @@ describe('Winner Selection', () => {
 
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={courtWithoutTeams}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
           onWinnerChange={mockOnWinnerChange}
         />,
       );
@@ -400,31 +452,12 @@ describe('Winner Selection', () => {
     it('should work without onWinnerChange callback', () => {
       render(
         <CourtAssignments
+          {...baseProps}
           assignments={doublesAssignment}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
         />,
       );
 
       expect(screen.queryByText(/Click on a team to mark them as the winner/)).not.toBeInTheDocument();
     });
-  });
-
-  describe('Functionality tests', () => {
-    it('should display crown for winners', () => {
-      const assignmentWithWinner: Court[] = [TEST_COURTS.withWinner(1)];
-
-      render(
-        <CourtAssignments
-          assignments={assignmentWithWinner}
-          benchedPlayers={[]}
-          onGenerateNewAssignments={mockOnGenerateNewAssignments}
-          onWinnerChange={mockOnWinnerChange}
-        />,
-      );
-
-      expect(screen.getByText('👑')).toBeInTheDocument();
-    });
-
   });
 });

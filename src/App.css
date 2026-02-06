@@ -21,6 +21,64 @@ h1 {
     font-weight: 700;
 }
 
+/* Section Styles */
+.section {
+    margin-bottom: 30px;
+    background: #f8fafc;
+    border-radius: 15px;
+    border: 2px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+.section-header:hover {
+    background-color: #edf2f7;
+}
+
+.section-header.no-collapse {
+    cursor: default;
+}
+
+.section-header.no-collapse:hover {
+    background-color: transparent;
+}
+
+.section-header h2 {
+    color: #2d3748;
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.collapse-indicator {
+    color: var(--color-primary);
+    font-size: 1rem;
+    font-weight: bold;
+    transition: transform 0.2s ease;
+}
+
+.section.collapsed .section-content {
+    display: none;
+}
+
+.section.collapsed .section-header {
+    border-bottom: none;
+}
+
+.section-content {
+    padding: 0 20px 20px;
+}
+
+/* Legacy step styles for backwards compatibility */
 .step {
     margin-bottom: 40px;
     padding: 15px;
@@ -527,6 +585,315 @@ h1 {
 
 .add-bulk-button:hover {
     background: var(--color-primary-hover);
+}
+
+/* Player Entry Form Styles */
+.player-entry-container {
+    margin-bottom: 20px;
+}
+
+.player-entry-form {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.player-input-wrapper {
+    flex: 1;
+}
+
+.player-entry-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: white;
+}
+
+.player-entry-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+.player-entry-input::placeholder {
+    color: #a0aec0;
+}
+
+.player-entry-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.camera-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: #edf2f7;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #4a5568;
+}
+
+.camera-button:hover {
+    background: #e2e8f0;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.add-player-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.add-player-button:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+}
+
+.add-player-button:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+}
+
+.multi-input-hint {
+    margin: 10px 0 0;
+    padding: 10px 14px;
+    background: #fef5e7;
+    border: 1px solid #f6ad55;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #744210;
+}
+
+/* Image Upload Modal Styles */
+.image-upload-modal {
+    max-width: 550px;
+    width: 95%;
+}
+
+.modal-upload-area {
+    padding: 30px 20px;
+    margin: 0;
+}
+
+.modal-upload-area .upload-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-upload-area .upload-icon {
+    color: var(--color-primary);
+    opacity: 0.7;
+}
+
+.modal-upload-area p {
+    margin: 0;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+/* Extracted Players Section */
+.extracted-players-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.extracted-players-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.extracted-count {
+    margin: 0;
+    color: #2d3748;
+    font-size: 1rem;
+}
+
+.extracted-count strong {
+    color: var(--color-primary);
+}
+
+.selection-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.selection-action-btn {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.selection-action-btn:hover:not(:disabled) {
+    background: #f7fafc;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.selection-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.extracted-players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.extracted-player-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.extracted-player-item:hover {
+    border-color: var(--color-primary);
+    background: #f7fafc;
+}
+
+.extracted-player-item.selected {
+    border-color: var(--color-primary);
+    background: rgba(66, 153, 225, 0.08);
+}
+
+.player-checkbox {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #cbd5e0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.extracted-player-item.selected .player-checkbox {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.player-name-text {
+    flex: 1;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.hidden-checkbox {
+    display: none;
+}
+
+.try-another-image-btn {
+    padding: 10px 16px;
+    background: transparent;
+    border: 2px dashed #cbd5e0;
+    border-radius: 8px;
+    color: #718096;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.try-another-image-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: #f7fafc;
+}
+
+/* Court Assignments Container */
+.court-assignments-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.court-settings-inline {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    padding: 15px;
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+}
+
+.court-settings-inline .court-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.court-settings-inline .court-input-group label {
+    font-weight: 500;
+    color: #4a5568;
+    white-space: nowrap;
+}
+
+.no-assignments-hint,
+.no-players-hint {
+    padding: 20px;
+    background: #f7fafc;
+    border: 2px dashed #e2e8f0;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.no-assignments-hint p,
+.no-players-hint p {
+    margin: 0;
+    color: #718096;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.no-players-hint {
+    background: #fffaf0;
+    border-color: #fbd38d;
+}
+
+.no-players-hint p {
+    color: #744210;
 }
 
 .court-settings {
@@ -1231,6 +1598,73 @@ h1 {
     .manual-entry-section {
         background: #ffffff;
         border: 1px solid #d2d6dc;
+    }
+
+    /* New section styles for mobile */
+    .section-header {
+        padding: 14px 15px;
+    }
+
+    .section-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .section-content {
+        padding: 0 15px 15px;
+    }
+
+    /* Player entry form mobile */
+    .player-entry-form {
+        flex-direction: column;
+    }
+
+    .player-entry-actions {
+        flex-direction: row;
+    }
+
+    .camera-button {
+        min-width: 50px;
+        min-height: 50px;
+    }
+
+    .add-player-button {
+        flex: 1;
+        justify-content: center;
+        min-height: 50px;
+    }
+
+    .player-entry-input {
+        font-size: 16px;
+        min-height: 50px;
+    }
+
+    /* Court settings inline mobile */
+    .court-settings-inline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .court-settings-inline .court-input-group {
+        justify-content: space-between;
+    }
+
+    .court-settings-inline .generate-button {
+        width: 100%;
+    }
+
+    /* Image upload modal mobile */
+    .image-upload-modal {
+        max-width: 95%;
+        margin: 10px;
+    }
+
+    .extracted-players-list {
+        max-height: 250px;
+    }
+
+    .extracted-players-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 
