@@ -319,10 +319,10 @@ describe('PlayerList Component', () => {
         />,
       );
 
-      const benchCountLabels = screen.getAllByText(/Bench count:/);
-      expect(benchCountLabels).toHaveLength(2);
-      expect(benchCountLabels[0].querySelector('strong')?.textContent).toBe('5');
-      expect(benchCountLabels[1].querySelector('strong')?.textContent).toBe('3');
+      const benchCount0 = screen.getByTestId('bench-count-player-0');
+      const benchCount1 = screen.getByTestId('bench-count-player-1');
+      expect(benchCount0).toHaveAttribute('title', 'Bench count: 5');
+      expect(benchCount1).toHaveAttribute('title', 'Bench count: 3');
     });
 
     it('shows 0 bench count when player has no bench history', () => {
@@ -340,9 +340,9 @@ describe('PlayerList Component', () => {
         />,
       );
 
-      const benchCountLabel = screen.getByText(/Bench count:/);
-      expect(benchCountLabel).toBeInTheDocument();
-      expect(benchCountLabel.querySelector('strong')?.textContent).toBe('0');
+      const benchCount = screen.getByTestId('bench-count-player-0');
+      expect(benchCount).toBeInTheDocument();
+      expect(benchCount).toHaveAttribute('title', 'Bench count: 0');
     });
 
     it('shows bench next toggle for present players', () => {
@@ -380,7 +380,6 @@ describe('PlayerList Component', () => {
         />,
       );
 
-      expect(screen.getAllByText(/Bench count:/)).toHaveLength(1);
       expect(screen.getAllByText('Bench next')).toHaveLength(1);
     });
 

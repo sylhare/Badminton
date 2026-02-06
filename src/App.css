@@ -200,13 +200,11 @@ h1 {
     row-gap: 8px;
 }
 
-.bench-count-label {
+.bench-count-emoji {
     color: #718096;
     white-space: nowrap;
-}
-
-.bench-count-label strong {
-    color: #c53030;
+    cursor: help;
+    font-size: 0.9rem;
 }
 
 .bench-next-toggle {

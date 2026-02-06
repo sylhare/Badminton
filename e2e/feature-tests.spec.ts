@@ -300,8 +300,10 @@ test.describe('Feature Tests', () => {
     const aliceItem = page.locator('.player-item').filter({ hasText: 'Alice' });
     const bobItem = page.locator('.player-item').filter({ hasText: 'Bob' });
 
-    const aliceInitialBenchCount = parseInt(await aliceItem.locator('.bench-count-label strong').textContent() || '0');
-    const bobInitialBenchCount = parseInt(await bobItem.locator('.bench-count-label strong').textContent() || '0');
+    const aliceInitialBenchText = await aliceItem.locator('.bench-count-emoji').textContent() || '🪑 0';
+    const aliceInitialBenchCount = parseInt(aliceInitialBenchText.replace('🪑', '').trim());
+    const bobInitialBenchText = await bobItem.locator('.bench-count-emoji').textContent() || '🪑 0';
+    const bobInitialBenchCount = parseInt(bobInitialBenchText.replace('🪑', '').trim());
 
     const aliceBenchToggle = aliceItem.locator('.bench-next-toggle');
     const bobBenchToggle = bobItem.locator('.bench-next-toggle');
@@ -328,11 +330,11 @@ test.describe('Feature Tests', () => {
 
     const aliceItemAfter = page.locator('.player-item').filter({ hasText: 'Alice' });
     const bobItemAfter = page.locator('.player-item').filter({ hasText: 'Bob' });
-    const aliceBenchCount = aliceItemAfter.locator('.bench-count-label strong');
-    const bobBenchCount = bobItemAfter.locator('.bench-count-label strong');
+    const aliceBenchCount = aliceItemAfter.locator('.bench-count-emoji');
+    const bobBenchCount = bobItemAfter.locator('.bench-count-emoji');
 
-    await expect(aliceBenchCount).toHaveText((aliceInitialBenchCount + 1).toString());
-    await expect(bobBenchCount).toHaveText((bobInitialBenchCount + 1).toString());
+    await expect(aliceBenchCount).toContainText((aliceInitialBenchCount + 1).toString());
+    await expect(bobBenchCount).toContainText((bobInitialBenchCount + 1).toString());
 
     await expect(aliceItemAfter.locator('.toggle-switch')).not.toHaveClass(/active/);
     await expect(bobItemAfter.locator('.toggle-switch')).not.toHaveClass(/active/);
@@ -350,8 +352,8 @@ test.describe('Feature Tests', () => {
     await expect(playerBenchRows.first()).toBeVisible();
 
     const aliceItem = page.locator('.player-item').filter({ hasText: 'Alice' });
-    const benchCount = aliceItem.locator('.bench-count-label strong');
-    await expect(benchCount).toHaveText('0');
+    const benchCount = aliceItem.locator('.bench-count-emoji');
+    await expect(benchCount).toContainText('0');
 
     const benchToggle = aliceItem.locator('.bench-next-toggle');
     await expect(benchToggle).toBeVisible();
