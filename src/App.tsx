@@ -282,6 +282,15 @@ function App(): React.ReactElement {
             Let us know on GitHub
           </a>
         </p>
+        <p>
+          <a
+            href={`${import.meta.env.BASE_URL || '/'}stats`}
+            className="analysis-link"
+            data-testid="stats-link"
+          >
+            View Statistics & Analysis
+          </a>
+        </p>
       </footer>
     </div>
   );

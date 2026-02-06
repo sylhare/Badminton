@@ -7,4 +7,11 @@ export default defineConfig(({ command }) => ({
   optimizeDeps: {
     include: ['tesseract.js'],
   },
+  server: {
+    watch: {
+      ignored: ['**/analysis/**'],
+    },
+  },
+  // Handle SPA routing - serve index.html for /analysis route
+  appType: 'spa',
 }));

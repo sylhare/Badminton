@@ -1,0 +1,21 @@
+[project]
+name = "badminton-analysis"
+version = "0.1.0"
+description = "Analysis notebook dependencies for badminton simulations."
+requires-python = ">=3.11"
+dependencies = [
+  "marimo",
+  "polars",
+  "matplotlib",
+  "uvicorn",
+]
+
+[project.scripts]
+export-html = "export_html:main"
+
+[tool.setuptools]
+py-modules = ["export_html"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
