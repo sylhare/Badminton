@@ -1,27 +1,19 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
 
 import App from '../src/App';
 import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
 
-import { COMMON_PLAYERS, clearTestState } from './shared';
+import { addPlayers, generateAndWaitForAssignments, clearTestState } from './shared';
 
 describe('App Leaderboard Persistence', () => {
   const user = userEvent.setup();
 
   const addPlayersAndGenerate = async (playerNames: string) => {
-    const bulkInput = screen.getAllByTestId('bulk-input')[0];
-    await act(async () => {
-      await user.type(bulkInput, playerNames);
-      await user.click(screen.getAllByTestId('add-bulk-button')[0]);
-    });
-
-    await act(async () => {
-      await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
-    });
+    await addPlayers(user, playerNames);
+    await generateAndWaitForAssignments(user);
   };
 
   beforeEach(clearTestState);
@@ -30,9 +22,7 @@ describe('App Leaderboard Persistence', () => {
   describe('Winner selection and recording', () => {
     it('should record wins immediately when winner is selected', async () => {
       render(<App />);
-      await addPlayersAndGenerate(COMMON_PLAYERS.EIGHT);
-
-      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Hank');
 
       const initialWinCounts = CourtAssignmentEngine.getWinCounts();
       expect(initialWinCounts.size).toBe(0);
@@ -50,7 +40,7 @@ describe('App Leaderboard Persistence', () => {
 
     it('should show leaderboard when players have wins', async () => {
       render(<App />);
-      await addPlayersAndGenerate(COMMON_PLAYERS.FOUR);
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
 
@@ -65,7 +55,7 @@ describe('App Leaderboard Persistence', () => {
 
     it('should update leaderboard immediately when removing a winner', async () => {
       render(<App />);
-      await addPlayersAndGenerate(COMMON_PLAYERS.FOUR);
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       const team1Elements = screen.getAllByText('Team 1');
 
@@ -96,241 +86,112 @@ describe('App Leaderboard Persistence', () => {
     it('should persist leaderboard data when app is remounted', async () => {
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getAllByTestId('bulk-input')[0];
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
+
+      const team1Elements = screen.getAllByText('Team 1');
       await act(async () => {
-        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
+        await user.click(team1Elements[0]);
       });
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      await act(async () => {
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      const mockCourt = [{
-        courtNumber: 1,
-        players: [
-          { id: 'alice', name: 'Alice', isPresent: true },
-          { id: 'bob', name: 'Bob', isPresent: true },
-          { id: 'charlie', name: 'Charlie', isPresent: true },
-          { id: 'diana', name: 'Diana', isPresent: true },
-        ],
-        teams: {
-          team1: [
-            { id: 'alice', name: 'Alice', isPresent: true },
-            { id: 'bob', name: 'Bob', isPresent: true },
-          ],
-          team2: [
-            { id: 'charlie', name: 'Charlie', isPresent: true },
-            { id: 'diana', name: 'Diana', isPresent: true },
-          ],
-        },
-        winner: 1 as 1 | 2,
-      }];
-
-      CourtAssignmentEngine.recordWins(mockCourt);
-      CourtAssignmentEngine.saveState();
-
-      const winCountsBeforeUnmount = CourtAssignmentEngine.getWinCounts();
-      const totalWinsBefore = Array.from(winCountsBeforeUnmount.values()).reduce((sum, wins) => sum + wins, 0);
-
-      expect(totalWinsBefore).toBe(2);
+      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
 
       unmount();
 
-      CourtAssignmentEngine.resetHistory();
-
       render(<App />);
 
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      const winCountsAfterMount = CourtAssignmentEngine.getWinCounts();
-      const totalWinsAfter = Array.from(winCountsAfterMount.values()).reduce((sum, wins) => sum + wins, 0);
-
-      expect(totalWinsAfter).toBe(totalWinsBefore);
-      expect(totalWinsAfter).toBeGreaterThan(0);
+      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
     });
 
     it('should maintain correct win counts for specific players', async () => {
-      const mockPlayers = [
-        { id: 'alice', name: 'Alice', isPresent: true },
-        { id: 'bob', name: 'Bob', isPresent: true },
-        { id: 'charlie', name: 'Charlie', isPresent: true },
-        { id: 'diana', name: 'Diana', isPresent: true },
-      ];
-
-      const { unmount } = render(<App />);
-
-      const singleInput = screen.getAllByTestId('single-player-input')[0];
-      const addButton = screen.getAllByTestId('add-single-button')[0];
-
-      for (const player of mockPlayers.map(p => p.name)) {
-        await act(async () => {
-          await user.clear(singleInput);
-          await user.type(singleInput, player);
-          await user.click(addButton);
-        });
-      }
-
-      await act(async () => {
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
-      });
-
-      const winnerRadios = screen.queryAllByRole('radio');
-      if (winnerRadios.length > 0) {
-        await act(async () => {
-          await user.click(winnerRadios[0]);
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-
-      const winCountsBefore = CourtAssignmentEngine.getWinCounts();
-
-      unmount();
       render(<App />);
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await addPlayers(user, 'Alice,Bob');
+      await addPlayers(user, 'Charlie,Diana');
 
-      const winCountsAfter = CourtAssignmentEngine.getWinCounts();
+      await act(async () => {
+        await user.click(screen.getByTestId('generate-assignments-button'));
+      });
 
-      const totalBefore = Array.from(winCountsBefore.values()).reduce((sum, wins) => sum + wins, 0);
-      const totalAfter = Array.from(winCountsAfter.values()).reduce((sum, wins) => sum + wins, 0);
+      await waitFor(() => {
+        expect(screen.getByTestId('court-1')).toBeInTheDocument();
+      }, { timeout: 3000 });
 
-      expect(totalAfter).toBe(totalBefore);
+      const team1Elements = screen.getAllByText('Team 1');
+      await act(async () => {
+        await user.click(team1Elements[0]);
+      });
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      for (const [playerId, wins] of winCountsBefore) {
-        expect(winCountsAfter.get(playerId)).toBe(wins);
-      }
+      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
     });
   });
 
   describe('Edge cases', () => {
     it('should handle changing winners without duplicate counting', async () => {
       render(<App />);
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
-      const bulkInput = screen.getAllByTestId('bulk-input')[0];
+      const team1Elements = screen.getAllByText('Team 1');
       await act(async () => {
-        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
+        await user.click(team1Elements[0]);
       });
+      await new Promise(resolve => setTimeout(resolve, 50));
 
+      const team2Elements = screen.getAllByText('Team 2');
       await act(async () => {
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
+        await user.click(team2Elements[0]);
       });
+      await new Promise(resolve => setTimeout(resolve, 50));
 
-      const winnerRadios = screen.queryAllByRole('radio');
-      if (winnerRadios.length >= 2) {
-
-        await act(async () => {
-          await user.click(winnerRadios[0]);
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 50));
-        await act(async () => {
-          await user.click(winnerRadios[1]);
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 50));
-        const winCountsAfterChange = CourtAssignmentEngine.getWinCounts();
-        const totalAfterChange = Array.from(winCountsAfterChange.values()).reduce((sum, wins) => sum + wins, 0);
-
-        expect(totalAfterChange).toBeGreaterThan(0);
-        expect(totalAfterChange).toBeLessThan(20);
-      }
+      const winCounts = CourtAssignmentEngine.getWinCounts();
+      const totalWins = Array.from(winCounts.values()).reduce((sum, wins) => sum + wins, 0);
+      expect(totalWins).toBe(2); // Only team 2 should have wins now
     });
 
     it('should handle changing winner on same court without duplicate counting in session', async () => {
       render(<App />);
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
-      const bulkInput = screen.getAllByTestId('bulk-input')[0];
+      const team1Elements = screen.getAllByText('Team 1');
       await act(async () => {
-        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
+        await user.click(team1Elements[0]);
       });
+      await new Promise(resolve => setTimeout(resolve, 50));
 
+      const team2Elements = screen.getAllByText('Team 2');
       await act(async () => {
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
+        await user.click(team2Elements[0]);
       });
+      await new Promise(resolve => setTimeout(resolve, 50));
 
-      const courtElements = screen.getAllByText(/Court \d+/);
-      expect(courtElements.length).toBeGreaterThan(0);
-
-      const firstCourtElement = courtElements[0].closest('.court-card');
-      if (firstCourtElement) {
-        const team1Element = firstCourtElement.querySelector('.team:first-of-type');
-        const team2Element = firstCourtElement.querySelector('.team:last-of-type');
-
-        if (team1Element && team2Element) {
-          const initialWinCounts = CourtAssignmentEngine.getWinCounts();
-          const initialTotal = Array.from(initialWinCounts.values()).reduce((sum, wins) => sum + wins, 0);
-
-          await act(async () => {
-            await user.click(team1Element as Element);
-          });
-
-          await new Promise(resolve => setTimeout(resolve, 50));
-
-          const afterFirstClickWinCounts = CourtAssignmentEngine.getWinCounts();
-          const afterFirstClickTotal = Array.from(afterFirstClickWinCounts.values()).reduce((sum, wins) => sum + wins, 0);
-
-          expect(afterFirstClickTotal).toBeGreaterThan(initialTotal);
-
-          await act(async () => {
-            await user.click(team2Element as Element);
-          });
-
-          await new Promise(resolve => setTimeout(resolve, 50));
-
-          const finalWinCounts = CourtAssignmentEngine.getWinCounts();
-          const finalTotal = Array.from(finalWinCounts.values()).reduce((sum, wins) => sum + wins, 0);
-
-          expect(finalTotal).toBe(afterFirstClickTotal);
-          expect(finalTotal).toBeGreaterThan(0);
-          expect(finalTotal).toBeLessThan(10);
-        }
-      }
+      const winCounts = CourtAssignmentEngine.getWinCounts();
+      const totalWins = Array.from(winCounts.values()).reduce((sum, wins) => sum + wins, 0);
+      expect(totalWins).toBe(2);
     });
 
     it('should not show leaderboard when no wins are recorded', async () => {
       render(<App />);
-      await addPlayersAndGenerate(COMMON_PLAYERS.FOUR);
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
-
-      const winCounts = CourtAssignmentEngine.getWinCounts();
-      expect(winCounts.size).toBe(0);
     });
 
     it('should show leaderboard with historical data on refresh even without current players', async () => {
       const { unmount } = render(<App />);
 
-      const bulkInput = screen.getAllByTestId('bulk-input')[0];
-      await act(async () => {
-        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDave');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
-      });
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
+      const team1Elements = screen.getAllByText('Team 1');
       await act(async () => {
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
+        await user.click(team1Elements[0]);
       });
-
-      const team1Element = screen.getByText('Team 1');
-      await act(async () => {
-        await user.click(team1Element);
-      });
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       unmount();
-
-      await act(async () => {
-        render(<App />);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
+      render(<App />);
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
     });

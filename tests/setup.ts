@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
 if (typeof HTMLCanvasElement !== 'undefined') {
@@ -18,8 +18,10 @@ if (typeof HTMLCanvasElement !== 'undefined') {
   });
 }
 
-// Mock requestAnimationFrame and cancelAnimationFrame (only in browser environment)
-// Use writable and configurable properties so vi.useFakeTimers() can override them
+/**
+ * Mock requestAnimationFrame and cancelAnimationFrame (only in browser environment).
+ * Uses writable and configurable properties so vi.useFakeTimers() can override them.
+ */
 if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'undefined') {
   Object.defineProperty(window, 'requestAnimationFrame', {
     writable: true,
@@ -36,7 +38,7 @@ if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'und
   });
 }
 
-// Mock window dimensions for canvas sizing
+/** Mock window dimensions for canvas sizing */
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'innerWidth', {
     writable: true,

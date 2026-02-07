@@ -1,26 +1,29 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 import type { Player, ManualCourtSelection } from '../types';
 
-interface ManualCourtSelectionProps {
+interface ManualCourtModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   players: Player[];
   onSelectionChange: (selection: ManualCourtSelection | null) => void;
   currentSelection: ManualCourtSelection | null;
 }
 
-const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
+/**
+ * Modal for manually selecting players for Court 1 assignment.
+ */
+const ManualCourtModal: React.FC<ManualCourtModalProps> = ({
+  isOpen,
+  onClose,
   players,
   onSelectionChange,
   currentSelection,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const presentPlayers = players.filter(p => p.isPresent);
   const selectedPlayerIds = new Set(currentSelection?.players.map(p => p.id) || []);
   const maxPlayers = 4;
 
-  /**
-   * Handle toggling a player's selection for manual court assignment
-   */
   const handlePlayerToggle = (player: Player) => {
     const isSelected = selectedPlayerIds.has(player.id);
     let newSelectedPlayers: Player[];
@@ -41,16 +44,10 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
     }
   };
 
-  /**
-   * Clear all selected players
-   */
   const clearSelection = () => {
     onSelectionChange(null);
   };
 
-  /**
-   * Get match type description based on player count
-   */
   const getMatchType = (playerCount: number): string => {
     switch (playerCount) {
       case 2: return 'Singles match';
@@ -60,25 +57,24 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
     }
   };
 
-  if (presentPlayers.length < 2) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="manual-court-selection" data-testid="manual-court-selection">
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      data-testid="manual-court-modal"
+    >
       <div
-        className="manual-court-header"
-        onClick={() => setIsExpanded(!isExpanded)}
-        data-testid="manual-court-header"
+        className="modal-content manual-court-modal-content"
+        onClick={e => e.stopPropagation()}
       >
-        <h3>⚙️ Manual Court 1 Assignment (Optional)</h3>
-        <div className="manual-court-toggle">
-          {isExpanded ? '▼' : '▶'}
+        <div className="modal-header">
+          <h3>Manual Court 1 Assignment</h3>
+          <button className="modal-close" onClick={onClose}>×</button>
         </div>
-      </div>
 
-      {isExpanded && (
-        <div className="manual-court-content">
+        <div className="modal-body">
           <p className="manual-court-description">
             Select 2-4 players to play together on Court 1. The rest will be assigned automatically.
           </p>
@@ -147,9 +143,15 @@ const ManualCourtSelectionComponent: React.FC<ManualCourtSelectionProps> = ({
             )}
           </div>
         </div>
-      )}
+
+        <div className="modal-footer">
+          <button className="modal-cancel-button" onClick={onClose}>
+            Done
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default ManualCourtSelectionComponent;
+export default ManualCourtModal;

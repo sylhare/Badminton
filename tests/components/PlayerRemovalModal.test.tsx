@@ -2,7 +2,6 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
 
 import PlayerRemovalModal from '../../src/components/PlayerRemovalModal';
 
@@ -150,7 +149,6 @@ describe('PlayerRemovalModal Component', () => {
       const user = userEvent.setup();
       render(<PlayerRemovalModal {...defaultProps} />);
 
-      // Tab through elements
       await user.tab();
       expect(screen.getByTestId('player-removal-modal-close')).toHaveFocus();
 

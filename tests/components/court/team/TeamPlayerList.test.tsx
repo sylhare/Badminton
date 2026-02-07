@@ -1,7 +1,6 @@
 import React from 'react';
 import { describe, it } from 'vitest';
 import { render } from '@testing-library/react';
-import '@testing-library/jest-dom';
 
 import { TeamPlayerList } from '../../../../src/components/court/team';
 import { MOCK_PLAYERS } from '../../../data/testFactories';

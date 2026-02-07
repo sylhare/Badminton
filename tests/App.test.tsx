@@ -1,133 +1,123 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
 
 import App from '../src/App';
-import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
+
+import { addPlayers, generateAndWaitForAssignments, clearTestState } from './shared';
 
 describe('App', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    CourtAssignmentEngine.resetHistory();
-  });
+  beforeEach(clearTestState);
+  afterEach(clearTestState);
 
-  afterEach(() => {
-    localStorage.clear();
-    CourtAssignmentEngine.resetHistory();
-  });
-
-  describe('App Step Visibility', () => {
+  describe('UI Structure', () => {
     const user = userEvent.setup();
 
-    it('renders Step 3 only after players are added', async () => {
+    it('renders Manage Players section', () => {
       render(<App />);
-
-      expect(screen.queryByText('Step 3: Court Settings')).not.toBeInTheDocument();
-
-      const singleInput = screen.getAllByPlaceholderText('Enter player name...')[0];
-      await act(async () => {
-        await user.type(singleInput, 'Alice');
-        await user.click(screen.getAllByTestId('add-single-button')[0]);
-      });
-
-      expect(screen.getAllByText('Step 3: Court Settings')[0]).toBeInTheDocument();
+      expect(screen.getByText('Manage Players')).toBeInTheDocument();
     });
 
-    it('renders court assignments after first generation', async () => {
+    it('renders Court Assignments section', () => {
       render(<App />);
-      const bulkInput = screen.getAllByTestId('bulk-input')[0];
-      await act(async () => {
-        await user.type(
-          bulkInput,
-          'Alice\nBob\nCharlie\nDiana',
-        );
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
-      });
+      expect(screen.getByText('Court Assignments')).toBeInTheDocument();
+    });
+
+    it('shows player list after adding players', async () => {
+      render(<App />);
+      await addPlayers(user, 'Alice');
+
+      expect(screen.getByText('Alice')).toBeInTheDocument();
+      expect(screen.getByTestId('player-stats')).toBeInTheDocument();
+    });
+
+    it('enables generate button after adding players', async () => {
+      render(<App />);
+
+      expect(screen.getByTestId('generate-assignments-button')).toBeDisabled();
+
+      await addPlayers(user, 'Alice');
+
+      expect(screen.getByTestId('generate-assignments-button')).not.toBeDisabled();
+    });
+
+    it('renders court assignments after generation', async () => {
+      render(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
       await act(async () => {
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
+        await user.click(screen.getByTestId('generate-assignments-button'));
       });
 
-      expect(screen.getAllByText('Step 4: Court Assignments')[0]).toBeInTheDocument();
-      expect(screen.queryByText('Step 4')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('court-1')).toBeInTheDocument();
+      }, { timeout: 3000 });
     });
 
     it('can generate multiple new assignments in succession', async () => {
       render(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Henry');
 
-      const bulkInput = screen.getAllByTestId('bulk-input')[0];
-      await act(async () => {
-        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank\nGrace\nHenry');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
-      });
-      await act(async () => {
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
-      });
-      expect(screen.getAllByText(/Court.*1/)[0]).toBeInTheDocument();
-      expect(screen.getAllByText(/Court.*2/)[0]).toBeInTheDocument();
+      await generateAndWaitForAssignments(user);
+
+      expect(screen.getByTestId('court-1')).toBeInTheDocument();
+      expect(screen.getByTestId('court-2')).toBeInTheDocument();
 
       await act(async () => {
-        await user.click(screen.getAllByText('🎲 Generate New Assignments')[0]);
+        await user.click(screen.getByTestId('generate-assignments-button'));
       });
-      expect(screen.getAllByText(/Court.*1/)[0]).toBeInTheDocument();
-      expect(screen.getAllByText(/Court.*2/)[0]).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('court-1')).toBeInTheDocument();
+        expect(screen.getByTestId('court-2')).toBeInTheDocument();
+      }, { timeout: 3000 });
     });
 
     it('preserves player present/absent status across regenerations', async () => {
       render(<App />);
-
-      const bulkInput = screen.getAllByTestId('bulk-input')[0];
-      await act(async () => {
-        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
-      });
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve,Frank');
 
       const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
       const aliceToggle = toggleButtons[0];
       const bobToggle = toggleButtons[1];
+
       await act(async () => {
         await user.click(aliceToggle);
         await user.click(bobToggle);
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
       });
 
-      const courtAssignmentsSection = screen.getByText('Step 4: Court Assignments').closest('.step');
-      expect(courtAssignmentsSection).not.toHaveTextContent('Alice');
-      expect(courtAssignmentsSection).not.toHaveTextContent('Bob');
-      expect(courtAssignmentsSection).toHaveTextContent('Charlie');
-      expect(courtAssignmentsSection).toHaveTextContent('Diana');
+      await generateAndWaitForAssignments(user);
 
-      await act(async () => {
-        await user.click(screen.getAllByText('🎲 Generate New Assignments')[0]);
-      });
-
-      expect(courtAssignmentsSection).not.toHaveTextContent('Alice');
-      expect(courtAssignmentsSection).not.toHaveTextContent('Bob');
+      const courtSection = screen.getByTestId('court-assignments-section');
+      expect(courtSection).not.toHaveTextContent('Alice');
+      expect(courtSection).not.toHaveTextContent('Bob');
+      expect(courtSection).toHaveTextContent('Charlie');
+      expect(courtSection).toHaveTextContent('Diana');
     });
 
     it('properly benches single remaining players instead of assigning them to courts', async () => {
       render(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Henry,Ivy');
 
-      const bulkInput = screen.getAllByTestId('bulk-input')[0];
-      await act(async () => {
-        await user.type(bulkInput, 'Alice\nBob\nCharlie\nDiana\nEve\nFrank\nGrace\nHenry\nIvy');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
-      });
+      await generateAndWaitForAssignments(user);
 
-      await act(async () => {
-        await user.click(screen.getAllByTestId('generate-assignments-button')[0]);
-      });
+      expect(screen.getByTestId('court-1')).toBeInTheDocument();
+      expect(screen.getByTestId('court-2')).toBeInTheDocument();
+      expect(screen.queryByTestId('court-3')).not.toBeInTheDocument();
+      expect(screen.getByText('🪑 Bench (1 player)')).toBeInTheDocument();
+    });
 
-      expect(screen.getAllByText(/Court.*1/)[0]).toBeInTheDocument();
-      expect(screen.getAllByText(/Court.*2/)[0]).toBeInTheDocument();
-      expect(screen.queryByText(/Court.*3/)).not.toBeInTheDocument();
+    it('collapses Manage Players section after first assignment', async () => {
+      render(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
-      expect(screen.getAllByText('🪑 Bench (1 player)')[0]).toBeInTheDocument();
+      const managePlayersSection = screen.getByTestId('manage-players-section');
+      expect(managePlayersSection).not.toHaveClass('collapsed');
 
-      const benchSection = screen.getAllByText('🪑 Bench (1 player)')[0].closest('.bench-section');
-      expect(benchSection).toBeInTheDocument();
+      await generateAndWaitForAssignments(user);
+
+      expect(managePlayersSection).toHaveClass('collapsed');
     });
   });
 
@@ -137,21 +127,19 @@ describe('App', () => {
     describe('Player Toggle Functionality', () => {
       beforeEach(async () => {
         render(<App />);
-        const bulkInput = screen.getAllByTestId('bulk-input')[0];
-        await user.type(bulkInput, 'Alice\nBob\nCharlie');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
+        await addPlayers(user, 'Alice,Bob,Charlie');
       });
 
       it('adds all players correctly with initial present state', async () => {
-        expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
+        expect(screen.getByText('Alice')).toBeInTheDocument();
+        expect(screen.getByText('Bob')).toBeInTheDocument();
+        expect(screen.getByText('Charlie')).toBeInTheDocument();
 
-        expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('3');
-        expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('3');
+        expect(screen.getByTestId('stats-present-count')).toHaveTextContent('3');
+        expect(screen.getByTestId('stats-total-count')).toHaveTextContent('3');
 
         const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
-        expect(toggleButtons).toHaveLength(3); // 3 players
+        expect(toggleButtons).toHaveLength(3);
         toggleButtons.forEach(button => {
           expect(button).toHaveClass('present');
         });
@@ -161,12 +149,12 @@ describe('App', () => {
         const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
         await user.click(toggleButtons[0]);
 
-        expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
+        expect(screen.getByText('Alice')).toBeInTheDocument();
         expect(toggleButtons[0]).toHaveClass('absent');
 
-        expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('2');
-        expect(screen.getAllByText('Absent')[0].previousElementSibling).toHaveTextContent('1');
-        expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('3');
+        expect(screen.getByTestId('stats-present-count')).toHaveTextContent('2');
+        expect(screen.getByTestId('stats-absent-count')).toHaveTextContent('1');
+        expect(screen.getByTestId('stats-total-count')).toHaveTextContent('3');
       });
 
       it('keeps all players visible when all are toggled off', async () => {
@@ -176,17 +164,17 @@ describe('App', () => {
         await user.click(toggleButtons[1]);
         await user.click(toggleButtons[2]);
 
-        expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
+        expect(screen.getByText('Alice')).toBeInTheDocument();
+        expect(screen.getByText('Bob')).toBeInTheDocument();
+        expect(screen.getByText('Charlie')).toBeInTheDocument();
 
         toggleButtons.forEach(button => {
           expect(button).toHaveClass('absent');
         });
 
-        expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('0');
-        expect(screen.getAllByText('Absent')[0].previousElementSibling).toHaveTextContent('3');
-        expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('3');
+        expect(screen.getByTestId('stats-present-count')).toHaveTextContent('0');
+        expect(screen.getByTestId('stats-absent-count')).toHaveTextContent('3');
+        expect(screen.getByTestId('stats-total-count')).toHaveTextContent('3');
       });
 
       it('updates stats when toggling a player back on', async () => {
@@ -198,39 +186,34 @@ describe('App', () => {
 
         await user.click(toggleButtons[0]);
 
-        expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
+        expect(screen.getByText('Alice')).toBeInTheDocument();
         expect(toggleButtons[0]).toHaveClass('present');
 
-        expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('1');
-        expect(screen.getAllByText('Absent')[0].previousElementSibling).toHaveTextContent('2');
-        expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('3');
+        expect(screen.getByTestId('stats-present-count')).toHaveTextContent('1');
+        expect(screen.getByTestId('stats-absent-count')).toHaveTextContent('2');
+        expect(screen.getByTestId('stats-total-count')).toHaveTextContent('3');
       });
     });
 
-    describe('Court Settings Visibility', () => {
+    describe('Generate Button State', () => {
       beforeEach(async () => {
         render(<App />);
-        const bulkInput = screen.getAllByTestId('bulk-input')[0];
-        await user.type(bulkInput, 'Alice\nBob');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
+        await addPlayers(user, 'Alice,Bob');
       });
 
-      it('displays court settings when players are present', () => {
-        expect(screen.getAllByText('Step 3: Court Settings')[0]).toBeInTheDocument();
+      it('enables generate button when players are present', () => {
+        expect(screen.getByTestId('generate-assignments-button')).not.toBeDisabled();
       });
 
-      it('hides court settings when all players are toggled off', async () => {
+      it('disables generate button when all players are toggled off', async () => {
         const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
         await user.click(toggleButtons[0]);
         await user.click(toggleButtons[1]);
 
-        expect(screen.getAllByText('Step 2: Manage Players')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
-        expect(screen.queryByText('Step 3: Court Settings')).not.toBeInTheDocument();
+        expect(screen.getByTestId('generate-assignments-button')).toBeDisabled();
       });
 
-      it('shows court settings again when at least one player is toggled on', async () => {
+      it('enables generate button when at least one player is toggled back on', async () => {
         const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
 
         await user.click(toggleButtons[0]);
@@ -238,23 +221,21 @@ describe('App', () => {
 
         await user.click(toggleButtons[0]);
 
-        expect(screen.getAllByText('Step 3: Court Settings')[0]).toBeInTheDocument();
+        expect(screen.getByTestId('generate-assignments-button')).not.toBeDisabled();
       });
     });
 
     describe('Remove vs Toggle Functionality', () => {
       beforeEach(async () => {
         render(<App />);
-        const bulkInput = screen.getAllByTestId('bulk-input')[0];
-        await user.type(bulkInput, 'Alice\nBob\nCharlie');
-        await user.click(screen.getAllByTestId('add-bulk-button')[0]);
+        await addPlayers(user, 'Alice,Bob,Charlie');
       });
 
       it('keeps toggled-off players in the list', async () => {
         const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
         await user.click(toggleButtons[0]);
 
-        expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
+        expect(screen.getByText('Alice')).toBeInTheDocument();
         expect(toggleButtons[0]).toHaveClass('absent');
       });
 
@@ -265,8 +246,8 @@ describe('App', () => {
         await user.click(screen.getByTestId('player-removal-modal-remove'));
 
         expect(screen.queryByText('Bob')).not.toBeInTheDocument();
-        expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
-        expect(screen.getAllByText('Charlie')[0]).toBeInTheDocument();
+        expect(screen.getByText('Alice')).toBeInTheDocument();
+        expect(screen.getByText('Charlie')).toBeInTheDocument();
       });
 
       it('updates player counts and UI elements after removal', async () => {
@@ -275,12 +256,11 @@ describe('App', () => {
 
         await user.click(screen.getByTestId('player-removal-modal-remove'));
 
-        expect(screen.getAllByTestId(/^toggle-presence-/)).toHaveLength(2); // 2 players
-        expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(2); // 2 players
-        expect(screen.getAllByText('Present')[0].previousElementSibling).toHaveTextContent('2');
-        expect(screen.getAllByText('Total')[0].previousElementSibling).toHaveTextContent('2');
+        expect(screen.getAllByTestId(/^toggle-presence-/)).toHaveLength(2);
+        expect(screen.getAllByTitle('Delete player permanently')).toHaveLength(2);
+        expect(screen.getByTestId('stats-present-count')).toHaveTextContent('2');
+        expect(screen.getByTestId('stats-total-count')).toHaveTextContent('2');
       });
     });
   });
-
 });

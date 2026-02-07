@@ -80,7 +80,7 @@ test.describe('Stats Page', () => {
       await firstTeam.click();
       await page.waitForTimeout(300);
 
-      const generateNewButton = page.getByTestId('generate-new-assignments-button');
+      const generateNewButton = page.getByTestId('generate-assignments-button');
       await generateNewButton.click();
       await page.waitForTimeout(300);
 
@@ -188,7 +188,7 @@ test.describe('Stats Page', () => {
       await firstTeam.click();
       await page.waitForTimeout(200);
 
-      const generateNewButton = page.getByTestId('generate-new-assignments-button');
+      const generateNewButton = page.getByTestId('generate-assignments-button');
       await generateNewButton.click();
       await page.waitForTimeout(200);
 
