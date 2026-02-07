@@ -70,7 +70,10 @@ export default [
       ],
       'import/order': [
         'error',
-        { 'newlines-between': 'always' },
+        {
+          'groups': ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
+          'newlines-between': 'always',
+        },
       ],
       'import/newline-after-import': ['error', { 'count': 1 }],
       ...reactPlugin.configs.recommended.rules,

@@ -1,13 +1,13 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, cleanup } from '@testing-library/react';
-import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
-import ManualCourtSelection from '../../src/components/ManualCourtSelection';
+import ManualCourtModal from '../../src/components/ManualCourtModal';
 import { createMockPlayers } from '../data/testFactories';
 
-describe('ManualCourtSelection Component', () => {
+describe('ManualCourtModal Component', () => {
+  const mockOnClose = vi.fn();
   const mockOnSelectionChange = vi.fn();
   const mockPlayers = createMockPlayers(8, { isPresent: true });
 
@@ -17,85 +17,143 @@ describe('ManualCourtSelection Component', () => {
   });
 
   describe('Rendering', () => {
-    it('renders the manual court selection header', () => {
+    it('does not render when isOpen is false', () => {
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={false}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={null}
         />,
       );
 
-      expect(screen.getByTestId('manual-court-header')).toBeInTheDocument();
-      expect(screen.getByText('⚙️ Manual Court 1 Assignment (Optional)')).toBeInTheDocument();
+      expect(screen.queryByTestId('manual-court-modal')).not.toBeInTheDocument();
     });
 
-    it('does not render when fewer than 2 present players', () => {
-      const onePlayer = createMockPlayers(1, { isPresent: true });
-
-      const { container } = render(
-        <ManualCourtSelection
-          players={onePlayer}
-          onSelectionChange={mockOnSelectionChange}
-          currentSelection={null}
-        />,
-      );
-
-      expect(container.firstChild).toBeNull();
-    });
-
-    it('shows collapsed state initially', () => {
+    it('renders when isOpen is true', () => {
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={null}
         />,
       );
 
-      expect(screen.queryByText('Select 2-4 players to play together')).not.toBeInTheDocument();
-      expect(screen.getByText('▶')).toBeInTheDocument();
+      expect(screen.getByTestId('manual-court-modal')).toBeInTheDocument();
+      expect(screen.getByText('Manual Court 1 Assignment')).toBeInTheDocument();
     });
 
-    it('expands when header is clicked', async () => {
-      const user = userEvent.setup();
+    it('shows description text', () => {
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={null}
         />,
       );
-
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
 
       expect(screen.getByText('Select 2-4 players to play together on Court 1. The rest will be assigned automatically.')).toBeInTheDocument();
-      expect(screen.getByText('▼')).toBeInTheDocument();
+    });
+  });
+
+  describe('Close functionality', () => {
+    it('calls onClose when overlay is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={null}
+        />,
+      );
+
+      const overlay = screen.getByTestId('manual-court-modal');
+      await act(async () => {
+        await user.click(overlay);
+      });
+
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('calls onClose when close button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={null}
+        />,
+      );
+
+      const closeButton = screen.getByRole('button', { name: '×' });
+      await act(async () => {
+        await user.click(closeButton);
+      });
+
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('calls onClose when Done button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={null}
+        />,
+      );
+
+      const doneButton = screen.getByText('Done');
+      await act(async () => {
+        await user.click(doneButton);
+      });
+
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it('does not close when clicking inside modal content', async () => {
+      const user = userEvent.setup();
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={null}
+        />,
+      );
+
+      const modalContent = screen.getByText('Manual Court 1 Assignment');
+      await act(async () => {
+        await user.click(modalContent);
+      });
+
+      expect(mockOnClose).not.toHaveBeenCalled();
     });
   });
 
   describe('Player Selection', () => {
-    const renderAndExpand = async () => {
-      const user = userEvent.setup();
+    it('shows all present players as selectable buttons', () => {
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={null}
         />,
       );
-
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
-
-      return user;
-    };
-
-    it('shows all present players as selectable buttons', async () => {
-      await renderAndExpand();
 
       mockPlayers.forEach(player => {
         expect(screen.getByTestId(`manual-court-player-${player.id}`)).toBeInTheDocument();
@@ -103,16 +161,33 @@ describe('ManualCourtSelection Component', () => {
       });
     });
 
-    it('shows selection count initially as 0/4', async () => {
-      await renderAndExpand();
+    it('shows selection count initially as 0/4', () => {
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={null}
+        />,
+      );
 
       expect(screen.getByText('0/4 players selected')).toBeInTheDocument();
     });
 
     it('selects a player when clicked', async () => {
-      const user = await renderAndExpand();
-      const firstPlayerButton = screen.getByTestId(`manual-court-player-${mockPlayers[0].id}`);
+      const user = userEvent.setup();
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={null}
+        />,
+      );
 
+      const firstPlayerButton = screen.getByTestId(`manual-court-player-${mockPlayers[0].id}`);
       await act(async () => {
         await user.click(firstPlayerButton);
       });
@@ -122,39 +197,32 @@ describe('ManualCourtSelection Component', () => {
       });
     });
 
-    it('shows correct selection count after selecting players', async () => {
-      const user = userEvent.setup();
-
+    it('shows correct selection count with selected players', () => {
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={{ players: [mockPlayers[0]] }}
         />,
       );
 
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
-
       expect(screen.getByText('1/4 players selected')).toBeInTheDocument();
     });
 
-    it('prevents selection of more than 4 players', async () => {
-      const user = userEvent.setup();
+    it('prevents selection of more than 4 players', () => {
       const selection = { players: mockPlayers.slice(0, 4) };
 
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={selection}
         />,
       );
-
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
 
       const fifthPlayerButton = screen.getByTestId(`manual-court-player-${mockPlayers[4].id}`);
       expect(fifthPlayerButton).toBeDisabled();
@@ -165,16 +233,14 @@ describe('ManualCourtSelection Component', () => {
       const selection = { players: [mockPlayers[0], mockPlayers[1]] };
 
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={selection}
         />,
       );
-
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
 
       await act(async () => {
         await user.click(screen.getByTestId(`manual-court-player-${mockPlayers[0].id}`));
@@ -187,68 +253,78 @@ describe('ManualCourtSelection Component', () => {
   });
 
   describe('Match Type Preview', () => {
-    const expandAndSelect = async (user: any, playerCount: number) => {
+    it('shows singles match preview for 2 players', () => {
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
-          currentSelection={{ players: mockPlayers.slice(0, playerCount) }}
+          currentSelection={{ players: mockPlayers.slice(0, 2) }}
         />,
       );
-
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
-    };
-
-    it('shows singles match preview for 2 players', async () => {
-      const user = userEvent.setup();
-      await expandAndSelect(user, 2);
 
       expect(screen.getByText('Will create: Singles match')).toBeInTheDocument();
     });
 
-    it('shows singles match with waiting preview for 3 players', async () => {
-      const user = userEvent.setup();
-      await expandAndSelect(user, 3);
+    it('shows singles match with waiting preview for 3 players', () => {
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={{ players: mockPlayers.slice(0, 3) }}
+        />,
+      );
 
       expect(screen.getByText('Will create: Singles match (1 waiting)')).toBeInTheDocument();
     });
 
-    it('shows doubles match preview for 4 players', async () => {
-      const user = userEvent.setup();
-      await expandAndSelect(user, 4);
+    it('shows doubles match preview for 4 players', () => {
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={{ players: mockPlayers.slice(0, 4) }}
+        />,
+      );
 
       expect(screen.getByText('Will create: Doubles match')).toBeInTheDocument();
     });
 
-    it('does not show preview for 1 player', async () => {
-      const user = userEvent.setup();
-      await expandAndSelect(user, 1);
+    it('does not show preview for 1 player', () => {
+      render(
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
+          players={mockPlayers}
+          onSelectionChange={mockOnSelectionChange}
+          currentSelection={{ players: [mockPlayers[0]] }}
+        />,
+      );
 
       expect(screen.queryByText(/Will create:/)).not.toBeInTheDocument();
     });
   });
 
   describe('Selected Players Display', () => {
-    it('shows selected players with tags', async () => {
-      const user = userEvent.setup();
+    it('shows selected players with tags', () => {
       const selection = { players: [mockPlayers[0], mockPlayers[1]] };
 
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={selection}
         />,
       );
 
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
-
       expect(screen.getByText('Selected for Court 1:')).toBeInTheDocument();
-      expect(screen.getByText(/Selected for Court 1:/)).toBeInTheDocument();
 
       const selectedPlayerTags = screen.getAllByText(mockPlayers[0].name);
       expect(selectedPlayerTags.length).toBeGreaterThan(0);
@@ -262,20 +338,18 @@ describe('ManualCourtSelection Component', () => {
       const selection = { players: [mockPlayers[0], mockPlayers[1]] };
 
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={selection}
         />,
       );
 
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
-
       const removeButtons = screen.getAllByText('×');
       await act(async () => {
-        await user.click(removeButtons[0]);
+        await user.click(removeButtons[1]);
       });
 
       expect(mockOnSelectionChange).toHaveBeenCalledWith({
@@ -288,16 +362,14 @@ describe('ManualCourtSelection Component', () => {
       const selection = { players: [mockPlayers[0], mockPlayers[1]] };
 
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={selection}
         />,
       );
-
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
 
       const clearButton = screen.getByTestId('clear-manual-selection');
       expect(clearButton).toBeInTheDocument();
@@ -312,72 +384,63 @@ describe('ManualCourtSelection Component', () => {
 
   describe('Player Filtering', () => {
     it('only shows present players', () => {
-      const mixedPlayers = [
-        ...createMockPlayers(3, { isPresent: true }),
-        ...createMockPlayers(2, { isPresent: false }),
-      ];
+      const presentPlayers = createMockPlayers(3, { isPresent: true });
+      const absentPlayers = createMockPlayers(2, { isPresent: false }).map((p, i) => ({
+        ...p,
+        id: `absent-${i}`,
+        name: `Absent Player ${i + 1}`,
+      }));
+      const mixedPlayers = [...presentPlayers, ...absentPlayers];
 
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mixedPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={null}
         />,
       );
 
-      expect(screen.getByTestId('manual-court-header')).toBeInTheDocument();
-    });
+      presentPlayers.forEach(player => {
+        expect(screen.getByTestId(`manual-court-player-${player.id}`)).toBeInTheDocument();
+      });
 
-    it('does not render when no present players meet minimum', () => {
-      const absentPlayers = createMockPlayers(5, { isPresent: false });
-
-      const { container } = render(
-        <ManualCourtSelection
-          players={absentPlayers}
-          onSelectionChange={mockOnSelectionChange}
-          currentSelection={null}
-        />,
-      );
-
-      expect(container.firstChild).toBeNull();
+      absentPlayers.forEach(player => {
+        expect(screen.queryByTestId(`manual-court-player-${player.id}`)).not.toBeInTheDocument();
+      });
     });
   });
 
   describe('Accessibility', () => {
-    it('has proper ARIA labels for player buttons', async () => {
-      const user = userEvent.setup();
+    it('has proper ARIA labels for player buttons', () => {
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={null}
         />,
       );
-
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
 
       const firstPlayerButton = screen.getByTestId(`manual-court-player-${mockPlayers[0].id}`);
       expect(firstPlayerButton).toHaveAttribute('aria-label',
         `Add ${mockPlayers[0].name} to manual court`);
     });
 
-    it('has proper ARIA labels for remove buttons', async () => {
-      const user = userEvent.setup();
+    it('has proper ARIA labels for remove buttons', () => {
       const selection = { players: [mockPlayers[0]] };
 
       render(
-        <ManualCourtSelection
+        <ManualCourtModal
+          isOpen={true}
+          onClose={mockOnClose}
           players={mockPlayers}
           onSelectionChange={mockOnSelectionChange}
           currentSelection={selection}
         />,
       );
-
-      await act(async () => {
-        await user.click(screen.getByTestId('manual-court-header'));
-      });
 
       const removeButton = screen.getByTitle('Remove from manual court');
       expect(removeButton).toHaveAttribute('aria-label',

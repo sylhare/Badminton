@@ -4,7 +4,7 @@ import {
   goToApp,
   addBulkPlayers,
   addSinglePlayer,
-  expandStepIfNeeded,
+  expandSectionIfNeeded,
   removeFirstPlayer,
   completeFullWorkflow,
   BULK_PLAYERS,
@@ -23,7 +23,8 @@ test.describe('Mixed Player Workflow', () => {
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('7');
 
-    await expandStepIfNeeded(page, 'Add Players');
+    // Section may be collapsed after adding players, expand if needed
+    await expandSectionIfNeeded(page, 'Manage Players');
 
     await addSinglePlayer(page, SINGLE_PLAYERS[0]);
     await addSinglePlayer(page, SINGLE_PLAYERS[1]);
@@ -58,7 +59,7 @@ test.describe('Mixed Player Workflow', () => {
 
     await addBulkPlayers(page, BULK_PLAYERS.slice(2, 5));
 
-    await expandStepIfNeeded(page, 'Add Players');
+    await expandSectionIfNeeded(page, 'Manage Players');
     await addSinglePlayer(page, SINGLE_PLAYERS[0]);
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('6');

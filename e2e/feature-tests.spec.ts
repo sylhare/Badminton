@@ -34,14 +34,13 @@ test.describe('Feature Tests', () => {
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('6');
 
-    const generateButton = page.getByTestId('generate-assignments-button');
-    await expect(generateButton).toBeVisible();
-    await generateButton.click();
+    const manualCourtButton = page.getByTestId('manual-court-button');
+    await expect(manualCourtButton).toBeVisible();
+    await manualCourtButton.click();
+    await page.waitForTimeout(300);
 
-    const manualCourtHeader = page.getByTestId('manual-court-header');
-    await expect(manualCourtHeader).toBeVisible();
-    await manualCourtHeader.click();
-    await page.waitForTimeout(500);
+    const modal = page.getByTestId('manual-court-modal');
+    await expect(modal).toBeVisible();
 
     const firstPlayer = page.locator('[data-testid^="manual-court-player-"]').first();
     await expect(firstPlayer).toBeVisible();
@@ -54,17 +53,17 @@ test.describe('Feature Tests', () => {
     await expect(page.locator('.selection-count')).toContainText('2/4 players selected');
     await expect(page.locator('.match-preview')).toContainText('Will create: Singles match');
 
-    const generateNewButton = page.getByTestId('generate-new-assignments-button');
-    await expect(generateNewButton).toBeVisible();
-    await generateNewButton.click();
+    await page.getByText('Done').click();
+    await page.waitForTimeout(200);
+
+    const generateButton = page.getByTestId('generate-assignments-button');
+    await expect(generateButton).toBeVisible();
+    await generateButton.click();
 
     await page.waitForTimeout(500);
     const court1 = page.getByTestId('court-1');
     await expect(court1).toBeVisible();
     await expect(court1.locator('.manual-court-icon')).toBeVisible();
-
-    await manualCourtHeader.click();
-    await page.waitForTimeout(500);
   });
 
   test.describe('Player removal modal', () => {
@@ -165,10 +164,20 @@ test.describe('Feature Tests', () => {
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
 
+    const courtInput = page.getByTestId('court-count-input');
+    await courtInput.evaluate((el: HTMLInputElement) => {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(el, '1');
+      }
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(100);
+
     const generateButton = page.getByTestId('generate-assignments-button');
     await generateButton.click();
 
-    await expect(page.locator('[data-testid^="court-"]')).toHaveCount(1);
+    await expect(page.locator('.court-card')).toHaveCount(1);
 
     const leaderboardBefore = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboardBefore).not.toBeVisible();
@@ -218,10 +227,20 @@ test.describe('Feature Tests', () => {
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
 
+    const courtInput = page.getByTestId('court-count-input');
+    await courtInput.evaluate((el: HTMLInputElement) => {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(el, '1');
+      }
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(100);
+
     const generateButton = page.getByTestId('generate-assignments-button');
     await generateButton.click();
 
-    await expect(page.locator('[data-testid^="court-"]')).toHaveCount(1);
+    await expect(page.locator('.court-card')).toHaveCount(1);
 
     const firstTeam = page.locator('.team-clickable').first();
     await firstTeam.click();
@@ -229,8 +248,8 @@ test.describe('Feature Tests', () => {
 
     await expect(page.locator('.crown')).toHaveCount(1);
 
-    const generateNewButton = page.getByTestId('generate-new-assignments-button');
-    await generateNewButton.click();
+    const regenerateButton = page.getByTestId('generate-assignments-button');
+    await regenerateButton.click();
 
     const leaderboard = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboard).toBeVisible();
@@ -253,11 +272,21 @@ test.describe('Feature Tests', () => {
 
     await addSinglePlayer(page, 'Second Player');
 
+    const newCourtInput = page.getByTestId('court-count-input');
+    await newCourtInput.evaluate((el: HTMLInputElement) => {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(el, '1');
+      }
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.waitForTimeout(100);
+
     const newGenerateButton = page.getByTestId('generate-assignments-button');
     await expect(newGenerateButton).toBeVisible();
     await newGenerateButton.click();
 
-    await expect(page.locator('[data-testid^="court-"]')).toHaveCount(1);
+    await expect(page.locator('.court-card')).toHaveCount(1);
   });
 
   test('Force bench players and verify bench count updates', async ({ page }) => {
@@ -273,7 +302,7 @@ test.describe('Feature Tests', () => {
     const generateButton = page.getByTestId('generate-assignments-button');
     await generateButton.click();
 
-    await expect(page.locator('[data-testid^="court-"]')).toHaveCount(2);
+    await expect(page.locator('.court-card')).toHaveCount(2);
 
     const benchSection = page.locator('.bench-section');
     await expect(benchSection).toBeVisible();
@@ -314,8 +343,8 @@ test.describe('Feature Tests', () => {
     await expect(aliceItem.locator('.toggle-switch')).toHaveClass(/active/);
     await expect(bobItem.locator('.toggle-switch')).toHaveClass(/active/);
 
-    const generateNewButton = page.getByTestId('generate-new-assignments-button');
-    await generateNewButton.click();
+    const regenerateButton = page.getByTestId('generate-assignments-button');
+    await regenerateButton.click();
     await page.waitForTimeout(500);
 
     const newBenchSection = page.locator('.bench-section');
@@ -344,9 +373,7 @@ test.describe('Feature Tests', () => {
     const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
     await addBulkPlayers(page, players);
 
-    const managePlayersStep = page.locator('.step').filter({ hasText: 'Manage Players' });
-    await managePlayersStep.click();
-    await page.waitForTimeout(200);
+    await expect(page.locator('.player-list')).toBeVisible();
 
     const playerBenchRows = page.locator('.player-bench-row');
     await expect(playerBenchRows.first()).toBeVisible();

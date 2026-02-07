@@ -9,15 +9,6 @@ export default defineConfig({
     setupFiles: './tests/setup.ts',
     maxWorkers: 2,
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false,
-        minThreads: 1,
-        maxThreads: 4,
-        useAtomics: true,
-      },
-    },
     fileParallelism: true,
     isolate: true,
     coverage: {
