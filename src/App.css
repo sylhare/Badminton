@@ -2246,6 +2246,7 @@ h1 {
 
 .app-footer p {
     margin: 0;
+    padding-bottom: 20px;
 }
 
 .app-footer a {

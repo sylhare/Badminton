@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import './App.css';
 import ManualPlayerEntry from './components/ManualPlayerEntry';
@@ -7,8 +7,8 @@ import { CourtAssignments } from './components/court';
 import Leaderboard from './components/Leaderboard';
 import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
 import { createPlayersFromNames } from './utils/playerUtils';
-import { saveAppState, loadAppState, clearAllStoredState } from './utils/storageUtils';
-import type { Player, Court, ManualCourtSelection, WinnerSelection } from './types';
+import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
+import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
 
 function App(): React.ReactElement {
   const loadedState = loadAppState();
@@ -27,11 +27,9 @@ function App(): React.ReactElement {
     CourtAssignmentEngine.loadState();
     isInitialLoad.current = false;
 
-    const unsubscribe = CourtAssignmentEngine.onStateChange(() => {
+    return CourtAssignmentEngine.onStateChange(() => {
       setEngineStateVersion(prev => prev + 1);
     });
-
-    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -109,7 +107,6 @@ function App(): React.ReactElement {
     }
 
     setAssignments(courts);
-    // Collapse manage players section after first assignment
     if (!isManagePlayersCollapsed) {
       setIsManagePlayersCollapsed(true);
     }
@@ -143,7 +140,6 @@ function App(): React.ReactElement {
   };
 
   const toggleManagePlayers = (event?: React.MouseEvent) => {
-    // Only toggle if clicking on the header, not its children (unless it's the header itself)
     if (event) {
       const target = event.target as HTMLElement;
       const isHeaderClick = target.closest('.section-header') !== null;
