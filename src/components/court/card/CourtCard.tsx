@@ -29,7 +29,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
 
     const newWinner = court.winner === teamNumber ? undefined : (teamNumber as 1 | 2);
 
-    // Trigger confetti for new winner
     if (court.winner !== teamNumber && newWinner !== undefined) {
       const { triggerConfetti } = await import('../../../utils/confetti');
       triggerConfetti(event.clientX, event.clientY, 30);
@@ -40,7 +39,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
 
   const { teams } = court;
 
-  // Court without teams
   if (!teams) {
     return (
       <div
@@ -56,7 +54,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
   const isSingles = teams.team1.length === 1 && teams.team2.length === 1;
   const isDoubles = teams.team1.length === 2 && teams.team2.length === 2;
 
-  // Singles match
   if (isSingles) {
     return (
       <div
@@ -81,7 +78,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
     );
   }
 
-  // Doubles match
   if (isDoubles) {
     return (
       <div
@@ -105,7 +101,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
     );
   }
 
-  // Generic court (mixed or other configurations)
   return (
     <div
       className={`court-card ${isAnimating ? 'animating-shake' : ''}`}
