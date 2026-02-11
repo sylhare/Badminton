@@ -311,9 +311,9 @@ function StatsPage(): React.ReactElement {
             </a>
 
             <a
-              href={`${basePath}analysis`}
+              href={`${basePath}engine`}
               className="notebook-card"
-              data-testid="analysis-link"
+              data-testid="engine-link"
             >
               <div className="notebook-icon">⚙️</div>
               <div className="notebook-content">
