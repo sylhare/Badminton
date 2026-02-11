@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "description": "📸 Snap, 🎲 Shuffle, 🏸 Play! The badminton organizer app that turns chaos into fair, fun matches. Upload your player list photo or add them manually to get perfectly balanced teams in seconds.",
   "type": "module",
+  "homepage": "https://sylhare.github.io/Badminton",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

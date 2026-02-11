@@ -10,7 +10,7 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <Router>
+      <Router basename={import.meta.env.BASE_URL || '/'}>
         <Routes>
           <Route path="/" element={<App />} />
           <Route path="/stats" element={<StatsPage />} />
