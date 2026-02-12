@@ -2,6 +2,7 @@ import React from 'react';
 
 import type { Court } from '../../../types';
 import { SinglesMatch, DoublesMatch, GenericCourtDisplay, NoTeamsDisplay } from '../display';
+import { triggerConfetti } from '../../../utils/confetti.ts';
 
 import CourtHeader from './CourtHeader';
 
@@ -30,7 +31,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
     const newWinner = court.winner === teamNumber ? undefined : (teamNumber as 1 | 2);
 
     if (court.winner !== teamNumber && newWinner !== undefined) {
-      const { triggerConfetti } = await import('../../../utils/confetti');
       triggerConfetti(event.clientX, event.clientY, 30);
     }
 
