@@ -21,18 +21,15 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
 
     if (!playerInput.trim()) return;
 
-    // Detect backticks for multi-player add
     const hasBackticks = playerInput.includes('`');
     let playerNames: string[];
 
     if (hasBackticks) {
-      // Split by backticks and filter empty entries
       playerNames = playerInput
         .split('`')
         .map(name => name.trim())
         .filter(name => name.length > 0);
     } else {
-      // Check if input contains commas or newlines for bulk add
       const hasSeparators = /[,\n]/.test(playerInput);
       if (hasSeparators) {
         playerNames = playerInput.split(/[,\n]+/);
@@ -54,7 +51,6 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
     onPlayersAdded(players);
   };
 
-  // Check if input suggests multiple players
   const isMultiInput = playerInput.includes('`') || /[,\n]/.test(playerInput);
   const getPlayerCount = (): number => {
     if (isMultiInput) {
