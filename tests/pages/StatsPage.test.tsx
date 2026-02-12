@@ -67,7 +67,7 @@ describe('StatsPage Component', () => {
 
     expect(screen.getByText('📓 Analysis Notebooks')).toBeInTheDocument();
     expect(screen.getByTestId('algorithm-link')).toBeInTheDocument();
-    expect(screen.getByTestId('analysis-link')).toBeInTheDocument();
+    expect(screen.getByTestId('engine-link')).toBeInTheDocument();
   });
 
   it('renders diagnostic sections when data exists', async () => {
