@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { CourtAssignmentEngine } from '../utils/CourtAssignmentEngine';
 import { loadAppState } from '../utils/storageUtils';
@@ -75,11 +75,9 @@ function StatsPage(): React.ReactElement {
       setPlayers(appState.players);
     }
 
-    const unsubscribe = CourtAssignmentEngine.onStateChange(() => {
+    return CourtAssignmentEngine.onStateChange(() => {
       setEngineState(CourtAssignmentEngine.prepareStateForSaving());
     });
-
-    return unsubscribe;
   }, []);
 
   const basePath = import.meta.env.BASE_URL || '/';
@@ -313,9 +311,9 @@ function StatsPage(): React.ReactElement {
             </a>
 
             <a
-              href={`${basePath}analysis`}
+              href={`${basePath}engine`}
               className="notebook-card"
-              data-testid="analysis-link"
+              data-testid="engine-link"
             >
               <div className="notebook-icon">⚙️</div>
               <div className="notebook-content">
