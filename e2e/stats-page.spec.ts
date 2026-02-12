@@ -60,9 +60,9 @@ test.describe('Stats Page', () => {
     test('displays engine comparison link', async ({ page }) => {
       await page.goto('/stats');
 
-      const analysisLink = page.getByTestId('analysis-link');
-      await expect(analysisLink).toBeVisible();
-      await expect(analysisLink).toContainText('Engine Comparison');
+      const engineLink = page.getByTestId('engine-link');
+      await expect(engineLink).toBeVisible();
+      await expect(engineLink).toContainText('Engine Comparison');
     });
   });
 
