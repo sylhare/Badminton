@@ -24,8 +24,8 @@
 
 import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine } from '../types';
 
-import { engineMC } from './CourtAssignmentEngine';
-import { engineSA } from './CourtAssignmentEngineSA';
+import { engineMC } from './MonteCarloEngine';
+import { engineSA } from './SimulatedAnnealingEngine';
 import { engineCG } from './ConflictGraphEngine';
 
 export type EngineType = 'sa' | 'mc' | 'cg';

@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 
-// Declare gtag function for TypeScript
 declare global {
   interface Window {
     gtag: (...args: any[]) => void;
@@ -24,7 +23,7 @@ export interface AnalyticsHook {
 
 export const useAnalytics = (): AnalyticsHook => {
   const trackEvent = useCallback((eventData: AnalyticsEvent) => {
-    // Check if gtag is available (it might not be in development or if blocked)
+    
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('event', eventData.action, {
         event_category: eventData.category,
@@ -34,7 +33,6 @@ export const useAnalytics = (): AnalyticsHook => {
     }
   }, []);
 
-  // Player-related events
   const trackPlayerAction = useCallback((action: string, details?: { method?: string; count?: number }) => {
     trackEvent({
       action,
@@ -44,7 +42,6 @@ export const useAnalytics = (): AnalyticsHook => {
     });
   }, [trackEvent]);
 
-  // Court-related events
   const trackCourtAction = useCallback((action: string, details?: { courtCount?: number }) => {
     trackEvent({
       action,
@@ -54,7 +51,6 @@ export const useAnalytics = (): AnalyticsHook => {
     });
   }, [trackEvent]);
 
-  // Game-related events
   const trackGameAction = useCallback((action: string, details?: { gameType?: string; courtNumber?: number }) => {
     trackEvent({
       action,
@@ -64,7 +60,6 @@ export const useAnalytics = (): AnalyticsHook => {
     });
   }, [trackEvent]);
 
-  // UI/Navigation events
   const trackUIAction = useCallback((action: string, details?: { section?: string }) => {
     trackEvent({
       action,

@@ -9,10 +9,10 @@ import {
   generateCourtAssignments,
   getBenchedPlayers,
   resetHistory,
-} from '../../src/utils/engineSelector';
-import { engineMC } from '../../src/utils/CourtAssignmentEngine';
-import { engineSA } from '../../src/utils/CourtAssignmentEngineSA';
-import { engineCG } from '../../src/utils/ConflictGraphEngine';
+} from '../../src/engines/engineSelector';
+import { engineMC } from '../../src/engines/MonteCarloEngine';
+import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
+import { engineCG } from '../../src/engines/ConflictGraphEngine';
 import type { Player } from '../../src/types';
 
 function mockPlayers(count: number): Player[] {

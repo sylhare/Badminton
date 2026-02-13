@@ -2,7 +2,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
-import { resetHistory } from '../src/utils/engineSelector';
+import { resetHistory } from '../src/engines/engineSelector';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {

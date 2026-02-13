@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { loadState, onStateChange, prepareStateForSaving } from '../utils/engineSelector';
+import { loadState, onStateChange, prepareStateForSaving } from '../engines/engineSelector';
 import { loadAppState } from '../utils/storageUtils';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
