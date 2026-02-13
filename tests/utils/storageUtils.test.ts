@@ -95,7 +95,7 @@ describe('StorageUtils', () => {
         players: mockPlayers,
         numberOfCourts: 4,
         assignments: [],
-        collapsedSteps: [1, 2], // Old format
+        collapsedSteps: [1, 2], 
         manualCourt: null,
       }));
 
@@ -109,7 +109,7 @@ describe('StorageUtils', () => {
         players: mockPlayers,
         numberOfCourts: 4,
         assignments: [],
-        collapsedSteps: [3, 4], // Old format without 1 or 2
+        collapsedSteps: [3, 4], 
         manualCourt: null,
       }));
 

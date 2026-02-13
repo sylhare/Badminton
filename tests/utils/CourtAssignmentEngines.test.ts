@@ -79,7 +79,6 @@ describe.each(engines)('$name – Core Behaviour', ({ name, engine }) => {
     const counts = Object.values(benchHistory);
     expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
 
-    // Verify getBenchCounts matches our local tracking
     const engineBenchCounts = engine.getBenchCounts();
     players.forEach(p => {
       expect(engineBenchCounts.get(p.id) || 0).toBe(benchHistory[p.id]);
@@ -649,7 +648,7 @@ describe.each(engines)('$name – Edge Cases', ({ engine }) => {
 
     expect(assignments.length).toBe(15);
     expect(assignments.every(c => c.players.length === 4)).toBe(true);
-    expect(duration).toBeLessThan(200); // 200ms is a safe upper bound for CI
+    expect(duration).toBeLessThan(200);
   });
 });
 

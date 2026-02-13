@@ -1,4 +1,4 @@
-// @vitest-environment node
+/// @vitest-environment node
 
 import fs from 'fs';
 import path from 'path';
@@ -17,41 +17,41 @@ const SAMPLES: Array<{
   expected: string[];
   minMatches: number;
 }> = [
-  {
-    filename: path.resolve(__dirname, '../../tests/data/names.png'),
-    expected: ['Tinley', 'Ella', 'Avrella', 'Yvette', 'Gabriela', 'Noella'],
-    minMatches: 4,
-  },
-  {
-    filename: path.resolve(__dirname, '../../tests/data/handwritten-names.png'),
-    expected: [
-      'Amy Thomas',
-      'Chelsea Cook',
-      'Joel Nylund',
-      'Kim Taylor',
-      'Lori Davis',
-      'Wendy Clark',
-    ],
-    minMatches: 0,
-  },
-];
+    {
+      filename: path.resolve(__dirname, '../../tests/data/names.png'),
+      expected: ['Tinley', 'Ella', 'Avrella', 'Yvette', 'Gabriela', 'Noella'],
+      minMatches: 4,
+    },
+    {
+      filename: path.resolve(__dirname, '../../tests/data/handwritten-names.png'),
+      expected: [
+        'Amy Thomas',
+        'Chelsea Cook',
+        'Joel Nylund',
+        'Kim Taylor',
+        'Lori Davis',
+        'Wendy Clark',
+      ],
+      minMatches: 0,
+    },
+  ];
 
 describe('OCR integration', () => {
   describe.each(SAMPLES)('sample %#', (sample) => {
     it(`should detect most expected names ${path.basename(sample.filename)}`, async () => {
-        const imgBuf = fs.readFileSync(sample.filename);
+      const imgBuf = fs.readFileSync(sample.filename);
 
-        const extracted = await recognizePlayerNames(imgBuf, { workerPath });
+      const extracted = await recognizePlayerNames(imgBuf, { workerPath });
 
-        const matches = sample.expected.filter((name) =>
-          extracted.some((e) =>
-            e.toLowerCase().includes(name.toLowerCase()) ||
-            name.toLowerCase().includes(e.toLowerCase()),
-          ),
-        );
+      const matches = sample.expected.filter((name) =>
+        extracted.some((e) =>
+          e.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(e.toLowerCase()),
+        ),
+      );
 
-        expect(matches.length).toBeGreaterThanOrEqual(sample.minMatches);
-      },
+      expect(matches.length).toBeGreaterThanOrEqual(sample.minMatches);
+    },
       60000,
     );
   });

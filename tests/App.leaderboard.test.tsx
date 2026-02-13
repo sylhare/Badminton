@@ -146,7 +146,7 @@ describe('App Leaderboard Persistence', () => {
 
       const winCounts = CourtAssignmentEngine.getWinCounts();
       const totalWins = Array.from(winCounts.values()).reduce((sum, wins) => sum + wins, 0);
-      expect(totalWins).toBe(2); // Only team 2 should have wins now
+      expect(totalWins).toBe(2); 
     });
 
     it('should handle changing winner on same court without duplicate counting in session', async () => {
