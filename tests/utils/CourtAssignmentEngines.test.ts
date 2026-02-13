@@ -4,25 +4,12 @@ import { CourtAssignmentEngine } from '../../src/utils/CourtAssignmentEngine';
 import { CourtAssignmentEngineSA } from '../../src/utils/CourtAssignmentEngineSA';
 import { ConflictGraphEngine } from '../../src/utils/ConflictGraphEngine';
 import type { ManualCourtSelection, Court, Player } from '../../src/types';
+import type { ICourtAssignmentEngine } from '../../src/utils/engineSelector';
 
-interface TestableEngine {
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[];
-  getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
-  resetHistory(): void;
-  clearCurrentSession(): void;
-  recordWins(courts: Court[]): void;
-  getWinCounts(): Map<string, number>;
-  updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];
-  saveState(): void;
-  loadState(): void;
-  prepareStateForSaving(): Record<string, unknown>;
-  onStateChange(listener: () => void): () => void;
-}
-
-const engines: Array<{ name: string; engine: TestableEngine }> = [
-  { name: 'Monte Carlo (MC)', engine: CourtAssignmentEngine },
-  { name: 'Simulated Annealing (SA)', engine: CourtAssignmentEngineSA },
-  { name: 'Conflict Graph (CG)', engine: ConflictGraphEngine },
+const engines: Array<{ name: string; engine: ICourtAssignmentEngine }> = [
+  { name: 'Monte Carlo (MC)', engine: CourtAssignmentEngine as unknown as ICourtAssignmentEngine },
+  { name: 'Simulated Annealing (SA)', engine: CourtAssignmentEngineSA as unknown as ICourtAssignmentEngine },
+  { name: 'Conflict Graph (CG)', engine: ConflictGraphEngine as unknown as ICourtAssignmentEngine },
 ];
 
 function mockPlayers(count: number): Player[] {
@@ -91,6 +78,22 @@ describe.each(engines)('$name – Core Behaviour', ({ name, engine }) => {
 
     const counts = Object.values(benchHistory);
     expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+
+    // Verify getBenchCounts matches our local tracking
+    const engineBenchCounts = engine.getBenchCounts();
+    players.forEach(p => {
+      expect(engineBenchCounts.get(p.id) || 0).toBe(benchHistory[p.id]);
+    });
+  });
+
+  it('getBenchCounts should return an empty map after resetHistory', () => {
+    const players = mockPlayers(12);
+    engine.generate(players, 2);
+
+    expect(engine.getBenchCounts().size).toBeGreaterThan(0);
+
+    engine.resetHistory();
+    expect(engine.getBenchCounts().size).toBe(0);
   });
 
   it('statistical check: teammate pairs are reasonably balanced over many rounds', () => {
@@ -237,6 +240,38 @@ describe.each(engines)('$name – Winner Tracking', ({ engine }) => {
 
     expect(winCounts1).not.toBe(winCounts2);
     expect(winCounts1.get('P0')).toBe(winCounts2.get('P0'));
+  });
+
+  it('should handle players with same name but different IDs', () => {
+    const players: Player[] = [
+      { id: 'A1', name: 'John', isPresent: true },
+      { id: 'A2', name: 'John', isPresent: true },
+      { id: 'B1', name: 'Jane', isPresent: true },
+      { id: 'B2', name: 'Jane', isPresent: true },
+    ];
+
+    const courts: Court[] = [createMockCourt(1, players, 1)];
+    engine.recordWins(courts);
+    const winCounts = engine.getWinCounts();
+
+    expect(winCounts.get('A1')).toBe(1);
+    expect(winCounts.get('A2')).toBe(1);
+    expect(winCounts.get('B1')).toBe(undefined);
+    expect(winCounts.get('B2')).toBe(undefined);
+  });
+
+  it('getWinCounts should maintain correct totals across multiple recordWins calls', () => {
+    const players = mockPlayers(4);
+    const court1: Court[] = [createMockCourt(1, players, 1)];
+    const court2: Court[] = [createMockCourt(1, players, 1)];
+
+    engine.recordWins(court1);
+    engine.clearCurrentSession();
+    engine.recordWins(court2);
+
+    const winCounts = engine.getWinCounts();
+    expect(winCounts.get('P0')).toBe(2);
+    expect(winCounts.get('P1')).toBe(2);
   });
 });
 
@@ -601,6 +636,20 @@ describe.each(engines)('$name – Edge Cases', ({ engine }) => {
 
     expect(assignments.length).toBe(15);
     expect(assignments.every(c => c.players.length === 4)).toBe(true);
+  });
+
+  it('should handle large player counts efficiently', () => {
+    const players = mockPlayers(60);
+    const startTime = performance.now();
+
+    const assignments = engine.generate(players, 15);
+
+    const endTime = performance.now();
+    const duration = endTime - startTime;
+
+    expect(assignments.length).toBe(15);
+    expect(assignments.every(c => c.players.length === 4)).toBe(true);
+    expect(duration).toBeLessThan(200); // 200ms is a safe upper bound for CI
   });
 });
 
