@@ -47,6 +47,7 @@ export interface ICourtAssignmentEngine {
   loadState(): void;
   recordWins(courts: Court[]): void;
   getWinCounts(): Map<string, number>;
+  getBenchCounts(): Map<string, number>;
   updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];
   reverseWinForCourt(courtNumber: number): void;
   onStateChange(listener: () => void): () => void;
@@ -187,6 +188,13 @@ export const recordWins = (courts: Court[]): void => {
  */
 export const getWinCounts = (): Map<string, number> => {
   return getEngine().getWinCounts();
+};
+
+/**
+ * Gets bench counts from the currently selected engine.
+ */
+export const getBenchCounts = (): Map<string, number> => {
+  return getEngine().getBenchCounts();
 };
 
 /**

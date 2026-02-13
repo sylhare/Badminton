@@ -131,7 +131,7 @@ export class ConflictGraphEngine {
 
   private static shouldReversePreviousRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }, currentWinner: 1 | 2, currentWinningPlayerIds: string[]): boolean {
     return !(previousRecord.winner === currentWinner &&
-             JSON.stringify(previousRecord.winningPlayers.sort()) === JSON.stringify(currentWinningPlayerIds.sort()));
+      JSON.stringify(previousRecord.winningPlayers.sort()) === JSON.stringify(currentWinningPlayerIds.sort()));
   }
 
   private static reversePreviousWinRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }): void {
@@ -224,6 +224,10 @@ export class ConflictGraphEngine {
 
   static getWinCounts(): Map<string, number> {
     return new Map(this.winCountMap);
+  }
+
+  static getBenchCounts(): Map<string, number> {
+    return new Map(this.benchCountMap);
   }
 
   // ============== Core Conflict Graph Algorithm ==============
