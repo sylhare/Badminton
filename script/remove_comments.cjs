@@ -1,20 +1,36 @@
-// How to run this script:
-// From project root: node script/remove_comments.cjs
-// Or from script directory: node remove_comments.cjs
-//
-// This script removes all line (//) and block (/* */) comments from code files.
-// By default it targets the `tests/` directory, but you can pass other directories as CLI arguments.
+/**
+ * This script removes regular line (//) and block (/* *\/) comments from code files.
+ * It preserves triple-slash directives (///) and JSDoc (/** *\/).
+ * 
+ * How to run:
+ * From project root: node script/remove_comments.cjs [directories...]
+ * Default targets: ./tests
+ */
 
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Removes comments from the provided content string.
+ * @param {string} content - The code content to clean.
+ * @returns {string} The cleaned content.
+ */
 function removeComments(content) {
-    content = content.replace(/^(\s*)\/\/.*$/gm, '');
-    content = content.replace(/\/\*[\s\S]*?\*\//g, '');
+    content = content.replace(/(\/\*\*[\s\S]*?\*\/)|(\/\*(?!\*)[\s\S]*?\*\/)/g, (match, jsdoc) => {
+        return jsdoc ? jsdoc : "";
+    });
+
+    content = content.replace(/(\/\*\*[\s\S]*?\*\/|\/\/\/|[a-z]+:\/\/)|(\/\/[^/].*|\/\/$)/g, (match, preserve) => {
+        return preserve ? preserve : "";
+    });
+
     content = content.replace(/\n\s*\n\s*\n/g, '\n\n');
     return content;
 }
 
+/**
+ * Processes a single file to remove comments.
+ */
 function processFile(filePath) {
     try {
         const content = fs.readFileSync(filePath, 'utf8');
@@ -29,6 +45,9 @@ function processFile(filePath) {
     }
 }
 
+/**
+ * Recursively walks a directory to find and process files.
+ */
 function walkDirectory(dir, extensions = ['.ts', '.tsx', '.js', '.jsx']) {
     const files = fs.readdirSync(dir);
 
@@ -44,15 +63,24 @@ function walkDirectory(dir, extensions = ['.ts', '.tsx', '.js', '.jsx']) {
     }
 }
 
-// Determine which directories to process:
-// Pass directories as CLI args, e.g. `node remove_comments.cjs src tests`.
-// If none supplied, we default to just the tests directory.
+/** Main execution block */
 const directories = process.argv.slice(2);
 if (directories.length === 0) {
     directories.push('./tests');
 }
 
 console.log(`Removing comments from: ${directories.join(', ')}`);
-directories.forEach(dir => walkDirectory(dir));
+directories.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        console.warn(`Path does not exist: ${dir}`);
+        return;
+    }
+    const stat = fs.statSync(dir);
+    if (stat.isDirectory()) {
+        walkDirectory(dir);
+    } else if (stat.isFile()) {
+        processFile(dir);
+    }
+});
 
-console.log('Comment removal complete!'); 
+console.log('Comment removal complete!');
