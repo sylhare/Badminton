@@ -1,15 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CourtAssignmentEngine } from '../../src/utils/CourtAssignmentEngine';
-import { CourtAssignmentEngineSA } from '../../src/utils/CourtAssignmentEngineSA';
-import { ConflictGraphEngine } from '../../src/utils/ConflictGraphEngine';
-import type { ManualCourtSelection, Court, Player } from '../../src/types';
-import type { ICourtAssignmentEngine } from '../../src/utils/engineSelector';
+import { engineMC } from '../../src/utils/CourtAssignmentEngine';
+import { engineSA } from '../../src/utils/CourtAssignmentEngineSA';
+import { engineCG } from '../../src/utils/ConflictGraphEngine';
+import type { ManualCourtSelection, Court, Player, ICourtAssignmentEngine } from '../../src/types';
 
 const engines: Array<{ name: string; engine: ICourtAssignmentEngine }> = [
-  { name: 'Monte Carlo (MC)', engine: CourtAssignmentEngine as unknown as ICourtAssignmentEngine },
-  { name: 'Simulated Annealing (SA)', engine: CourtAssignmentEngineSA as unknown as ICourtAssignmentEngine },
-  { name: 'Conflict Graph (CG)', engine: ConflictGraphEngine as unknown as ICourtAssignmentEngine },
+  { name: 'Monte Carlo (MC)', engine: engineMC },
+  { name: 'Simulated Annealing (SA)', engine: engineSA },
+  { name: 'Conflict Graph (CG)', engine: engineCG },
 ];
 
 function mockPlayers(count: number): Player[] {

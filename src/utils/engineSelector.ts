@@ -22,11 +22,11 @@
  * ```
  */
 
-import type { Court, Player, ManualCourtSelection, CourtEngineState } from '../types';
+import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine } from '../types';
 
-import { CourtAssignmentEngine } from './CourtAssignmentEngine';
-import { CourtAssignmentEngineSA } from './CourtAssignmentEngineSA';
-import { ConflictGraphEngine } from './ConflictGraphEngine';
+import { engineMC } from './CourtAssignmentEngine';
+import { engineSA } from './CourtAssignmentEngineSA';
+import { engineCG } from './ConflictGraphEngine';
 
 export type EngineType = 'sa' | 'mc' | 'cg';
 
@@ -34,44 +34,22 @@ export type EngineType = 'sa' | 'mc' | 'cg';
 let currentEngineType: EngineType = 'sa';
 
 /**
- * Engine interface that all court assignment engines must implement.
- * This ensures all engines are drop-in replacements.
+ * Gets the engine instance for the specified type.
  */
-export interface ICourtAssignmentEngine {
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[];
-  getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
-  resetHistory(): void;
-  clearCurrentSession(): void;
-  prepareStateForSaving(): CourtEngineState;
-  saveState(): void;
-  loadState(): void;
-  recordWins(courts: Court[]): void;
-  getWinCounts(): Map<string, number>;
-  getBenchCounts(): Map<string, number>;
-  updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];
-  reverseWinForCourt(courtNumber: number): void;
-  onStateChange(listener: () => void): () => void;
-}
-
-/**
- * Gets the engine class for the specified type.
- */
-const getEngineClass = (type: EngineType): typeof CourtAssignmentEngine | typeof CourtAssignmentEngineSA | typeof ConflictGraphEngine => {
+const getEngineInstance = (type: EngineType): ICourtAssignmentEngine => {
   switch (type) {
     case 'cg':
-      return ConflictGraphEngine;
+      return engineCG;
     case 'mc':
-      return CourtAssignmentEngine;
+      return engineMC;
     case 'sa':
     default:
-      return CourtAssignmentEngineSA;
+      return engineSA;
   }
 };
 
 /**
  * Sets the active court assignment engine.
- * Note: Changing engines does NOT transfer state between them.
- * You should call loadState() on the new engine if you want to restore saved state.
  */
 export const setEngine = (type: EngineType): void => {
   currentEngineType = type;
@@ -83,10 +61,10 @@ export const setEngine = (type: EngineType): void => {
 export const getEngineType = (): EngineType => currentEngineType;
 
 /**
- * Gets the currently active engine class.
+ * Gets the currently active engine instance.
  */
-export const getEngine = (): typeof CourtAssignmentEngine | typeof CourtAssignmentEngineSA | typeof ConflictGraphEngine => {
-  return getEngineClass(currentEngineType);
+export const getEngine = (): ICourtAssignmentEngine => {
+  return getEngineInstance(currentEngineType);
 };
 
 /**

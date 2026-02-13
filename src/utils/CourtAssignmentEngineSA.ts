@@ -1,4 +1,4 @@
-import type { Court, Player, ManualCourtSelection, CourtEngineState } from '../types';
+import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine } from '../types';
 
 import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 
@@ -12,71 +12,42 @@ import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
  * designed to provide stronger guarantees against teammate/opponent repetition than
  * the Monte Carlo approach. SA can escape local minima and explore the solution space
  * more effectively.
- *
- * ## Key Differences from Monte Carlo:
- * - **Iterative Improvement**: Builds on previous solutions rather than independent samples
- * - **Accepts Worse Solutions**: Probabilistically accepts worse solutions to escape local minima
- * - **Temperature Schedule**: Gradually reduces acceptance probability of worse solutions
- * - **Hard Constraints**: Uses very high penalties for repetitions, effectively making them forbidden
- *
- * ## Algorithm Overview:
- * 1. Generate an initial random assignment
- * 2. Iteratively perturb the solution (swap players between courts/teams)
- * 3. Accept improvements always; accept worse solutions with probability e^(-Δ/T)
- * 4. Gradually reduce temperature T (cooling schedule)
- * 5. Return best solution found
- *
- * ## Cost Function:
- * - **Hard Penalty**: Repeated teammates get massive penalty (effectively forbidden)
- * - **Soft Penalties**: Opponent repetition, skill balance, skill pairing
- *
- * ## Performance:
- * - Iterations: 5000 (configurable)
- * - Perturbations per iteration: 1 (single swap)
- * - Time complexity: O(iterations × perturbation_cost) ≈ O(5000 × n)
  */
-export class CourtAssignmentEngineSA {
+export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
   /** Tracks how many times each player has been benched across all sessions */
-  private static benchCountMap: Map<string, number> = new Map();
+  private benchCountMap: Map<string, number> = new Map();
   /** Tracks how many times each player has played singles matches across all sessions */
-  private static singleCountMap: Map<string, number> = new Map();
+  private singleCountMap: Map<string, number> = new Map();
   /** Tracks pairwise teammate frequency to encourage variety */
-  private static teammateCountMap: Map<string, number> = new Map();
+  private teammateCountMap: Map<string, number> = new Map();
   /** Tracks pairwise opponent frequency to encourage variety */
-  private static opponentCountMap: Map<string, number> = new Map();
+  private opponentCountMap: Map<string, number> = new Map();
   /** Tracks total wins per player for skill-based team balancing */
-  private static winCountMap: Map<string, number> = new Map();
+  private winCountMap: Map<string, number> = new Map();
   /** Tracks total losses per player for skill-based team balancing */
-  private static lossCountMap: Map<string, number> = new Map();
+  private lossCountMap: Map<string, number> = new Map();
   /** Tracks recorded match outcomes for the current session */
-  private static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
+  private recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
   /** Observer pattern listeners for state change notifications */
-  private static stateChangeListeners: Array<() => void> = [];
+  private stateChangeListeners: Array<() => void> = [];
 
   // ============== SA Configuration ==============
-  /** Number of SA iterations */
-  private static readonly SA_ITERATIONS = 5000;
-  /** Initial temperature (higher = more exploration) */
-  private static readonly INITIAL_TEMPERATURE = 100.0;
-  /** Cooling rate (closer to 1 = slower cooling, more exploration) */
-  private static readonly COOLING_RATE = 0.9995;
-  /** Minimum temperature (stop accepting worse solutions below this) */
-  private static readonly MIN_TEMPERATURE = 0.1;
+  private readonly SA_ITERATIONS = 5000;
+  private readonly INITIAL_TEMPERATURE = 100.0;
+  private readonly COOLING_RATE = 0.9995;
+  private readonly MIN_TEMPERATURE = 0.1;
 
   // ============== Cost Weights ==============
-  /** Penalty for repeated teammates (very high = hard constraint) */
-  private static readonly TEAMMATE_REPEAT_PENALTY = 10000;
-  /** Penalty multiplier for opponent repetition */
-  private static readonly OPPONENT_REPEAT_PENALTY = 50;
-  /** Penalty for skill pairing (high-win with high-win) */
-  private static readonly SKILL_PAIR_PENALTY = 1;
-  /** Penalty for team imbalance */
-  private static readonly BALANCE_PENALTY = 2;
+  private readonly TEAMMATE_REPEAT_PENALTY = 10000;
+  private readonly OPPONENT_REPEAT_PENALTY = 50;
+  private readonly SKILL_PAIR_PENALTY = 1;
+  private readonly BALANCE_PENALTY = 2;
+  private readonly SINGLES_REPEAT_PENALTY = 100;
 
   /**
    * Subscribes to state changes in the engine (Observer pattern).
    */
-  static onStateChange(listener: () => void): () => void {
+  onStateChange(listener: () => void): () => void {
     this.stateChangeListeners.push(listener);
     return () => {
       const index = this.stateChangeListeners.indexOf(listener);
@@ -86,11 +57,11 @@ export class CourtAssignmentEngineSA {
     };
   }
 
-  private static notifyStateChange(): void {
+  private notifyStateChange(): void {
     this.stateChangeListeners.forEach(listener => listener());
   }
 
-  static resetHistory(): void {
+  resetHistory(): void {
     this.benchCountMap.clear();
     this.singleCountMap.clear();
     this.teammateCountMap.clear();
@@ -101,11 +72,11 @@ export class CourtAssignmentEngineSA {
     this.notifyStateChange();
   }
 
-  static clearCurrentSession(): void {
+  clearCurrentSession(): void {
     this.recordedWinsMap.clear();
   }
 
-  static prepareStateForSaving(): CourtEngineState {
+  prepareStateForSaving(): CourtEngineState {
     return {
       benchCountMap: Object.fromEntries(this.benchCountMap),
       singleCountMap: Object.fromEntries(this.singleCountMap),
@@ -116,11 +87,11 @@ export class CourtAssignmentEngineSA {
     };
   }
 
-  static saveState(): void {
+  saveState(): void {
     saveCourtEngineState(this.prepareStateForSaving());
   }
 
-  static loadState(): void {
+  loadState(): void {
     const state = loadCourtEngineState();
 
     if (state.benchCountMap) {
@@ -143,12 +114,12 @@ export class CourtAssignmentEngineSA {
     }
   }
 
-  private static shouldReversePreviousRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }, currentWinner: 1 | 2, currentWinningPlayerIds: string[]): boolean {
+  private shouldReversePreviousRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }, currentWinner: 1 | 2, currentWinningPlayerIds: string[]): boolean {
     return !(previousRecord.winner === currentWinner &&
       JSON.stringify(previousRecord.winningPlayers.sort()) === JSON.stringify(currentWinningPlayerIds.sort()));
   }
 
-  private static reversePreviousWinRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }): void {
+  private reversePreviousWinRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }): void {
     previousRecord.winningPlayers.forEach(playerId => {
       const currentWins = this.winCountMap.get(playerId) || 0;
       if (currentWins > 0) {
@@ -164,7 +135,7 @@ export class CourtAssignmentEngineSA {
     });
   }
 
-  static reverseWinForCourt(courtNumber: number): void {
+  reverseWinForCourt(courtNumber: number): void {
     const previousRecord = this.recordedWinsMap.get(courtNumber);
     if (previousRecord) {
       this.reversePreviousWinRecord(previousRecord);
@@ -173,7 +144,7 @@ export class CourtAssignmentEngineSA {
     }
   }
 
-  static updateWinner(
+  updateWinner(
     courtNumber: number,
     winner: 1 | 2 | undefined,
     currentAssignments: Court[],
@@ -197,7 +168,7 @@ export class CourtAssignmentEngineSA {
     return updatedAssignments;
   }
 
-  static recordWins(courts: Court[]): void {
+  recordWins(courts: Court[]): void {
     let stateChanged = false;
     courts.forEach(court => {
       if (court.winner && court.teams) {
@@ -236,25 +207,17 @@ export class CourtAssignmentEngineSA {
     }
   }
 
-  static getWinCounts(): Map<string, number> {
+  getWinCounts(): Map<string, number> {
     return new Map(this.winCountMap);
   }
 
-  static getBenchCounts(): Map<string, number> {
+  getBenchCounts(): Map<string, number> {
     return new Map(this.benchCountMap);
   }
 
   // ============== Core SA Algorithm ==============
 
-  /**
-   * Generates optimal court assignments using Simulated Annealing.
-   *
-   * @param players - Array of all players (present and absent)
-   * @param numberOfCourts - Number of courts available
-   * @param manualSelection - Optional manual court selection for specific players
-   * @returns Array of court assignments with teams and players
-   */
-  static generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
@@ -325,7 +288,7 @@ export class CourtAssignmentEngineSA {
   /**
    * Core Simulated Annealing algorithm.
    */
-  private static runSimulatedAnnealing(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
+  private runSimulatedAnnealing(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     if (players.length < 2) return [];
 
     // Generate initial solution
@@ -365,7 +328,7 @@ export class CourtAssignmentEngineSA {
   /**
    * Generates an initial random solution for SA to improve upon.
    */
-  private static generateInitialSolution(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
+  private generateInitialSolution(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     const courts: Court[] = [];
     const shuffled = this.shuffleArray([...players]);
 
@@ -393,7 +356,7 @@ export class CourtAssignmentEngineSA {
   /**
    * Creates teams for a court, trying all 3 splits and picking the best.
    */
-  private static createTeams(players: Player[]): Court['teams'] {
+  private createTeams(players: Player[]): Court['teams'] {
     if (players.length === 4) {
       return this.chooseBestTeamSplit(players).teams;
     } else if (players.length === 2) {
@@ -404,13 +367,8 @@ export class CourtAssignmentEngineSA {
 
   /**
    * Perturbs the current solution by making a small random change.
-   *
-   * Perturbation strategies:
-   * 1. Swap two players between different courts
-   * 2. Swap two players within same court (changes teams)
-   * 3. Re-split teams on a single court
    */
-  private static perturbSolution(courts: Court[]): Court[] {
+  private perturbSolution(courts: Court[]): Court[] {
     const newCourts = this.cloneCourts(courts);
 
     if (newCourts.length === 0) return newCourts;
@@ -434,7 +392,7 @@ export class CourtAssignmentEngineSA {
   /**
    * Swaps one player from court A with one player from court B.
    */
-  private static swapPlayersBetweenCourts(courts: Court[]): void {
+  private swapPlayersBetweenCourts(courts: Court[]): void {
     if (courts.length < 2) return;
 
     const courtA = Math.floor(Math.random() * courts.length);
@@ -464,7 +422,7 @@ export class CourtAssignmentEngineSA {
   /**
    * Re-randomizes and re-splits teams on a single court.
    */
-  private static resplitCourtTeams(courts: Court[]): void {
+  private resplitCourtTeams(courts: Court[]): void {
     const courtIdx = Math.floor(Math.random() * courts.length);
     const court = courts[courtIdx];
 
@@ -478,7 +436,7 @@ export class CourtAssignmentEngineSA {
   /**
    * Swaps two players within the same court (changes team composition).
    */
-  private static swapWithinCourt(courts: Court[]): void {
+  private swapWithinCourt(courts: Court[]): void {
     const courtIdx = Math.floor(Math.random() * courts.length);
     const court = courts[courtIdx];
 
@@ -499,7 +457,7 @@ export class CourtAssignmentEngineSA {
   /**
    * Deep clones court array for SA iteration.
    */
-  private static cloneCourts(courts: Court[]): Court[] {
+  private cloneCourts(courts: Court[]): Court[] {
     return courts.map(court => ({
       courtNumber: court.courtNumber,
       players: [...court.players],
@@ -511,33 +469,25 @@ export class CourtAssignmentEngineSA {
     }));
   }
 
-  /**
-   * Evaluates total cost of an assignment.
-   * Uses HARD penalties for teammate repetition.
-   */
-  /** Penalty for repeated singles play (high to ensure fair rotation) */
-  private static readonly SINGLES_REPEAT_PENALTY = 100;
-
-  private static evaluateTotalCost(courts: Court[]): number {
+  private evaluateTotalCost(courts: Court[]): number {
     let totalCost = 0;
 
     for (const court of courts) {
       if (!court.teams) continue;
 
-      // === SINGLES REPETITION (ensure fair singles rotation) ===
+      // === SINGLES REPETITION ===
       if (court.players.length === 2) {
         const player1SinglesCount = this.singleCountMap.get(court.players[0].id) ?? 0;
         const player2SinglesCount = this.singleCountMap.get(court.players[1].id) ?? 0;
         totalCost += (player1SinglesCount + player2SinglesCount) * this.SINGLES_REPEAT_PENALTY;
       }
 
-      // === TEAMMATE REPETITION (HARD CONSTRAINT) ===
+      // === TEAMMATE REPETITION ===
       const addTeammateCost = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
             const count = this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0;
             if (count > 0) {
-              // Hard penalty: heavily discourage any repetition
               totalCost += this.TEAMMATE_REPEAT_PENALTY * count;
             }
           }
@@ -547,7 +497,7 @@ export class CourtAssignmentEngineSA {
       addTeammateCost(court.teams.team1);
       addTeammateCost(court.teams.team2);
 
-      // === OPPONENT REPETITION (SOFT CONSTRAINT) ===
+      // === OPPONENT REPETITION ===
       court.teams.team1.forEach(a => {
         court.teams!.team2.forEach(b => {
           const count = this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
@@ -585,22 +535,20 @@ export class CourtAssignmentEngineSA {
     return totalCost;
   }
 
-  // ============== Helper Methods ==============
-
-  static getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
+  getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
     const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
     return players.filter(p => p.isPresent && !assignedIds.has(p.id));
   }
 
-  private static pairKey(a: string, b: string): string {
+  private pairKey(a: string, b: string): string {
     return a < b ? `${a}|${b}` : `${b}|${a}`;
   }
 
-  private static incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
+  private incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
     map.set(key, (map.get(key) ?? 0) + inc);
   }
 
-  private static shuffleArray<T>(array: T[]): T[] {
+  private shuffleArray<T>(array: T[]): T[] {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       const temp = array[i];
@@ -610,7 +558,7 @@ export class CourtAssignmentEngineSA {
     return array;
   }
 
-  private static selectBenchedPlayers(players: Player[], benchSpots: number): Player[] {
+  private selectBenchedPlayers(players: Player[], benchSpots: number): Player[] {
     if (benchSpots <= 0) return [];
 
     players.forEach(p => {
@@ -623,7 +571,7 @@ export class CourtAssignmentEngineSA {
     }).slice(0, benchSpots);
   }
 
-  private static chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
+  private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
     const splits: Array<[[number, number], [number, number]]> = [
       [[0, 1], [2, 3]],
       [[0, 2], [1, 3]],
@@ -646,10 +594,7 @@ export class CourtAssignmentEngineSA {
     return { teams: bestTeams, cost: bestCost };
   }
 
-  /**
-   * Evaluates cost of a specific team split (used during team selection).
-   */
-  private static evaluateSplitCost(team1: Player[], team2: Player[]): number {
+  private evaluateSplitCost(team1: Player[], team2: Player[]): number {
     let cost = 0;
 
     // Teammate repetition
@@ -678,7 +623,7 @@ export class CourtAssignmentEngineSA {
     return cost;
   }
 
-  private static createManualCourt(players: Player[], courtNumber: number): Court {
+  private createManualCourt(players: Player[], courtNumber: number): Court {
     const court: Court = {
       courtNumber,
       players: [...players],
@@ -702,12 +647,7 @@ export class CourtAssignmentEngineSA {
     return court;
   }
 
-  // ============== Debug/Analysis Methods ==============
-
-  /**
-   * Returns statistics about the current state (useful for analysis).
-   */
-  static getStats(): {
+  getStats(): {
     totalTeammatePairs: number;
     maxTeammateCount: number;
     avgTeammateCount: number;
@@ -729,10 +669,5 @@ export class CourtAssignmentEngineSA {
   }
 }
 
-/** Wrapper function for generating court assignments with SA. */
-export const generateCourtAssignmentsSA = (players: Player[], courts: number, manualCourt?: ManualCourtSelection): Court[] =>
-  CourtAssignmentEngineSA.generate(players, courts, manualCourt);
-
-/** Wrapper function for getting benched players. */
-export const getBenchedPlayersSA = (assignments: Court[], players: Player[]): Player[] =>
-  CourtAssignmentEngineSA.getBenchedPlayers(assignments, players);
+/** Singleton instance of the SA engine. */
+export const engineSA = new CourtAssignmentEngineSA();

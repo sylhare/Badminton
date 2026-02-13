@@ -10,9 +10,9 @@ import {
   getBenchedPlayers,
   resetHistory,
 } from '../../src/utils/engineSelector';
-import { CourtAssignmentEngine } from '../../src/utils/CourtAssignmentEngine';
-import { CourtAssignmentEngineSA } from '../../src/utils/CourtAssignmentEngineSA';
-import { ConflictGraphEngine } from '../../src/utils/ConflictGraphEngine';
+import { engineMC } from '../../src/utils/CourtAssignmentEngine';
+import { engineSA } from '../../src/utils/CourtAssignmentEngineSA';
+import { engineCG } from '../../src/utils/ConflictGraphEngine';
 import type { Player } from '../../src/types';
 
 function mockPlayers(count: number): Player[] {
@@ -25,36 +25,35 @@ function mockPlayers(count: number): Player[] {
 
 describe('Engine Selector', () => {
   beforeEach(() => {
-
     setEngine('sa');
-    CourtAssignmentEngine.resetHistory();
-    CourtAssignmentEngineSA.resetHistory();
-    ConflictGraphEngine.resetHistory();
+    engineMC.resetHistory();
+    engineSA.resetHistory();
+    engineCG.resetHistory();
   });
 
   describe('Engine Selection', () => {
     it('should default to Simulated Annealing engine', () => {
       expect(getEngineType()).toBe('sa');
-      expect(getEngine()).toBe(CourtAssignmentEngineSA);
+      expect(getEngine()).toBe(engineSA);
     });
 
     it('should switch to Monte Carlo engine', () => {
       setEngine('mc');
       expect(getEngineType()).toBe('mc');
-      expect(getEngine()).toBe(CourtAssignmentEngine);
+      expect(getEngine()).toBe(engineMC);
     });
 
     it('should switch to Conflict Graph engine', () => {
       setEngine('cg');
       expect(getEngineType()).toBe('cg');
-      expect(getEngine()).toBe(ConflictGraphEngine);
+      expect(getEngine()).toBe(engineCG);
     });
 
     it('should switch back to Simulated Annealing engine', () => {
       setEngine('cg');
       setEngine('sa');
       expect(getEngineType()).toBe('sa');
-      expect(getEngine()).toBe(CourtAssignmentEngineSA);
+      expect(getEngine()).toBe(engineSA);
     });
   });
 
@@ -173,7 +172,7 @@ describe('Engine Selector', () => {
       const players = mockPlayers(12);
 
       setEngine('sa');
-      CourtAssignmentEngineSA.resetHistory();
+      engineSA.resetHistory();
       const saAssignments = generateCourtAssignments(players, 3);
 
       expect(saAssignments).toHaveLength(3);
@@ -181,7 +180,7 @@ describe('Engine Selector', () => {
       expect(saAssignments.every(c => c.players.length === 4)).toBe(true);
 
       setEngine('mc');
-      CourtAssignmentEngine.resetHistory();
+      engineMC.resetHistory();
       const mcAssignments = generateCourtAssignments(players, 3);
 
       expect(mcAssignments).toHaveLength(3);
@@ -189,7 +188,7 @@ describe('Engine Selector', () => {
       expect(mcAssignments.every(c => c.players.length === 4)).toBe(true);
 
       setEngine('cg');
-      ConflictGraphEngine.resetHistory();
+      engineCG.resetHistory();
       const cgAssignments = generateCourtAssignments(players, 3);
 
       expect(cgAssignments).toHaveLength(3);
@@ -201,17 +200,17 @@ describe('Engine Selector', () => {
       const players = mockPlayers(5);
 
       setEngine('sa');
-      CourtAssignmentEngineSA.resetHistory();
+      engineSA.resetHistory();
       const saAssignments = generateCourtAssignments(players, 2);
       const saBenched = getBenchedPlayers(saAssignments, players);
 
       setEngine('mc');
-      CourtAssignmentEngine.resetHistory();
+      engineMC.resetHistory();
       const mcAssignments = generateCourtAssignments(players, 2);
       const mcBenched = getBenchedPlayers(mcAssignments, players);
 
       setEngine('cg');
-      ConflictGraphEngine.resetHistory();
+      engineCG.resetHistory();
       const cgAssignments = generateCourtAssignments(players, 2);
       const cgBenched = getBenchedPlayers(cgAssignments, players);
 
