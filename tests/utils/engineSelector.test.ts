@@ -4,8 +4,6 @@ import {
   setEngine,
   engine,
   getEngineType,
-  getEngineName,
-  getEngineDescription,
 } from '../../src/engines/engineSelector';
 import { engineMC } from '../../src/engines/MonteCarloEngine';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
@@ -57,36 +55,36 @@ describe('Engine Selector', () => {
   describe('Engine Names and Descriptions', () => {
     it('should return correct name for Simulated Annealing', () => {
       setEngine('sa');
-      expect(getEngineName()).toBe('Simulated Annealing');
+      expect(engine().getName()).toBe('Simulated Annealing');
     });
 
     it('should return correct name for Monte Carlo', () => {
       setEngine('mc');
-      expect(getEngineName()).toBe('Monte Carlo');
+      expect(engine().getName()).toBe('Monte Carlo');
     });
 
     it('should return correct name for Conflict Graph', () => {
       setEngine('cg');
-      expect(getEngineName()).toBe('Conflict Graph');
+      expect(engine().getName()).toBe('Conflict Graph');
     });
 
     it('should return description for Simulated Annealing', () => {
       setEngine('sa');
-      const desc = getEngineDescription();
+      const desc = engine().getDescription();
       expect(desc).toContain('Simulated Annealing');
       expect(desc).toContain('5000');
     });
 
     it('should return description for Monte Carlo', () => {
       setEngine('mc');
-      const desc = getEngineDescription();
+      const desc = engine().getDescription();
       expect(desc).toContain('Monte Carlo');
       expect(desc).toContain('300');
     });
 
     it('should return description for Conflict Graph', () => {
       setEngine('cg');
-      const desc = getEngineDescription();
+      const desc = engine().getDescription();
       expect(desc).toContain('greedy');
       expect(desc).toContain('conflict');
     });

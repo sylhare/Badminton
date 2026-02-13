@@ -20,6 +20,14 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
   private readonly BALANCE_PENALTY = 2000;
   private readonly SINGLES_REPEAT_PENALTY = 100;
 
+  getName(): string {
+    return 'Simulated Annealing';
+  }
+
+  getDescription(): string {
+    return 'Simulated Annealing with iterative improvement. Performs 5000 iterations, accepting worse solutions probabilistically to escape local minima.';
+  }
+
   protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     return this.runSimulatedAnnealing(players, numberOfCourts, startCourtNum);
   }

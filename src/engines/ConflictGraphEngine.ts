@@ -13,6 +13,14 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
   private readonly OPPONENT_WEIGHT = 10;
   private readonly BALANCE_WEIGHT = 2;
 
+  getName(): string {
+    return 'Conflict Graph';
+  }
+
+  getDescription(): string {
+    return 'Deterministic greedy construction using conflict graph modeling. Systematically builds assignments by selecting players that minimize total conflict.';
+  }
+
   protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     return this.buildCourtsWithConflictGraph(players, numberOfCourts, startCourtNum);
   }

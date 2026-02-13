@@ -12,6 +12,14 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
   private costCache: Map<string, number> = new Map();
   private readonly MAX_ATTEMPTS = 300;
 
+  getName(): string {
+    return 'Monte Carlo';
+  }
+
+  getDescription(): string {
+    return 'Monte Carlo sampling with greedy evaluation. Generates 300 random candidate assignments and selects the one with lowest cost.';
+  }
+
   protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     this.costCache.clear();
 

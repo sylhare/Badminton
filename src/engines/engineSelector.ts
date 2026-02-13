@@ -76,32 +76,3 @@ export const engine = (): ICourtAssignmentEngine => {
   return getEngineInstance(currentEngineType);
 };
 
-/**
- * Gets a human-readable name for the current engine.
- */
-export const getEngineName = (): string => {
-  switch (currentEngineType) {
-    case 'cg':
-      return 'Conflict Graph';
-    case 'mc':
-      return 'Monte Carlo';
-    case 'sa':
-    default:
-      return 'Simulated Annealing';
-  }
-};
-
-/**
- * Gets a description of the current engine's algorithm.
- */
-export const getEngineDescription = (): string => {
-  switch (currentEngineType) {
-    case 'cg':
-      return 'Deterministic greedy construction using conflict graph modeling. Systematically builds assignments by selecting players that minimize total conflict.';
-    case 'mc':
-      return 'Monte Carlo sampling with greedy evaluation. Generates 300 random candidate assignments and selects the one with lowest cost.';
-    case 'sa':
-    default:
-      return 'Simulated Annealing with iterative improvement. Performs 5000 iterations, accepting worse solutions probabilistically to escape local minima.';
-  }
-};
