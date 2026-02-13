@@ -21,6 +21,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     /** Map of player IDs to their total losses */
     protected static lossCountMap: Map<string, number> = new Map();
 
+    /** Map of player IDs or pair keys to last updated timestamp (round number or match count) */
+    protected static lastUpdatedMap: Map<string, number> = new Map();
+    /** Current "time" counter or round count to use for timestamps */
+    protected static globalCounter = 0;
+
     /** Tracks recorded match outcomes for the current session (court number → result) */
     protected static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
 
@@ -54,6 +59,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         CourtAssignmentTracker.winCountMap.clear();
         CourtAssignmentTracker.lossCountMap.clear();
         CourtAssignmentTracker.recordedWinsMap.clear();
+        CourtAssignmentTracker.lastUpdatedMap.clear();
+        CourtAssignmentTracker.globalCounter = 0;
         this.notifyStateChange();
     }
 
@@ -62,8 +69,12 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         CourtAssignmentTracker.recordedWinsMap.clear();
     }
 
-    /** Prepares the internal maps for persistence. */
+    /** Prepares the internal maps for persistence. Filters and prunes old data. */
     prepareStateForSaving(): CourtEngineState {
+        // Pruning logic: keep the 500 most recently updated entries across large maps
+        const MAX_ENTRIES = 500;
+        this.pruneHistoricalData(MAX_ENTRIES);
+
         return {
             benchCountMap: Object.fromEntries(CourtAssignmentTracker.benchCountMap),
             singleCountMap: Object.fromEntries(CourtAssignmentTracker.singleCountMap),
@@ -71,7 +82,36 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
             opponentCountMap: Object.fromEntries(CourtAssignmentTracker.opponentCountMap),
             winCountMap: Object.fromEntries(CourtAssignmentTracker.winCountMap),
             lossCountMap: Object.fromEntries(CourtAssignmentTracker.lossCountMap),
+            lastUpdatedMap: Object.fromEntries(CourtAssignmentTracker.lastUpdatedMap),
         };
+    }
+
+    /** Prunes historical pairings and counts based on recency. */
+    private pruneHistoricalData(maxEntries: number): void {
+        const pairingKeys = [
+            ...CourtAssignmentTracker.teammateCountMap.keys(),
+            ...CourtAssignmentTracker.opponentCountMap.keys(),
+        ];
+
+        if (pairingKeys.length <= maxEntries) return;
+
+        // Sort keys by their last updated timestamp
+        const sortedKeys = pairingKeys.sort((a, b) => {
+            const timeA = CourtAssignmentTracker.lastUpdatedMap.get(a) ?? 0;
+            const timeB = CourtAssignmentTracker.lastUpdatedMap.get(b) ?? 0;
+            return timeB - timeA; // Descending
+        });
+
+        const keysToKeep = new Set(sortedKeys.slice(0, maxEntries));
+
+        // Delete keys not in the "keep" set
+        pairingKeys.forEach(key => {
+            if (!keysToKeep.has(key)) {
+                CourtAssignmentTracker.teammateCountMap.delete(key);
+                CourtAssignmentTracker.opponentCountMap.delete(key);
+                CourtAssignmentTracker.lastUpdatedMap.delete(key);
+            }
+        });
     }
 
     /** Saves the current state to persistent storage. */
@@ -101,11 +141,35 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         if (state.lossCountMap) {
             CourtAssignmentTracker.lossCountMap = new Map(Object.entries(state.lossCountMap));
         }
+        if (state.lastUpdatedMap) {
+            CourtAssignmentTracker.lastUpdatedMap = new Map(Object.entries(state.lastUpdatedMap));
+            // Restore globalCounter to the max seen timestamp
+            const times = Array.from(CourtAssignmentTracker.lastUpdatedMap.values());
+            CourtAssignmentTracker.globalCounter = times.length > 0 ? Math.max(...times) : 0;
+        }
     }
 
     /**
      * Records wins and losses for a set of matches.
      */
+    getStats(): any {
+        const teammateValues = Array.from(CourtAssignmentTracker.teammateCountMap.values());
+        const opponentValues = Array.from(CourtAssignmentTracker.opponentCountMap.values());
+        return {
+            winCountMap: new Map(CourtAssignmentTracker.winCountMap),
+            lossCountMap: new Map(CourtAssignmentTracker.lossCountMap),
+            teammateCountMap: new Map(CourtAssignmentTracker.teammateCountMap),
+            opponentCountMap: new Map(CourtAssignmentTracker.opponentCountMap),
+            benchCountMap: new Map(CourtAssignmentTracker.benchCountMap),
+            singleCountMap: new Map(CourtAssignmentTracker.singleCountMap),
+            totalTeammatePairs: teammateValues.length,
+            maxTeammateCount: Math.max(0, ...teammateValues),
+            avgTeammateCount: teammateValues.length > 0 ? teammateValues.reduce((a, b) => a + b, 0) / teammateValues.length : 0,
+            totalOpponentPairs: opponentValues.length,
+            maxOpponentCount: Math.max(0, ...opponentValues),
+        };
+    }
+
     recordWins(courts: Court[]): void {
         let stateChanged = false;
         courts.forEach(court => {
@@ -127,9 +191,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
                 winningTeam.forEach(player => {
                     this.incrementMapCount(CourtAssignmentTracker.winCountMap, player.id);
+                    this.updateTimestamp(player.id);
                 });
                 losingTeam.forEach(player => {
                     this.incrementMapCount(CourtAssignmentTracker.lossCountMap, player.id);
+                    this.updateTimestamp(player.id);
                 });
 
                 CourtAssignmentTracker.recordedWinsMap.set(courtNumber, {
@@ -142,6 +208,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         });
 
         if (stateChanged) {
+            CourtAssignmentTracker.globalCounter++; // Increment "time"
             this.notifyStateChange();
         }
     }
@@ -230,20 +297,25 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
      */
     recordSingles(playerId: string): void {
         this.incrementMapCount(CourtAssignmentTracker.singleCountMap, playerId);
+        this.updateTimestamp(playerId);
     }
 
     /**
      * Records a teammate pairing.
      */
     recordTeammatePair(p1: string, p2: string): void {
-        this.incrementMapCount(CourtAssignmentTracker.teammateCountMap, this.pairKey(p1, p2));
+        const key = this.pairKey(p1, p2);
+        this.incrementMapCount(CourtAssignmentTracker.teammateCountMap, key);
+        this.updateTimestamp(key);
     }
 
     /**
      * Records an opponent pairing.
      */
     recordOpponentPair(p1: string, p2: string): void {
-        this.incrementMapCount(CourtAssignmentTracker.opponentCountMap, this.pairKey(p1, p2));
+        const key = this.pairKey(p1, p2);
+        this.incrementMapCount(CourtAssignmentTracker.opponentCountMap, key);
+        this.updateTimestamp(key);
     }
 
     /**
@@ -251,6 +323,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
      */
     protected incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
         map.set(key, (map.get(key) ?? 0) + inc);
+    }
+
+    /** Updates the last seen timestamp for a key */
+    protected updateTimestamp(key: string): void {
+        CourtAssignmentTracker.lastUpdatedMap.set(key, CourtAssignmentTracker.globalCounter);
     }
 
     /**
@@ -308,6 +385,10 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         return new Map(CourtAssignmentTracker.winCountMap);
     }
 
+    getLossCounts(): Map<string, number> {
+        return new Map(CourtAssignmentTracker.lossCountMap);
+    }
+
     getBenchCounts(): Map<string, number> {
         return new Map(CourtAssignmentTracker.benchCountMap);
     }
@@ -316,4 +397,5 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
         return players.filter(p => p.isPresent && !assignedIds.has(p.id));
     }
+
 }

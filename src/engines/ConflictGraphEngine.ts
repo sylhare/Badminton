@@ -12,7 +12,7 @@ export class ConflictGraphEngine extends CourtAssignmentTracker implements ICour
   private readonly OPPONENT_WEIGHT = 10;
   private readonly BALANCE_WEIGHT = 2;
 
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
@@ -34,7 +34,14 @@ export class ConflictGraphEngine extends CourtAssignmentTracker implements ICour
     if ((remainingPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
     benchSpots = Math.min(benchSpots, remainingPlayers.length);
 
-    const benchedPlayers = this.selectBenchedPlayers(remainingPlayers, benchSpots);
+    const forceBenchedPlayers = forceBenchPlayerIds
+      ? remainingPlayers.filter(p => forceBenchPlayerIds.has(p.id))
+      : [];
+    const additionalBenchSpots = Math.max(0, benchSpots - forceBenchedPlayers.length);
+    const playersForAlgorithmBench = remainingPlayers.filter(p => !forceBenchPlayerIds?.has(p.id));
+    const algorithmBenchedPlayers = this.selectBenchedPlayers(playersForAlgorithmBench, additionalBenchSpots);
+
+    const benchedPlayers = [...forceBenchedPlayers, ...algorithmBenchedPlayers];
     const onCourtPlayers = remainingPlayers.filter(p => !benchedPlayers.includes(p));
 
     const startCourtNum = manualCourtResult ? 2 : 1;
@@ -163,13 +170,11 @@ export class ConflictGraphEngine extends CourtAssignmentTracker implements ICour
     return { teams: bestTeams, cost: bestCost };
   }
 
-  getStats() {
-    const teammateValues = Array.from(CourtAssignmentTracker.teammateCountMap.values());
+  override getStats() {
+    const baseStats = super.getStats();
     return {
-      totalTeammatePairs: teammateValues.length,
-      maxTeammateCount: Math.max(0, ...teammateValues),
-      avgTeammateCount: teammateValues.length > 0 ? teammateValues.reduce((a, b) => a + b, 0) / teammateValues.length : 0,
-      conflictEdges: teammateValues.filter(v => v > 0).length,
+      ...baseStats,
+      conflictEdges: Array.from(CourtAssignmentTracker.teammateCountMap.values()).filter(v => v > 0).length,
     };
   }
 }

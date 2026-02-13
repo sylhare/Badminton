@@ -13,13 +13,13 @@ export class CourtAssignmentEngineSA extends CourtAssignmentTracker implements I
   private readonly COOLING_RATE = 0.9995;
   private readonly MIN_TEMPERATURE = 0.1;
 
-  private readonly TEAMMATE_REPEAT_PENALTY = 10000;
-  private readonly OPPONENT_REPEAT_PENALTY = 50;
-  private readonly SKILL_PAIR_PENALTY = 1;
-  private readonly BALANCE_PENALTY = 2;
-  private readonly SINGLES_REPEAT_PENALTY = 100;
+  private readonly TEAMMATE_REPEAT_PENALTY = 200;
+  private readonly OPPONENT_REPEAT_PENALTY = 100;
+  private readonly SKILL_PAIR_PENALTY = 500;
+  private readonly BALANCE_PENALTY = 1000;
+  private readonly SINGLES_REPEAT_PENALTY = 500;
 
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
@@ -41,7 +41,14 @@ export class CourtAssignmentEngineSA extends CourtAssignmentTracker implements I
     if ((remainingPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
     benchSpots = Math.min(benchSpots, remainingPlayers.length);
 
-    const benchedPlayers = this.selectBenchedPlayers(remainingPlayers, benchSpots);
+    const forceBenchedPlayers = forceBenchPlayerIds
+      ? remainingPlayers.filter(p => forceBenchPlayerIds.has(p.id))
+      : [];
+    const additionalBenchSpots = Math.max(0, benchSpots - forceBenchedPlayers.length);
+    const playersForAlgorithmBench = remainingPlayers.filter(p => !forceBenchPlayerIds?.has(p.id));
+    const algorithmBenchedPlayers = this.selectBenchedPlayers(playersForAlgorithmBench, additionalBenchSpots);
+
+    const benchedPlayers = [...forceBenchedPlayers, ...algorithmBenchedPlayers];
     const onCourtPlayers = remainingPlayers.filter(p => !benchedPlayers.includes(p));
 
     const startCourtNum = manualCourtResult ? 2 : 1;
@@ -105,12 +112,13 @@ export class CourtAssignmentEngineSA extends CourtAssignmentTracker implements I
         if (currentCost < bestCost) {
           best = this.cloneCourts(current);
           bestCost = currentCost;
+          if (bestCost === 0) console.log(`[SA ANNEAL] Found 0 cost at iteration ${i}, temp ${temperature.toFixed(2)}`);
         }
       }
 
       temperature *= this.COOLING_RATE;
     }
-
+    console.log(`[SA ANNEAL] Finished. Best cost: ${bestCost}`);
     return best;
   }
 
@@ -235,13 +243,16 @@ export class CourtAssignmentEngineSA extends CourtAssignmentTracker implements I
         });
       });
 
+      const winCounts = this.getWinCounts();
+      const lossCounts = this.getLossCounts();
+
       const addSkillPairPenalty = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
-            const wins1 = CourtAssignmentTracker.winCountMap.get(team[i].id) ?? 0;
-            const wins2 = CourtAssignmentTracker.winCountMap.get(team[j].id) ?? 0;
-            const losses1 = CourtAssignmentTracker.lossCountMap.get(team[i].id) ?? 0;
-            const losses2 = CourtAssignmentTracker.lossCountMap.get(team[j].id) ?? 0;
+            const wins1 = winCounts.get(team[i].id) ?? 0;
+            const wins2 = winCounts.get(team[j].id) ?? 0;
+            const losses1 = lossCounts.get(team[i].id) ?? 0;
+            const losses2 = lossCounts.get(team[j].id) ?? 0;
             totalCost += (wins1 * wins2 + losses1 * losses2) * this.SKILL_PAIR_PENALTY;
           }
         }
@@ -249,12 +260,12 @@ export class CourtAssignmentEngineSA extends CourtAssignmentTracker implements I
       addSkillPairPenalty(court.teams.team1);
       addSkillPairPenalty(court.teams.team2);
 
-      const t1W = court.teams.team1.reduce((a, p) => a + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
-      const t2W = court.teams.team2.reduce((a, p) => a + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
+      const t1W = court.teams.team1.reduce((a, p) => a + (winCounts.get(p.id) ?? 0), 0);
+      const t2W = court.teams.team2.reduce((a, p) => a + (winCounts.get(p.id) ?? 0), 0);
       totalCost += Math.abs(t1W - t2W) * this.BALANCE_PENALTY;
 
-      const t1L = court.teams.team1.reduce((a, p) => a + (CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0), 0);
-      const t2L = court.teams.team2.reduce((a, p) => a + (CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0), 0);
+      const t1L = court.teams.team1.reduce((a, p) => a + (lossCounts.get(p.id) ?? 0), 0);
+      const t2L = court.teams.team2.reduce((a, p) => a + (lossCounts.get(p.id) ?? 0), 0);
       totalCost += Math.abs(t1L - t2L) * this.BALANCE_PENALTY;
     }
     return totalCost;
@@ -288,22 +299,12 @@ export class CourtAssignmentEngineSA extends CourtAssignmentTracker implements I
     };
     addTMC(t1); addTMC(t2);
     t1.forEach(a => t2.forEach(b => cost += (CourtAssignmentTracker.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY));
-    const t1W = t1.reduce((a, p) => a + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
-    const t2W = t2.reduce((a, p) => a + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
+
+    const winCounts = this.getWinCounts();
+    const t1W = t1.reduce((a, p) => a + (winCounts.get(p.id) ?? 0), 0);
+    const t2W = t2.reduce((a, p) => a + (winCounts.get(p.id) ?? 0), 0);
     cost += Math.abs(t1W - t2W) * this.BALANCE_PENALTY;
     return cost;
-  }
-
-  getStats() {
-    const teammateValues = Array.from(CourtAssignmentTracker.teammateCountMap.values());
-    const opponentValues = Array.from(CourtAssignmentTracker.opponentCountMap.values());
-    return {
-      totalTeammatePairs: teammateValues.length,
-      maxTeammateCount: Math.max(0, ...teammateValues),
-      avgTeammateCount: teammateValues.length > 0 ? teammateValues.reduce((a, b) => a + b, 0) / teammateValues.length : 0,
-      totalOpponentPairs: opponentValues.length,
-      maxOpponentCount: Math.max(0, ...opponentValues),
-    };
   }
 }
 

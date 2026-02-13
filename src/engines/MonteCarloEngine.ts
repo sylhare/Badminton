@@ -162,7 +162,9 @@ export class MonteCarloEngine extends CourtAssignmentTracker implements ICourtAs
 
     const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
     const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(team1WinSum - team2WinSum);
+    const diff = Math.abs(team1WinSum - team2WinSum);
+    if (diff > 0) console.log(`[ENGINE DEBUG] T1 Wins: ${team1WinSum}, T2 Wins: ${team2WinSum}, Diff: ${diff}`);
+    cost += diff;
 
     const team1LossSum = court.teams.team1.reduce((acc, p) => acc + (CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0), 0);
     const team2LossSum = court.teams.team2.reduce((acc, p) => acc + (CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0), 0);
@@ -174,7 +176,9 @@ export class MonteCarloEngine extends CourtAssignmentTracker implements ICourtAs
 
   private getCourtCacheKey(court: Court): string {
     if (!court.teams) return '';
-    return [...court.teams.team1.map(p => p.id), ...court.teams.team2.map(p => p.id)].sort().join('|');
+    const t1 = court.teams.team1.map(p => p.id).sort().join(',');
+    const t2 = court.teams.team2.map(p => p.id).sort().join(',');
+    return [t1, t2].sort().join('||');
   }
 
   private generateCandidate(onCourtPlayers: Player[], numberOfCourts: number, startCourtNum: number) {

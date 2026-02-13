@@ -39,6 +39,7 @@ export interface CourtEngineState {
   opponentCountMap: Record<string, number>;
   winCountMap: Record<string, number>;
   lossCountMap: Record<string, number>;
+  lastUpdatedMap: Record<string, number>;
 }
 
 export interface ICourtAssignmentTracker {
@@ -54,8 +55,9 @@ export interface ICourtAssignmentTracker {
   updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];
   reverseWinForCourt(courtNumber: number): void;
   getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
+  getStats(): any;
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[];
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): Court[];
 }
