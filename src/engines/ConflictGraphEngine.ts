@@ -1,211 +1,16 @@
-import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine } from '../types';
-
-import { saveCourtEngineState, loadCourtEngineState } from '../utils/storageUtils';
+import type { Court, Player, ManualCourtSelection, ICourtAssignmentEngine } from '../types';
+import { CourtAssignmentTracker } from './CourtAssignmentTracker';
 
 /**
- * ConflictGraphEngine - Conflict Graph-Based Court Assignment Engine
- *
- * @pattern Greedy Construction with Conflict Graph
- *
- * @description
- * This engine uses a conflict graph approach to GUARANTEE no teammate repetitions
- * when mathematically possible. Players who have been teammates before are connected
- * by edges in a conflict graph, and the algorithm finds independent sets (players
- * with no conflicts between them) to form courts.
- *
+ * Conflict Graph Implementation
+ * 
+ * This engine uses a conflict graph to find a solution that guarantees
+ * no teammate repetitions when possible.
  */
-export class ConflictGraphEngine implements ICourtAssignmentEngine {
-  /** Tracks how many times each player has been benched across all sessions */
-  private benchCountMap: Map<string, number> = new Map();
-  /** Tracks how many times each player has played singles matches across all sessions */
-  private singleCountMap: Map<string, number> = new Map();
-  /** Tracks pairwise teammate frequency - THIS IS THE CONFLICT GRAPH */
-  private teammateCountMap: Map<string, number> = new Map();
-  /** Tracks pairwise opponent frequency */
-  private opponentCountMap: Map<string, number> = new Map();
-  /** Tracks total wins per player for skill-based team balancing */
-  private winCountMap: Map<string, number> = new Map();
-  /** Tracks total losses per player for skill-based team balancing */
-  private lossCountMap: Map<string, number> = new Map();
-  /** Tracks recorded match outcomes for the current session */
-  private recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
-  /** Observer pattern listeners for state change notifications */
-  private stateChangeListeners: Array<() => void> = [];
-
+export class ConflictGraphEngine extends CourtAssignmentTracker implements ICourtAssignmentEngine {
   private readonly MAX_SEARCH_ATTEMPTS = 100;
   private readonly OPPONENT_WEIGHT = 10;
   private readonly BALANCE_WEIGHT = 2;
-
-  /**
-   * Subscribes to state changes in the engine (Observer pattern).
-   */
-  onStateChange(listener: () => void): () => void {
-    this.stateChangeListeners.push(listener);
-    return () => {
-      const index = this.stateChangeListeners.indexOf(listener);
-      if (index > -1) {
-        this.stateChangeListeners.splice(index, 1);
-      }
-    };
-  }
-
-  private notifyStateChange(): void {
-    this.stateChangeListeners.forEach(listener => listener());
-  }
-
-  resetHistory(): void {
-    this.benchCountMap.clear();
-    this.singleCountMap.clear();
-    this.teammateCountMap.clear();
-    this.opponentCountMap.clear();
-    this.winCountMap.clear();
-    this.lossCountMap.clear();
-    this.recordedWinsMap.clear();
-    this.notifyStateChange();
-  }
-
-  clearCurrentSession(): void {
-    this.recordedWinsMap.clear();
-  }
-
-  prepareStateForSaving(): CourtEngineState {
-    return {
-      benchCountMap: Object.fromEntries(this.benchCountMap),
-      singleCountMap: Object.fromEntries(this.singleCountMap),
-      teammateCountMap: Object.fromEntries(this.teammateCountMap),
-      opponentCountMap: Object.fromEntries(this.opponentCountMap),
-      winCountMap: Object.fromEntries(this.winCountMap),
-      lossCountMap: Object.fromEntries(this.lossCountMap),
-    };
-  }
-
-  saveState(): void {
-    saveCourtEngineState(this.prepareStateForSaving());
-  }
-
-  loadState(): void {
-    const state = loadCourtEngineState();
-
-    if (state.benchCountMap) {
-      this.benchCountMap = new Map(Object.entries(state.benchCountMap));
-    }
-    if (state.singleCountMap) {
-      this.singleCountMap = new Map(Object.entries(state.singleCountMap));
-    }
-    if (state.teammateCountMap) {
-      this.teammateCountMap = new Map(Object.entries(state.teammateCountMap));
-    }
-    if (state.opponentCountMap) {
-      this.opponentCountMap = new Map(Object.entries(state.opponentCountMap));
-    }
-    if (state.winCountMap) {
-      this.winCountMap = new Map(Object.entries(state.winCountMap));
-    }
-    if (state.lossCountMap) {
-      this.lossCountMap = new Map(Object.entries(state.lossCountMap));
-    }
-  }
-
-  private shouldReversePreviousRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }, currentWinner: 1 | 2, currentWinningPlayerIds: string[]): boolean {
-    return !(previousRecord.winner === currentWinner &&
-      JSON.stringify(previousRecord.winningPlayers.sort()) === JSON.stringify(currentWinningPlayerIds.sort()));
-  }
-
-  private reversePreviousWinRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }): void {
-    previousRecord.winningPlayers.forEach(playerId => {
-      const currentWins = this.winCountMap.get(playerId) || 0;
-      if (currentWins > 0) {
-        this.winCountMap.set(playerId, currentWins - 1);
-      }
-    });
-
-    previousRecord.losingPlayers.forEach(playerId => {
-      const currentLosses = this.lossCountMap.get(playerId) || 0;
-      if (currentLosses > 0) {
-        this.lossCountMap.set(playerId, currentLosses - 1);
-      }
-    });
-  }
-
-  reverseWinForCourt(courtNumber: number): void {
-    const previousRecord = this.recordedWinsMap.get(courtNumber);
-    if (previousRecord) {
-      this.reversePreviousWinRecord(previousRecord);
-      this.recordedWinsMap.delete(courtNumber);
-      this.notifyStateChange();
-    }
-  }
-
-  updateWinner(
-    courtNumber: number,
-    winner: 1 | 2 | undefined,
-    currentAssignments: Court[],
-  ): Court[] {
-    const court = currentAssignments.find(c => c.courtNumber === courtNumber);
-    if (!court) return currentAssignments;
-
-    if (court.winner && court.winner !== winner) {
-      this.reverseWinForCourt(courtNumber);
-    }
-
-    const updatedAssignments = currentAssignments.map(c =>
-      c.courtNumber === courtNumber ? { ...c, winner } : c,
-    );
-
-    if (winner && court.teams) {
-      this.recordWins([{ ...court, winner }]);
-    }
-
-    this.notifyStateChange();
-    return updatedAssignments;
-  }
-
-  recordWins(courts: Court[]): void {
-    let stateChanged = false;
-    courts.forEach(court => {
-      if (court.winner && court.teams) {
-        const courtNumber = court.courtNumber;
-        const winningTeam = court.winner === 1 ? court.teams.team1 : court.teams.team2;
-        const losingTeam = court.winner === 1 ? court.teams.team2 : court.teams.team1;
-        const winningPlayerIds = winningTeam.map(p => p.id);
-        const losingPlayerIds = losingTeam.map(p => p.id);
-
-        const previousRecord = this.recordedWinsMap.get(courtNumber);
-
-        if (previousRecord && this.shouldReversePreviousRecord(previousRecord, court.winner, winningPlayerIds)) {
-          this.reversePreviousWinRecord(previousRecord);
-          stateChanged = true;
-        } else if (previousRecord) {
-          return;
-        }
-
-        winningTeam.forEach(player => {
-          this.incrementMapCount(this.winCountMap, player.id);
-        });
-        losingTeam.forEach(player => {
-          this.incrementMapCount(this.lossCountMap, player.id);
-        });
-
-        this.recordedWinsMap.set(courtNumber, {
-          winner: court.winner,
-          winningPlayers: winningPlayerIds,
-          losingPlayers: losingPlayerIds,
-        });
-        stateChanged = true;
-      }
-    });
-    if (stateChanged) {
-      this.notifyStateChange();
-    }
-  }
-
-  getWinCounts(): Map<string, number> {
-    return new Map(this.winCountMap);
-  }
-
-  getBenchCounts(): Map<string, number> {
-    return new Map(this.benchCountMap);
-  }
 
   generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
@@ -218,7 +23,7 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     if (manualSelection && manualSelection.players.length > 0) {
       const manualPlayers = manualSelection.players.filter(p => p.isPresent);
       if (manualPlayers.length >= 2 && manualPlayers.length <= 4) {
-        manualCourtResult = this.createManualCourt(manualPlayers, 1);
+        manualCourtResult = this.createManualCourt(manualPlayers, 1, (p) => this.chooseBestTeamSplit(p).teams);
         remainingPlayers = presentPlayers.filter(p => !manualPlayers.some(mp => mp.id === p.id));
         remainingCourts = numberOfCourts - 1;
       }
@@ -236,35 +41,20 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     const courts = this.buildCourtsWithConflictGraph(onCourtPlayers, remainingCourts, startCourtNum);
 
     let finalCourts = courts;
+    if (manualCourtResult) finalCourts = [manualCourtResult, ...finalCourts];
 
-    if (manualCourtResult) {
-      finalCourts = [manualCourtResult, ...finalCourts];
-    }
-
-    benchedPlayers.forEach(p => this.incrementMapCount(this.benchCountMap, p.id));
+    benchedPlayers.forEach(p => this.recordBenching(p.id));
     finalCourts.forEach(court => {
       if (!court.teams) return;
-
-      if (court.players.length === 2) {
-        court.players.forEach(p => this.incrementMapCount(this.singleCountMap, p.id));
-      }
-
-      const addTeamPairs = (team: Player[]): void => {
+      if (court.players.length === 2) court.players.forEach(p => this.recordSingles(p.id));
+      const addTeamPairs = (team: Player[]) => {
         for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            this.incrementMapCount(this.teammateCountMap, this.pairKey(team[i].id, team[j].id));
-          }
+          for (let j = i + 1; j < team.length; j++) this.recordTeammatePair(team[i].id, team[j].id);
         }
       };
-
       addTeamPairs(court.teams.team1);
       addTeamPairs(court.teams.team2);
-
-      court.teams.team1.forEach(a => {
-        court.teams!.team2.forEach(b => {
-          this.incrementMapCount(this.opponentCountMap, this.pairKey(a.id, b.id));
-        });
-      });
+      court.teams.team1.forEach(a => court.teams!.team2.forEach(b => this.recordOpponentPair(a.id, b.id)));
     });
 
     return finalCourts;
@@ -273,275 +63,115 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
   private buildCourtsWithConflictGraph(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     const courts: Court[] = [];
     const availablePlayers = [...players];
-
-    for (let courtNum = startCourtNum; courtNum < startCourtNum + numberOfCourts; courtNum++) {
+    for (let cNum = startCourtNum; cNum < startCourtNum + numberOfCourts; cNum++) {
       if (availablePlayers.length < 2) break;
-
-      let courtPlayers: Player[] | null = null;
-
+      let cPlayers: Player[] | null = null;
       if (availablePlayers.length >= 4) {
-        courtPlayers = this.findConflictFreeGroup(availablePlayers, 4);
-
-        if (!courtPlayers) {
-          courtPlayers = this.findMinimumConflictGroup(availablePlayers, 4);
-        }
-      } else if (availablePlayers.length >= 2) {
-        courtPlayers = this.selectBestSinglesPair(availablePlayers);
-      }
-
-      if (!courtPlayers || courtPlayers.length < 2) break;
-
-      for (const p of courtPlayers) {
+        cPlayers = this.findConflictFreeGroup(availablePlayers, 4);
+        if (!cPlayers) cPlayers = this.findMinimumConflictGroup(availablePlayers, 4);
+      } else if (availablePlayers.length >= 2) cPlayers = this.selectBestSinglesPair(availablePlayers);
+      if (!cPlayers || cPlayers.length < 2) break;
+      for (const p of cPlayers) {
         const idx = availablePlayers.findIndex(ap => ap.id === p.id);
         if (idx !== -1) availablePlayers.splice(idx, 1);
       }
-
-      const teams = this.createOptimalTeams(courtPlayers);
-      courts.push({ courtNumber: courtNum, players: courtPlayers, teams });
+      const teams = this.createOptimalTeams(cPlayers);
+      courts.push({ courtNumber: cNum, players: cPlayers, teams });
     }
-
     return courts;
   }
 
   private findConflictFreeGroup(players: Player[], size: number): Player[] | null {
-    if (players.length < size) return null;
-
     for (let attempt = 0; attempt < this.MAX_SEARCH_ATTEMPTS; attempt++) {
       const shuffled = this.shuffleArray([...players]);
       const group: Player[] = [];
-
-      for (const player of shuffled) {
-
-        let hasConflict = false;
-        for (const existing of group) {
-          if (this.hasTeammateConflict(player.id, existing.id)) {
-            hasConflict = true;
-            break;
-          }
-        }
-
-        if (!hasConflict) {
-          group.push(player);
-          if (group.length === size) {
-            return group;
-          }
+      for (const p of shuffled) {
+        if (!group.some(e => this.hasTeammateConflict(p.id, e.id))) {
+          group.push(p);
+          if (group.length === size) return group;
         }
       }
     }
-
-    const sortedByConflicts = [...players].sort((a, b) => {
-      const conflictsA = this.countConflicts(a.id, players);
-      const conflictsB = this.countConflicts(b.id, players);
-      return conflictsA - conflictsB;
-    });
-
+    const sorted = [...players].sort((a, b) => this.countConflicts(a.id, players) - this.countConflicts(b.id, players));
     const group: Player[] = [];
-    for (const player of sortedByConflicts) {
-      let hasConflict = false;
-      for (const existing of group) {
-        if (this.hasTeammateConflict(player.id, existing.id)) {
-          hasConflict = true;
-          break;
-        }
-      }
-
-      if (!hasConflict) {
-        group.push(player);
-        if (group.length === size) {
-          return group;
-        }
+    for (const p of sorted) {
+      if (!group.some(e => this.hasTeammateConflict(p.id, e.id))) {
+        group.push(p);
+        if (group.length === size) return group;
       }
     }
-
     return null;
   }
 
   private findMinimumConflictGroup(players: Player[], size: number): Player[] {
     if (players.length <= size) return players.slice(0, size);
-
     let bestGroup: Player[] = [];
-    let bestConflictCount = Infinity;
-
-    for (let attempt = 0; attempt < this.MAX_SEARCH_ATTEMPTS; attempt++) {
-      const shuffled = this.shuffleArray([...players]);
-      const group = shuffled.slice(0, size);
-      const conflictCount = this.countGroupConflicts(group);
-
-      if (conflictCount < bestConflictCount) {
-        bestConflictCount = conflictCount;
-        bestGroup = group;
-        if (conflictCount === 0) break;
-      }
+    let bestCount = Infinity;
+    for (let i = 0; i < this.MAX_SEARCH_ATTEMPTS; i++) {
+      const group = this.shuffleArray([...players]).slice(0, size);
+      const count = this.countGroupConflicts(group);
+      if (count < bestCount) { bestCount = count; bestGroup = group; if (count === 0) break; }
     }
-
     return bestGroup;
   }
 
   private selectBestSinglesPair(players: Player[]): Player[] {
-    if (players.length < 2) return players;
-
-    const sorted = [...players].sort((a, b) => {
-      const aSingles = this.singleCountMap.get(a.id) ?? 0;
-      const bSingles = this.singleCountMap.get(b.id) ?? 0;
-      return aSingles - bSingles;
-    });
-
-    return sorted.slice(0, 2);
+    return [...players].sort((a, b) => (CourtAssignmentTracker.singleCountMap.get(a.id) ?? 0) - (CourtAssignmentTracker.singleCountMap.get(b.id) ?? 0)).slice(0, 2);
   }
 
-  private hasTeammateConflict(playerId1: string, playerId2: string): boolean {
-    const key = this.pairKey(playerId1, playerId2);
-    return (this.teammateCountMap.get(key) ?? 0) > 0;
+  private hasTeammateConflict(p1: string, p2: string): boolean {
+    return (CourtAssignmentTracker.teammateCountMap.get(this.pairKey(p1, p2)) ?? 0) > 0;
   }
 
-  private countConflicts(playerId: string, allPlayers: Player[]): number {
-    let count = 0;
-    for (const other of allPlayers) {
-      if (other.id !== playerId && this.hasTeammateConflict(playerId, other.id)) {
-        count++;
-      }
-    }
-    return count;
+  private countConflicts(pid: string, all: Player[]): number {
+    return all.reduce((acc, p) => acc + (p.id !== pid && this.hasTeammateConflict(pid, p.id) ? 1 : 0), 0);
   }
 
   private countGroupConflicts(group: Player[]): number {
     let count = 0;
     for (let i = 0; i < group.length; i++) {
-      for (let j = i + 1; j < group.length; j++) {
-        const key = this.pairKey(group[i].id, group[j].id);
-        count += this.teammateCountMap.get(key) ?? 0;
-      }
+      for (let j = i + 1; j < group.length; j++) count += (CourtAssignmentTracker.teammateCountMap.get(this.pairKey(group[i].id, group[j].id)) ?? 0);
     }
     return count;
   }
 
   private createOptimalTeams(players: Player[]): Court['teams'] {
-    if (players.length === 4) {
-      return this.chooseBestTeamSplit(players).teams;
-    } else if (players.length === 2) {
-      return { team1: [players[0]], team2: [players[1]] };
-    }
+    if (players.length === 4) return this.chooseBestTeamSplit(players).teams;
+    if (players.length === 2) return { team1: [players[0]], team2: [players[1]] };
     return undefined;
   }
 
   private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
     const splits: Array<[[number, number], [number, number]]> = [
-      [[0, 1], [2, 3]],
-      [[0, 2], [1, 3]],
-      [[0, 3], [1, 2]],
+      [[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]],
     ];
-
     let bestCost = Infinity;
-    let bestTeams: Court['teams'] = undefined;
-
+    let bestTeams: Court['teams'];
     for (const split of splits) {
-      const team1 = [players[split[0][0]], players[split[0][1]]];
-      const team2 = [players[split[1][0]], players[split[1][1]]];
-
+      const t1 = [players[split[0][0]], players[split[0][1]]];
+      const t2 = [players[split[1][0]], players[split[1][1]]];
       let cost = 0;
-
-      for (const a of team1) {
-        for (const b of team2) {
-          cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT;
-        }
-      }
-
-      const team1Wins = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-      const team2Wins = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-      cost += Math.abs(team1Wins - team2Wins) * this.BALANCE_WEIGHT;
-
-      const team1Losses = team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
-      const team2Losses = team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
-      cost += Math.abs(team1Losses - team2Losses) * this.BALANCE_WEIGHT;
-
-      if (cost < bestCost) {
-        bestCost = cost;
-        bestTeams = { team1, team2 };
-      }
+      t1.forEach(a => t2.forEach(b => cost += (CourtAssignmentTracker.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT));
+      const t1W = t1.reduce((a, p) => a + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
+      const t2W = t2.reduce((a, p) => a + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
+      cost += Math.abs(t1W - t2W) * this.BALANCE_WEIGHT;
+      const t1L = t1.reduce((a, p) => a + (CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0), 0);
+      const t2L = t2.reduce((a, p) => a + (CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0), 0);
+      cost += Math.abs(t1L - t2L) * this.BALANCE_WEIGHT;
+      if (cost < bestCost) { bestCost = cost; bestTeams = { team1: t1, team2: t2 }; }
     }
-
     return { teams: bestTeams, cost: bestCost };
   }
 
-  getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
-    const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
-    return players.filter(p => p.isPresent && !assignedIds.has(p.id));
-  }
-
-  private pairKey(a: string, b: string): string {
-    return a < b ? `${a}|${b}` : `${b}|${a}`;
-  }
-
-  private incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
-    map.set(key, (map.get(key) ?? 0) + inc);
-  }
-
-  private shuffleArray<T>(array: T[]): T[] {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = array[i];
-      array[i] = array[j];
-      array[j] = temp;
-    }
-    return array;
-  }
-
-  private selectBenchedPlayers(players: Player[], benchSpots: number): Player[] {
-    if (benchSpots <= 0) return [];
-
-    players.forEach(p => {
-      if (!this.benchCountMap.has(p.id)) this.benchCountMap.set(p.id, 0);
-    });
-
-    const shuffled = this.shuffleArray([...players]);
-    return shuffled.sort((a, b) => {
-      return (this.benchCountMap.get(a.id) ?? 0) - (this.benchCountMap.get(b.id) ?? 0);
-    }).slice(0, benchSpots);
-  }
-
-  private createManualCourt(players: Player[], courtNumber: number): Court {
-    const court: Court = {
-      courtNumber,
-      players: [...players],
-    };
-
-    if (players.length === 4) {
-      const res = this.chooseBestTeamSplit(players);
-      court.teams = res.teams;
-    } else if (players.length === 2) {
-      court.teams = {
-        team1: [players[0]],
-        team2: [players[1]],
-      };
-    } else if (players.length === 3) {
-      court.teams = {
-        team1: [players[0]],
-        team2: [players[1]],
-      };
-    }
-
-    return court;
-  }
-
-  getStats(): {
-    totalTeammatePairs: number;
-    maxTeammateCount: number;
-    avgTeammateCount: number;
-    conflictEdges: number;
-  } {
-    const teammateValues = Array.from(this.teammateCountMap.values());
-    const conflictEdges = teammateValues.filter(v => v > 0).length;
-
+  getStats() {
+    const teammateValues = Array.from(CourtAssignmentTracker.teammateCountMap.values());
     return {
       totalTeammatePairs: teammateValues.length,
       maxTeammateCount: Math.max(0, ...teammateValues),
-      avgTeammateCount: teammateValues.length > 0
-        ? teammateValues.reduce((a, b) => a + b, 0) / teammateValues.length
-        : 0,
-      conflictEdges,
+      avgTeammateCount: teammateValues.length > 0 ? teammateValues.reduce((a, b) => a + b, 0) / teammateValues.length : 0,
+      conflictEdges: teammateValues.filter(v => v > 0).length,
     };
   }
 }
 
-/** Singleton instance of the Conflict Graph engine. */
 export const engineCG = new ConflictGraphEngine();
