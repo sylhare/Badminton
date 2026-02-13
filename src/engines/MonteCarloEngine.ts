@@ -1,5 +1,6 @@
-import type { Court, Player, ManualCourtSelection, ICourtAssignmentEngine } from '../types';
+import type { Court, Player, ICourtAssignmentEngine } from '../types';
 import { CourtAssignmentTracker } from './CourtAssignmentTracker';
+import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
 
 /**
  * Monte Carlo Greedy Search Implementation
@@ -7,89 +8,24 @@ import { CourtAssignmentTracker } from './CourtAssignmentTracker';
  * This engine generates multiple random configurations and selects the one
  * with the lowest heuristic cost.
  */
-export class MonteCarloEngine extends CourtAssignmentTracker implements ICourtAssignmentEngine {
+export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICourtAssignmentEngine {
   private costCache: Map<string, number> = new Map();
   private readonly MAX_ATTEMPTS = 300;
 
-  generate(
-    players: Player[],
-    numberOfCourts: number,
-    manualSelection?: ManualCourtSelection,
-    forceBenchPlayerIds?: Set<string>
-  ): Court[] {
-    const presentPlayers = players.filter(p => p.isPresent);
-    if (presentPlayers.length === 0) return [];
-
+  protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     this.costCache.clear();
-
-    let manualCourtResult: Court | null = null;
-    let remainingPlayers = presentPlayers;
-    let remainingCourts = numberOfCourts;
-
-    if (manualSelection && manualSelection.players.length > 0) {
-      const manualPlayers = manualSelection.players.filter(p => p.isPresent);
-      if (manualPlayers.length >= 2 && manualPlayers.length <= 4) {
-        manualCourtResult = this.createManualCourt(manualPlayers, 1, (p) => this.chooseBestTeamSplit(p).teams);
-        remainingPlayers = presentPlayers.filter(p => !manualPlayers.some(mp => mp.id === p.id));
-        remainingCourts = numberOfCourts - 1;
-      }
-    }
-
-    const capacity = remainingCourts * 4;
-    let benchSpots = Math.max(0, remainingPlayers.length - capacity);
-    if ((remainingPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
-    benchSpots = Math.min(benchSpots, remainingPlayers.length);
-
-    const forceBenchedPlayers = forceBenchPlayerIds
-      ? remainingPlayers.filter(p => forceBenchPlayerIds.has(p.id))
-      : [];
-
-    const additionalBenchSpots = Math.max(0, benchSpots - forceBenchedPlayers.length);
-    const playersForAlgorithmBench = remainingPlayers.filter(p => !forceBenchPlayerIds?.has(p.id));
-    const algorithmBenchedPlayers = this.selectBenchedPlayers(playersForAlgorithmBench, additionalBenchSpots);
-
-    const benchedPlayers = [...forceBenchedPlayers, ...algorithmBenchedPlayers];
-    const onCourtPlayers = remainingPlayers.filter(p => !benchedPlayers.includes(p));
 
     let best: { courts: Court[]; cost: number } | null = null;
     for (let i = 0; i < this.MAX_ATTEMPTS; i++) {
-      const cand = this.generateCandidate(onCourtPlayers, remainingCourts, manualCourtResult ? 2 : 1);
+      const cand = this.generateCandidate(players, numberOfCourts, startCourtNum);
       if (!best || cand.cost < best.cost) best = cand;
     }
 
-    let finalCourts = best ? best.courts : [];
+    return best ? best.courts : [];
+  }
 
-    if (manualCourtResult) {
-      finalCourts = [manualCourtResult, ...finalCourts];
-    }
-
-    benchedPlayers.forEach(p => this.recordBenching(p.id));
-    finalCourts.forEach(court => {
-      if (!court.teams) return;
-
-      if (court.players.length === 2) {
-        court.players.forEach(p => this.recordSingles(p.id));
-      }
-
-      const addTeamPairs = (team: Player[]): void => {
-        for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            this.recordTeammatePair(team[i].id, team[j].id);
-          }
-        }
-      };
-
-      addTeamPairs(court.teams.team1);
-      addTeamPairs(court.teams.team2);
-
-      court.teams.team1.forEach(a => {
-        court.teams!.team2.forEach(b => {
-          this.recordOpponentPair(a.id, b.id);
-        });
-      });
-    });
-
-    return finalCourts;
+  protected getOptimalTeamSplit(players: Player[]): Court['teams'] {
+    return this.chooseBestTeamSplit(players).teams;
   }
 
   private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
