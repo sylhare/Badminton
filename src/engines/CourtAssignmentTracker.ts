@@ -1,4 +1,4 @@
-import type { Court, Player, CourtEngineState } from '../types';
+import type { Court, Player, CourtEngineState, ICourtAssignmentTracker } from '../types';
 import { saveCourtEngineState, loadCourtEngineState } from '../utils/storageUtils';
 
 /**
@@ -7,7 +7,7 @@ import { saveCourtEngineState, loadCourtEngineState } from '../utils/storageUtil
  * Provides shared telemetry, historical tracking, and persistence.
  * Static members ensure all inherited engines share the same state.
  */
-export class CourtAssignmentTracker {
+export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     /** Map of player IDs to their bench counts */
     protected static benchCountMap: Map<string, number> = new Map();
     /** Map of player IDs to their singles match counts */
