@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { CourtAssignmentEngine } from '../utils/CourtAssignmentEngine';
+import { loadState, onStateChange, prepareStateForSaving } from '../utils/engineSelector';
 import { loadAppState } from '../utils/storageUtils';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
@@ -67,16 +67,16 @@ function StatsPage(): React.ReactElement {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    CourtAssignmentEngine.loadState();
-    setEngineState(CourtAssignmentEngine.prepareStateForSaving());
+    loadState();
+    setEngineState(prepareStateForSaving());
 
     const appState = loadAppState();
     if (appState.players) {
       setPlayers(appState.players);
     }
 
-    return CourtAssignmentEngine.onStateChange(() => {
-      setEngineState(CourtAssignmentEngine.prepareStateForSaving());
+    return onStateChange(() => {
+      setEngineState(prepareStateForSaving());
     });
   }, []);
 
@@ -274,8 +274,8 @@ function StatsPage(): React.ReactElement {
   /** Raw bench data sorted by count for the distribution table */
   const benchData = hasEntries(maps.bench)
     ? Object.entries(maps.bench)
-        .map(([playerId, count]) => ({ player: getPlayerName(playerId), count }))
-        .sort((a, b) => b.count - a.count)
+      .map(([playerId, count]) => ({ player: getPlayerName(playerId), count }))
+      .sort((a, b) => b.count - a.count)
     : [];
 
   return (
