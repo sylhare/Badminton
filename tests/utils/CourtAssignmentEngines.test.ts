@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { engineMC } from '../../src/utils/CourtAssignmentEngine';
-import { engineSA } from '../../src/utils/CourtAssignmentEngineSA';
-import { engineCG } from '../../src/utils/ConflictGraphEngine';
+import { engineMC } from '../../src/engines/MonteCarloEngine';
+import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
+import { engineCG } from '../../src/engines/ConflictGraphEngine';
 import type { ManualCourtSelection, Court, Player, ICourtAssignmentEngine } from '../../src/types';
 
 const engines: Array<{ name: string; engine: ICourtAssignmentEngine }> = [

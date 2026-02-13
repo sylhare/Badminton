@@ -1,27 +1,26 @@
 import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine } from '../types';
 
-import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
+import { saveCourtEngineState, loadCourtEngineState } from '../utils/storageUtils';
 
 /**
- * ConflictGraphEngine - Conflict Graph-Based Court Assignment Engine
+ * CourtAssignmentEngineSA - Simulated Annealing Court Assignment Engine
  *
- * @pattern Greedy Construction with Conflict Graph
+ * @pattern Simulated Annealing with Hard Constraints
  *
  * @description
- * This engine uses a conflict graph approach to GUARANTEE no teammate repetitions
- * when mathematically possible. Players who have been teammates before are connected
- * by edges in a conflict graph, and the algorithm finds independent sets (players
- * with no conflicts between them) to form courts.
- *
+ * This class implements a court assignment algorithm using Simulated Annealing (SA),
+ * designed to provide stronger guarantees against teammate/opponent repetition than
+ * the Monte Carlo approach. SA can escape local minima and explore the solution space
+ * more effectively.
  */
-export class ConflictGraphEngine implements ICourtAssignmentEngine {
+export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
   /** Tracks how many times each player has been benched across all sessions */
   private benchCountMap: Map<string, number> = new Map();
   /** Tracks how many times each player has played singles matches across all sessions */
   private singleCountMap: Map<string, number> = new Map();
-  /** Tracks pairwise teammate frequency - THIS IS THE CONFLICT GRAPH */
+  /** Tracks pairwise teammate frequency to encourage variety */
   private teammateCountMap: Map<string, number> = new Map();
-  /** Tracks pairwise opponent frequency */
+  /** Tracks pairwise opponent frequency to encourage variety */
   private opponentCountMap: Map<string, number> = new Map();
   /** Tracks total wins per player for skill-based team balancing */
   private winCountMap: Map<string, number> = new Map();
@@ -32,9 +31,16 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
   /** Observer pattern listeners for state change notifications */
   private stateChangeListeners: Array<() => void> = [];
 
-  private readonly MAX_SEARCH_ATTEMPTS = 100;
-  private readonly OPPONENT_WEIGHT = 10;
-  private readonly BALANCE_WEIGHT = 2;
+  private readonly SA_ITERATIONS = 5000;
+  private readonly INITIAL_TEMPERATURE = 100.0;
+  private readonly COOLING_RATE = 0.9995;
+  private readonly MIN_TEMPERATURE = 0.1;
+
+  private readonly TEAMMATE_REPEAT_PENALTY = 10000;
+  private readonly OPPONENT_REPEAT_PENALTY = 50;
+  private readonly SKILL_PAIR_PENALTY = 1;
+  private readonly BALANCE_PENALTY = 2;
+  private readonly SINGLES_REPEAT_PENALTY = 100;
 
   /**
    * Subscribes to state changes in the engine (Observer pattern).
@@ -233,9 +239,9 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     const onCourtPlayers = remainingPlayers.filter(p => !benchedPlayers.includes(p));
 
     const startCourtNum = manualCourtResult ? 2 : 1;
-    const courts = this.buildCourtsWithConflictGraph(onCourtPlayers, remainingCourts, startCourtNum);
+    const saCourts = this.runSimulatedAnnealing(onCourtPlayers, remainingCourts, startCourtNum);
 
-    let finalCourts = courts;
+    let finalCourts = saCourts;
 
     if (manualCourtResult) {
       finalCourts = [manualCourtResult, ...finalCourts];
@@ -270,153 +276,74 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     return finalCourts;
   }
 
-  private buildCourtsWithConflictGraph(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
-    const courts: Court[] = [];
-    const availablePlayers = [...players];
+  /**
+   * Core Simulated Annealing algorithm.
+   */
+  private runSimulatedAnnealing(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
+    if (players.length < 2) return [];
 
-    for (let courtNum = startCourtNum; courtNum < startCourtNum + numberOfCourts; courtNum++) {
-      if (availablePlayers.length < 2) break;
+    let current = this.generateInitialSolution(players, numberOfCourts, startCourtNum);
+    let currentCost = this.evaluateTotalCost(current);
+    let best = this.cloneCourts(current);
+    let bestCost = currentCost;
 
-      let courtPlayers: Player[] | null = null;
+    let temperature = this.INITIAL_TEMPERATURE;
 
-      if (availablePlayers.length >= 4) {
-        courtPlayers = this.findConflictFreeGroup(availablePlayers, 4);
+    for (let i = 0; i < this.SA_ITERATIONS; i++) {
 
-        if (!courtPlayers) {
-          courtPlayers = this.findMinimumConflictGroup(availablePlayers, 4);
+      const neighbor = this.perturbSolution(current);
+      const neighborCost = this.evaluateTotalCost(neighbor);
+
+      const delta = neighborCost - currentCost;
+
+      if (delta < 0 || (temperature > this.MIN_TEMPERATURE && Math.random() < Math.exp(-delta / temperature))) {
+        current = neighbor;
+        currentCost = neighborCost;
+
+        if (currentCost < bestCost) {
+          best = this.cloneCourts(current);
+          bestCost = currentCost;
         }
-      } else if (availablePlayers.length >= 2) {
-        
-        courtPlayers = this.selectBestSinglesPair(availablePlayers);
       }
 
-      if (!courtPlayers || courtPlayers.length < 2) break;
+      temperature *= this.COOLING_RATE;
+    }
 
-      for (const p of courtPlayers) {
-        const idx = availablePlayers.findIndex(ap => ap.id === p.id);
-        if (idx !== -1) availablePlayers.splice(idx, 1);
+    return best;
+  }
+
+  /**
+   * Generates an initial random solution for SA to improve upon.
+   */
+  private generateInitialSolution(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
+    const courts: Court[] = [];
+    const shuffled = this.shuffleArray([...players]);
+
+    let idx = 0;
+    for (let courtNum = startCourtNum; courtNum < startCourtNum + numberOfCourts; courtNum++) {
+      const courtPlayers: Player[] = [];
+      for (let i = 0; i < 4 && idx < shuffled.length; i++) {
+        courtPlayers.push(shuffled[idx++]);
       }
 
-      const teams = this.createOptimalTeams(courtPlayers);
+      if (courtPlayers.length < 2) break;
+      if (courtPlayers.length === 3) {
+
+        shuffled.unshift(courtPlayers.pop()!);
+        idx--;
+      }
+
+      const teams = this.createTeams(courtPlayers);
       courts.push({ courtNumber: courtNum, players: courtPlayers, teams });
     }
 
     return courts;
   }
 
-  private findConflictFreeGroup(players: Player[], size: number): Player[] | null {
-    if (players.length < size) return null;
-
-    for (let attempt = 0; attempt < this.MAX_SEARCH_ATTEMPTS; attempt++) {
-      const shuffled = this.shuffleArray([...players]);
-      const group: Player[] = [];
-
-      for (const player of shuffled) {
-        
-        let hasConflict = false;
-        for (const existing of group) {
-          if (this.hasTeammateConflict(player.id, existing.id)) {
-            hasConflict = true;
-            break;
-          }
-        }
-
-        if (!hasConflict) {
-          group.push(player);
-          if (group.length === size) {
-            return group;
-          }
-        }
-      }
-    }
-
-    const sortedByConflicts = [...players].sort((a, b) => {
-      const conflictsA = this.countConflicts(a.id, players);
-      const conflictsB = this.countConflicts(b.id, players);
-      return conflictsA - conflictsB;
-    });
-
-    const group: Player[] = [];
-    for (const player of sortedByConflicts) {
-      let hasConflict = false;
-      for (const existing of group) {
-        if (this.hasTeammateConflict(player.id, existing.id)) {
-          hasConflict = true;
-          break;
-        }
-      }
-
-      if (!hasConflict) {
-        group.push(player);
-        if (group.length === size) {
-          return group;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private findMinimumConflictGroup(players: Player[], size: number): Player[] {
-    if (players.length <= size) return players.slice(0, size);
-
-    let bestGroup: Player[] = [];
-    let bestConflictCount = Infinity;
-
-    for (let attempt = 0; attempt < this.MAX_SEARCH_ATTEMPTS; attempt++) {
-      const shuffled = this.shuffleArray([...players]);
-      const group = shuffled.slice(0, size);
-      const conflictCount = this.countGroupConflicts(group);
-
-      if (conflictCount < bestConflictCount) {
-        bestConflictCount = conflictCount;
-        bestGroup = group;
-        if (conflictCount === 0) break;
-      }
-    }
-
-    return bestGroup;
-  }
-
-  private selectBestSinglesPair(players: Player[]): Player[] {
-    if (players.length < 2) return players;
-
-    const sorted = [...players].sort((a, b) => {
-      const aSingles = this.singleCountMap.get(a.id) ?? 0;
-      const bSingles = this.singleCountMap.get(b.id) ?? 0;
-      return aSingles - bSingles;
-    });
-
-    return sorted.slice(0, 2);
-  }
-
-  private hasTeammateConflict(playerId1: string, playerId2: string): boolean {
-    const key = this.pairKey(playerId1, playerId2);
-    return (this.teammateCountMap.get(key) ?? 0) > 0;
-  }
-
-  private countConflicts(playerId: string, allPlayers: Player[]): number {
-    let count = 0;
-    for (const other of allPlayers) {
-      if (other.id !== playerId && this.hasTeammateConflict(playerId, other.id)) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  private countGroupConflicts(group: Player[]): number {
-    let count = 0;
-    for (let i = 0; i < group.length; i++) {
-      for (let j = i + 1; j < group.length; j++) {
-        const key = this.pairKey(group[i].id, group[j].id);
-        count += this.teammateCountMap.get(key) ?? 0;
-      }
-    }
-    return count;
-  }
-
-  private createOptimalTeams(players: Player[]): Court['teams'] {
+  /**
+   * Creates teams for a court, trying all 3 splits and picking the best.
+   */
+  private createTeams(players: Player[]): Court['teams'] {
     if (players.length === 4) {
       return this.chooseBestTeamSplit(players).teams;
     } else if (players.length === 2) {
@@ -425,43 +352,163 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     return undefined;
   }
 
-  private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
-    const splits: Array<[[number, number], [number, number]]> = [
-      [[0, 1], [2, 3]],
-      [[0, 2], [1, 3]],
-      [[0, 3], [1, 2]],
-    ];
+  /**
+   * Perturbs the current solution by making a small random change.
+   */
+  private perturbSolution(courts: Court[]): Court[] {
+    const newCourts = this.cloneCourts(courts);
 
-    let bestCost = Infinity;
-    let bestTeams: Court['teams'] = undefined;
+    if (newCourts.length === 0) return newCourts;
 
-    for (const split of splits) {
-      const team1 = [players[split[0][0]], players[split[0][1]]];
-      const team2 = [players[split[1][0]], players[split[1][1]]];
+    const strategy = Math.random();
 
-      let cost = 0;
+    if (strategy < 0.5 && newCourts.length > 1) {
 
-      for (const a of team1) {
-        for (const b of team2) {
-          cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT;
-        }
-      }
-
-      const team1Wins = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-      const team2Wins = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-      cost += Math.abs(team1Wins - team2Wins) * this.BALANCE_WEIGHT;
-
-      const team1Losses = team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
-      const team2Losses = team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
-      cost += Math.abs(team1Losses - team2Losses) * this.BALANCE_WEIGHT;
-
-      if (cost < bestCost) {
-        bestCost = cost;
-        bestTeams = { team1, team2 };
-      }
+      this.swapPlayersBetweenCourts(newCourts);
+    } else if (strategy < 0.8) {
+      this.resplitCourtTeams(newCourts);
+    } else {
+      this.swapWithinCourt(newCourts);
     }
 
-    return { teams: bestTeams, cost: bestCost };
+    return newCourts;
+  }
+
+  /**
+   * Swaps one player from court A with one player from court B.
+   */
+  private swapPlayersBetweenCourts(courts: Court[]): void {
+    if (courts.length < 2) return;
+
+    const courtA = Math.floor(Math.random() * courts.length);
+    let courtB = Math.floor(Math.random() * courts.length);
+    while (courtB === courtA) {
+      courtB = Math.floor(Math.random() * courts.length);
+    }
+
+    const playersA = courts[courtA].players;
+    const playersB = courts[courtB].players;
+
+    if (playersA.length === 0 || playersB.length === 0) return;
+
+    const idxA = Math.floor(Math.random() * playersA.length);
+    const idxB = Math.floor(Math.random() * playersB.length);
+
+    const temp = playersA[idxA];
+    playersA[idxA] = playersB[idxB];
+    playersB[idxB] = temp;
+
+    courts[courtA].teams = this.createTeams(playersA);
+    courts[courtB].teams = this.createTeams(playersB);
+  }
+
+  /**
+   * Re-randomizes and re-splits teams on a single court.
+   */
+  private resplitCourtTeams(courts: Court[]): void {
+    const courtIdx = Math.floor(Math.random() * courts.length);
+    const court = courts[courtIdx];
+
+    if (court.players.length === 4) {
+
+      this.shuffleArray(court.players);
+      court.teams = this.chooseBestTeamSplit(court.players).teams;
+    }
+  }
+
+  /**
+   * Swaps two players within the same court (changes team composition).
+   */
+  private swapWithinCourt(courts: Court[]): void {
+    const courtIdx = Math.floor(Math.random() * courts.length);
+    const court = courts[courtIdx];
+
+    if (!court.teams || court.players.length !== 4) return;
+
+    const idx1 = Math.floor(Math.random() * court.teams.team1.length);
+    const idx2 = Math.floor(Math.random() * court.teams.team2.length);
+
+    const temp = court.teams.team1[idx1];
+    court.teams.team1[idx1] = court.teams.team2[idx2];
+    court.teams.team2[idx2] = temp;
+
+    court.players = [...court.teams.team1, ...court.teams.team2];
+  }
+
+  /**
+   * Deep clones court array for SA iteration.
+   */
+  private cloneCourts(courts: Court[]): Court[] {
+    return courts.map(court => ({
+      courtNumber: court.courtNumber,
+      players: [...court.players],
+      teams: court.teams ? {
+        team1: [...court.teams.team1],
+        team2: [...court.teams.team2],
+      } : undefined,
+      winner: court.winner,
+    }));
+  }
+
+  private evaluateTotalCost(courts: Court[]): number {
+    let totalCost = 0;
+
+    for (const court of courts) {
+      if (!court.teams) continue;
+
+      if (court.players.length === 2) {
+        const player1SinglesCount = this.singleCountMap.get(court.players[0].id) ?? 0;
+        const player2SinglesCount = this.singleCountMap.get(court.players[1].id) ?? 0;
+        totalCost += (player1SinglesCount + player2SinglesCount) * this.SINGLES_REPEAT_PENALTY;
+      }
+
+      const addTeammateCost = (team: Player[]): void => {
+        for (let i = 0; i < team.length; i++) {
+          for (let j = i + 1; j < team.length; j++) {
+            const count = this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0;
+            if (count > 0) {
+              totalCost += this.TEAMMATE_REPEAT_PENALTY * count;
+            }
+          }
+        }
+      };
+
+      addTeammateCost(court.teams.team1);
+      addTeammateCost(court.teams.team2);
+
+      court.teams.team1.forEach(a => {
+        court.teams!.team2.forEach(b => {
+          const count = this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
+          totalCost += this.OPPONENT_REPEAT_PENALTY * count;
+        });
+      });
+
+      const addSkillPairPenalty = (team: Player[]): void => {
+        for (let i = 0; i < team.length; i++) {
+          for (let j = i + 1; j < team.length; j++) {
+            const wins1 = this.winCountMap.get(team[i].id) ?? 0;
+            const wins2 = this.winCountMap.get(team[j].id) ?? 0;
+            const losses1 = this.lossCountMap.get(team[i].id) ?? 0;
+            const losses2 = this.lossCountMap.get(team[j].id) ?? 0;
+
+            totalCost += this.SKILL_PAIR_PENALTY * (wins1 * wins2 + losses1 * losses2);
+          }
+        }
+      };
+
+      addSkillPairPenalty(court.teams.team1);
+      addSkillPairPenalty(court.teams.team2);
+
+      const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+      const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+      totalCost += this.BALANCE_PENALTY * Math.abs(team1WinSum - team2WinSum);
+
+      const team1LossSum = court.teams.team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
+      const team2LossSum = court.teams.team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
+      totalCost += this.BALANCE_PENALTY * Math.abs(team1LossSum - team2LossSum);
+    }
+
+    return totalCost;
   }
 
   getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
@@ -500,6 +547,55 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     }).slice(0, benchSpots);
   }
 
+  private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
+    const splits: Array<[[number, number], [number, number]]> = [
+      [[0, 1], [2, 3]],
+      [[0, 2], [1, 3]],
+      [[0, 3], [1, 2]],
+    ];
+
+    let bestCost = Infinity;
+    let bestTeams: Court['teams'] = undefined;
+
+    splits.forEach(split => {
+      const team1 = [players[split[0][0]], players[split[0][1]]];
+      const team2 = [players[split[1][0]], players[split[1][1]]];
+      const cost = this.evaluateSplitCost(team1, team2);
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestTeams = { team1, team2 };
+      }
+    });
+
+    return { teams: bestTeams, cost: bestCost };
+  }
+
+  private evaluateSplitCost(team1: Player[], team2: Player[]): number {
+    let cost = 0;
+
+    const addTeammateCost = (team: Player[]): void => {
+      for (let i = 0; i < team.length; i++) {
+        for (let j = i + 1; j < team.length; j++) {
+          cost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
+        }
+      }
+    };
+    addTeammateCost(team1);
+    addTeammateCost(team2);
+
+    team1.forEach(a => {
+      team2.forEach(b => {
+        cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY;
+      });
+    });
+
+    const team1Wins = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+    const team2Wins = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+    cost += Math.abs(team1Wins - team2Wins) * this.BALANCE_PENALTY;
+
+    return cost;
+  }
+
   private createManualCourt(players: Player[], courtNumber: number): Court {
     const court: Court = {
       courtNumber,
@@ -528,10 +624,11 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     totalTeammatePairs: number;
     maxTeammateCount: number;
     avgTeammateCount: number;
-    conflictEdges: number;
+    totalOpponentPairs: number;
+    maxOpponentCount: number;
   } {
     const teammateValues = Array.from(this.teammateCountMap.values());
-    const conflictEdges = teammateValues.filter(v => v > 0).length;
+    const opponentValues = Array.from(this.opponentCountMap.values());
 
     return {
       totalTeammatePairs: teammateValues.length,
@@ -539,10 +636,11 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
       avgTeammateCount: teammateValues.length > 0
         ? teammateValues.reduce((a, b) => a + b, 0) / teammateValues.length
         : 0,
-      conflictEdges,
+      totalOpponentPairs: opponentValues.length,
+      maxOpponentCount: Math.max(0, ...opponentValues),
     };
   }
 }
 
-/** Singleton instance of the Conflict Graph engine. */
-export const engineCG = new ConflictGraphEngine();
+/** Singleton instance of the SA engine. */
+export const engineSA = new CourtAssignmentEngineSA();

@@ -17,7 +17,7 @@ import {
   getWinCounts,
   getBenchCounts,
   clearCurrentSession,
-} from './utils/engineSelector';
+} from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';

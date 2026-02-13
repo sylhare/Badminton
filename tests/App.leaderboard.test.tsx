@@ -4,7 +4,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
-import { getWinCounts } from '../src/utils/engineSelector';
+import { getWinCounts } from '../src/engines/engineSelector';
 
 import { addPlayers, generateAndWaitForAssignments, clearTestState } from './shared';
 

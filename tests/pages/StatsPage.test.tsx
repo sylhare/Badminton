@@ -3,10 +3,10 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 import StatsPage from '../../src/pages/StatsPage';
-import * as engineSelector from '../../src/utils/engineSelector';
+import * as engineSelector from '../../src/engines/engineSelector';
 import * as storageUtils from '../../src/utils/storageUtils';
 
-vi.mock('../../src/utils/engineSelector', () => ({
+vi.mock('../../src/engines/engineSelector', () => ({
   loadState: vi.fn(),
   prepareStateForSaving: vi.fn(),
   onStateChange: vi.fn(() => vi.fn()),
