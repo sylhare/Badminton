@@ -1,4 +1,4 @@
-import type { Court, Player, ManualCourtSelection, CourtEngineState } from '../types';
+import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine } from '../types';
 
 import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
 
@@ -13,56 +13,34 @@ import { saveCourtEngineState, loadCourtEngineState } from './storageUtils';
  * by edges in a conflict graph, and the algorithm finds independent sets (players
  * with no conflicts between them) to form courts.
  *
- * ## Key Advantages over Monte Carlo/SA:
- * - **Deterministic non-repetition**: If a valid assignment exists, it WILL find it
- * - **Fails fast**: Knows immediately when non-repetition is impossible
- * - **Optimal for variety**: Maximizes pairing diversity by construction
- *
- * ## Algorithm Overview:
- * 1. Build conflict graph where edges = "already been teammates"
- * 2. For each court, greedily find 4 players with NO edges between them
- * 3. Among valid player sets, choose best team split for balance
- * 4. If no valid set exists, fall back to minimum-conflict selection
- *
- * ## When It Works Best:
- * - Early rounds with few historical pairings
- * - Larger player pools (more options to avoid conflicts)
- * - When non-repetition is the primary goal
- *
- * ## Limitations:
- * - May fail to find valid assignments after many rounds (mathematically impossible)
- * - Falls back to "minimum conflict" when perfect assignment isn't possible
  */
-export class ConflictGraphEngine {
+export class ConflictGraphEngine implements ICourtAssignmentEngine {
   /** Tracks how many times each player has been benched across all sessions */
-  private static benchCountMap: Map<string, number> = new Map();
+  private benchCountMap: Map<string, number> = new Map();
   /** Tracks how many times each player has played singles matches across all sessions */
-  private static singleCountMap: Map<string, number> = new Map();
+  private singleCountMap: Map<string, number> = new Map();
   /** Tracks pairwise teammate frequency - THIS IS THE CONFLICT GRAPH */
-  private static teammateCountMap: Map<string, number> = new Map();
+  private teammateCountMap: Map<string, number> = new Map();
   /** Tracks pairwise opponent frequency */
-  private static opponentCountMap: Map<string, number> = new Map();
+  private opponentCountMap: Map<string, number> = new Map();
   /** Tracks total wins per player for skill-based team balancing */
-  private static winCountMap: Map<string, number> = new Map();
+  private winCountMap: Map<string, number> = new Map();
   /** Tracks total losses per player for skill-based team balancing */
-  private static lossCountMap: Map<string, number> = new Map();
+  private lossCountMap: Map<string, number> = new Map();
   /** Tracks recorded match outcomes for the current session */
-  private static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
+  private recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
   /** Observer pattern listeners for state change notifications */
-  private static stateChangeListeners: Array<() => void> = [];
+  private stateChangeListeners: Array<() => void> = [];
 
   // ============== Configuration ==============
-  /** Number of random attempts when looking for conflict-free groups */
-  private static readonly MAX_SEARCH_ATTEMPTS = 100;
-  /** Weight for opponent repetition in cost function */
-  private static readonly OPPONENT_WEIGHT = 10;
-  /** Weight for skill balance in cost function */
-  private static readonly BALANCE_WEIGHT = 2;
+  private readonly MAX_SEARCH_ATTEMPTS = 100;
+  private readonly OPPONENT_WEIGHT = 10;
+  private readonly BALANCE_WEIGHT = 2;
 
   /**
    * Subscribes to state changes in the engine (Observer pattern).
    */
-  static onStateChange(listener: () => void): () => void {
+  onStateChange(listener: () => void): () => void {
     this.stateChangeListeners.push(listener);
     return () => {
       const index = this.stateChangeListeners.indexOf(listener);
@@ -72,11 +50,11 @@ export class ConflictGraphEngine {
     };
   }
 
-  private static notifyStateChange(): void {
+  private notifyStateChange(): void {
     this.stateChangeListeners.forEach(listener => listener());
   }
 
-  static resetHistory(): void {
+  resetHistory(): void {
     this.benchCountMap.clear();
     this.singleCountMap.clear();
     this.teammateCountMap.clear();
@@ -87,11 +65,11 @@ export class ConflictGraphEngine {
     this.notifyStateChange();
   }
 
-  static clearCurrentSession(): void {
+  clearCurrentSession(): void {
     this.recordedWinsMap.clear();
   }
 
-  static prepareStateForSaving(): CourtEngineState {
+  prepareStateForSaving(): CourtEngineState {
     return {
       benchCountMap: Object.fromEntries(this.benchCountMap),
       singleCountMap: Object.fromEntries(this.singleCountMap),
@@ -102,11 +80,11 @@ export class ConflictGraphEngine {
     };
   }
 
-  static saveState(): void {
+  saveState(): void {
     saveCourtEngineState(this.prepareStateForSaving());
   }
 
-  static loadState(): void {
+  loadState(): void {
     const state = loadCourtEngineState();
 
     if (state.benchCountMap) {
@@ -129,12 +107,12 @@ export class ConflictGraphEngine {
     }
   }
 
-  private static shouldReversePreviousRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }, currentWinner: 1 | 2, currentWinningPlayerIds: string[]): boolean {
+  private shouldReversePreviousRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }, currentWinner: 1 | 2, currentWinningPlayerIds: string[]): boolean {
     return !(previousRecord.winner === currentWinner &&
       JSON.stringify(previousRecord.winningPlayers.sort()) === JSON.stringify(currentWinningPlayerIds.sort()));
   }
 
-  private static reversePreviousWinRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }): void {
+  private reversePreviousWinRecord(previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }): void {
     previousRecord.winningPlayers.forEach(playerId => {
       const currentWins = this.winCountMap.get(playerId) || 0;
       if (currentWins > 0) {
@@ -150,7 +128,7 @@ export class ConflictGraphEngine {
     });
   }
 
-  static reverseWinForCourt(courtNumber: number): void {
+  reverseWinForCourt(courtNumber: number): void {
     const previousRecord = this.recordedWinsMap.get(courtNumber);
     if (previousRecord) {
       this.reversePreviousWinRecord(previousRecord);
@@ -159,7 +137,7 @@ export class ConflictGraphEngine {
     }
   }
 
-  static updateWinner(
+  updateWinner(
     courtNumber: number,
     winner: 1 | 2 | undefined,
     currentAssignments: Court[],
@@ -183,7 +161,7 @@ export class ConflictGraphEngine {
     return updatedAssignments;
   }
 
-  static recordWins(courts: Court[]): void {
+  recordWins(courts: Court[]): void {
     let stateChanged = false;
     courts.forEach(court => {
       if (court.winner && court.teams) {
@@ -222,20 +200,17 @@ export class ConflictGraphEngine {
     }
   }
 
-  static getWinCounts(): Map<string, number> {
+  getWinCounts(): Map<string, number> {
     return new Map(this.winCountMap);
   }
 
-  static getBenchCounts(): Map<string, number> {
+  getBenchCounts(): Map<string, number> {
     return new Map(this.benchCountMap);
   }
 
   // ============== Core Conflict Graph Algorithm ==============
 
-  /**
-   * Generates court assignments using conflict graph approach.
-   */
-  static generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
 
@@ -303,11 +278,7 @@ export class ConflictGraphEngine {
     return finalCourts;
   }
 
-  /**
-   * Builds courts by finding conflict-free player groups.
-   * A conflict exists between two players if they've been teammates before.
-   */
-  private static buildCourtsWithConflictGraph(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
+  private buildCourtsWithConflictGraph(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     const courts: Court[] = [];
     const availablePlayers = [...players];
 
@@ -345,11 +316,7 @@ export class ConflictGraphEngine {
     return courts;
   }
 
-  /**
-   * Finds a group of `size` players with NO conflicts (never been teammates).
-   * Uses randomized search to find valid independent sets.
-   */
-  private static findConflictFreeGroup(players: Player[], size: number): Player[] | null {
+  private findConflictFreeGroup(players: Player[], size: number): Player[] | null {
     if (players.length < size) return null;
 
     // Try randomized search
@@ -376,7 +343,7 @@ export class ConflictGraphEngine {
       }
     }
 
-    // Also try greedy approach: start with player with fewest conflicts
+    // Also try greedy approach
     const sortedByConflicts = [...players].sort((a, b) => {
       const conflictsA = this.countConflicts(a.id, players);
       const conflictsB = this.countConflicts(b.id, players);
@@ -401,19 +368,15 @@ export class ConflictGraphEngine {
       }
     }
 
-    return null; // No conflict-free group found
+    return null;
   }
 
-  /**
-   * When no conflict-free group exists, find the group with minimum total conflicts.
-   */
-  private static findMinimumConflictGroup(players: Player[], size: number): Player[] {
+  private findMinimumConflictGroup(players: Player[], size: number): Player[] {
     if (players.length <= size) return players.slice(0, size);
 
     let bestGroup: Player[] = [];
     let bestConflictCount = Infinity;
 
-    // Sample random groups and pick the one with fewest conflicts
     for (let attempt = 0; attempt < this.MAX_SEARCH_ATTEMPTS; attempt++) {
       const shuffled = this.shuffleArray([...players]);
       const group = shuffled.slice(0, size);
@@ -422,8 +385,6 @@ export class ConflictGraphEngine {
       if (conflictCount < bestConflictCount) {
         bestConflictCount = conflictCount;
         bestGroup = group;
-
-        // If we found a zero-conflict group, we're done
         if (conflictCount === 0) break;
       }
     }
@@ -431,11 +392,7 @@ export class ConflictGraphEngine {
     return bestGroup;
   }
 
-  /**
-   * Selects the best pair for singles, preferring players who've played singles less often.
-   * This ensures fair singles rotation across all players.
-   */
-  private static selectBestSinglesPair(players: Player[]): Player[] {
+  private selectBestSinglesPair(players: Player[]): Player[] {
     if (players.length < 2) return players;
 
     const sorted = [...players].sort((a, b) => {
@@ -447,18 +404,12 @@ export class ConflictGraphEngine {
     return sorted.slice(0, 2);
   }
 
-  /**
-   * Checks if two players have been teammates before.
-   */
-  private static hasTeammateConflict(playerId1: string, playerId2: string): boolean {
+  private hasTeammateConflict(playerId1: string, playerId2: string): boolean {
     const key = this.pairKey(playerId1, playerId2);
     return (this.teammateCountMap.get(key) ?? 0) > 0;
   }
 
-  /**
-   * Counts how many other players this player has conflicts with.
-   */
-  private static countConflicts(playerId: string, allPlayers: Player[]): number {
+  private countConflicts(playerId: string, allPlayers: Player[]): number {
     let count = 0;
     for (const other of allPlayers) {
       if (other.id !== playerId && this.hasTeammateConflict(playerId, other.id)) {
@@ -468,10 +419,7 @@ export class ConflictGraphEngine {
     return count;
   }
 
-  /**
-   * Counts total teammate conflicts within a group.
-   */
-  private static countGroupConflicts(group: Player[]): number {
+  private countGroupConflicts(group: Player[]): number {
     let count = 0;
     for (let i = 0; i < group.length; i++) {
       for (let j = i + 1; j < group.length; j++) {
@@ -482,11 +430,7 @@ export class ConflictGraphEngine {
     return count;
   }
 
-  /**
-   * Creates optimal team split for a group of players.
-   * Minimizes opponent repetition and maximizes skill balance.
-   */
-  private static createOptimalTeams(players: Player[]): Court['teams'] {
+  private createOptimalTeams(players: Player[]): Court['teams'] {
     if (players.length === 4) {
       return this.chooseBestTeamSplit(players).teams;
     } else if (players.length === 2) {
@@ -495,11 +439,7 @@ export class ConflictGraphEngine {
     return undefined;
   }
 
-  /**
-   * Evaluates all 3 possible team splits and returns the best one.
-   * Optimizes for: minimal opponent repetition + skill balance.
-   */
-  private static chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
+  private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
     const splits: Array<[[number, number], [number, number]]> = [
       [[0, 1], [2, 3]],
       [[0, 2], [1, 3]],
@@ -515,14 +455,12 @@ export class ConflictGraphEngine {
 
       let cost = 0;
 
-      // Opponent repetition cost
       for (const a of team1) {
         for (const b of team2) {
           cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT;
         }
       }
 
-      // Skill balance cost
       const team1Wins = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
       const team2Wins = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
       cost += Math.abs(team1Wins - team2Wins) * this.BALANCE_WEIGHT;
@@ -540,22 +478,20 @@ export class ConflictGraphEngine {
     return { teams: bestTeams, cost: bestCost };
   }
 
-  // ============== Helper Methods ==============
-
-  static getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
+  getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
     const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
     return players.filter(p => p.isPresent && !assignedIds.has(p.id));
   }
 
-  private static pairKey(a: string, b: string): string {
+  private pairKey(a: string, b: string): string {
     return a < b ? `${a}|${b}` : `${b}|${a}`;
   }
 
-  private static incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
+  private incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
     map.set(key, (map.get(key) ?? 0) + inc);
   }
 
-  private static shuffleArray<T>(array: T[]): T[] {
+  private shuffleArray<T>(array: T[]): T[] {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       const temp = array[i];
@@ -565,7 +501,7 @@ export class ConflictGraphEngine {
     return array;
   }
 
-  private static selectBenchedPlayers(players: Player[], benchSpots: number): Player[] {
+  private selectBenchedPlayers(players: Player[], benchSpots: number): Player[] {
     if (benchSpots <= 0) return [];
 
     players.forEach(p => {
@@ -578,7 +514,7 @@ export class ConflictGraphEngine {
     }).slice(0, benchSpots);
   }
 
-  private static createManualCourt(players: Player[], courtNumber: number): Court {
+  private createManualCourt(players: Player[], courtNumber: number): Court {
     const court: Court = {
       courtNumber,
       players: [...players],
@@ -602,12 +538,7 @@ export class ConflictGraphEngine {
     return court;
   }
 
-  // ============== Debug/Analysis Methods ==============
-
-  /**
-   * Returns statistics about the current conflict graph state.
-   */
-  static getStats(): {
+  getStats(): {
     totalTeammatePairs: number;
     maxTeammateCount: number;
     avgTeammateCount: number;
@@ -627,10 +558,5 @@ export class ConflictGraphEngine {
   }
 }
 
-/** Wrapper function for generating court assignments with Conflict Graph. */
-export const generateCourtAssignmentsCG = (players: Player[], courts: number, manualCourt?: ManualCourtSelection): Court[] =>
-  ConflictGraphEngine.generate(players, courts, manualCourt);
-
-/** Wrapper function for getting benched players. */
-export const getBenchedPlayersCG = (assignments: Court[], players: Player[]): Player[] =>
-  ConflictGraphEngine.getBenchedPlayers(assignments, players);
+/** Singleton instance of the Conflict Graph engine. */
+export const engineCG = new ConflictGraphEngine();

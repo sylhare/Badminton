@@ -40,3 +40,19 @@ export interface CourtEngineState {
   winCountMap: Record<string, number>;
   lossCountMap: Record<string, number>;
 }
+
+export interface ICourtAssignmentEngine {
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[];
+  getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
+  resetHistory(): void;
+  clearCurrentSession(): void;
+  prepareStateForSaving(): CourtEngineState;
+  saveState(): void;
+  loadState(): void;
+  recordWins(courts: Court[]): void;
+  getWinCounts(): Map<string, number>;
+  getBenchCounts(): Map<string, number>;
+  updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];
+  reverseWinForCourt(courtNumber: number): void;
+  onStateChange(listener: () => void): () => void;
+}
