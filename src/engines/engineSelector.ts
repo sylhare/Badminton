@@ -104,9 +104,15 @@ export const generateCourtAssignments = (
   players: Player[],
   numberOfCourts: number,
   manualSelection?: ManualCourtSelection,
+  forceBenchPlayerIds?: Set<string>,
 ): Court[] => {
-  return getEngine().generate(players, numberOfCourts, manualSelection);
+  return getEngine().generate(players, numberOfCourts, manualSelection, forceBenchPlayerIds);
 };
+
+/**
+ * Returns shared telemetry statistics.
+ */
+export const getStats = () => getEngine().getStats();
 
 /**
  * Gets benched players using the currently selected engine.

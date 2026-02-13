@@ -107,6 +107,7 @@ function App(): React.ReactElement {
       players,
       numberOfCourts,
       manualCourtSelection || undefined,
+      forceBenchPlayerIds,
     );
 
     if (hadManualSelection) {
