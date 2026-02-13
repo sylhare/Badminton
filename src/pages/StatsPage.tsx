@@ -285,9 +285,9 @@ function StatsPage(): React.ReactElement {
           <a href={basePath} className="back-link" data-testid="back-to-app">
             ← Back to App
           </a>
-          <h1>Engine Diagnostics</h1>
+          <h1>{engine().getName()} Diagnostics</h1>
           <p className="stats-subtitle">
-            Monitor algorithm behavior and detect unusual patterns
+            {engine().getDescription()}
           </p>
         </header>
 
