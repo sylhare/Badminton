@@ -7,8 +7,8 @@ import { DoublesMatch } from '../../../../src/components/court/display';
 import { TEST_PLAYERS } from '../../../data/testData';
 
 describe('DoublesMatch', () => {
-  const team1Players = [TEST_PLAYERS[0], TEST_PLAYERS[1]]; // Alice, Bob
-  const team2Players = [TEST_PLAYERS[2], TEST_PLAYERS[3]]; // Charlie, Diana
+  const team1Players = [TEST_PLAYERS[0], TEST_PLAYERS[1]]; 
+  const team2Players = [TEST_PLAYERS[2], TEST_PLAYERS[3]]; 
 
   it('renders both teams with all players', () => {
     render(

@@ -97,10 +97,6 @@ export const getEngineDescription = (): string => {
   }
 };
 
-// ============================================================================
-// UNIFIED API - These functions use the currently selected engine
-// ============================================================================
-
 /**
  * Generates court assignments using the currently selected engine.
  */

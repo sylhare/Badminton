@@ -53,12 +53,10 @@ export const loadAppState = (): Partial<{
       return {};
     }
 
-    // Migration: convert old collapsedSteps to isManagePlayersCollapsed
     let isManagePlayersCollapsed = false;
     if (typeof parsed.isManagePlayersCollapsed === 'boolean') {
       isManagePlayersCollapsed = parsed.isManagePlayersCollapsed;
     } else if (Array.isArray(parsed.collapsedSteps)) {
-      // Old format: steps 1 and 2 were the player-related steps
       isManagePlayersCollapsed = parsed.collapsedSteps.includes(1) || parsed.collapsedSteps.includes(2);
     }
 

@@ -31,13 +31,11 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
   /** Observer pattern listeners for state change notifications */
   private stateChangeListeners: Array<() => void> = [];
 
-  // ============== SA Configuration ==============
   private readonly SA_ITERATIONS = 5000;
   private readonly INITIAL_TEMPERATURE = 100.0;
   private readonly COOLING_RATE = 0.9995;
   private readonly MIN_TEMPERATURE = 0.1;
 
-  // ============== Cost Weights ==============
   private readonly TEAMMATE_REPEAT_PENALTY = 10000;
   private readonly OPPONENT_REPEAT_PENALTY = 50;
   private readonly SKILL_PAIR_PENALTY = 1;
@@ -215,8 +213,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     return new Map(this.benchCountMap);
   }
 
-  // ============== Core SA Algorithm ==============
-
   generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
@@ -225,7 +221,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     let remainingPlayers = presentPlayers;
     let remainingCourts = numberOfCourts;
 
-    // Handle manual court selection
     if (manualSelection && manualSelection.players.length > 0) {
       const manualPlayers = manualSelection.players.filter(p => p.isPresent);
       if (manualPlayers.length >= 2 && manualPlayers.length <= 4) {
@@ -235,17 +230,14 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
       }
     }
 
-    // Calculate bench spots
     const capacity = remainingCourts * 4;
     let benchSpots = Math.max(0, remainingPlayers.length - capacity);
     if ((remainingPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
     benchSpots = Math.min(benchSpots, remainingPlayers.length);
 
-    // Select benched players fairly
     const benchedPlayers = this.selectBenchedPlayers(remainingPlayers, benchSpots);
     const onCourtPlayers = remainingPlayers.filter(p => !benchedPlayers.includes(p));
 
-    // Run Simulated Annealing
     const startCourtNum = manualCourtResult ? 2 : 1;
     const saCourts = this.runSimulatedAnnealing(onCourtPlayers, remainingCourts, startCourtNum);
 
@@ -255,7 +247,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
       finalCourts = [manualCourtResult, ...finalCourts];
     }
 
-    // Update historical tracking
     benchedPlayers.forEach(p => this.incrementMapCount(this.benchCountMap, p.id));
     finalCourts.forEach(court => {
       if (!court.teams) return;
@@ -291,7 +282,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
   private runSimulatedAnnealing(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     if (players.length < 2) return [];
 
-    // Generate initial solution
     let current = this.generateInitialSolution(players, numberOfCourts, startCourtNum);
     let currentCost = this.evaluateTotalCost(current);
     let best = this.cloneCourts(current);
@@ -300,25 +290,22 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     let temperature = this.INITIAL_TEMPERATURE;
 
     for (let i = 0; i < this.SA_ITERATIONS; i++) {
-      // Generate neighbor by perturbation
+      
       const neighbor = this.perturbSolution(current);
       const neighborCost = this.evaluateTotalCost(neighbor);
 
       const delta = neighborCost - currentCost;
 
-      // Accept if better, or accept worse with probability e^(-delta/T)
       if (delta < 0 || (temperature > this.MIN_TEMPERATURE && Math.random() < Math.exp(-delta / temperature))) {
         current = neighbor;
         currentCost = neighborCost;
 
-        // Track best solution found
         if (currentCost < bestCost) {
           best = this.cloneCourts(current);
           bestCost = currentCost;
         }
       }
 
-      // Cool down
       temperature *= this.COOLING_RATE;
     }
 
@@ -341,7 +328,7 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
 
       if (courtPlayers.length < 2) break;
       if (courtPlayers.length === 3) {
-        // Put the extra player back
+        
         shuffled.unshift(courtPlayers.pop()!);
         idx--;
       }
@@ -376,13 +363,13 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     const strategy = Math.random();
 
     if (strategy < 0.5 && newCourts.length > 1) {
-      // Strategy 1: Swap players between two different courts
+      
       this.swapPlayersBetweenCourts(newCourts);
     } else if (strategy < 0.8) {
-      // Strategy 2: Re-split teams on one court
+      
       this.resplitCourtTeams(newCourts);
     } else {
-      // Strategy 3: Swap players within same court (team change)
+      
       this.swapWithinCourt(newCourts);
     }
 
@@ -409,12 +396,10 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     const idxA = Math.floor(Math.random() * playersA.length);
     const idxB = Math.floor(Math.random() * playersB.length);
 
-    // Swap
     const temp = playersA[idxA];
     playersA[idxA] = playersB[idxB];
     playersB[idxB] = temp;
 
-    // Re-create teams for both courts
     courts[courtA].teams = this.createTeams(playersA);
     courts[courtB].teams = this.createTeams(playersB);
   }
@@ -427,7 +412,7 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     const court = courts[courtIdx];
 
     if (court.players.length === 4) {
-      // Shuffle and pick new split
+      
       this.shuffleArray(court.players);
       court.teams = this.chooseBestTeamSplit(court.players).teams;
     }
@@ -442,7 +427,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
 
     if (!court.teams || court.players.length !== 4) return;
 
-    // Randomly swap one player from team1 with one from team2
     const idx1 = Math.floor(Math.random() * court.teams.team1.length);
     const idx2 = Math.floor(Math.random() * court.teams.team2.length);
 
@@ -450,7 +434,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     court.teams.team1[idx1] = court.teams.team2[idx2];
     court.teams.team2[idx2] = temp;
 
-    // Update players array to match
     court.players = [...court.teams.team1, ...court.teams.team2];
   }
 
@@ -475,14 +458,12 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     for (const court of courts) {
       if (!court.teams) continue;
 
-      // === SINGLES REPETITION ===
       if (court.players.length === 2) {
         const player1SinglesCount = this.singleCountMap.get(court.players[0].id) ?? 0;
         const player2SinglesCount = this.singleCountMap.get(court.players[1].id) ?? 0;
         totalCost += (player1SinglesCount + player2SinglesCount) * this.SINGLES_REPEAT_PENALTY;
       }
 
-      // === TEAMMATE REPETITION ===
       const addTeammateCost = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
@@ -497,7 +478,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
       addTeammateCost(court.teams.team1);
       addTeammateCost(court.teams.team2);
 
-      // === OPPONENT REPETITION ===
       court.teams.team1.forEach(a => {
         court.teams!.team2.forEach(b => {
           const count = this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
@@ -505,7 +485,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
         });
       });
 
-      // === SKILL PAIRING PENALTY ===
       const addSkillPairPenalty = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
@@ -522,7 +501,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
       addSkillPairPenalty(court.teams.team1);
       addSkillPairPenalty(court.teams.team2);
 
-      // === TEAM BALANCE ===
       const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
       const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
       totalCost += this.BALANCE_PENALTY * Math.abs(team1WinSum - team2WinSum);
@@ -597,7 +575,6 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
   private evaluateSplitCost(team1: Player[], team2: Player[]): number {
     let cost = 0;
 
-    // Teammate repetition
     const addTeammateCost = (team: Player[]): void => {
       for (let i = 0; i < team.length; i++) {
         for (let j = i + 1; j < team.length; j++) {
@@ -608,14 +585,12 @@ export class CourtAssignmentEngineSA implements ICourtAssignmentEngine {
     addTeammateCost(team1);
     addTeammateCost(team2);
 
-    // Opponent repetition
     team1.forEach(a => {
       team2.forEach(b => {
         cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY;
       });
     });
 
-    // Balance
     const team1Wins = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
     const team2Wins = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
     cost += Math.abs(team1Wins - team2Wins) * this.BALANCE_PENALTY;
