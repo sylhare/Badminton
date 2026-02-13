@@ -62,8 +62,17 @@ export const getEngineType = (): EngineType => currentEngineType;
 
 /**
  * Gets the currently active engine instance.
+ * Use this to access all engine methods directly.
+ * 
+ * @example
+ * ```typescript
+ * import { engine } from './engineSelector';
+ * 
+ * const assignments = engine.generateCourtAssignments(players, 2);
+ * const stats = engine.getStats();
+ * ```
  */
-export const getEngine = (): ICourtAssignmentEngine => {
+export const engine = (): ICourtAssignmentEngine => {
   return getEngineInstance(currentEngineType);
 };
 
@@ -95,109 +104,4 @@ export const getEngineDescription = (): string => {
     default:
       return 'Simulated Annealing with iterative improvement. Performs 5000 iterations, accepting worse solutions probabilistically to escape local minima.';
   }
-};
-
-/**
- * Generates court assignments using the currently selected engine.
- */
-export const generateCourtAssignments = (
-  players: Player[],
-  numberOfCourts: number,
-  manualSelection?: ManualCourtSelection,
-  forceBenchPlayerIds?: Set<string>,
-): Court[] => {
-  return getEngine().generate(players, numberOfCourts, manualSelection, forceBenchPlayerIds);
-};
-
-/**
- * Returns shared telemetry statistics.
- */
-export const getStats = () => getEngine().getStats();
-
-/**
- * Gets benched players using the currently selected engine.
- */
-export const getBenchedPlayers = (assignments: Court[], players: Player[]): Player[] => {
-  return getEngine().getBenchedPlayers(assignments, players);
-};
-
-/**
- * Resets history on the currently selected engine.
- */
-export const resetHistory = (): void => {
-  getEngine().resetHistory();
-};
-
-/**
- * Clears current session on the currently selected engine.
- */
-export const clearCurrentSession = (): void => {
-  getEngine().clearCurrentSession();
-};
-
-/**
- * Prepares state for saving from the currently selected engine.
- */
-export const prepareStateForSaving = (): CourtEngineState => {
-  return getEngine().prepareStateForSaving();
-};
-
-/**
- * Saves state from the currently selected engine.
- */
-export const saveState = (): void => {
-  getEngine().saveState();
-};
-
-/**
- * Loads state into the currently selected engine.
- */
-export const loadState = (): void => {
-  getEngine().loadState();
-};
-
-/**
- * Records wins using the currently selected engine.
- */
-export const recordWins = (courts: Court[]): void => {
-  getEngine().recordWins(courts);
-};
-
-/**
- * Gets win counts from the currently selected engine.
- */
-export const getWinCounts = (): Map<string, number> => {
-  return getEngine().getWinCounts();
-};
-
-/**
- * Gets bench counts from the currently selected engine.
- */
-export const getBenchCounts = (): Map<string, number> => {
-  return getEngine().getBenchCounts();
-};
-
-/**
- * Updates winner using the currently selected engine.
- */
-export const updateWinner = (
-  courtNumber: number,
-  winner: 1 | 2 | undefined,
-  currentAssignments: Court[],
-): Court[] => {
-  return getEngine().updateWinner(courtNumber, winner, currentAssignments);
-};
-
-/**
- * Reverses win for court using the currently selected engine.
- */
-export const reverseWinForCourt = (courtNumber: number): void => {
-  getEngine().reverseWinForCourt(courtNumber);
-};
-
-/**
- * Subscribes to state changes on the currently selected engine.
- */
-export const onStateChange = (listener: () => void): (() => void) => {
-  return getEngine().onStateChange(listener);
 };

@@ -2,7 +2,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
-import { resetHistory } from '../src/engines/engineSelector';
+import { engine } from '../src/engines/engineSelector';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {
@@ -14,7 +14,7 @@ export const COMMON_PLAYERS = {
 /** Common setup/teardown used across multiple test files */
 export const clearTestState = (): void => {
   localStorage.clear();
-  resetHistory();
+  engine().resetHistory();
 };
 
 /** Helper to add players via the input field */
