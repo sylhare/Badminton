@@ -32,7 +32,6 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
   /** Observer pattern listeners for state change notifications */
   private stateChangeListeners: Array<() => void> = [];
 
-  // ============== Configuration ==============
   private readonly MAX_SEARCH_ATTEMPTS = 100;
   private readonly OPPONENT_WEIGHT = 10;
   private readonly BALANCE_WEIGHT = 2;
@@ -208,8 +207,6 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     return new Map(this.benchCountMap);
   }
 
-  // ============== Core Conflict Graph Algorithm ==============
-
   generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
@@ -218,7 +215,6 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     let remainingPlayers = presentPlayers;
     let remainingCourts = numberOfCourts;
 
-    // Handle manual court selection
     if (manualSelection && manualSelection.players.length > 0) {
       const manualPlayers = manualSelection.players.filter(p => p.isPresent);
       if (manualPlayers.length >= 2 && manualPlayers.length <= 4) {
@@ -228,17 +224,14 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
       }
     }
 
-    // Calculate bench spots
     const capacity = remainingCourts * 4;
     let benchSpots = Math.max(0, remainingPlayers.length - capacity);
     if ((remainingPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
     benchSpots = Math.min(benchSpots, remainingPlayers.length);
 
-    // Select benched players fairly
     const benchedPlayers = this.selectBenchedPlayers(remainingPlayers, benchSpots);
     const onCourtPlayers = remainingPlayers.filter(p => !benchedPlayers.includes(p));
 
-    // Build courts using conflict graph approach
     const startCourtNum = manualCourtResult ? 2 : 1;
     const courts = this.buildCourtsWithConflictGraph(onCourtPlayers, remainingCourts, startCourtNum);
 
@@ -248,7 +241,6 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
       finalCourts = [manualCourtResult, ...finalCourts];
     }
 
-    // Update historical tracking
     benchedPlayers.forEach(p => this.incrementMapCount(this.benchCountMap, p.id));
     finalCourts.forEach(court => {
       if (!court.teams) return;
@@ -285,30 +277,26 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
     for (let courtNum = startCourtNum; courtNum < startCourtNum + numberOfCourts; courtNum++) {
       if (availablePlayers.length < 2) break;
 
-      // Try to find 4 conflict-free players
       let courtPlayers: Player[] | null = null;
 
       if (availablePlayers.length >= 4) {
         courtPlayers = this.findConflictFreeGroup(availablePlayers, 4);
 
-        // If no conflict-free group, find minimum-conflict group
         if (!courtPlayers) {
           courtPlayers = this.findMinimumConflictGroup(availablePlayers, 4);
         }
       } else if (availablePlayers.length >= 2) {
-        // Not enough for 4, try 2 - prefer players who've played singles less
+        
         courtPlayers = this.selectBestSinglesPair(availablePlayers);
       }
 
       if (!courtPlayers || courtPlayers.length < 2) break;
 
-      // Remove selected players from available pool
       for (const p of courtPlayers) {
         const idx = availablePlayers.findIndex(ap => ap.id === p.id);
         if (idx !== -1) availablePlayers.splice(idx, 1);
       }
 
-      // Create court with optimal team split
       const teams = this.createOptimalTeams(courtPlayers);
       courts.push({ courtNumber: courtNum, players: courtPlayers, teams });
     }
@@ -319,13 +307,12 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
   private findConflictFreeGroup(players: Player[], size: number): Player[] | null {
     if (players.length < size) return null;
 
-    // Try randomized search
     for (let attempt = 0; attempt < this.MAX_SEARCH_ATTEMPTS; attempt++) {
       const shuffled = this.shuffleArray([...players]);
       const group: Player[] = [];
 
       for (const player of shuffled) {
-        // Check if player conflicts with anyone already in group
+        
         let hasConflict = false;
         for (const existing of group) {
           if (this.hasTeammateConflict(player.id, existing.id)) {
@@ -343,7 +330,6 @@ export class ConflictGraphEngine implements ICourtAssignmentEngine {
       }
     }
 
-    // Also try greedy approach
     const sortedByConflicts = [...players].sort((a, b) => {
       const conflictsA = this.countConflicts(a.id, players);
       const conflictsB = this.countConflicts(b.id, players);
