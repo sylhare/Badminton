@@ -185,4 +185,60 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     }
     return cost;
   }
+
+  /**
+   * Calculates the opponent repetition cost between two teams.
+   */
+  protected calculateOpponentCost(team1: Player[], team2: Player[], penaltyMultiplier: number): number {
+    let cost = 0;
+    team1.forEach(a => {
+      team2.forEach(b => {
+        cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * penaltyMultiplier;
+      });
+    });
+    return cost;
+  }
+
+  /**
+   * Calculates the win balance cost between two teams.
+   * Penalizes imbalanced matchups based on win history.
+   */
+  protected calculateWinBalanceCost(team1: Player[], team2: Player[], penaltyMultiplier: number): number {
+    const team1WinSum = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+    const team2WinSum = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+    return Math.abs(team1WinSum - team2WinSum) * penaltyMultiplier;
+  }
+
+  /**
+   * Calculates the loss balance cost between two teams.
+   * Penalizes imbalanced matchups based on loss history.
+   */
+  protected calculateLossBalanceCost(team1: Player[], team2: Player[], penaltyMultiplier: number): number {
+    const team1LossSum = team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
+    const team2LossSum = team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
+    return Math.abs(team1LossSum - team2LossSum) * penaltyMultiplier;
+  }
+
+  /**
+   * Calculates the singles repetition cost for a pair of players.
+   */
+  protected calculateSinglesCost(players: Player[], penaltyMultiplier: number): number {
+    if (players.length !== 2) return 0;
+    const p1Count = this.singleCountMap.get(players[0].id) ?? 0;
+    const p2Count = this.singleCountMap.get(players[1].id) ?? 0;
+    return (p1Count + p2Count) * penaltyMultiplier;
+  }
+
+  /**
+   * Creates teams from a list of players.
+   * For 4 players, uses optimal team split. For 2 players, creates singles match.
+   */
+  protected createTeamsFromPlayers(players: Player[]): Court['teams'] {
+    if (players.length === 4) {
+      return this.chooseBestTeamSplit(players).teams;
+    } else if (players.length === 2) {
+      return { team1: [players[0]], team2: [players[1]] };
+    }
+    return undefined;
+  }
 }

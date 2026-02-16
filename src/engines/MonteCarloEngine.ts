@@ -41,23 +41,11 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
 
     cost += this.calculateTeammateCost(team1, 1);
     cost += this.calculateTeammateCost(team2, 1);
-
-    team1.forEach(a => {
-      team2.forEach(b => {
-        cost += this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
-      });
-    });
-
+    cost += this.calculateOpponentCost(team1, team2, 1);
     cost += this.calculateSkillPairPenalty(team1, 1);
     cost += this.calculateSkillPairPenalty(team2, 1);
-
-    const team1WinSum = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-    const team2WinSum = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(team1WinSum - team2WinSum);
-
-    const team1LossSum = team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
-    const team2LossSum = team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(team1LossSum - team2LossSum);
+    cost += this.calculateWinBalanceCost(team1, team2, 1);
+    cost += this.calculateLossBalanceCost(team1, team2, 1);
 
     return cost;
   }
@@ -70,32 +58,23 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
     let cost = 0;
 
     if (court.players.length === 2) {
-      const p1 = court.players[0].id;
-      const p2 = court.players[1].id;
-      cost += (this.singleCountMap.get(p1) ?? 0 + (this.singleCountMap.get(p2) ?? 0)) * 100;
+      cost += this.calculateSinglesCost(court.players, 100);
     }
 
     cost += this.calculateTeammateCost(court.teams.team1, 1);
     cost += this.calculateTeammateCost(court.teams.team2, 1);
-
-    court.teams.team1.forEach(a => {
-      court.teams!.team2.forEach(b => {
-        cost += this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
-      });
-    });
-
+    cost += this.calculateOpponentCost(court.teams.team1, court.teams.team2, 1);
     cost += this.calculateSkillPairPenalty(court.teams.team1, 1);
     cost += this.calculateSkillPairPenalty(court.teams.team2, 1);
 
-    const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-    const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-    const diff = Math.abs(team1WinSum - team2WinSum);
-    if (diff > 0) console.log(`[ENGINE DEBUG] T1 Wins: ${team1WinSum}, T2 Wins: ${team2WinSum}, Diff: ${diff}`);
-    cost += diff;
-
-    const team1LossSum = court.teams.team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
-    const team2LossSum = court.teams.team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(team1LossSum - team2LossSum);
+    const winCost = this.calculateWinBalanceCost(court.teams.team1, court.teams.team2, 1);
+    if (winCost > 0) {
+      const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+      const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+      console.log(`[ENGINE DEBUG] T1 Wins: ${team1WinSum}, T2 Wins: ${team2WinSum}, Diff: ${winCost}`);
+    }
+    cost += winCost;
+    cost += this.calculateLossBalanceCost(court.teams.team1, court.teams.team2, 1);
 
     if (cacheKey) this.costCache.set(cacheKey, cost);
     return cost;
