@@ -111,6 +111,40 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     protected abstract getOptimalTeamSplit(players: Player[]): Court['teams'];
 
     /**
+     * Evaluates the cost of a specific team split.
+     * Each engine implements its own cost calculation logic.
+     */
+    protected abstract evaluateTeamSplitCost(team1: Player[], team2: Player[]): number;
+
+    /**
+     * Chooses the best team split from all possible configurations.
+     * Uses the engine-specific cost evaluation to select optimal teams.
+     */
+    protected chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
+        const splits: Array<[[number, number], [number, number]]> = [
+            [[0, 1], [2, 3]],
+            [[0, 2], [1, 3]],
+            [[0, 3], [1, 2]],
+        ];
+
+        let bestCost = Infinity;
+        let bestTeams: Court['teams'];
+
+        for (const split of splits) {
+            const team1 = [players[split[0][0]], players[split[0][1]]];
+            const team2 = [players[split[1][0]], players[split[1][1]]];
+            const cost = this.evaluateTeamSplitCost(team1, team2);
+
+            if (cost < bestCost) {
+                bestCost = cost;
+                bestTeams = { team1, team2 };
+            }
+        }
+
+        return { teams: bestTeams!, cost: bestCost };
+    }
+
+    /**
      * Records statistics for the generated round.
      */
     protected recordSessionStats(benchedPlayers: Player[], courts: Court[]): void {

@@ -36,27 +36,50 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
     return this.chooseBestTeamSplit(players).teams;
   }
 
-  private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
-    const splits: Array<[[number, number], [number, number]]> = [
-      [[0, 1], [2, 3]],
-      [[0, 2], [1, 3]],
-      [[0, 3], [1, 2]],
-    ];
+  protected evaluateTeamSplitCost(team1: Player[], team2: Player[]): number {
+    let cost = 0;
 
-    let bestCost = Infinity;
-    let bestTeams: Court['teams'] = undefined;
-
-    splits.forEach(split => {
-      const team1 = [players[split[0][0]], players[split[0][1]]];
-      const team2 = [players[split[1][0]], players[split[1][1]]];
-      const cost = this.evaluateCourtCost({ courtNumber: -1, players, teams: { team1, team2 } });
-      if (cost < bestCost) {
-        bestCost = cost;
-        bestTeams = { team1, team2 };
+    const addTeamPairs = (team: Player[]): void => {
+      for (let i = 0; i < team.length; i++) {
+        for (let j = i + 1; j < team.length; j++) {
+          cost += this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0;
+        }
       }
+    };
+
+    addTeamPairs(team1);
+    addTeamPairs(team2);
+
+    team1.forEach(a => {
+      team2.forEach(b => {
+        cost += this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0;
+      });
     });
 
-    return { teams: bestTeams, cost: bestCost };
+    const addSkillPairPenalty = (team: Player[]): void => {
+      for (let i = 0; i < team.length; i++) {
+        for (let j = i + 1; j < team.length; j++) {
+          const wins1 = this.winCountMap.get(team[i].id) ?? 0;
+          const wins2 = this.winCountMap.get(team[j].id) ?? 0;
+          const losses1 = this.lossCountMap.get(team[i].id) ?? 0;
+          const losses2 = this.lossCountMap.get(team[j].id) ?? 0;
+          cost += wins1 * wins2 + losses1 * losses2;
+        }
+      }
+    };
+
+    addSkillPairPenalty(team1);
+    addSkillPairPenalty(team2);
+
+    const team1WinSum = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+    const team2WinSum = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
+    cost += Math.abs(team1WinSum - team2WinSum);
+
+    const team1LossSum = team1.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
+    const team2LossSum = team2.reduce((acc, p) => acc + (this.lossCountMap.get(p.id) ?? 0), 0);
+    cost += Math.abs(team1LossSum - team2LossSum);
+
+    return cost;
   }
 
   private evaluateCourtCost(court: Court): number {

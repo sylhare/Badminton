@@ -216,24 +216,7 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
     return totalCost;
   }
 
-  private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
-    const splits: Array<[[number, number], [number, number]]> = [
-      [[0, 1], [2, 3]],
-      [[0, 2], [1, 3]],
-      [[0, 3], [1, 2]],
-    ];
-    let bestCost = Infinity;
-    let bestTeams: Court['teams'];
-    splits.forEach(split => {
-      const t1 = [players[split[0][0]], players[split[0][1]]];
-      const t2 = [players[split[1][0]], players[split[1][1]]];
-      const cost = this.evaluateSplitCost(t1, t2);
-      if (cost < bestCost) { bestCost = cost; bestTeams = { team1: t1, team2: t2 }; }
-    });
-    return { teams: bestTeams, cost: bestCost };
-  }
-
-  private evaluateSplitCost(t1: Player[], t2: Player[]): number {
+  protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
     let cost = 0;
     const addTMC = (team: Player[]) => {
       for (let i = 0; i < team.length; i++) {
