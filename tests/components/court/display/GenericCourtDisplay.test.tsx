@@ -7,8 +7,8 @@ import { GenericCourtDisplay } from '../../../../src/components/court/display';
 import { TEST_PLAYERS } from '../../../data/testData';
 
 describe('GenericCourtDisplay', () => {
-  const team1Players = [TEST_PLAYERS[0], TEST_PLAYERS[1]]; 
-  const team2Players = [TEST_PLAYERS[2]]; 
+  const team1Players = [TEST_PLAYERS[0], TEST_PLAYERS[1]];
+  const team2Players = [TEST_PLAYERS[2]];
 
   it('renders team 1 players', () => {
     render(

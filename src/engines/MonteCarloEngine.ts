@@ -1,10 +1,10 @@
-import type { Court, Player, ICourtAssignmentEngine } from '../types';
-import { CourtAssignmentTracker } from './CourtAssignmentTracker';
+import type { Court, ICourtAssignmentEngine, Player } from '../types';
+
 import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
 
 /**
  * Monte Carlo Greedy Search Implementation
- * 
+ *
  * This engine generates multiple random configurations and selects the one
  * with the lowest heuristic cost.
  */

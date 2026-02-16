@@ -23,7 +23,7 @@ export interface AnalyticsHook {
 
 export const useAnalytics = (): AnalyticsHook => {
   const trackEvent = useCallback((eventData: AnalyticsEvent) => {
-    
+
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('event', eventData.action, {
         event_category: eventData.category,

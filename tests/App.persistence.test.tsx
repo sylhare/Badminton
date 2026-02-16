@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
 
-import { addPlayers, generateAndWaitForAssignments, clearTestState } from './shared';
+import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
 
 describe('App Persistence Integration', () => {
   const user = userEvent.setup();
