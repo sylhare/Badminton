@@ -4,7 +4,7 @@ import { engineMC } from '../../src/engines/MonteCarloEngine';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import { engineCG } from '../../src/engines/ConflictGraphEngine';
 import * as selector from '../../src/engines/engineSelector';
-import type { ManualCourtSelection, Court, Player, ICourtAssignmentEngine } from '../../src/types';
+import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../../src/types';
 
 const engines: Array<{ name: string; engine: ICourtAssignmentEngine; type: selector.EngineType }> = [
   { name: 'Monte Carlo (MC)', engine: engineMC, type: 'mc' },
@@ -34,7 +34,7 @@ function createMockCourt(courtNumber: number, players: Player[], winner?: 1 | 2)
 
 describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
   beforeEach(() => {
-    selector.setEngine(type); 
+    selector.setEngine(type);
     engine.resetHistory();
     localStorage.clear();
   });
@@ -669,7 +669,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       }
 
       const avgDiff = totalDiff / testRuns;
-      
+
       expect(avgDiff).toBeLessThanOrEqual(25);
     });
   });
@@ -742,7 +742,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
   describe('Shared Edge Cases & Heuristics', () => {
     it('handles 3-player remainder specifically (odd total players)', () => {
-      const players = mockPlayers(7); 
+      const players = mockPlayers(7);
       const assignments = engine.generate(players, 2);
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
@@ -752,8 +752,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('considers player losses in team balancing', () => {
       const players = mockPlayers(4);
-      
-      const initialCourt = createMockCourt(1, players, 1); 
+
+      const initialCourt = createMockCourt(1, players, 1);
       engine.recordWins([initialCourt]);
       engine.clearCurrentSession();
 
@@ -765,12 +765,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('reverses win if a second recordWins call for the same court has a different winner', () => {
       const players = mockPlayers(4);
-      const court1 = createMockCourt(1, players, 1); 
+      const court1 = createMockCourt(1, players, 1);
 
       engine.recordWins([court1]);
       expect(engine.getWinCounts().get('P0')).toBe(1);
 
-      const court2 = createMockCourt(1, players, 2); 
+      const court2 = createMockCourt(1, players, 2);
       engine.recordWins([court2]);
 
       const winCounts = engine.getWinCounts();
@@ -791,7 +791,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('strictly respects forceBenchPlayerIds', () => {
       const players = mockPlayers(8);
-      
+
       const forceBench = new Set(['P0', 'P1']);
       const assignments = engine.generate(players, 2, undefined, forceBench);
 
@@ -830,7 +830,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
   describe('engineSelector Delegators', () => {
     it('exercises engine() accessor', () => {
-      
+
       const players = mockPlayers(4);
 
       selector.engine().resetHistory();
@@ -864,7 +864,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       engine.recordWins([oldCourt]);
 
       for (let round = 0; round < 120; round++) {
-        const offset = (round * 4) % 96; 
+        const offset = (round * 4) % 96;
         const roundPlayers = [
           players[offset],
           players[offset + 1],

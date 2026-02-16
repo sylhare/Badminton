@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { Court } from '../../../types';
-import { SinglesMatch, DoublesMatch, GenericCourtDisplay, NoTeamsDisplay } from '../display';
+import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
 
 import CourtHeader from './CourtHeader';

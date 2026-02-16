@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  setEngine,
-  engine,
-  getEngineType,
-} from '../../src/engines/engineSelector';
+import { engine, getEngineType, setEngine } from '../../src/engines/engineSelector';
 import { engineMC } from '../../src/engines/MonteCarloEngine';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import { engineCG } from '../../src/engines/ConflictGraphEngine';

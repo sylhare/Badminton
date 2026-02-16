@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash, ArrowClockwise, Play, Pause } from '@phosphor-icons/react';
+import { ArrowClockwise, Pause, Play, Trash } from '@phosphor-icons/react';
 
 import type { Player } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';

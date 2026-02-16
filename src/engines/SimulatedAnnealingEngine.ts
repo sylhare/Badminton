@@ -1,10 +1,10 @@
-import type { Court, Player, ICourtAssignmentEngine } from '../types';
-import { CourtAssignmentTracker } from './CourtAssignmentTracker';
+import type { Court, ICourtAssignmentEngine, Player } from '../types';
+
 import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
 
 /**
  * Simulated Annealing Implementation
- * 
+ *
  * This engine uses simulated annealing to find a solution that minimizes
  * repetitions and balances teams.
  */
@@ -34,6 +34,27 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
 
   protected getOptimalTeamSplit(players: Player[]): Court['teams'] {
     return this.chooseBestTeamSplit(players).teams;
+  }
+
+  protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
+    let cost = 0;
+    const addTMC = (team: Player[]) => {
+      for (let i = 0; i < team.length; i++) {
+        for (let j = i + 1; j < team.length; j++) {
+          cost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
+        }
+      }
+    };
+    addTMC(t1);
+    addTMC(t2);
+    t1.forEach(a => t2.forEach(b =>
+      cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY,
+    ));
+
+    const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+    const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+    cost += Math.abs(t1W - t2W) * this.BALANCE_PENALTY;
+    return cost;
   }
 
   private runSimulatedAnnealing(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
@@ -173,7 +194,7 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
       if (!court.teams) continue;
       if (court.players.length === 2) {
         totalCost += ((this.singleCountMap.get(court.players[0].id) ?? 0) +
-                     (this.singleCountMap.get(court.players[1].id) ?? 0)) * this.SINGLES_REPEAT_PENALTY;
+          (this.singleCountMap.get(court.players[1].id) ?? 0)) * this.SINGLES_REPEAT_PENALTY;
       }
       const addTeammateCost = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
@@ -214,26 +235,6 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
       totalCost += Math.abs(t1L - t2L) * this.BALANCE_PENALTY;
     }
     return totalCost;
-  }
-
-  protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
-    let cost = 0;
-    const addTMC = (team: Player[]) => {
-      for (let i = 0; i < team.length; i++) {
-        for (let j = i + 1; j < team.length; j++) {
-          cost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
-        }
-      }
-    };
-    addTMC(t1); addTMC(t2);
-    t1.forEach(a => t2.forEach(b =>
-      cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY
-    ));
-
-    const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-    const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(t1W - t2W) * this.BALANCE_PENALTY;
-    return cost;
   }
 }
 

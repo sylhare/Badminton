@@ -1,10 +1,10 @@
-import type { Court, Player, ICourtAssignmentEngine } from '../types';
-import { CourtAssignmentTracker } from './CourtAssignmentTracker';
+import type { Court, ICourtAssignmentEngine, Player } from '../types';
+
 import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
 
 /**
  * Conflict Graph Implementation
- * 
+ *
  * This engine uses a conflict graph to find a solution that guarantees
  * no teammate repetitions when possible.
  */
@@ -21,12 +21,38 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     return 'Deterministic greedy construction using conflict graph modeling. Systematically builds assignments by selecting players that minimize total conflict.';
   }
 
+  override getStats() {
+    const baseStats = super.getStats();
+    return {
+      ...baseStats,
+      conflictEdges: Array.from(this.teammateCountMap.values()).filter(v => v > 0).length,
+    };
+  }
+
   protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     return this.buildCourtsWithConflictGraph(players, numberOfCourts, startCourtNum);
   }
 
   protected getOptimalTeamSplit(players: Player[]): Court['teams'] {
     return this.chooseBestTeamSplit(players).teams;
+  }
+
+  protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
+    let cost = 0;
+
+    t1.forEach(a => t2.forEach(b =>
+      cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT,
+    ));
+
+    const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+    const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+    cost += Math.abs(t1W - t2W) * this.BALANCE_WEIGHT;
+
+    const t1L = t1.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
+    const t2L = t2.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
+    cost += Math.abs(t1L - t2L) * this.BALANCE_WEIGHT;
+
+    return cost;
   }
 
   private buildCourtsWithConflictGraph(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
@@ -79,14 +105,18 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     for (let i = 0; i < this.MAX_SEARCH_ATTEMPTS; i++) {
       const group = this.shuffleArray([...players]).slice(0, size);
       const count = this.countGroupConflicts(group);
-      if (count < bestCount) { bestCount = count; bestGroup = group; if (count === 0) break; }
+      if (count < bestCount) {
+        bestCount = count;
+        bestGroup = group;
+        if (count === 0) break;
+      }
     }
     return bestGroup;
   }
 
   private selectBestSinglesPair(players: Player[]): Player[] {
     return [...players].sort((a, b) =>
-      (this.singleCountMap.get(a.id) ?? 0) - (this.singleCountMap.get(b.id) ?? 0)
+      (this.singleCountMap.get(a.id) ?? 0) - (this.singleCountMap.get(b.id) ?? 0),
     ).slice(0, 2);
   }
 
@@ -112,32 +142,6 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     if (players.length === 4) return this.chooseBestTeamSplit(players).teams;
     if (players.length === 2) return { team1: [players[0]], team2: [players[1]] };
     return undefined;
-  }
-
-  protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
-    let cost = 0;
-
-    t1.forEach(a => t2.forEach(b =>
-      cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT
-    ));
-
-    const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-    const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(t1W - t2W) * this.BALANCE_WEIGHT;
-
-    const t1L = t1.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
-    const t2L = t2.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(t1L - t2L) * this.BALANCE_WEIGHT;
-
-    return cost;
-  }
-
-  override getStats() {
-    const baseStats = super.getStats();
-    return {
-      ...baseStats,
-      conflictEdges: Array.from(this.teammateCountMap.values()).filter(v => v > 0).length,
-    };
   }
 }
 

@@ -22,7 +22,7 @@
  * ```
  */
 
-import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine, EngineType } from '../types';
+import type { EngineType, ICourtAssignmentEngine } from '../types';
 
 import { engineMC } from './MonteCarloEngine';
 import { engineSA } from './SimulatedAnnealingEngine';

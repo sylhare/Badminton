@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { Player, ManualCourtSelection } from '../types';
+import type { ManualCourtSelection, Player } from '../types';
 
 interface ManualCourtModalProps {
   isOpen: boolean;

@@ -1,9 +1,9 @@
 import React from 'react';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import SinglesGraph from '../../src/components/SinglesGraph';
-import { createMockGetPlayerName, createLongNameGetter } from '../data/testFactories';
+import { createLongNameGetter, createMockGetPlayerName } from '../data/testFactories';
 import { graphAssertions } from '../data/testHelpers';
 
 describe('SinglesGraph Component', () => {

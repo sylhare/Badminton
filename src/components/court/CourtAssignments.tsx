@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
-import type { Court, Player, WinnerSelection, ManualCourtSelection } from '../../types';
+import type { Court, ManualCourtSelection, Player, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import ManualCourtModal from '../ManualCourtModal';
 
@@ -163,7 +163,8 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
           {onWinnerChange && (
             <div className="winner-instructions">
-              💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the winning
+              💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the
+              winning
               team. Click again to remove the winner.
             </div>
           )}

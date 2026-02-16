@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { GRAPH_COLORS, getColorForCount, getGlowColorForCount } from '../constants/graphColors';
+import { getColorForCount, getGlowColorForCount, GRAPH_COLORS } from '../constants/graphColors';
 
 /**
  * Props for the SinglesGraph component

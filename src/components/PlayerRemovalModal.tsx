@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trash, Pause } from '@phosphor-icons/react';
+import { Pause, Trash, X } from '@phosphor-icons/react';
 
 interface PlayerRemovalModalProps {
   isOpen: boolean;

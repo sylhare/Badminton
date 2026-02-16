@@ -1,4 +1,4 @@
-import type { Player, Court, ManualCourtSelection, AppState, CourtEngineState } from '../types';
+import type { AppState, Court, CourtEngineState, ManualCourtSelection, Player } from '../types';
 
 const STORAGE_KEYS = {
   APP_STATE: 'badminton-app-state',
