@@ -114,29 +114,22 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     return undefined;
   }
 
-  private chooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
-    const splits: Array<[[number, number], [number, number]]> = [
-      [[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]],
-    ];
+  protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
+    let cost = 0;
 
-    let bestCost = Infinity;
-    let bestTeams: Court['teams'];
-    for (const split of splits) {
-      const t1 = [players[split[0][0]], players[split[0][1]]];
-      const t2 = [players[split[1][0]], players[split[1][1]]];
-      let cost = 0;
-      t1.forEach(a => t2.forEach(b =>
-        cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT
-      ));
-      const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-      const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-      cost += Math.abs(t1W - t2W) * this.BALANCE_WEIGHT;
-      const t1L = t1.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
-      const t2L = t2.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
-      cost += Math.abs(t1L - t2L) * this.BALANCE_WEIGHT;
-      if (cost < bestCost) { bestCost = cost; bestTeams = { team1: t1, team2: t2 }; }
-    }
-    return { teams: bestTeams, cost: bestCost };
+    t1.forEach(a => t2.forEach(b =>
+      cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT
+    ));
+
+    const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+    const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+    cost += Math.abs(t1W - t2W) * this.BALANCE_WEIGHT;
+
+    const t1L = t1.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
+    const t2L = t2.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
+    cost += Math.abs(t1L - t2L) * this.BALANCE_WEIGHT;
+
+    return cost;
   }
 
   override getStats() {
