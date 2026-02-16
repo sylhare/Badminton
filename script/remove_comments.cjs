@@ -16,11 +16,11 @@ const path = require('path');
  * @returns {string} The cleaned content.
  */
 function removeComments(content) {
-    content = content.replace(/(\/\*\*[\s\S]*?\*\/)|(\/\*(?!\*)[\s\S]*?\*\/)/g, (match, jsdoc) => {
-        return jsdoc ? jsdoc : "";
+    content = content.replace(/(\/\*\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}?)|(\/\*(?!\*)[\s\S]*?\*\/)/g, (match, preserve) => {
+        return preserve ? preserve : "";
     });
 
-    content = content.replace(/(\/\*\*[\s\S]*?\*\/|\/\/\/|[a-z]+:\/\/)|(\/\/[^/].*|\/\/$)/g, (match, preserve) => {
+    content = content.replace(/(\/\*\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}?|\/\/\/|[a-z]+:\/\/)|(\/\/[^/].*|\/\/$)/g, (match, preserve) => {
         return preserve ? preserve : "";
     });
 
