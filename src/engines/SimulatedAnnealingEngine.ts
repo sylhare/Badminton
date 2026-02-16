@@ -38,15 +38,8 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
 
   protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
     let cost = 0;
-    const addTMC = (team: Player[]) => {
-      for (let i = 0; i < team.length; i++) {
-        for (let j = i + 1; j < team.length; j++) {
-          cost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
-        }
-      }
-    };
-    addTMC(t1);
-    addTMC(t2);
+    cost += this.calculateTeammateCost(t1, this.TEAMMATE_REPEAT_PENALTY);
+    cost += this.calculateTeammateCost(t2, this.TEAMMATE_REPEAT_PENALTY);
     t1.forEach(a => t2.forEach(b =>
       cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY,
     ));
@@ -196,15 +189,8 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
         totalCost += ((this.singleCountMap.get(court.players[0].id) ?? 0) +
           (this.singleCountMap.get(court.players[1].id) ?? 0)) * this.SINGLES_REPEAT_PENALTY;
       }
-      const addTeammateCost = (team: Player[]): void => {
-        for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            totalCost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
-          }
-        }
-      };
-      addTeammateCost(court.teams.team1);
-      addTeammateCost(court.teams.team2);
+      totalCost += this.calculateTeammateCost(court.teams.team1, this.TEAMMATE_REPEAT_PENALTY);
+      totalCost += this.calculateTeammateCost(court.teams.team2, this.TEAMMATE_REPEAT_PENALTY);
 
       court.teams.team1.forEach(a => {
         court.teams!.team2.forEach(b => {
@@ -212,19 +198,8 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
         });
       });
 
-      const addSkillPairPenalty = (team: Player[]): void => {
-        for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            const wins1 = this.winCountMap.get(team[i].id) ?? 0;
-            const wins2 = this.winCountMap.get(team[j].id) ?? 0;
-            const losses1 = this.lossCountMap.get(team[i].id) ?? 0;
-            const losses2 = this.lossCountMap.get(team[j].id) ?? 0;
-            totalCost += (wins1 * wins2 + losses1 * losses2) * this.SKILL_PAIR_PENALTY;
-          }
-        }
-      };
-      addSkillPairPenalty(court.teams.team1);
-      addSkillPairPenalty(court.teams.team2);
+      totalCost += this.calculateSkillPairPenalty(court.teams.team1, this.SKILL_PAIR_PENALTY);
+      totalCost += this.calculateSkillPairPenalty(court.teams.team2, this.SKILL_PAIR_PENALTY);
 
       const t1W = court.teams.team1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
       const t2W = court.teams.team2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
