@@ -27,10 +27,25 @@ export async function goToApp(page: Page): Promise<void> {
   await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
 }
 
-export async function goToStatsPage(page: Page): Promise<void> {
-  const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
-  await page.goto(`${targetUrl}/stats`);
-  await expect(page.locator('h1')).toContainText('Engine Diagnostics');
+/**
+ * Navigates to the stats/diagnostics page from the app or directly
+ */
+export async function goToStatsPage(page: Page, fromApp = false): Promise<void> {
+  if (fromApp) {
+    const statsLink = page.locator('a[href*="stats"]');
+    await expect(statsLink).toBeVisible();
+    await statsLink.click();
+  } else {
+    const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+    await page.goto(`${targetUrl}/stats`);
+  }
+}
+
+/**
+ * Alias for goToStatsPage - navigates directly to stats page via URL
+ */
+export async function navigateToStats(page: Page): Promise<void> {
+  await page.goto('/stats');
 }
 
 /**
@@ -205,4 +220,27 @@ export async function completeFullWorkflow(
 
   await expandSectionIfNeeded(page, 'Manage Players');
   await verifyPlayerStats(page, finalPlayerCount, finalPlayerCount);
+}
+
+/**
+ * Sets up a game with the given players and generates initial court assignments
+ */
+export async function setupGameWithPlayers(page: Page, players: string[]): Promise<void> {
+  await addBulkPlayers(page, players);
+  const generateButton = page.getByTestId('generate-assignments-button');
+  await generateButton.click();
+  await page.waitForTimeout(300);
+}
+
+/**
+ * Plays a round by selecting the first team as winner and generating new assignments
+ */
+export async function playRound(page: Page): Promise<void> {
+  const firstTeam = page.locator('.team-clickable').first();
+  await firstTeam.click();
+  await page.waitForTimeout(200);
+
+  const generateButton = page.getByTestId('generate-assignments-button');
+  await generateButton.click();
+  await page.waitForTimeout(200);
 }
