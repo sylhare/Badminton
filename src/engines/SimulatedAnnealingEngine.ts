@@ -40,13 +40,8 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
     let cost = 0;
     cost += this.calculateTeammateCost(t1, this.TEAMMATE_REPEAT_PENALTY);
     cost += this.calculateTeammateCost(t2, this.TEAMMATE_REPEAT_PENALTY);
-    t1.forEach(a => t2.forEach(b =>
-      cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY,
-    ));
-
-    const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-    const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(t1W - t2W) * this.BALANCE_PENALTY;
+    cost += this.calculateOpponentCost(t1, t2, this.OPPONENT_REPEAT_PENALTY);
+    cost += this.calculateWinBalanceCost(t1, t2, this.BALANCE_PENALTY);
     return cost;
   }
 
@@ -105,12 +100,7 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
   }
 
   private createTeams(players: Player[]): Court['teams'] {
-    if (players.length === 4) {
-      return this.chooseBestTeamSplit(players).teams;
-    } else if (players.length === 2) {
-      return { team1: [players[0]], team2: [players[1]] };
-    }
-    return undefined;
+    return this.createTeamsFromPlayers(players);
   }
 
   private perturbSolution(courts: Court[]): Court[] {
@@ -186,28 +176,15 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
     for (const court of courts) {
       if (!court.teams) continue;
       if (court.players.length === 2) {
-        totalCost += ((this.singleCountMap.get(court.players[0].id) ?? 0) +
-          (this.singleCountMap.get(court.players[1].id) ?? 0)) * this.SINGLES_REPEAT_PENALTY;
+        totalCost += this.calculateSinglesCost(court.players, this.SINGLES_REPEAT_PENALTY);
       }
       totalCost += this.calculateTeammateCost(court.teams.team1, this.TEAMMATE_REPEAT_PENALTY);
       totalCost += this.calculateTeammateCost(court.teams.team2, this.TEAMMATE_REPEAT_PENALTY);
-
-      court.teams.team1.forEach(a => {
-        court.teams!.team2.forEach(b => {
-          totalCost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY;
-        });
-      });
-
+      totalCost += this.calculateOpponentCost(court.teams.team1, court.teams.team2, this.OPPONENT_REPEAT_PENALTY);
       totalCost += this.calculateSkillPairPenalty(court.teams.team1, this.SKILL_PAIR_PENALTY);
       totalCost += this.calculateSkillPairPenalty(court.teams.team2, this.SKILL_PAIR_PENALTY);
-
-      const t1W = court.teams.team1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-      const t2W = court.teams.team2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-      totalCost += Math.abs(t1W - t2W) * this.BALANCE_PENALTY;
-
-      const t1L = court.teams.team1.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
-      const t2L = court.teams.team2.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
-      totalCost += Math.abs(t1L - t2L) * this.BALANCE_PENALTY;
+      totalCost += this.calculateWinBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
+      totalCost += this.calculateLossBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
     }
     return totalCost;
   }

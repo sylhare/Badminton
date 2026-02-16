@@ -39,19 +39,9 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
 
   protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
     let cost = 0;
-
-    t1.forEach(a => t2.forEach(b =>
-      cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT,
-    ));
-
-    const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-    const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(t1W - t2W) * this.BALANCE_WEIGHT;
-
-    const t1L = t1.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
-    const t2L = t2.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
-    cost += Math.abs(t1L - t2L) * this.BALANCE_WEIGHT;
-
+    cost += this.calculateOpponentCost(t1, t2, this.OPPONENT_WEIGHT);
+    cost += this.calculateWinBalanceCost(t1, t2, this.BALANCE_WEIGHT);
+    cost += this.calculateLossBalanceCost(t1, t2, this.BALANCE_WEIGHT);
     return cost;
   }
 
@@ -70,7 +60,7 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
         const idx = availablePlayers.findIndex(ap => ap.id === p.id);
         if (idx !== -1) availablePlayers.splice(idx, 1);
       }
-      const teams = this.createOptimalTeams(cPlayers);
+      const teams = this.createTeamsFromPlayers(cPlayers);
       courts.push({ courtNumber: cNum, players: cPlayers, teams });
     }
     return courts;
@@ -104,7 +94,7 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     let bestCount = Infinity;
     for (let i = 0; i < this.MAX_SEARCH_ATTEMPTS; i++) {
       const group = this.shuffleArray([...players]).slice(0, size);
-      const count = this.countGroupConflicts(group);
+      const count = this.calculateTeammateCost(group, 1);
       if (count < bestCount) {
         bestCount = count;
         bestGroup = group;
@@ -126,16 +116,6 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
 
   private countConflicts(pid: string, all: Player[]): number {
     return all.reduce((acc, p) => acc + (p.id !== pid && this.hasTeammateConflict(pid, p.id) ? 1 : 0), 0);
-  }
-
-  private countGroupConflicts(group: Player[]): number {
-    return this.calculateTeammateCost(group, 1);
-  }
-
-  private createOptimalTeams(players: Player[]): Court['teams'] {
-    if (players.length === 4) return this.chooseBestTeamSplit(players).teams;
-    if (players.length === 2) return { team1: [players[0]], team2: [players[1]] };
-    return undefined;
   }
 }
 
