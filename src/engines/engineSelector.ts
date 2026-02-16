@@ -22,13 +22,13 @@
  * ```
  */
 
-import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine } from '../types';
+import type { Court, Player, ManualCourtSelection, CourtEngineState, ICourtAssignmentEngine, EngineType } from '../types';
 
 import { engineMC } from './MonteCarloEngine';
 import { engineSA } from './SimulatedAnnealingEngine';
 import { engineCG } from './ConflictGraphEngine';
 
-export type EngineType = 'sa' | 'mc' | 'cg';
+export type { EngineType };
 
 /** Currently selected engine type */
 let currentEngineType: EngineType = 'sa';

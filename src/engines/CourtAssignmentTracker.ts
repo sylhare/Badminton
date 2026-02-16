@@ -1,4 +1,4 @@
-import type { Court, Player, CourtEngineState, ICourtAssignmentTracker } from '../types';
+import type { Court, Player, CourtEngineState, ICourtAssignmentTracker, EngineType } from '../types';
 import { saveCourtEngineState, loadCourtEngineState } from '../utils/storageUtils';
 
 /**
@@ -8,29 +8,69 @@ import { saveCourtEngineState, loadCourtEngineState } from '../utils/storageUtil
  * Static members ensure all inherited engines share the same state.
  */
 export class CourtAssignmentTracker implements ICourtAssignmentTracker {
-    /** Map of player IDs to their bench counts */
+    // ============================================================================
+    // PERSISTENT STATE - Saved to localStorage across sessions
+    // ============================================================================
+    // These maps track historical data and are persisted to ensure fair rotation
+    // and balanced play across multiple sessions. All engines share this state.
+
+    /** Player bench counts - tracks how many times each player was benched */
     protected static benchCountMap: Map<string, number> = new Map();
-    /** Map of player IDs to their singles match counts */
+
+    /** Singles match counts - tracks singles play for fair rotation */
     protected static singleCountMap: Map<string, number> = new Map();
-    /** Map of player pairs to their teammate frequencies */
+
+    /** Teammate pair frequencies - avoids repeating partner combinations */
     protected static teammateCountMap: Map<string, number> = new Map();
-    /** Map of player pairs to their opponent frequencies */
+
+    /** Opponent pair frequencies - varies opponent matchups */
     protected static opponentCountMap: Map<string, number> = new Map();
-    /** Map of player IDs to their total wins */
+
+    /** Total wins per player - used for team balancing */
     protected static winCountMap: Map<string, number> = new Map();
-    /** Map of player IDs to their total losses */
+
+    /** Total losses per player - used for team balancing */
     protected static lossCountMap: Map<string, number> = new Map();
 
-    /** Map of player IDs or pair keys to last updated timestamp (round number or match count) */
+    // ============================================================================
+    // SESSION STATE - Reset each session, never persisted
+    // ============================================================================
+    // Tracks which courts have recorded wins during the current round to prevent
+    // double-counting if the user changes winners multiple times before generating
+    // next round.
+
+    /** Recorded match outcomes for current session (court number → result) */
+    protected static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
+
+    // ============================================================================
+    // RUNTIME OPTIMIZATION STATE - Ephemeral, never persisted
+    // ============================================================================
+    // Timestamps used during runtime for pruning old data when saving. These are
+    // rebuilt each session and do not need to be saved to localStorage.
+
+    /** Timestamps for pruning stale pairings - tracks last update time */
     protected static lastUpdatedMap: Map<string, number> = new Map();
-    /** Current "time" counter or round count to use for timestamps */
+
+    /** Monotonic counter for generating timestamps */
     protected static globalCounter = 0;
 
-    /** Tracks recorded match outcomes for the current session (court number → result) */
-    protected static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
+    // ============================================================================
+    // OBSERVER STATE - Runtime only
+    // ============================================================================
 
     /** Observer pattern listeners for state change notifications */
     private static stateChangeListeners: Array<() => void> = [];
+
+    // ============================================================================
+    // PROTECTED ACCESSORS - For internal use by engines
+    // ============================================================================
+    // These provide convenient access to static maps without requiring the class prefix
+
+    protected get teammateCountMap() { return CourtAssignmentTracker.teammateCountMap; }
+    protected get opponentCountMap() { return CourtAssignmentTracker.opponentCountMap; }
+    protected get singleCountMap() { return CourtAssignmentTracker.singleCountMap; }
+    protected get winCountMap() { return CourtAssignmentTracker.winCountMap; }
+    protected get lossCountMap() { return CourtAssignmentTracker.lossCountMap; }
 
     /**
      * Subscribes to state changes in the tracker (Observer pattern).
@@ -70,7 +110,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
 
     /** Prepares the internal maps for persistence. Filters and prunes old data. */
-    prepareStateForSaving(engineType: 'sa' | 'mc' | 'cg'): CourtEngineState {
+    prepareStateForSaving(engineType: EngineType): CourtEngineState {
         // Pruning logic: keep the 500 most recently updated entries across large maps
         const MAX_ENTRIES = 500;
         this.pruneHistoricalData(MAX_ENTRIES);
@@ -115,12 +155,12 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
 
     /** Saves the current state to persistent storage. */
-    saveState(engineType: 'sa' | 'mc' | 'cg'): void {
+    saveState(engineType: EngineType): void {
         saveCourtEngineState(this.prepareStateForSaving(engineType));
     }
 
     /** Loads tracking data from persistent storage. */
-    loadState(currentEngineType: 'sa' | 'mc' | 'cg'): void {
+    loadState(currentEngineType: EngineType): void {
         const state = loadCourtEngineState();
 
         if (state.engineType && state.engineType !== currentEngineType) {
