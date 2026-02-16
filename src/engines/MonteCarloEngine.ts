@@ -39,16 +39,8 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
   protected evaluateTeamSplitCost(team1: Player[], team2: Player[]): number {
     let cost = 0;
 
-    const addTeamPairs = (team: Player[]): void => {
-      for (let i = 0; i < team.length; i++) {
-        for (let j = i + 1; j < team.length; j++) {
-          cost += this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0;
-        }
-      }
-    };
-
-    addTeamPairs(team1);
-    addTeamPairs(team2);
+    cost += this.calculateTeammateCost(team1, 1);
+    cost += this.calculateTeammateCost(team2, 1);
 
     team1.forEach(a => {
       team2.forEach(b => {
@@ -56,20 +48,8 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
       });
     });
 
-    const addSkillPairPenalty = (team: Player[]): void => {
-      for (let i = 0; i < team.length; i++) {
-        for (let j = i + 1; j < team.length; j++) {
-          const wins1 = this.winCountMap.get(team[i].id) ?? 0;
-          const wins2 = this.winCountMap.get(team[j].id) ?? 0;
-          const losses1 = this.lossCountMap.get(team[i].id) ?? 0;
-          const losses2 = this.lossCountMap.get(team[j].id) ?? 0;
-          cost += wins1 * wins2 + losses1 * losses2;
-        }
-      }
-    };
-
-    addSkillPairPenalty(team1);
-    addSkillPairPenalty(team2);
+    cost += this.calculateSkillPairPenalty(team1, 1);
+    cost += this.calculateSkillPairPenalty(team2, 1);
 
     const team1WinSum = team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
     const team2WinSum = team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
@@ -95,16 +75,8 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
       cost += (this.singleCountMap.get(p1) ?? 0 + (this.singleCountMap.get(p2) ?? 0)) * 100;
     }
 
-    const addTeamPairs = (team: Player[]): void => {
-      for (let i = 0; i < team.length; i++) {
-        for (let j = i + 1; j < team.length; j++) {
-          cost += this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0;
-        }
-      }
-    };
-
-    addTeamPairs(court.teams.team1);
-    addTeamPairs(court.teams.team2);
+    cost += this.calculateTeammateCost(court.teams.team1, 1);
+    cost += this.calculateTeammateCost(court.teams.team2, 1);
 
     court.teams.team1.forEach(a => {
       court.teams!.team2.forEach(b => {
@@ -112,20 +84,8 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
       });
     });
 
-    const addSkillPairPenalty = (team: Player[]): void => {
-      for (let i = 0; i < team.length; i++) {
-        for (let j = i + 1; j < team.length; j++) {
-          const wins1 = this.winCountMap.get(team[i].id) ?? 0;
-          const wins2 = this.winCountMap.get(team[j].id) ?? 0;
-          const losses1 = this.lossCountMap.get(team[i].id) ?? 0;
-          const losses2 = this.lossCountMap.get(team[j].id) ?? 0;
-          cost += wins1 * wins2 + losses1 * losses2;
-        }
-      }
-    };
-
-    addSkillPairPenalty(court.teams.team1);
-    addSkillPairPenalty(court.teams.team2);
+    cost += this.calculateSkillPairPenalty(court.teams.team1, 1);
+    cost += this.calculateSkillPairPenalty(court.teams.team2, 1);
 
     const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
     const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);

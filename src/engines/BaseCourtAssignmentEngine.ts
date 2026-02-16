@@ -154,4 +154,35 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
       });
     });
   }
+
+  /**
+   * Calculates the teammate repetition cost for a team.
+   */
+  protected calculateTeammateCost(team: Player[], penaltyMultiplier: number): number {
+    let cost = 0;
+    for (let i = 0; i < team.length; i++) {
+      for (let j = i + 1; j < team.length; j++) {
+        cost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * penaltyMultiplier;
+      }
+    }
+    return cost;
+  }
+
+  /**
+   * Calculates the skill-based pairing penalty for a team.
+   * Penalizes pairing players with similar skill levels (wins/losses).
+   */
+  protected calculateSkillPairPenalty(team: Player[], penaltyMultiplier: number): number {
+    let cost = 0;
+    for (let i = 0; i < team.length; i++) {
+      for (let j = i + 1; j < team.length; j++) {
+        const wins1 = this.winCountMap.get(team[i].id) ?? 0;
+        const wins2 = this.winCountMap.get(team[j].id) ?? 0;
+        const losses1 = this.lossCountMap.get(team[i].id) ?? 0;
+        const losses2 = this.lossCountMap.get(team[j].id) ?? 0;
+        cost += (wins1 * wins2 + losses1 * losses2) * penaltyMultiplier;
+      }
+    }
+    return cost;
+  }
 }

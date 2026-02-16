@@ -289,10 +289,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     return new Map(CourtAssignmentTracker.winCountMap);
   }
 
-  getLossCounts(): Map<string, number> {
-    return new Map(CourtAssignmentTracker.lossCountMap);
-  }
-
   getBenchCounts(): Map<string, number> {
     return new Map(CourtAssignmentTracker.benchCountMap);
   }

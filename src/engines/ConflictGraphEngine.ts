@@ -129,13 +129,7 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
   }
 
   private countGroupConflicts(group: Player[]): number {
-    let count = 0;
-    for (let i = 0; i < group.length; i++) {
-      for (let j = i + 1; j < group.length; j++) {
-        count += (this.teammateCountMap.get(this.pairKey(group[i].id, group[j].id)) ?? 0);
-      }
-    }
-    return count;
+    return this.calculateTeammateCost(group, 1);
   }
 
   private createOptimalTeams(players: Player[]): Court['teams'] {
