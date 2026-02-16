@@ -63,11 +63,11 @@ export const getEngineType = (): EngineType => currentEngineType;
 /**
  * Gets the currently active engine instance.
  * Use this to access all engine methods directly.
- * 
+ *
  * @example
  * ```typescript
  * import { engine } from './engineSelector';
- * 
+ *
  * const assignments = engine.generateCourtAssignments(players, 2);
  * const stats = engine.getStats();
  * ```

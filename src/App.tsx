@@ -5,7 +5,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import { CourtAssignments } from './components/court';
 import Leaderboard from './components/Leaderboard';
-import { engine } from './engines/engineSelector';
+import { engine, getEngineType } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
@@ -24,7 +24,7 @@ function App(): React.ReactElement {
   const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    engine().loadState();
+    engine().loadState(getEngineType());
     isInitialLoad.current = false;
 
     return engine().onStateChange(() => {
@@ -42,7 +42,7 @@ function App(): React.ReactElement {
       isManagePlayersCollapsed,
       manualCourt: manualCourtSelection,
     });
-    engine().saveState();
+    engine().saveState(getEngineType());
   }, [players, numberOfCourts, assignments, isManagePlayersCollapsed, manualCourtSelection]);
 
   const handlePlayersAdded = (newNames: string[]) => {
@@ -84,7 +84,7 @@ function App(): React.ReactElement {
 
   const handleResetAlgorithm = () => {
     engine().resetHistory();
-    engine().saveState();
+    engine().saveState(getEngineType());
   };
 
   const generateAssignments = () => {

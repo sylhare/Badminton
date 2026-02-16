@@ -16,7 +16,10 @@ vi.mock('../../src/engines/engineSelector', () => ({
     loadState: mockLoadState,
     prepareStateForSaving: mockPrepareStateForSaving,
     onStateChange: mockOnStateChange,
+    getName: vi.fn(() => 'Test Engine'),
+    getDescription: vi.fn(() => 'Test engine description'),
   }),
+  getEngineType: vi.fn(() => 'sa'),
 }));
 
 vi.mock('../../src/utils/storageUtils', () => ({
@@ -36,13 +39,13 @@ describe('StatsPage Component', () => {
   ];
 
   const mockEngineState = {
+    engineType: 'sa' as const,
     benchCountMap: { '1': 2, '2': 1, '3': 0 },
     teammateCountMap: { '1|2': 2, '2|3': 1, '3|4': 1 },
     opponentCountMap: { '1|3': 2, '2|4': 1 },
     singleCountMap: { '1': 1, '2': 2 },
     winCountMap: { '1': 3, '2': 1 },
     lossCountMap: { '1': 1, '2': 2 },
-    lastUpdatedMap: {},
   };
 
   beforeEach(() => {
@@ -57,8 +60,8 @@ describe('StatsPage Component', () => {
   it('renders the page header', () => {
     render(<StatsPage />);
 
-    expect(screen.getByText('Engine Diagnostics')).toBeInTheDocument();
-    expect(screen.getByText(/Monitor algorithm behavior/)).toBeInTheDocument();
+    expect(screen.getByText('Test Engine Diagnostics')).toBeInTheDocument();
+    expect(screen.getByText('Test engine description')).toBeInTheDocument();
   });
 
   it('renders back to app link', () => {

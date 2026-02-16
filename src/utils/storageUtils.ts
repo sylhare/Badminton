@@ -78,6 +78,7 @@ export const loadAppState = (): Partial<{
 export const saveCourtEngineState = (state: CourtEngineState): void => {
   try {
     const stateToSave: CourtEngineState = {
+      engineType: state.engineType,
       benchCountMap: state.benchCountMap,
       singleCountMap: state.singleCountMap,
       teammateCountMap: state.teammateCountMap,

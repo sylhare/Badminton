@@ -21,6 +21,7 @@ export interface Court {
 
 export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
+export type EngineType = 'sa' | 'mc' | 'cg';
 
 export interface AppState {
   players: Player[];
@@ -33,22 +34,22 @@ export interface AppState {
 }
 
 export interface CourtEngineState {
+  engineType?: EngineType;
   benchCountMap: Record<string, number>;
   singleCountMap: Record<string, number>;
   teammateCountMap: Record<string, number>;
   opponentCountMap: Record<string, number>;
   winCountMap: Record<string, number>;
   lossCountMap: Record<string, number>;
-  lastUpdatedMap: Record<string, number>;
 }
 
 export interface ICourtAssignmentTracker {
   onStateChange(listener: () => void): () => void;
   resetHistory(): void;
   clearCurrentSession(): void;
-  prepareStateForSaving(): CourtEngineState;
-  saveState(): void;
-  loadState(): void;
+  prepareStateForSaving(engineType: EngineType): CourtEngineState;
+  saveState(engineType: EngineType): void;
+  loadState(engineType: EngineType): void;
   recordWins(courts: Court[]): void;
   getWinCounts(): Map<string, number>;
   getBenchCounts(): Map<string, number>;
