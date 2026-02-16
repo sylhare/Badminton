@@ -8,11 +8,6 @@ import { saveCourtEngineState, loadCourtEngineState } from '../utils/storageUtil
  * Static members ensure all inherited engines share the same state.
  */
 export class CourtAssignmentTracker implements ICourtAssignmentTracker {
-    // ============================================================================
-    // PERSISTENT STATE - Saved to localStorage across sessions
-    // ============================================================================
-    // These maps track historical data and are persisted to ensure fair rotation
-    // and balanced play across multiple sessions. All engines share this state.
 
     /** Player bench counts - tracks how many times each player was benched */
     protected static benchCountMap: Map<string, number> = new Map();
@@ -32,21 +27,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     /** Total losses per player - used for team balancing */
     protected static lossCountMap: Map<string, number> = new Map();
 
-    // ============================================================================
-    // SESSION STATE - Reset each session, never persisted
-    // ============================================================================
-    // Tracks which courts have recorded wins during the current round to prevent
-    // double-counting if the user changes winners multiple times before generating
-    // next round.
-
     /** Recorded match outcomes for current session (court number → result) */
     protected static recordedWinsMap: Map<number, { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] }> = new Map();
-
-    // ============================================================================
-    // RUNTIME OPTIMIZATION STATE - Ephemeral, never persisted
-    // ============================================================================
-    // Timestamps used during runtime for pruning old data when saving. These are
-    // rebuilt each session and do not need to be saved to localStorage.
 
     /** Timestamps for pruning stale pairings - tracks last update time */
     protected static lastUpdatedMap: Map<string, number> = new Map();
@@ -54,17 +36,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     /** Monotonic counter for generating timestamps */
     protected static globalCounter = 0;
 
-    // ============================================================================
-    // OBSERVER STATE - Runtime only
-    // ============================================================================
-
     /** Observer pattern listeners for state change notifications */
     private static stateChangeListeners: Array<() => void> = [];
-
-    // ============================================================================
-    // PROTECTED ACCESSORS - For internal use by engines
-    // ============================================================================
-    // These provide convenient access to static maps without requiring the class prefix
 
     protected get teammateCountMap() { return CourtAssignmentTracker.teammateCountMap; }
     protected get opponentCountMap() { return CourtAssignmentTracker.opponentCountMap; }
@@ -111,7 +84,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
     /** Prepares the internal maps for persistence. Filters and prunes old data. */
     prepareStateForSaving(engineType: EngineType): CourtEngineState {
-        // Pruning logic: keep the 500 most recently updated entries across large maps
         const MAX_ENTRIES = 500;
         this.pruneHistoricalData(MAX_ENTRIES);
 
@@ -135,16 +107,14 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
         if (pairingKeys.length <= maxEntries) return;
 
-        // Sort keys by their last updated timestamp
         const sortedKeys = pairingKeys.sort((a, b) => {
             const timeA = CourtAssignmentTracker.lastUpdatedMap.get(a) ?? 0;
             const timeB = CourtAssignmentTracker.lastUpdatedMap.get(b) ?? 0;
-            return timeB - timeA; // Descending
+            return timeB - timeA; 
         });
 
         const keysToKeep = new Set(sortedKeys.slice(0, maxEntries));
 
-        // Delete keys not in the "keep" set
         pairingKeys.forEach(key => {
             if (!keysToKeep.has(key)) {
                 CourtAssignmentTracker.teammateCountMap.delete(key);
@@ -251,7 +221,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         });
 
         if (stateChanged) {
-            CourtAssignmentTracker.globalCounter++; // Increment "time"
+            CourtAssignmentTracker.globalCounter++; 
             this.notifyStateChange();
         }
     }
@@ -421,8 +391,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
         return court;
     }
-
-    // --- ICourtAssignmentEngine Getters ---
 
     getWinCounts(): Map<string, number> {
         return new Map(CourtAssignmentTracker.winCountMap);

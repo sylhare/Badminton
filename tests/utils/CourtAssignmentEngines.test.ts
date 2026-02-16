@@ -34,7 +34,7 @@ function createMockCourt(courtNumber: number, players: Player[], winner?: 1 | 2)
 
 describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
   beforeEach(() => {
-    selector.setEngine(type); // Set the selector engine for each test run
+    selector.setEngine(type); 
     engine.resetHistory();
     localStorage.clear();
   });
@@ -649,7 +649,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         winner: 1,
       };
 
-      // Train with a significant imbalance
       for (let i = 0; i < 50; i++) {
         selector.engine().recordWins([{ ...trainingCourt, courtNumber: i + 1 }]);
       }
@@ -670,7 +669,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       }
 
       const avgDiff = totalDiff / testRuns;
-      // Allow for some noise but ensure it's generally balanced (much less than the max possible ~100)
+      
       expect(avgDiff).toBeLessThanOrEqual(25);
     });
   });
@@ -743,7 +742,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
   describe('Shared Edge Cases & Heuristics', () => {
     it('handles 3-player remainder specifically (odd total players)', () => {
-      const players = mockPlayers(7); // 4 + 3 -> 4 on C1, 2 on C2, 1 benched
+      const players = mockPlayers(7); 
       const assignments = engine.generate(players, 2);
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
@@ -753,12 +752,11 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('considers player losses in team balancing', () => {
       const players = mockPlayers(4);
-      // Mock losses for P2, P3
-      const initialCourt = createMockCourt(1, players, 1); // P0, P1 win; P2, P3 lose
+      
+      const initialCourt = createMockCourt(1, players, 1); 
       engine.recordWins([initialCourt]);
       engine.clearCurrentSession();
 
-      // Generate again, heuristic should kick in
       const assignments = engine.generate(players, 1);
       expect(assignments).toHaveLength(1);
       expect(assignments[0].players).toHaveLength(4);
@@ -767,13 +765,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('reverses win if a second recordWins call for the same court has a different winner', () => {
       const players = mockPlayers(4);
-      const court1 = createMockCourt(1, players, 1); // P0, P1 win
+      const court1 = createMockCourt(1, players, 1); 
 
       engine.recordWins([court1]);
       expect(engine.getWinCounts().get('P0')).toBe(1);
 
-      // Same session (or at least same court number recorded previously)
-      const court2 = createMockCourt(1, players, 2); // P2, P3 win
+      const court2 = createMockCourt(1, players, 2); 
       engine.recordWins([court2]);
 
       const winCounts = engine.getWinCounts();
@@ -794,7 +791,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('strictly respects forceBenchPlayerIds', () => {
       const players = mockPlayers(8);
-      // Force P0 and P1 to bench
+      
       const forceBench = new Set(['P0', 'P1']);
       const assignments = engine.generate(players, 2, undefined, forceBench);
 
@@ -814,18 +811,15 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0], players[1], players[2]],
       };
 
-      // Most engines will skip team splitting or produce a partially filled court
       const assignments = engine.generate(players, 2, manualSelection);
       expect(assignments.length).toBeGreaterThanOrEqual(1);
 
-      // Players P0, P1, P2 should definitely be on a court (Court 1)
       const court1 = assignments.find(c => c.courtNumber === 1);
       expect(court1).toBeDefined();
       expect(court1!.players.map(p => p.id)).toContain('P0');
       expect(court1!.players.map(p => p.id)).toContain('P1');
       expect(court1!.players.map(p => p.id)).toContain('P2');
 
-      // And NOT in any other court
       const otherCourts = assignments.filter(c => c.courtNumber !== 1);
       const otherPlayers = otherCourts.flatMap(c => c.players.map(p => p.id));
       expect(otherPlayers).not.toContain('P0');
@@ -836,7 +830,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
   describe('engineSelector Delegators', () => {
     it('exercises engine() accessor', () => {
-      // selector.setEngine(type) is already called in the main beforeEach
+      
       const players = mockPlayers(4);
 
       selector.engine().resetHistory();
@@ -855,7 +849,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       selector.engine().saveState(type);
       selector.engine().loadState(type);
 
-      // Use the 'name' and 'type' from the describe.each loop
       expect(selector.engine().getName()).toBe(name.split(' (')[0]);
       expect(selector.engine().getDescription()).toBeDefined();
       expect(selector.getEngineType()).toBe(type);
@@ -867,14 +860,11 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       engine.resetHistory();
       const players = mockPlayers(100);
 
-      // 1. Record some "old" pairings by simulating early rounds
       const oldCourt = createMockCourt(1, [players[0], players[1], players[2], players[3]], 1);
       engine.recordWins([oldCourt]);
 
-      // 2. Simulate many rounds with different player combinations to create 600+ unique pairings
-      // Each round of 4 players creates 2 teammate pairs and 4 opponent pairs
       for (let round = 0; round < 120; round++) {
-        const offset = (round * 4) % 96; // Cycle through players
+        const offset = (round * 4) % 96; 
         const roundPlayers = [
           players[offset],
           players[offset + 1],
@@ -890,10 +880,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const opponentKeys = Object.keys(stateBefore.opponentCountMap);
       const totalPairings = teammateKeys.length + opponentKeys.length;
 
-      // Verify pruning occurred
       expect(totalPairings).toBeLessThanOrEqual(500);
 
-      // Verify old pairings were removed (P0|P1 was the very first pairing)
       expect(teammateKeys).not.toContain('P0|P1');
     });
 
@@ -901,7 +889,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       engine.resetHistory();
       const players = mockPlayers(50);
 
-      // Simulate 100 rounds to generate many pairings
       for (let round = 0; round < 100; round++) {
         const offset = (round * 4) % 46;
         const roundPlayers = [
@@ -916,7 +903,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       const stateBefore = engine.prepareStateForSaving(type);
 
-      // Verify that player win/loss counts are NEVER pruned (only pairings)
       expect(Object.keys(stateBefore.winCountMap).length).toBeGreaterThan(0);
       expect(Object.keys(stateBefore.lossCountMap).length).toBeGreaterThan(0);
     });
@@ -925,21 +911,17 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       engine.resetHistory();
       const players = mockPlayers(8);
 
-      // Record several rounds to create data
       for (let i = 0; i < 5; i++) {
         const court = createMockCourt(i + 1, players.slice(0, 4), 1);
         engine.recordWins([court]);
       }
 
-      // Save with engine type
       engine.saveState(type);
       engine.resetHistory();
 
-      // Load and verify engine type matches
       engine.loadState(type);
       const stateAfterLoad = engine.prepareStateForSaving(type);
 
-      // Verify engineType was persisted
       expect(stateAfterLoad.engineType).toBe(type);
     });
 
@@ -947,7 +929,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       engine.resetHistory();
       const players = mockPlayers(8);
 
-      // Generate data with current engine
       const court = createMockCourt(1, players.slice(0, 4), 1);
       engine.recordWins([court]);
       engine.saveState(type);
@@ -955,11 +936,9 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const winCountsBeforeSave = engine.getWinCounts();
       expect(winCountsBeforeSave.size).toBeGreaterThan(0);
 
-      // Try to load with a different engine type
       const differentType = type === 'sa' ? 'mc' : 'sa';
       engine.loadState(differentType);
 
-      // History should be reset
       const winCountsAfterLoad = engine.getWinCounts();
       expect(winCountsAfterLoad.size).toBe(0);
     });
