@@ -70,19 +70,19 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
 
     /** Prepares the internal maps for persistence. Filters and prunes old data. */
-    prepareStateForSaving(): CourtEngineState {
+    prepareStateForSaving(engineType: 'sa' | 'mc' | 'cg'): CourtEngineState {
         // Pruning logic: keep the 500 most recently updated entries across large maps
         const MAX_ENTRIES = 500;
         this.pruneHistoricalData(MAX_ENTRIES);
 
         return {
+            engineType,
             benchCountMap: Object.fromEntries(CourtAssignmentTracker.benchCountMap),
             singleCountMap: Object.fromEntries(CourtAssignmentTracker.singleCountMap),
             teammateCountMap: Object.fromEntries(CourtAssignmentTracker.teammateCountMap),
             opponentCountMap: Object.fromEntries(CourtAssignmentTracker.opponentCountMap),
             winCountMap: Object.fromEntries(CourtAssignmentTracker.winCountMap),
             lossCountMap: Object.fromEntries(CourtAssignmentTracker.lossCountMap),
-            lastUpdatedMap: Object.fromEntries(CourtAssignmentTracker.lastUpdatedMap),
         };
     }
 
@@ -115,13 +115,22 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
 
     /** Saves the current state to persistent storage. */
-    saveState(): void {
-        saveCourtEngineState(this.prepareStateForSaving());
+    saveState(engineType: 'sa' | 'mc' | 'cg'): void {
+        saveCourtEngineState(this.prepareStateForSaving(engineType));
     }
 
     /** Loads tracking data from persistent storage. */
-    loadState(): void {
+    loadState(currentEngineType: 'sa' | 'mc' | 'cg'): void {
         const state = loadCourtEngineState();
+
+        if (state.engineType && state.engineType !== currentEngineType) {
+            console.warn(
+                `[Engine Storage] Engine changed from ${state.engineType} to ${currentEngineType}. ` +
+                `Resetting history to avoid inconsistent cost evaluation.`
+            );
+            this.resetHistory();
+            return;
+        }
 
         if (state.benchCountMap) {
             CourtAssignmentTracker.benchCountMap = new Map(Object.entries(state.benchCountMap));
@@ -140,12 +149,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         }
         if (state.lossCountMap) {
             CourtAssignmentTracker.lossCountMap = new Map(Object.entries(state.lossCountMap));
-        }
-        if (state.lastUpdatedMap) {
-            CourtAssignmentTracker.lastUpdatedMap = new Map(Object.entries(state.lastUpdatedMap));
-            // Restore globalCounter to the max seen timestamp
-            const times = Array.from(CourtAssignmentTracker.lastUpdatedMap.values());
-            CourtAssignmentTracker.globalCounter = times.length > 0 ? Math.max(...times) : 0;
         }
     }
 

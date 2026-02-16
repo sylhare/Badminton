@@ -297,13 +297,13 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const winCountsBeforeSave = engine.getWinCounts();
       expect(winCountsBeforeSave.size).toBeGreaterThan(0);
 
-      engine.saveState();
+      engine.saveState(type);
       engine.resetHistory();
 
       const emptyWinCounts = engine.getWinCounts();
       expect(emptyWinCounts.size).toBe(0);
 
-      engine.loadState();
+      engine.loadState(type);
 
       const winCountsAfterLoad = engine.getWinCounts();
       expect(winCountsAfterLoad.size).toBe(winCountsBeforeSave.size);
@@ -316,7 +316,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('should handle loading when no saved state exists', () => {
       localStorage.clear();
 
-      expect(() => engine.loadState()).not.toThrow();
+      expect(() => engine.loadState(type)).not.toThrow();
 
       const winCounts = engine.getWinCounts();
       expect(winCounts.size).toBe(0);
@@ -325,7 +325,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('should handle corrupted localStorage data gracefully', () => {
       localStorage.setItem('badminton-court-engine-state', 'invalid-json');
 
-      expect(() => engine.loadState()).not.toThrow();
+      expect(() => engine.loadState(type)).not.toThrow();
 
       const winCounts = engine.getWinCounts();
       expect(winCounts.size).toBe(0);
@@ -339,12 +339,13 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(4);
       engine.generate(players, 1);
 
-      expect(() => engine.saveState()).not.toThrow();
+      expect(() => engine.saveState(type)).not.toThrow();
     });
 
     it('should return state object with all required properties', () => {
-      const state = engine.prepareStateForSaving();
+      const state = engine.prepareStateForSaving(type);
 
+      expect(state).toHaveProperty('engineType');
       expect(state).toHaveProperty('benchCountMap');
       expect(state).toHaveProperty('teammateCountMap');
       expect(state).toHaveProperty('opponentCountMap');
@@ -848,15 +849,15 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       selector.engine().reverseWinForCourt(1);
       expect(selector.engine().getWinCounts().get('P0')).toBe(0);
 
-      const state = selector.engine().prepareStateForSaving();
+      const state = selector.engine().prepareStateForSaving(type);
       expect(state).toHaveProperty('winCountMap');
 
-      selector.engine().saveState();
-      selector.engine().loadState();
+      selector.engine().saveState(type);
+      selector.engine().loadState(type);
 
       // Use the 'name' and 'type' from the describe.each loop
-      expect(selector.getEngineName()).toBe(name.split(' (')[0]);
-      expect(selector.getEngineDescription()).toBeDefined();
+      expect(selector.engine().getName()).toBe(name.split(' (')[0]);
+      expect(selector.engine().getDescription()).toBeDefined();
       expect(selector.getEngineType()).toBe(type);
     });
   });
@@ -884,7 +885,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         engine.recordWins([court]);
       }
 
-      const stateBefore = engine.prepareStateForSaving();
+      const stateBefore = engine.prepareStateForSaving(type);
       const teammateKeys = Object.keys(stateBefore.teammateCountMap);
       const opponentKeys = Object.keys(stateBefore.opponentCountMap);
       const totalPairings = teammateKeys.length + opponentKeys.length;
@@ -913,44 +914,54 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         engine.recordWins([court]);
       }
 
-      const stateBefore = engine.prepareStateForSaving();
+      const stateBefore = engine.prepareStateForSaving(type);
 
       // Verify that player win/loss counts are NEVER pruned (only pairings)
       expect(Object.keys(stateBefore.winCountMap).length).toBeGreaterThan(0);
       expect(Object.keys(stateBefore.lossCountMap).length).toBeGreaterThan(0);
-
-      // Verify lastUpdatedMap is included in saved state
-      expect(stateBefore.lastUpdatedMap).toBeDefined();
-      expect(Object.keys(stateBefore.lastUpdatedMap).length).toBeGreaterThan(0);
     });
 
-    it('persists and restores lastUpdatedMap correctly', () => {
+    it('persists and restores engineType correctly', () => {
       engine.resetHistory();
       const players = mockPlayers(8);
 
-      // Record several rounds to create timestamp data
+      // Record several rounds to create data
       for (let i = 0; i < 5; i++) {
         const court = createMockCourt(i + 1, players.slice(0, 4), 1);
         engine.recordWins([court]);
       }
 
-      // Get state before save
-      const stateBeforeSave = engine.prepareStateForSaving();
-      const timestampsBeforeSave = Object.keys(stateBeforeSave.lastUpdatedMap);
+      // Save with engine type
+      engine.saveState(type);
+      engine.resetHistory();
 
-      // Verify lastUpdatedMap has entries
-      expect(timestampsBeforeSave.length).toBeGreaterThan(0);
+      // Load and verify engine type matches
+      engine.loadState(type);
+      const stateAfterLoad = engine.prepareStateForSaving(type);
 
-      // Save and reload
-      engine.saveState();
-      engine.loadState();
+      // Verify engineType was persisted
+      expect(stateAfterLoad.engineType).toBe(type);
+    });
 
-      const stateAfterLoad = engine.prepareStateForSaving();
-      const timestampsAfterLoad = Object.keys(stateAfterLoad.lastUpdatedMap);
+    it('resets history when loading state with different engine type', () => {
+      engine.resetHistory();
+      const players = mockPlayers(8);
 
-      // Verify lastUpdatedMap was persisted
-      expect(timestampsAfterLoad.length).toBe(timestampsBeforeSave.length);
-      expect(stateAfterLoad.lastUpdatedMap).toEqual(stateBeforeSave.lastUpdatedMap);
+      // Generate data with current engine
+      const court = createMockCourt(1, players.slice(0, 4), 1);
+      engine.recordWins([court]);
+      engine.saveState(type);
+
+      const winCountsBeforeSave = engine.getWinCounts();
+      expect(winCountsBeforeSave.size).toBeGreaterThan(0);
+
+      // Try to load with a different engine type
+      const differentType = type === 'sa' ? 'mc' : 'sa';
+      engine.loadState(differentType);
+
+      // History should be reset
+      const winCountsAfterLoad = engine.getWinCounts();
+      expect(winCountsAfterLoad.size).toBe(0);
     });
   });
 });

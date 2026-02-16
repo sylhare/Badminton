@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { engine } from '../engines/engineSelector';
+import { engine, getEngineType } from '../engines/engineSelector';
 import { loadAppState } from '../utils/storageUtils';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
@@ -67,8 +67,9 @@ function StatsPage(): React.ReactElement {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    engine().loadState();
-    setEngineState(engine().prepareStateForSaving());
+    const engineType = getEngineType();
+    engine().loadState(engineType);
+    setEngineState(engine().prepareStateForSaving(engineType));
 
     const appState = loadAppState();
     if (appState.players) {
@@ -76,7 +77,7 @@ function StatsPage(): React.ReactElement {
     }
 
     return engine().onStateChange(() => {
-      setEngineState(engine().prepareStateForSaving());
+      setEngineState(engine().prepareStateForSaving(getEngineType()));
     });
   }, []);
 
