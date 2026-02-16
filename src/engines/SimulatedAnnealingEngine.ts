@@ -172,12 +172,13 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
     for (const court of courts) {
       if (!court.teams) continue;
       if (court.players.length === 2) {
-        totalCost += ((CourtAssignmentTracker.singleCountMap.get(court.players[0].id) ?? 0) + (CourtAssignmentTracker.singleCountMap.get(court.players[1].id) ?? 0)) * this.SINGLES_REPEAT_PENALTY;
+        totalCost += ((this.singleCountMap.get(court.players[0].id) ?? 0) +
+                     (this.singleCountMap.get(court.players[1].id) ?? 0)) * this.SINGLES_REPEAT_PENALTY;
       }
       const addTeammateCost = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
-            totalCost += (CourtAssignmentTracker.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
+            totalCost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
           }
         }
       };
@@ -186,20 +187,17 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
 
       court.teams.team1.forEach(a => {
         court.teams!.team2.forEach(b => {
-          totalCost += (CourtAssignmentTracker.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY;
+          totalCost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY;
         });
       });
-
-      const winCounts = this.getWinCounts();
-      const lossCounts = this.getLossCounts();
 
       const addSkillPairPenalty = (team: Player[]): void => {
         for (let i = 0; i < team.length; i++) {
           for (let j = i + 1; j < team.length; j++) {
-            const wins1 = winCounts.get(team[i].id) ?? 0;
-            const wins2 = winCounts.get(team[j].id) ?? 0;
-            const losses1 = lossCounts.get(team[i].id) ?? 0;
-            const losses2 = lossCounts.get(team[j].id) ?? 0;
+            const wins1 = this.winCountMap.get(team[i].id) ?? 0;
+            const wins2 = this.winCountMap.get(team[j].id) ?? 0;
+            const losses1 = this.lossCountMap.get(team[i].id) ?? 0;
+            const losses2 = this.lossCountMap.get(team[j].id) ?? 0;
             totalCost += (wins1 * wins2 + losses1 * losses2) * this.SKILL_PAIR_PENALTY;
           }
         }
@@ -207,12 +205,12 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
       addSkillPairPenalty(court.teams.team1);
       addSkillPairPenalty(court.teams.team2);
 
-      const t1W = court.teams.team1.reduce((a, p) => a + (winCounts.get(p.id) ?? 0), 0);
-      const t2W = court.teams.team2.reduce((a, p) => a + (winCounts.get(p.id) ?? 0), 0);
+      const t1W = court.teams.team1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+      const t2W = court.teams.team2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
       totalCost += Math.abs(t1W - t2W) * this.BALANCE_PENALTY;
 
-      const t1L = court.teams.team1.reduce((a, p) => a + (lossCounts.get(p.id) ?? 0), 0);
-      const t2L = court.teams.team2.reduce((a, p) => a + (lossCounts.get(p.id) ?? 0), 0);
+      const t1L = court.teams.team1.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
+      const t2L = court.teams.team2.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
       totalCost += Math.abs(t1L - t2L) * this.BALANCE_PENALTY;
     }
     return totalCost;
@@ -240,16 +238,17 @@ export class CourtAssignmentEngineSA extends BaseCourtAssignmentEngine implement
     const addTMC = (team: Player[]) => {
       for (let i = 0; i < team.length; i++) {
         for (let j = i + 1; j < team.length; j++) {
-          cost += (CourtAssignmentTracker.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
+          cost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * this.TEAMMATE_REPEAT_PENALTY;
         }
       }
     };
     addTMC(t1); addTMC(t2);
-    t1.forEach(a => t2.forEach(b => cost += (CourtAssignmentTracker.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY));
+    t1.forEach(a => t2.forEach(b =>
+      cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_REPEAT_PENALTY
+    ));
 
-    const winCounts = this.getWinCounts();
-    const t1W = t1.reduce((a, p) => a + (winCounts.get(p.id) ?? 0), 0);
-    const t2W = t2.reduce((a, p) => a + (winCounts.get(p.id) ?? 0), 0);
+    const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+    const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
     cost += Math.abs(t1W - t2W) * this.BALANCE_PENALTY;
     return cost;
   }

@@ -85,11 +85,13 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
   }
 
   private selectBestSinglesPair(players: Player[]): Player[] {
-    return [...players].sort((a, b) => (CourtAssignmentTracker.singleCountMap.get(a.id) ?? 0) - (CourtAssignmentTracker.singleCountMap.get(b.id) ?? 0)).slice(0, 2);
+    return [...players].sort((a, b) =>
+      (this.singleCountMap.get(a.id) ?? 0) - (this.singleCountMap.get(b.id) ?? 0)
+    ).slice(0, 2);
   }
 
   private hasTeammateConflict(p1: string, p2: string): boolean {
-    return (CourtAssignmentTracker.teammateCountMap.get(this.pairKey(p1, p2)) ?? 0) > 0;
+    return (this.teammateCountMap.get(this.pairKey(p1, p2)) ?? 0) > 0;
   }
 
   private countConflicts(pid: string, all: Player[]): number {
@@ -99,7 +101,9 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
   private countGroupConflicts(group: Player[]): number {
     let count = 0;
     for (let i = 0; i < group.length; i++) {
-      for (let j = i + 1; j < group.length; j++) count += (CourtAssignmentTracker.teammateCountMap.get(this.pairKey(group[i].id, group[j].id)) ?? 0);
+      for (let j = i + 1; j < group.length; j++) {
+        count += (this.teammateCountMap.get(this.pairKey(group[i].id, group[j].id)) ?? 0);
+      }
     }
     return count;
   }
@@ -114,18 +118,21 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     const splits: Array<[[number, number], [number, number]]> = [
       [[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]],
     ];
+
     let bestCost = Infinity;
     let bestTeams: Court['teams'];
     for (const split of splits) {
       const t1 = [players[split[0][0]], players[split[0][1]]];
       const t2 = [players[split[1][0]], players[split[1][1]]];
       let cost = 0;
-      t1.forEach(a => t2.forEach(b => cost += (CourtAssignmentTracker.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT));
-      const t1W = t1.reduce((a, p) => a + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
-      const t2W = t2.reduce((a, p) => a + (CourtAssignmentTracker.winCountMap.get(p.id) ?? 0), 0);
+      t1.forEach(a => t2.forEach(b =>
+        cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * this.OPPONENT_WEIGHT
+      ));
+      const t1W = t1.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
+      const t2W = t2.reduce((a, p) => a + (this.winCountMap.get(p.id) ?? 0), 0);
       cost += Math.abs(t1W - t2W) * this.BALANCE_WEIGHT;
-      const t1L = t1.reduce((a, p) => a + (CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0), 0);
-      const t2L = t2.reduce((a, p) => a + (CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0), 0);
+      const t1L = t1.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
+      const t2L = t2.reduce((a, p) => a + (this.lossCountMap.get(p.id) ?? 0), 0);
       cost += Math.abs(t1L - t2L) * this.BALANCE_WEIGHT;
       if (cost < bestCost) { bestCost = cost; bestTeams = { team1: t1, team2: t2 }; }
     }
@@ -136,7 +143,7 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     const baseStats = super.getStats();
     return {
       ...baseStats,
-      conflictEdges: Array.from(CourtAssignmentTracker.teammateCountMap.values()).filter(v => v > 0).length,
+      conflictEdges: Array.from(this.teammateCountMap.values()).filter(v => v > 0).length,
     };
   }
 }
