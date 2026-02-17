@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+
 import type { Player, Court } from '../../src/types';
 import { pairKey } from '../../src/utils/playerUtils';
+
 import type {
   MatchEvent,
   MatchPairEvent,

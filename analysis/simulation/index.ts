@@ -4,8 +4,8 @@ import { resolve } from 'node:path';
 import { engineMC as CourtAssignmentEngine } from '../../src/engines/MonteCarloEngine.ts';
 import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
 import { engineCG as ConflictGraphEngine } from '../../src/engines/ConflictGraphEngine.ts';
-import { RandomBaselineEngine } from './RandomBaselineEngine.ts';
 
+import { RandomBaselineEngine } from './RandomBaselineEngine.ts';
 import type {
   MatchEvent,
   PlayerStats,
@@ -15,7 +15,6 @@ import type {
   PairEvent,
   RoundResult,
 } from './types';
-
 import {
   loadConfig,
   generatePlayerLevels,
