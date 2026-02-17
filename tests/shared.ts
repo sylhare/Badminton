@@ -2,7 +2,9 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
-import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
+import { engineMC } from '../src/engines/MonteCarloEngine';
+import { engineSA } from '../src/engines/SimulatedAnnealingEngine';
+import { engineCG } from '../src/engines/ConflictGraphEngine';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {
@@ -15,7 +17,9 @@ export const COMMON_PLAYERS = {
 export const clearTestState = async (): Promise<void> => {
   localStorage.clear();
   await act(async () => {
-    CourtAssignmentEngine.resetHistory();
+    engineMC.resetHistory();
+    engineSA.resetHistory();
+    engineCG.resetHistory();
     await new Promise(resolve => setTimeout(resolve, 0));
   });
 };
