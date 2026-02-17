@@ -1,6 +1,6 @@
 # Analysis README
 
-This folder contains the simulation script and the Marimo notebook for analyzing repeat teammate pairs.
+This folder contains the simulation script and Marimo notebooks for analyzing court assignment algorithms.
 
 ## Setup (install dependencies)
 
@@ -14,19 +14,52 @@ uv venv
 
 ## Run the simulation (generate CSVs)
 
-The simulation writes results into `analysis/data/`.
+The simulation compares all three court assignment algorithms (Monte Carlo, Simulated Annealing, and Conflict Graph) and generates comprehensive metrics.
+
+### Configuration
+
+Create or edit `analysis/data/config.json`:
+
+```json
+{
+  "runs": 100,
+  "rounds": 10,
+  "playerCounts": [20],
+  "numCourts": 4
+}
+```
+
+- **runs**: Number of simulation sessions per algorithm
+- **rounds**: Number of rounds per session
+- **playerCounts**: Array of player counts to test (e.g., `[17, 18, 19, 20]`)
+- **numCourts**: Number of available courts
+
+### Run the simulation
 
 ```bash
 cd analysis
-SIM_RUNS=5000 SIM_ROUNDS=10 SIM_PLAYERS=20 SIM_COURTS=4 npx tsx ./simulate.ts
+npx tsx ./simulation.ts
 ```
 
-## Run the bench analysis simulation
+### Output
 
-```bash
-cd analysis
-SIM_TYPE=bench BENCH_RUNS=1000 BENCH_ROUNDS=50 BENCH_MIN_PLAYERS=17 BENCH_MAX_PLAYERS=20 npx tsx ./simulate.ts
-```
+The simulation generates data in `analysis/data/`:
+- `mc_algo/`, `sa_algo/`, `cg_algo/`: Per-engine results
+  - `summary.csv`: Repeat pair statistics per simulation
+  - `pair_events.csv`: Individual repeat pair occurrences
+  - `match_events.csv`: Match outcomes with team strengths
+  - `bench_stats.csv`: Bench fairness metrics
+  - `match_pair_summary.csv`: Player pair interaction counts
+  - `player_stats.csv`: Win/loss records per player
+  - `config.json`: Configuration and aggregate statistics
+- `comparison_summary.csv`: Side-by-side engine comparison
+
+### Metrics tracked
+
+- **Repeat pairs**: How often the same team plays together across rounds
+- **Balance**: Team strength matching (based on simulated skill levels)
+- **Bench fairness**: Distribution of bench time and gaps between benches
+- **Win distribution**: Player win rates relative to skill levels
 
 ## Run the notebook (editable)
 
