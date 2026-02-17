@@ -14,7 +14,7 @@ uv venv
 
 ## Run the simulation (generate CSVs)
 
-The simulation compares all three court assignment algorithms (Monte Carlo, Simulated Annealing, and Conflict Graph) and generates comprehensive metrics.
+The simulation compares all four court assignment algorithms (Random Baseline, Monte Carlo, Simulated Annealing, and Conflict Graph) and generates comprehensive metrics.
 
 ### Configuration
 
@@ -38,13 +38,13 @@ Create or edit `analysis/data/config.json`:
 
 ```bash
 cd analysis
-npx tsx ./simulation.ts
+npx tsx ./simulation/index.ts
 ```
 
 ### Output
 
 The simulation generates data in `analysis/data/`:
-- `mc_algo/`, `sa_algo/`, `cg_algo/`: Per-engine results
+- `random_baseline/`, `mc_algo/`, `sa_algo/`, `cg_algo/`: Per-engine results
   - `summary.csv`: Repeat pair statistics per simulation
   - `pair_events.csv`: Individual repeat pair occurrences
   - `match_events.csv`: Match outcomes with team strengths
