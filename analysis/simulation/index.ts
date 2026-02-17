@@ -1,16 +1,30 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { engineMC as CourtAssignmentEngine } from '../src/engines/MonteCarloEngine.ts';
-import { engineSA as CourtAssignmentEngineSA } from '../src/engines/SimulatedAnnealingEngine.ts';
-import { engineCG as ConflictGraphEngine } from '../src/engines/ConflictGraphEngine.ts';
-import type { Player, Court } from '../src/types';
+import { engineMC as CourtAssignmentEngine } from '../../src/engines/MonteCarloEngine.ts';
+import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
+import { engineCG as ConflictGraphEngine } from '../../src/engines/ConflictGraphEngine.ts';
+import type { Player, Court } from '../../src/types';
 
-/**
- * Random baseline engine with no optimization.
- * Provides contrast with optimized engines by using pure random assignment
- * without any bench fairness or pairing optimization.
- */
+import type {
+  MatchEvent,
+  PlayerStats,
+  SessionBenchStats,
+  MatchPairEvent,
+  SimulationSummary,
+  PairEvent,
+  RoundResult,
+} from './types';
+
+import {
+  loadConfig,
+  generatePlayerLevels,
+  toPlayerList,
+  toCsv,
+  extractRoundPairs,
+  evaluateRepeats,
+} from './utils';
+
 class RandomBaselineEngine {
   private static winCountMap: Map<string, number> = new Map();
 
@@ -37,12 +51,6 @@ class RandomBaselineEngine {
     return new Map(this.winCountMap);
   }
 
-  /**
-   * Generates court assignments using pure random shuffling.
-   * @param players - All players to consider
-   * @param numberOfCourts - Maximum courts available
-   * @returns Array of court assignments
-   */
   static generate(players: Player[], numberOfCourts: number): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
@@ -74,161 +82,18 @@ class RandomBaselineEngine {
   }
 }
 
-// ============================================================================
-// Configuration
-// ============================================================================
-
 const SCRIPT_DIR = import.meta.dirname;
-const DATA_DIR = resolve(SCRIPT_DIR, 'data');
+const DATA_DIR = resolve(SCRIPT_DIR, '..', 'data');
 const CONFIG_PATH = resolve(DATA_DIR, 'config.json');
 
-/** Loads simulation configuration from config.json or returns defaults. */
-const loadConfig = () => {
-  if (!existsSync(CONFIG_PATH)) {
-    return { runs: 100, rounds: 10, playerCounts: [20], numCourts: 4 };
-  }
-  const raw = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
-  // Support both old `numPlayers` and new `playerCounts` format
-  if (!raw.playerCounts && raw.numPlayers) {
-    raw.playerCounts = [raw.numPlayers];
-  }
-  return raw;
-};
-
-const config = loadConfig();
+const config = loadConfig(CONFIG_PATH);
 const RUNS = config.runs;
 const ROUNDS = config.rounds;
 const PLAYER_COUNTS: number[] = config.playerCounts ?? [20];
 const MAX_COURTS = config.numCourts;
 const MAX_PLAYERS = Math.max(...PLAYER_COUNTS);
 
-// ============================================================================
-// Player Skill Levels & Match Outcome Simulation
-// ============================================================================
-
-/**
- * Generates player skill levels (1-5) with a roughly normal distribution.
- * Distribution: level 1=30%, 2=35%, 3=15%, 4=5%, 5=15%
- * @param count - Number of players to generate levels for
- */
-const generatePlayerLevels = (count: number): Map<string, number> => {
-  const levels = new Map<string, number>();
-  const distribution = [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5];
-
-  for (let i = 0; i < count; i++) {
-    const playerId = `P${i + 1}`;
-    const level = distribution[i % distribution.length];
-    levels.set(playerId, level);
-  }
-  return levels;
-};
-
 const PLAYER_LEVELS = generatePlayerLevels(MAX_PLAYERS);
-
-/** Calculates team strength as sum of player levels. */
-const calculateTeamStrength = (players: Player[]): number => {
-  return players.reduce((sum, p) => sum + (PLAYER_LEVELS.get(p.id) ?? 3), 0);
-};
-
-/**
- * Simulates match outcome using logistic probability based on team strengths.
- * Uses k=0.3 for the logistic function, giving these win probabilities for the stronger team:
- * - diff 0: 50%, diff 1: 57%, diff 2: 65%, diff 4: 77%, diff 6: 86%, diff 8: 92%
- * @returns 1 if team1 wins, 2 if team2 wins
- */
-const simulateMatchOutcome = (team1Strength: number, team2Strength: number): 1 | 2 => {
-  const k = 0.3;
-  const strengthDiff = team1Strength - team2Strength;
-  const pTeam1Wins = 1 / (1 + Math.exp(-k * strengthDiff));
-  return Math.random() < pTeam1Wins ? 1 : 2;
-};
-
-// ============================================================================
-// Types
-// ============================================================================
-
-/** Records a single match with team compositions, strengths, and outcome. */
-type MatchEvent = {
-  simulationId: number;
-  roundIndex: number;
-  courtIndex: number;
-  team1Players: string;
-  team2Players: string;
-  team1Strength: number;
-  team2Strength: number;
-  strengthDifferential: number;
-  winner: 1 | 2;
-  strongerTeamWon: boolean;
-  team1EngineWins: number;
-  team2EngineWins: number;
-  engineWinDifferential: number;
-  engineBalancedTeamWon: boolean;
-};
-
-/** Aggregate statistics for a player across all simulations. */
-type PlayerStats = {
-  playerId: string;
-  level: number;
-  totalWins: number;
-  totalLosses: number;
-  gamesPlayed: number;
-};
-
-/** Aggregate bench fairness statistics for a session. */
-type SessionBenchStats = {
-  simulationId: number;
-  numPlayers: number;
-  maxBenchCount: number;
-  minBenchCount: number;
-  benchRange: number;
-  avgBenchCount: number;
-  meanGap: number;
-  doubleBenchCount: number;
-  totalGapEvents: number;
-};
-
-/** Tracks when two players were in the same match. */
-type MatchPairEvent = {
-  simulationId: number;
-  roundIndex: number;
-  pairId: string;
-  wasTeammate: boolean;
-};
-
-/** Summary of repeat pair statistics for a simulation. */
-type SimulationSummary = {
-  simulationId: number;
-  rounds: number;
-  repeatAnyPair: boolean;
-  repeatPairDifferentOpponents: boolean;
-  repeatPairSameOpponents: boolean;
-  repeatPairCount: number;
-  repeatPairDifferentOpponentsCount: number;
-  repeatPairSameOpponentsCount: number;
-};
-
-/** Records when a team pairing was repeated across rounds. */
-type PairEvent = {
-  simulationId: number;
-  fromRound: number;
-  toRound: number;
-  pairId: string;
-  opponentFrom: string;
-  opponentTo: string;
-  opponentChanged: boolean;
-};
-
-/** Results extracted from a single round. */
-type RoundResult = {
-  roundIndex: number;
-  pairToOpponent: Map<string, string>;
-  matchEvents: MatchEvent[];
-  matchPairEvents: MatchPairEvent[];
-};
-
-// ============================================================================
-// Engine Registry
-// ============================================================================
 
 const ALL_ENGINES = [
   { id: 'random', name: 'Random Baseline', engine: RandomBaselineEngine, dir: 'random_baseline' },
@@ -239,185 +104,6 @@ const ALL_ENGINES = [
 
 type EngineType = typeof ALL_ENGINES[number]['engine'];
 
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/** Creates a canonical pair key by sorting player IDs. */
-const pairKey = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`);
-
-/** Creates a list of present players with sequential IDs. */
-const toPlayerList = (count: number): Player[] =>
-  Array.from({ length: count }, (_, i) => ({
-    id: `P${i + 1}`,
-    name: `Player ${i + 1}`,
-    isPresent: true,
-  }));
-
-/**
- * Converts an array of records to CSV format.
- * @param rows - Array of objects to convert
- * @param defaultHeaders - Headers to use if rows is empty
- */
-const toCsv = (rows: Array<Record<string, string | number | boolean>>, defaultHeaders?: string[]): string => {
-  const escape = (value: string | number | boolean) => {
-    const raw = String(value);
-    if (raw.includes(',') || raw.includes('"') || raw.includes('\n')) {
-      return `"${raw.replaceAll('"', '""')}"`;
-    }
-    return raw;
-  };
-
-  if (rows.length === 0) {
-    return defaultHeaders ? defaultHeaders.join(',') : '';
-  }
-
-  const headers = Object.keys(rows[0]);
-  const lines = [headers.join(',')];
-  for (const row of rows) {
-    lines.push(headers.map(header => escape(row[header] ?? '')).join(','));
-  }
-  return lines.join('\n');
-};
-
-// ============================================================================
-// Simulation Logic
-// ============================================================================
-
-/**
- * Extracts match data from court assignments for a single round.
- * Records wins to the engine for skill balancing in subsequent rounds.
- */
-const extractRoundPairs = (
-  roundIndex: number,
-  courts: Court[],
-  simulationId: number,
-  Engine: EngineType,
-): RoundResult => {
-  const pairToOpponent = new Map<string, string>();
-  const matchEvents: MatchEvent[] = [];
-  const matchPairEvents: MatchPairEvent[] = [];
-  const courtsWithWinners: Court[] = [];
-  const engineWinCounts = Engine.getWinCounts ? Engine.getWinCounts() : new Map<string, number>();
-
-  for (let courtIdx = 0; courtIdx < courts.length; courtIdx++) {
-    const court = courts[courtIdx];
-    if (!court.teams) continue;
-
-    const [a1, a2] = court.teams.team1;
-    const [b1, b2] = court.teams.team2;
-
-    const team1Key = pairKey(a1.id, a2.id);
-    const team2Key = pairKey(b1.id, b2.id);
-
-    pairToOpponent.set(team1Key, team2Key);
-    pairToOpponent.set(team2Key, team1Key);
-
-    const allPlayers = [a1, a2, b1, b2];
-    for (let i = 0; i < allPlayers.length; i++) {
-      for (let j = i + 1; j < allPlayers.length; j++) {
-        const p1 = allPlayers[i];
-        const p2 = allPlayers[j];
-        const wasTeammate = (i < 2 && j < 2) || (i >= 2 && j >= 2);
-        matchPairEvents.push({
-          simulationId,
-          roundIndex,
-          pairId: pairKey(p1.id, p2.id),
-          wasTeammate,
-        });
-      }
-    }
-
-    const team1Strength = calculateTeamStrength(court.teams.team1);
-    const team2Strength = calculateTeamStrength(court.teams.team2);
-    const strengthDiff = Math.abs(team1Strength - team2Strength);
-    const winner = simulateMatchOutcome(team1Strength, team2Strength);
-    const strongerTeam = team1Strength >= team2Strength ? 1 : 2;
-
-    const team1EngineWins = (engineWinCounts.get(a1.id) ?? 0) + (engineWinCounts.get(a2.id) ?? 0);
-    const team2EngineWins = (engineWinCounts.get(b1.id) ?? 0) + (engineWinCounts.get(b2.id) ?? 0);
-    const engineWinDiff = Math.abs(team1EngineWins - team2EngineWins);
-    const engineStrongerTeam = team1EngineWins >= team2EngineWins ? 1 : 2;
-
-    courtsWithWinners.push({ ...court, winner });
-
-    matchEvents.push({
-      simulationId,
-      roundIndex,
-      courtIndex: courtIdx + 1,
-      team1Players: team1Key,
-      team2Players: team2Key,
-      team1Strength,
-      team2Strength,
-      strengthDifferential: strengthDiff,
-      winner,
-      strongerTeamWon: winner === strongerTeam,
-      team1EngineWins,
-      team2EngineWins,
-      engineWinDifferential: engineWinDiff,
-      engineBalancedTeamWon: winner === engineStrongerTeam,
-    });
-  }
-
-  if (Engine.recordWins) {
-    Engine.recordWins(courtsWithWinners);
-  }
-
-  return { roundIndex, pairToOpponent, matchEvents, matchPairEvents };
-};
-
-/** Analyzes rounds for repeated team pairings. */
-const evaluateRepeats = (rounds: RoundResult[], simulationId: number) => {
-  let repeatPairCount = 0;
-  let repeatPairDifferentOpponentsCount = 0;
-  let repeatPairSameOpponentsCount = 0;
-  const events: PairEvent[] = [];
-
-  const pairOccurrences = new Map<string, { roundIndex: number; opponent: string }[]>();
-
-  for (const round of rounds) {
-    for (const [pairId, opponent] of round.pairToOpponent.entries()) {
-      const occurrences = pairOccurrences.get(pairId) ?? [];
-      occurrences.push({ roundIndex: round.roundIndex, opponent });
-      pairOccurrences.set(pairId, occurrences);
-    }
-  }
-
-  for (const [pairId, occurrences] of pairOccurrences.entries()) {
-    if (occurrences.length <= 1) continue;
-
-    const firstOccurrence = occurrences[0];
-
-    for (let i = 1; i < occurrences.length; i++) {
-      const repeat = occurrences[i];
-      repeatPairCount += 1;
-
-      const opponentChanged = firstOccurrence.opponent !== repeat.opponent;
-      if (opponentChanged) {
-        repeatPairDifferentOpponentsCount += 1;
-      } else {
-        repeatPairSameOpponentsCount += 1;
-      }
-
-      events.push({
-        simulationId,
-        fromRound: firstOccurrence.roundIndex,
-        toRound: repeat.roundIndex,
-        pairId,
-        opponentFrom: firstOccurrence.opponent,
-        opponentTo: repeat.opponent,
-        opponentChanged,
-      });
-    }
-  }
-
-  return { repeatPairCount, repeatPairDifferentOpponentsCount, repeatPairSameOpponentsCount, events };
-};
-
-/**
- * Runs multiple simulation sessions for a single engine with a specific player count.
- * Each session consists of multiple rounds with the engine making court assignments.
- */
 const runSimulation = (Engine: EngineType, numPlayers: number): {
   summaries: SimulationSummary[];
   pairEvents: PairEvent[];
@@ -448,7 +134,7 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
     for (let round = 0; round < ROUNDS; round++) {
       const courts = Engine.generate(players, MAX_COURTS);
 
-      const roundResult = extractRoundPairs(round + 1, courts, simId, Engine);
+      const roundResult = extractRoundPairs(round + 1, courts, simId, Engine, PLAYER_LEVELS);
       rounds.push(roundResult);
       for (const m of roundResult.matchEvents) matchEvents.push(m);
       for (const mp of roundResult.matchPairEvents) matchPairEvents.push(mp);
@@ -512,11 +198,6 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
   return { summaries, pairEvents, matchEvents, matchPairEvents, benchStats };
 };
 
-/**
- * Runs simulation for a single engine configuration and writes results to disk.
- * Runs batches for each player count in PLAYER_COUNTS.
- * @param engineConfig - Engine configuration from ALL_ENGINES
- */
 const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const { name, engine, dir } = engineConfig;
   const engineDir = resolve(DATA_DIR, dir);
@@ -684,10 +365,6 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
     benchFairness: engineConfigFile.benchFairness,
   };
 };
-
-// ============================================================================
-// Main Execution
-// ============================================================================
 
 console.log('╔════════════════════════════════════════════════════════════╗');
 console.log('║           ENGINE COMPARISON SIMULATION                     ║');
