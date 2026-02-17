@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { engineMC as CourtAssignmentEngine } from '../src/engines/MonteCarloEngine.ts';
 import { engineSA as CourtAssignmentEngineSA } from '../src/engines/SimulatedAnnealingEngine.ts';
 import { engineCG as ConflictGraphEngine } from '../src/engines/ConflictGraphEngine.ts';
-import type { Player, Court } from '../src/types/index.ts';
+import type { Player, Court } from '../src/types';
 
 // Engine selection: 'mc' for Monte Carlo, 'sa' for Simulated Annealing, 'cg' for Conflict Graph, 'all' for all engines
 const ENGINE_TYPE = process.env.SIM_ENGINE ?? 'mc';
@@ -18,7 +18,6 @@ const ALL_ENGINES = [
 
 type EngineType = typeof ALL_ENGINES[number]['engine'];
 
-// Get the appropriate engine based on selection
 const getEngine = (): EngineType => {
   if (ENGINE_TYPE === 'sa') {
     return CourtAssignmentEngineSA;
@@ -249,7 +248,6 @@ const runComparisonSimulation = () => {
     console.log(`  ✓ ${name}: ${repeatRate.toFixed(1)}% sessions with repeats, avg ${avgRepeats.toFixed(2)} repeats/session (${elapsed}ms)\n`);
   }
 
-  // Write comparison summary
   const comparisonSummary = ALL_ENGINES.map(({ id, name }) => ({
     engine: id,
     engineName: name,
@@ -282,7 +280,6 @@ const runComparisonSimulation = () => {
 const runSimulation = () => {
   ensureDataDir();
 
-  // If running comparison mode (all engines)
   if (ENGINE_TYPE === 'all') {
     runComparisonSimulation();
     return;
@@ -290,7 +287,6 @@ const runSimulation = () => {
 
   console.log(`Using engine: ${getEngineName()}`);
 
-  // If running multiple batches, generate all of them
   if (NUM_BATCHES > 1) {
     const allBatchIds: string[] = [];
     for (let batch = 1; batch <= NUM_BATCHES; batch++) {
@@ -299,7 +295,6 @@ const runSimulation = () => {
       allBatchIds.push(String(batch));
     }
 
-    // Also run a single batch without suffix for backwards compatibility
     runSingleBatch('');
 
     const config = {
@@ -314,7 +309,6 @@ const runSimulation = () => {
     };
     writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
   } else if (BATCH_ID) {
-    // Single batch with specific ID
     runSingleBatch(BATCH_ID);
 
     const config = {
@@ -328,7 +322,6 @@ const runSimulation = () => {
     };
     writeFileSync(resolve(DATA_DIR, 'config.json'), JSON.stringify(config, null, 2));
   } else {
-    // Default: single batch without ID
     runSingleBatch('');
 
     const config = {
@@ -374,8 +367,7 @@ const ensureBenchDataDir = () => {
 const calculateTheoreticalMax = (numPlayers: number, numCourts: number): number => {
   const playingSpots = numCourts * 4;
   const benchSpots = numPlayers - playingSpots;
-  if (benchSpots <= 0) return Infinity; // More spots than players - never bench
-  // In ideal rotation: max consecutive games = (playingSpots / benchSpots)
+  if (benchSpots <= 0) return Infinity;
   return playingSpots / benchSpots;
 };
 
@@ -388,7 +380,6 @@ const runBenchSimulation = (numPlayers: number, batchId: number, engine?: Engine
   for (let simId = 1; simId <= BENCH_RUNS; simId++) {
     Engine.resetHistory();
 
-    // Track last bench round for each player (0 = start, meaning never benched yet)
     const lastBenchRound: Map<string, number> = new Map();
     players.forEach(p => lastBenchRound.set(p.id, 0));
 
@@ -398,15 +389,12 @@ const runBenchSimulation = (numPlayers: number, batchId: number, engine?: Engine
       const courts = Engine.generate(players, BENCH_COURTS);
       const playingIds = new Set(courts.flatMap(c => c.players.map(p => p.id)));
 
-      // Find who is benched this round
       for (const player of players) {
         if (!playingIds.has(player.id)) {
-          // Player is benched
           const lastBench = lastBenchRound.get(player.id) ?? 0;
-          const gamesSinceLastBench = round - lastBench - 1; // Games played between benches
+          const gamesSinceLastBench = round - lastBench - 1;
 
           if (lastBench > 0) {
-            // Only record if this isn't their first bench
             benchEvents.push({
               simulationId: simId,
               playerId: player.id,
@@ -415,13 +403,11 @@ const runBenchSimulation = (numPlayers: number, batchId: number, engine?: Engine
             });
             allGapsBetweenBenches.push(gamesSinceLastBench);
           }
-
           lastBenchRound.set(player.id, round);
         }
       }
     }
 
-    // Calculate summary stats for this simulation
     const theoreticalMax = calculateTheoreticalMax(numPlayers, BENCH_COURTS);
 
     if (allGapsBetweenBenches.length > 0) {
@@ -438,7 +424,6 @@ const runBenchSimulation = (numPlayers: number, batchId: number, engine?: Engine
     }
   }
 
-  // Write results with engine suffix when in comparison mode
   const engineSuffix = engineId ? `_${engineId}` : '';
   const suffix = `${engineSuffix}_${numPlayers}p_batch${batchId}`;
   writeFileSync(resolve(BENCH_DATA_DIR, `bench_events${suffix}.csv`), toCsv(benchEvents));
@@ -458,7 +443,6 @@ const runAllBenchSimulations = () => {
     }
   }
 
-  // If running comparison mode (all engines)
   if (ENGINE_TYPE === 'all') {
     console.log('Running BENCH COMPARISON mode: All engines (MC, SA, CG)');
     console.log(`Running bench analysis: ${allConfigs.length} configurations × 3 engines...\n`);
@@ -508,7 +492,6 @@ const runAllBenchSimulations = () => {
   console.log(`\nBench analysis complete. Data saved to ${BENCH_DATA_DIR}`);
 };
 
-// Main execution: run standard simulation or bench analysis based on env var
 const simulationType = process.env.SIM_TYPE ?? 'standard';
 
 if (simulationType === 'bench') {

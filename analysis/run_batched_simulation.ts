@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { engineMC as CourtAssignmentEngine } from '../src/engines/MonteCarloEngine.ts';
 import { engineSA as CourtAssignmentEngineSA } from '../src/engines/SimulatedAnnealingEngine.ts';
 import { engineCG as ConflictGraphEngine } from '../src/engines/ConflictGraphEngine.ts';
-import type { Player, Court } from '../src/types/index.ts';
+import type { Player, Court } from '../src/types';
 
 /**
  * Random baseline engine with no optimization.
@@ -472,8 +472,6 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
           }
           lastBenchRound.set(player.id, round + 1);
         }
-
-        // Removed detailed bench events - only aggregate stats are needed
       }
     }
 
@@ -529,8 +527,6 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   console.log(`${'='.repeat(60)}`);
 
   const startTime = Date.now();
-
-  // Aggregate results across all player counts
   const allSummaries: SimulationSummary[] = [];
   const allPairEvents: PairEvent[] = [];
   const allMatchEvents: MatchEvent[] = [];
