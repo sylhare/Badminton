@@ -43,23 +43,23 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
 
-  protected get teammateCountMap() {
+  protected get teammateCountMap(): Map<string, number> {
     return CourtAssignmentTracker.teammateCountMap;
   }
 
-  protected get opponentCountMap() {
+  protected get opponentCountMap(): Map<string, number> {
     return CourtAssignmentTracker.opponentCountMap;
   }
 
-  protected get singleCountMap() {
+  protected get singleCountMap(): Map<string, number> {
     return CourtAssignmentTracker.singleCountMap;
   }
 
-  protected get winCountMap() {
+  protected get winCountMap(): Map<string, number> {
     return CourtAssignmentTracker.winCountMap;
   }
 
-  protected get lossCountMap() {
+  protected get lossCountMap(): Map<string, number> {
     return CourtAssignmentTracker.lossCountMap;
   }
 
@@ -152,7 +152,19 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /**
    * Records wins and losses for a set of matches.
    */
-  getStats(): any {
+  getStats(): {
+    winCountMap: Map<string, number>;
+    lossCountMap: Map<string, number>;
+    teammateCountMap: Map<string, number>;
+    opponentCountMap: Map<string, number>;
+    benchCountMap: Map<string, number>;
+    singleCountMap: Map<string, number>;
+    totalTeammatePairs: number;
+    maxTeammateCount: number;
+    avgTeammateCount: number;
+    totalOpponentPairs: number;
+    maxOpponentCount: number;
+  } {
     const teammateValues = Array.from(CourtAssignmentTracker.teammateCountMap.values());
     const opponentValues = Array.from(CourtAssignmentTracker.opponentCountMap.values());
     return {

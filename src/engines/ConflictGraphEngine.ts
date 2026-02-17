@@ -21,7 +21,7 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     return 'Deterministic greedy construction using conflict graph modeling. Systematically builds assignments by selecting players that minimize total conflict.';
   }
 
-  override getStats() {
+  override getStats(): ReturnType<typeof super.getStats> & { conflictEdges: number } {
     const baseStats = super.getStats();
     return {
       ...baseStats,

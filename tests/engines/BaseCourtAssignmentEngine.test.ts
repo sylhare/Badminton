@@ -190,8 +190,8 @@ describe('BaseCourtAssignmentEngine', () => {
       const mixedPairCost = engine.testCalculateSkillPairPenalty([players[0], players[2]], 1);
 
       expect(winnerPairCost).toBeGreaterThan(mixedPairCost);
-      expect(mixedPairCost).toBe(0); 
-      expect(winnerPairCost).toBe(1); 
+      expect(mixedPairCost).toBe(0);
+      expect(winnerPairCost).toBe(1);
     });
 
     it('applies penalty multiplier correctly', () => {
@@ -266,7 +266,7 @@ describe('BaseCourtAssignmentEngine', () => {
       engine.clearCurrentSession();
 
       const cost = engine.testCalculateWinBalanceCost([players[0], players[1]], [players[2], players[3]], 1);
-      expect(cost).toBe(2); 
+      expect(cost).toBe(2);
     });
 
     it('applies penalty multiplier correctly', () => {
@@ -315,7 +315,7 @@ describe('BaseCourtAssignmentEngine', () => {
       engine.clearCurrentSession();
 
       const cost = engine.testCalculateLossBalanceCost([players[0], players[1]], [players[2], players[3]], 1);
-      expect(cost).toBe(2); 
+      expect(cost).toBe(2);
     });
 
     it('applies penalty multiplier correctly', () => {
@@ -369,7 +369,7 @@ describe('BaseCourtAssignmentEngine', () => {
       engine.clearCurrentSession();
 
       const cost = engine.testCalculateSinglesCost(players, 1);
-      expect(cost).toBe(2); 
+      expect(cost).toBe(2);
     });
 
     it('applies penalty multiplier correctly', () => {
@@ -394,7 +394,7 @@ describe('BaseCourtAssignmentEngine', () => {
       }
 
       const cost = engine.testCalculateSinglesCost(players, 1);
-      expect(cost).toBe(6); 
+      expect(cost).toBe(6);
     });
   });
 
@@ -432,11 +432,6 @@ describe('BaseCourtAssignmentEngine', () => {
       engine.clearCurrentSession();
 
       const teams = engine.testCreateTeamsFromPlayers(players);
-      const team1Ids = teams!.team1.map(p => p.id).sort();
-      const team2Ids = teams!.team2.map(p => p.id).sort();
-
-      const isP0P1Together = (team1Ids.includes('P0') && team1Ids.includes('P1')) ||
-                             (team2Ids.includes('P0') && team2Ids.includes('P1'));
 
       expect(teams).toBeDefined();
     });
@@ -452,7 +447,7 @@ describe('BaseCourtAssignmentEngine', () => {
       expect(result.teams).toBeDefined();
       expect(result.teams!.team1).toHaveLength(2);
       expect(result.teams!.team2).toHaveLength(2);
-      expect(result.cost).toBe(0); 
+      expect(result.cost).toBe(0);
     });
 
     it('evaluates all 3 possible team splits', () => {
