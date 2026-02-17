@@ -8,20 +8,24 @@ import App from '../src/App';
 import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
 
 describe('App', () => {
-  beforeEach(clearTestState);
-  afterEach(clearTestState);
+  beforeEach(async () => await clearTestState());
+  afterEach(async () => await clearTestState());
 
   describe('UI Structure', () => {
     const user = userEvent.setup();
 
-    it('renders Manage Players section', () => {
+    it('renders Manage Players section', async () => {
       render(<App />);
-      expect(screen.getByText('Manage Players')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Manage Players')).toBeInTheDocument();
+      });
     });
 
-    it('renders Court Assignments section', () => {
+    it('renders Court Assignments section', async () => {
       render(<App />);
-      expect(screen.getByText('Court Assignments')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Court Assignments')).toBeInTheDocument();
+      });
     });
 
     it('shows player list after adding players', async () => {

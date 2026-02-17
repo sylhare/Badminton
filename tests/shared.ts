@@ -2,7 +2,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
-import { engine } from '../src/engines/engineSelector';
+import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {
@@ -12,9 +12,12 @@ export const COMMON_PLAYERS = {
 };
 
 /** Common setup/teardown used across multiple test files */
-export const clearTestState = (): void => {
+export const clearTestState = async (): Promise<void> => {
   localStorage.clear();
-  engine().resetHistory();
+  await act(async () => {
+    CourtAssignmentEngine.resetHistory();
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
 };
 
 /** Helper to add players via the input field */
@@ -26,8 +29,8 @@ export const addPlayers = async (
   await act(async () => {
     await user.type(input, playerNames);
     await user.click(screen.getByTestId('add-player-button'));
+    await new Promise(resolve => setTimeout(resolve, 50));
   });
-  await new Promise(resolve => setTimeout(resolve, 50));
 };
 
 /** Helper to generate assignments and wait for them to appear */

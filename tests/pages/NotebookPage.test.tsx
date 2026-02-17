@@ -19,11 +19,17 @@ describe('NotebookPage Component', () => {
     fetchSpy.mockRestore();
   });
 
-  it('renders the page header with the correct title', () => {
+  it('renders the page header with the correct title', async () => {
+    vi.mocked(fetchSpy).mockResolvedValueOnce(new Response(null, { status: 200 }));
+
     render(<NotebookPage notebookUrl={mockNotebookUrlAvailable} title="Engine Comparison" />);
 
     expect(screen.getByText('Engine Comparison')).toBeInTheDocument();
     expect(screen.getByTestId('back-to-stats')).toHaveAttribute('href', `/stats`);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalled();
+    });
   });
 
   it('renders unavailable message when fetch fails', async () => {
