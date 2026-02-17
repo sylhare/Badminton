@@ -29,8 +29,6 @@ export interface AppState {
   assignments: Court[];
   isManagePlayersCollapsed: boolean;
   manualCourt: ManualCourtSelection | null;
-  /** @deprecated Use isManagePlayersCollapsed instead */
-  collapsedSteps?: number[];
 }
 
 export interface CourtEngineState {
