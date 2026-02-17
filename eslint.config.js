@@ -5,7 +5,7 @@ import typescriptEslint from 'typescript-eslint';
 
 export default [
   {
-    ignores: ['**/dist', '**/coverage', '**/node_modules', '**/playwright-report', '**/test-results'],
+    ignores: ['**/dist', '**/coverage', '**/node_modules', '**/.venv', '**/playwright-report', '**/test-results'],
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
