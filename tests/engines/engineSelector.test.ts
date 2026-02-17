@@ -1,18 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  setEngine,
-  getEngine,
-  getEngineType,
-  getEngineName,
-  getEngineDescription,
-  generateCourtAssignments,
-  getBenchedPlayers,
-  resetHistory,
-} from '../../src/utils/engineSelector';
-import { CourtAssignmentEngine } from '../../src/utils/CourtAssignmentEngine';
-import { CourtAssignmentEngineSA } from '../../src/utils/CourtAssignmentEngineSA';
-import { ConflictGraphEngine } from '../../src/utils/ConflictGraphEngine';
+import { engine, getEngineType, setEngine } from '../../src/engines/engineSelector';
+import { engineMC } from '../../src/engines/MonteCarloEngine';
+import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
+import { engineCG } from '../../src/engines/ConflictGraphEngine';
 import type { Player } from '../../src/types';
 
 function mockPlayers(count: number): Player[] {
@@ -25,72 +16,71 @@ function mockPlayers(count: number): Player[] {
 
 describe('Engine Selector', () => {
   beforeEach(() => {
-
     setEngine('sa');
-    CourtAssignmentEngine.resetHistory();
-    CourtAssignmentEngineSA.resetHistory();
-    ConflictGraphEngine.resetHistory();
+    engineMC.resetHistory();
+    engineSA.resetHistory();
+    engineCG.resetHistory();
   });
 
   describe('Engine Selection', () => {
     it('should default to Simulated Annealing engine', () => {
       expect(getEngineType()).toBe('sa');
-      expect(getEngine()).toBe(CourtAssignmentEngineSA);
+      expect(engine()).toBe(engineSA);
     });
 
     it('should switch to Monte Carlo engine', () => {
       setEngine('mc');
       expect(getEngineType()).toBe('mc');
-      expect(getEngine()).toBe(CourtAssignmentEngine);
+      expect(engine()).toBe(engineMC);
     });
 
     it('should switch to Conflict Graph engine', () => {
       setEngine('cg');
       expect(getEngineType()).toBe('cg');
-      expect(getEngine()).toBe(ConflictGraphEngine);
+      expect(engine()).toBe(engineCG);
     });
 
     it('should switch back to Simulated Annealing engine', () => {
       setEngine('cg');
       setEngine('sa');
       expect(getEngineType()).toBe('sa');
-      expect(getEngine()).toBe(CourtAssignmentEngineSA);
+      expect(engine()).toBe(engineSA);
     });
   });
 
   describe('Engine Names and Descriptions', () => {
     it('should return correct name for Simulated Annealing', () => {
       setEngine('sa');
-      expect(getEngineName()).toBe('Simulated Annealing');
+      expect(engine().getName()).toBe('Simulated Annealing');
     });
 
     it('should return correct name for Monte Carlo', () => {
       setEngine('mc');
-      expect(getEngineName()).toBe('Monte Carlo');
+      expect(engine().getName()).toBe('Monte Carlo');
     });
 
     it('should return correct name for Conflict Graph', () => {
       setEngine('cg');
-      expect(getEngineName()).toBe('Conflict Graph');
+      expect(engine().getName()).toBe('Conflict Graph');
     });
 
     it('should return description for Simulated Annealing', () => {
       setEngine('sa');
-      const desc = getEngineDescription();
+      const desc = engine().getDescription();
       expect(desc).toContain('Simulated Annealing');
       expect(desc).toContain('5000');
     });
 
     it('should return description for Monte Carlo', () => {
       setEngine('mc');
-      const desc = getEngineDescription();
+      const desc = engine().getDescription();
       expect(desc).toContain('Monte Carlo');
       expect(desc).toContain('300');
     });
 
     it('should return description for Conflict Graph', () => {
       setEngine('cg');
-      const desc = getEngineDescription();
+      const desc = engine().getDescription();
       expect(desc).toContain('greedy');
       expect(desc).toContain('conflict');
     });
@@ -99,12 +89,12 @@ describe('Engine Selector', () => {
   describe('Unified API - Simulated Annealing', () => {
     beforeEach(() => {
       setEngine('sa');
-      resetHistory();
+      engine().resetHistory();
     });
 
     it('should generate court assignments', () => {
       const players = mockPlayers(8);
-      const assignments = generateCourtAssignments(players, 2);
+      const assignments = engine().generate(players, 2);
 
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
@@ -113,8 +103,8 @@ describe('Engine Selector', () => {
 
     it('should get benched players', () => {
       const players = mockPlayers(10);
-      const assignments = generateCourtAssignments(players, 2);
-      const benched = getBenchedPlayers(assignments, players);
+      const assignments = engine().generate(players, 2);
+      const benched = engine().getBenchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -123,12 +113,12 @@ describe('Engine Selector', () => {
   describe('Unified API - Monte Carlo', () => {
     beforeEach(() => {
       setEngine('mc');
-      resetHistory();
+      engine().resetHistory();
     });
 
     it('should generate court assignments', () => {
       const players = mockPlayers(8);
-      const assignments = generateCourtAssignments(players, 2);
+      const assignments = engine().generate(players, 2);
 
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
@@ -137,8 +127,8 @@ describe('Engine Selector', () => {
 
     it('should get benched players', () => {
       const players = mockPlayers(10);
-      const assignments = generateCourtAssignments(players, 2);
-      const benched = getBenchedPlayers(assignments, players);
+      const assignments = engine().generate(players, 2);
+      const benched = engine().getBenchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -147,12 +137,12 @@ describe('Engine Selector', () => {
   describe('Unified API - Conflict Graph', () => {
     beforeEach(() => {
       setEngine('cg');
-      resetHistory();
+      engine().resetHistory();
     });
 
     it('should generate court assignments', () => {
       const players = mockPlayers(8);
-      const assignments = generateCourtAssignments(players, 2);
+      const assignments = engine().generate(players, 2);
 
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
@@ -161,8 +151,8 @@ describe('Engine Selector', () => {
 
     it('should get benched players', () => {
       const players = mockPlayers(10);
-      const assignments = generateCourtAssignments(players, 2);
-      const benched = getBenchedPlayers(assignments, players);
+      const assignments = engine().generate(players, 2);
+      const benched = engine().getBenchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -173,24 +163,24 @@ describe('Engine Selector', () => {
       const players = mockPlayers(12);
 
       setEngine('sa');
-      CourtAssignmentEngineSA.resetHistory();
-      const saAssignments = generateCourtAssignments(players, 3);
+      engineSA.resetHistory();
+      const saAssignments = engine().generate(players, 3);
 
       expect(saAssignments).toHaveLength(3);
       expect(saAssignments.every(c => c.teams !== undefined)).toBe(true);
       expect(saAssignments.every(c => c.players.length === 4)).toBe(true);
 
       setEngine('mc');
-      CourtAssignmentEngine.resetHistory();
-      const mcAssignments = generateCourtAssignments(players, 3);
+      engineMC.resetHistory();
+      const mcAssignments = engine().generate(players, 3);
 
       expect(mcAssignments).toHaveLength(3);
       expect(mcAssignments.every(c => c.teams !== undefined)).toBe(true);
       expect(mcAssignments.every(c => c.players.length === 4)).toBe(true);
 
       setEngine('cg');
-      ConflictGraphEngine.resetHistory();
-      const cgAssignments = generateCourtAssignments(players, 3);
+      engineCG.resetHistory();
+      const cgAssignments = engine().generate(players, 3);
 
       expect(cgAssignments).toHaveLength(3);
       expect(cgAssignments.every(c => c.teams !== undefined)).toBe(true);
@@ -201,19 +191,19 @@ describe('Engine Selector', () => {
       const players = mockPlayers(5);
 
       setEngine('sa');
-      CourtAssignmentEngineSA.resetHistory();
-      const saAssignments = generateCourtAssignments(players, 2);
-      const saBenched = getBenchedPlayers(saAssignments, players);
+      engineSA.resetHistory();
+      const saAssignments = engine().generate(players, 2);
+      const saBenched = engine().getBenchedPlayers(saAssignments, players);
 
       setEngine('mc');
-      CourtAssignmentEngine.resetHistory();
-      const mcAssignments = generateCourtAssignments(players, 2);
-      const mcBenched = getBenchedPlayers(mcAssignments, players);
+      engineMC.resetHistory();
+      const mcAssignments = engine().generate(players, 2);
+      const mcBenched = engine().getBenchedPlayers(mcAssignments, players);
 
       setEngine('cg');
-      ConflictGraphEngine.resetHistory();
-      const cgAssignments = generateCourtAssignments(players, 2);
-      const cgBenched = getBenchedPlayers(cgAssignments, players);
+      engineCG.resetHistory();
+      const cgAssignments = engine().generate(players, 2);
+      const cgBenched = engine().getBenchedPlayers(cgAssignments, players);
 
       expect(saBenched.length).toBe(1);
       expect(mcBenched.length).toBe(1);
@@ -224,13 +214,13 @@ describe('Engine Selector', () => {
       const players: Player[] = [];
 
       setEngine('sa');
-      expect(generateCourtAssignments(players, 2)).toEqual([]);
+      expect(engine().generate(players, 2)).toEqual([]);
 
       setEngine('mc');
-      expect(generateCourtAssignments(players, 2)).toEqual([]);
+      expect(engine().generate(players, 2)).toEqual([]);
 
       setEngine('cg');
-      expect(generateCourtAssignments(players, 2)).toEqual([]);
+      expect(engine().generate(players, 2)).toEqual([]);
     });
   });
 });

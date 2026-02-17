@@ -1,4 +1,4 @@
-import type { Player, Court, ManualCourtSelection, AppState, CourtEngineState } from '../types';
+import type { AppState, Court, CourtEngineState, ManualCourtSelection, Player } from '../types';
 
 const STORAGE_KEYS = {
   APP_STATE: 'badminton-app-state',
@@ -53,12 +53,10 @@ export const loadAppState = (): Partial<{
       return {};
     }
 
-    // Migration: convert old collapsedSteps to isManagePlayersCollapsed
     let isManagePlayersCollapsed = false;
     if (typeof parsed.isManagePlayersCollapsed === 'boolean') {
       isManagePlayersCollapsed = parsed.isManagePlayersCollapsed;
     } else if (Array.isArray(parsed.collapsedSteps)) {
-      // Old format: steps 1 and 2 were the player-related steps
       isManagePlayersCollapsed = parsed.collapsedSteps.includes(1) || parsed.collapsedSteps.includes(2);
     }
 
@@ -80,6 +78,7 @@ export const loadAppState = (): Partial<{
 export const saveCourtEngineState = (state: CourtEngineState): void => {
   try {
     const stateToSave: CourtEngineState = {
+      engineType: state.engineType,
       benchCountMap: state.benchCountMap,
       singleCountMap: state.singleCountMap,
       teammateCountMap: state.teammateCountMap,

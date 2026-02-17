@@ -74,61 +74,61 @@
 
 <script src="https://unpkg.com/tesseract.js@v4.1.1/dist/tesseract.min.js"></script>
 <script>
-    function extractPlayerNames(text) {
-        const lines = text.split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
-            .filter(line => {
-                const lowerLine = line.toLowerCase()
-                return !lowerLine.includes('list') &&
-                    !lowerLine.includes('players') &&
-                    !lowerLine.includes('badminton') &&
-                    !lowerLine.includes('court') &&
-                    line.length < 50 &&
-                    line.length > 1
-            })
-        return lines
-    }
+  function extractPlayerNames(text) {
+    const lines = text.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .filter(line => {
+          const lowerLine = line.toLowerCase()
+          return !lowerLine.includes('list') &&
+              !lowerLine.includes('players') &&
+              !lowerLine.includes('badminton') &&
+              !lowerLine.includes('court') &&
+              line.length < 50 &&
+              line.length > 1
+        })
+    return lines
+  }
 
-    document.getElementById('fileInput').addEventListener('change', async function (e) {
-        const file = e.target.files[0]
-        if (!file) return
+  document.getElementById('fileInput').addEventListener('change', async function (e) {
+    const file = e.target.files[0]
+    if (!file) return
 
-        const resultsDiv = document.getElementById('results')
-        const statusDiv = document.getElementById('status')
-        const outputDiv = document.getElementById('output')
+    const resultsDiv = document.getElementById('results')
+    const statusDiv = document.getElementById('status')
+    const outputDiv = document.getElementById('output')
 
-        resultsDiv.style.display = 'block'
-        statusDiv.innerHTML = '<div class="processing">🔄 Processing image with OCR...</div>'
-        outputDiv.innerHTML = ''
+    resultsDiv.style.display = 'block'
+    statusDiv.innerHTML = '<div class="processing">🔄 Processing image with OCR...</div>'
+    outputDiv.innerHTML = ''
 
-        try {
-            console.log('Starting OCR processing...')
+    try {
+      console.log('Starting OCR processing...')
 
-            const worker = await Tesseract.createWorker({
-                logger: m => {
-                    console.log(m)
-                    if (m.status === 'recognizing text') {
-                        statusDiv.innerHTML = `<div class="processing">🔄 ${m.status}: ${Math.round(m.progress * 100)}%</div>`
-                    }
-                }
-            })
+      const worker = await Tesseract.createWorker({
+        logger: m => {
+          console.log(m)
+          if (m.status === 'recognizing text') {
+            statusDiv.innerHTML = `<div class="processing">🔄 ${m.status}: ${Math.round(m.progress * 100)}%</div>`
+          }
+        }
+      })
 
-            await worker.loadLanguage('eng')
-            await worker.initialize('eng')
+      await worker.loadLanguage('eng')
+      await worker.initialize('eng')
 
-            const {data: {text, confidence}} = await worker.recognize(file)
-            await worker.terminate()
+      const { data: { text, confidence } } = await worker.recognize(file)
+      await worker.terminate()
 
-            console.log('OCR completed. Raw text:', text)
-            console.log('Confidence:', confidence)
+      console.log('OCR completed. Raw text:', text)
+      console.log('Confidence:', confidence)
 
-            // Process the text
-            const extractedNames = extractPlayerNames(text)
+      // Process the text
+      const extractedNames = extractPlayerNames(text)
 
-            statusDiv.innerHTML = `<div class="success">✅ OCR completed! Confidence: ${Math.round(confidence)}%</div>`
+      statusDiv.innerHTML = `<div class="success">✅ OCR completed! Confidence: ${Math.round(confidence)}%</div>`
 
-            outputDiv.innerHTML = `
+      outputDiv.innerHTML = `
                     <h4>Raw OCR Text:</h4>
                     <pre>${text}</pre>
                     
@@ -139,17 +139,17 @@
                     <pre>["Tinley", "Ella", "Avrella", "Yvette", "Gabriela", "Noella"]</pre>
                 `
 
-            // Test with your specific names
-            if (extractedNames.includes('Tinley') || extractedNames.includes('Ella')) {
-                statusDiv.innerHTML += '<div class="success">🎉 Successfully detected names from your image!</div>'
-            } else {
-                statusDiv.innerHTML += '<div style="color: orange;">⚠️ Names might need adjustment. Check the raw text above.</div>'
-            }
+      // Test with your specific names
+      if (extractedNames.includes('Tinley') || extractedNames.includes('Ella')) {
+        statusDiv.innerHTML += '<div class="success">🎉 Successfully detected names from your image!</div>'
+      } else {
+        statusDiv.innerHTML += '<div style="color: orange;">⚠️ Names might need adjustment. Check the raw text above.</div>'
+      }
 
-        } catch (error) {
-            console.error('OCR Error:', error)
-            statusDiv.innerHTML = `<div class="error">❌ OCR failed: ${error.message}</div>`
-            outputDiv.innerHTML = `
+    } catch (error) {
+      console.error('OCR Error:', error)
+      statusDiv.innerHTML = `<div class="error">❌ OCR failed: ${error.message}</div>`
+      outputDiv.innerHTML = `
                     <h4>Error Details:</h4>
                     <pre>${error.stack}</pre>
                     
@@ -161,8 +161,8 @@
                         <li>Check browser console for more details</li>
                     </ul>
                 `
-        }
-    })
+    }
+  })
 </script>
 </body>
 </html> 

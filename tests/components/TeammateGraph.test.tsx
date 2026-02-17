@@ -1,13 +1,9 @@
 import React from 'react';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import TeammateGraph from '../../src/components/TeammateGraph';
-import {
-  createMockGetPlayerName,
-  createLongNameGetter,
-  GRAPH_COLORS,
-} from '../data/testFactories';
+import { createLongNameGetter, createMockGetPlayerName, GRAPH_COLORS } from '../data/testFactories';
 import { graphAssertions } from '../data/testHelpers';
 
 describe('TeammateGraph Component', () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { CourtAssignmentEngine } from '../utils/CourtAssignmentEngine';
+import { engine, getEngineType } from '../engines/engineSelector';
 import { loadAppState } from '../utils/storageUtils';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
@@ -67,16 +67,17 @@ function StatsPage(): React.ReactElement {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    CourtAssignmentEngine.loadState();
-    setEngineState(CourtAssignmentEngine.prepareStateForSaving());
+    const engineType = getEngineType();
+    engine().loadState(engineType);
+    setEngineState(engine().prepareStateForSaving(engineType));
 
     const appState = loadAppState();
     if (appState.players) {
       setPlayers(appState.players);
     }
 
-    return CourtAssignmentEngine.onStateChange(() => {
-      setEngineState(CourtAssignmentEngine.prepareStateForSaving());
+    return engine().onStateChange(() => {
+      setEngineState(engine().prepareStateForSaving(getEngineType()));
     });
   }, []);
 
@@ -274,8 +275,8 @@ function StatsPage(): React.ReactElement {
   /** Raw bench data sorted by count for the distribution table */
   const benchData = hasEntries(maps.bench)
     ? Object.entries(maps.bench)
-        .map(([playerId, count]) => ({ player: getPlayerName(playerId), count }))
-        .sort((a, b) => b.count - a.count)
+      .map(([playerId, count]) => ({ player: getPlayerName(playerId), count }))
+      .sort((a, b) => b.count - a.count)
     : [];
 
   return (
@@ -285,9 +286,9 @@ function StatsPage(): React.ReactElement {
           <a href={basePath} className="back-link" data-testid="back-to-app">
             ← Back to App
           </a>
-          <h1>Engine Diagnostics</h1>
+          <h1>{engine().getName()} Diagnostics</h1>
           <p className="stats-subtitle">
-            Monitor algorithm behavior and detect unusual patterns
+            {engine().getDescription()}
           </p>
         </header>
 

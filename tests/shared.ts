@@ -2,7 +2,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
-import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
+import { engine } from '../src/engines/engineSelector';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {
@@ -14,7 +14,7 @@ export const COMMON_PLAYERS = {
 /** Common setup/teardown used across multiple test files */
 export const clearTestState = (): void => {
   localStorage.clear();
-  CourtAssignmentEngine.resetHistory();
+  engine().resetHistory();
 };
 
 /** Helper to add players via the input field */

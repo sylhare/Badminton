@@ -4,9 +4,9 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
-import { CourtAssignmentEngine } from '../src/utils/CourtAssignmentEngine';
+import { engine } from '../src/engines/engineSelector';
 
-import { addPlayers, generateAndWaitForAssignments, clearTestState } from './shared';
+import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
 
 describe('App Leaderboard Persistence', () => {
   const user = userEvent.setup();
@@ -24,7 +24,7 @@ describe('App Leaderboard Persistence', () => {
       render(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Hank');
 
-      const initialWinCounts = CourtAssignmentEngine.getWinCounts();
+      const initialWinCounts = engine().getWinCounts();
       expect(initialWinCounts.size).toBe(0);
 
       const team1Elements = screen.getAllByText('Team 1');
@@ -33,7 +33,7 @@ describe('App Leaderboard Persistence', () => {
       });
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      const updatedWinCounts = CourtAssignmentEngine.getWinCounts();
+      const updatedWinCounts = engine().getWinCounts();
       const totalWins = Array.from(updatedWinCounts.values()).reduce((sum, wins) => sum + wins, 0);
       expect(totalWins).toBeGreaterThan(0);
     });
@@ -65,7 +65,7 @@ describe('App Leaderboard Persistence', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
-      const winCountsAfterSelection = CourtAssignmentEngine.getWinCounts();
+      const winCountsAfterSelection = engine().getWinCounts();
       const totalWinsAfterSelection = Array.from(winCountsAfterSelection.values()).reduce((sum, wins) => sum + wins, 0);
       expect(totalWinsAfterSelection).toBeGreaterThan(0);
 
@@ -74,7 +74,7 @@ describe('App Leaderboard Persistence', () => {
       });
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const winCountsAfterRemoval = CourtAssignmentEngine.getWinCounts();
+      const winCountsAfterRemoval = engine().getWinCounts();
       const totalWinsAfterRemoval = Array.from(winCountsAfterRemoval.values()).reduce((sum, wins) => sum + wins, 0);
       expect(totalWinsAfterRemoval).toBe(0);
 
@@ -144,9 +144,9 @@ describe('App Leaderboard Persistence', () => {
       });
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      const winCounts = CourtAssignmentEngine.getWinCounts();
+      const winCounts = engine().getWinCounts();
       const totalWins = Array.from(winCounts.values()).reduce((sum, wins) => sum + wins, 0);
-      expect(totalWins).toBe(2); // Only team 2 should have wins now
+      expect(totalWins).toBe(2);
     });
 
     it('should handle changing winner on same court without duplicate counting in session', async () => {
@@ -165,7 +165,7 @@ describe('App Leaderboard Persistence', () => {
       });
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      const winCounts = CourtAssignmentEngine.getWinCounts();
+      const winCounts = engine().getWinCounts();
       const totalWins = Array.from(winCounts.values()).reduce((sum, wins) => sum + wins, 0);
       expect(totalWins).toBe(2);
     });

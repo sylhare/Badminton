@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { X, Camera, Check } from '@phosphor-icons/react';
+import { Camera, Check, X } from '@phosphor-icons/react';
 
 import { useImageOcr } from '../hooks/useImageOcr';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
