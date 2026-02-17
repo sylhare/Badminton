@@ -134,9 +134,10 @@ function App(): React.ReactElement {
 
   const handleViewBenchCounts = () => {
     setIsManagePlayersCollapsed(false);
-    setTimeout(() => {
+    const timerId = setTimeout(() => {
       managePlayersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
+    return () => clearTimeout(timerId);
   };
 
   const toggleManagePlayers = (event?: React.MouseEvent) => {
