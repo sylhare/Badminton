@@ -5,7 +5,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import { CourtAssignments } from './components/court';
 import Leaderboard from './components/Leaderboard';
-import { CourtAssignmentEngine, generateCourtAssignments, getBenchedPlayers } from './utils/CourtAssignmentEngine';
+import { engine, getEngineType } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
@@ -24,10 +24,10 @@ function App(): React.ReactElement {
   const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    CourtAssignmentEngine.loadState();
+    engine().loadState(getEngineType());
     isInitialLoad.current = false;
 
-    return CourtAssignmentEngine.onStateChange(() => {
+    return engine().onStateChange(() => {
       setEngineStateVersion(prev => prev + 1);
     });
   }, []);
@@ -42,7 +42,7 @@ function App(): React.ReactElement {
       isManagePlayersCollapsed,
       manualCourt: manualCourtSelection,
     });
-    CourtAssignmentEngine.saveState();
+    engine().saveState(getEngineType());
   }, [players, numberOfCourts, assignments, isManagePlayersCollapsed, manualCourtSelection]);
 
   const handlePlayersAdded = (newNames: string[]) => {
@@ -68,7 +68,7 @@ function App(): React.ReactElement {
     if (assignments.length > 0) {
       const assignmentsWithWinners = assignments.filter(court => court.winner);
       if (assignmentsWithWinners.length > 0) {
-        CourtAssignmentEngine.recordWins(assignmentsWithWinners);
+        engine().recordWins(assignmentsWithWinners);
       }
     }
   };
@@ -78,24 +78,24 @@ function App(): React.ReactElement {
     setAssignments([]);
     setIsManagePlayersCollapsed(false);
     setManualCourtSelection(null);
-    CourtAssignmentEngine.resetHistory();
+    engine().resetHistory();
     setTimeout(() => clearAllStoredState(), 0);
   };
 
   const handleResetAlgorithm = () => {
-    CourtAssignmentEngine.resetHistory();
-    CourtAssignmentEngine.saveState();
+    engine().resetHistory();
+    engine().saveState(getEngineType());
   };
 
   const generateAssignments = () => {
     recordCurrentWins();
-    CourtAssignmentEngine.clearCurrentSession();
+    engine().clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
-    const courts = generateCourtAssignments(
+    const courts = engine().generate(
       players,
       numberOfCourts,
       manualCourtSelection || undefined,
-      forceBenchPlayerIds.size > 0 ? forceBenchPlayerIds : undefined,
+      forceBenchPlayerIds,
     );
 
     if (hadManualSelection) {
@@ -116,7 +116,7 @@ function App(): React.ReactElement {
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
     setAssignments(prevAssignments =>
-      CourtAssignmentEngine.updateWinner(courtNumber, winner, prevAssignments),
+      engine().updateWinner(courtNumber, winner, prevAssignments),
     );
   };
 
@@ -180,7 +180,7 @@ function App(): React.ReactElement {
                   onRemovePlayer={handleRemovePlayer}
                   onClearAllPlayers={handleClearAllPlayers}
                   onResetAlgorithm={handleResetAlgorithm}
-                  benchCounts={CourtAssignmentEngine.getBenchCounts()}
+                  benchCounts={engine().getBenchCounts()}
                   forceBenchPlayerIds={forceBenchPlayerIds}
                   onToggleForceBench={handleToggleForceBench}
                 />
@@ -199,7 +199,7 @@ function App(): React.ReactElement {
             <CourtAssignments
               players={players}
               assignments={assignments}
-              benchedPlayers={getBenchedPlayers(assignments, players)}
+              benchedPlayers={engine().getBenchedPlayers(assignments, players)}
               numberOfCourts={numberOfCourts}
               onNumberOfCourtsChange={setNumberOfCourts}
               onGenerateAssignments={generateAssignments}
@@ -212,7 +212,7 @@ function App(): React.ReactElement {
           </div>
         </div>
 
-        <Leaderboard players={players} winCounts={CourtAssignmentEngine.getWinCounts()} />
+        <Leaderboard players={players} winCounts={engine().getWinCounts()} />
       </div>
 
       <footer className="app-footer">

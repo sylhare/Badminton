@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  saveAppState,
-  loadAppState,
-  saveCourtEngineState,
-  loadCourtEngineState,
   clearAllStoredState,
+  loadAppState,
+  loadCourtEngineState,
+  saveAppState,
+  saveCourtEngineState,
 } from '../../src/utils/storageUtils';
-import type { Player, Court } from '../../src/types';
+import type { Court, Player } from '../../src/types';
 
 describe('StorageUtils', () => {
   beforeEach(() => {
@@ -95,7 +95,7 @@ describe('StorageUtils', () => {
         players: mockPlayers,
         numberOfCourts: 4,
         assignments: [],
-        collapsedSteps: [1, 2], // Old format
+        collapsedSteps: [1, 2],
         manualCourt: null,
       }));
 
@@ -109,7 +109,7 @@ describe('StorageUtils', () => {
         players: mockPlayers,
         numberOfCourts: 4,
         assignments: [],
-        collapsedSteps: [3, 4], // Old format without 1 or 2
+        collapsedSteps: [3, 4],
         manualCourt: null,
       }));
 

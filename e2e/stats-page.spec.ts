@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { goToApp, addBulkPlayers } from './helpers';
+import { goToApp, navigateToStats, setupGameWithPlayers, playRound } from './helpers';
 
 test.describe('Stats Page', () => {
   test.beforeEach(async ({ page }) => {
@@ -11,16 +11,18 @@ test.describe('Stats Page', () => {
 
   test.describe('Navigation', () => {
     test('can navigate to stats page from main app', async ({ page }) => {
+      await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
+
       const statsLink = page.locator('a[href*="stats"]');
       await expect(statsLink).toBeVisible();
       await statsLink.click();
 
-      await expect(page.locator('h1')).toContainText('Engine Diagnostics');
-      await expect(page.locator('.stats-subtitle')).toContainText('Monitor algorithm behavior');
+      await expect(page.locator('h1')).toContainText('Simulated Annealing Diagnostics');
+      await expect(page.locator('.stats-subtitle')).toContainText('Simulated Annealing with iterative improvement');
     });
 
     test('can navigate back to app from stats page', async ({ page }) => {
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       const backLink = page.getByTestId('back-to-app');
       await expect(backLink).toBeVisible();
@@ -32,7 +34,7 @@ test.describe('Stats Page', () => {
 
   test.describe('No Data State', () => {
     test('shows no data message when no session data exists', async ({ page }) => {
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       await expect(page.locator('.no-data')).toBeVisible();
       await expect(page.getByText('No session data yet')).toBeVisible();
@@ -40,7 +42,7 @@ test.describe('Stats Page', () => {
     });
 
     test('start game link navigates back to app', async ({ page }) => {
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       await page.getByText('Start a Game →').click();
 
@@ -50,7 +52,7 @@ test.describe('Stats Page', () => {
 
   test.describe('Notebook Links', () => {
     test('displays algorithm documentation link', async ({ page }) => {
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       const algorithmLink = page.getByTestId('algorithm-link');
       await expect(algorithmLink).toBeVisible();
@@ -58,7 +60,7 @@ test.describe('Stats Page', () => {
     });
 
     test('displays engine comparison link', async ({ page }) => {
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       const engineLink = page.getByTestId('engine-link');
       await expect(engineLink).toBeVisible();
@@ -69,25 +71,16 @@ test.describe('Stats Page', () => {
   test.describe('Session Diagnostics', () => {
     test('shows diagnostics after playing games', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
-
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
+      await setupGameWithPlayers(page, players);
 
       await expect(page.locator('[data-testid^="court-"]').first()).toBeVisible();
 
-      const firstTeam = page.locator('.team-clickable').first();
-      await firstTeam.click();
-      await page.waitForTimeout(300);
-
-      const generateNewButton = page.getByTestId('generate-assignments-button');
-      await generateNewButton.click();
-      await page.waitForTimeout(300);
+      await playRound(page);
 
       const statsLink = page.locator('a[href*="stats"]');
       await statsLink.click();
 
-      await expect(page.locator('h1')).toContainText('Engine Diagnostics');
+      await expect(page.locator('h1')).toContainText('Simulated Annealing Diagnostics');
 
       await expect(page.locator('.stats-grid')).toBeVisible();
       await expect(page.getByText('Total Players')).toBeVisible();
@@ -98,14 +91,9 @@ test.describe('Stats Page', () => {
 
     test('displays bench distribution section', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       await expect(page.getByText('🪑 Bench Distribution')).toBeVisible();
       await expect(page.getByText(/Never benched/)).toBeVisible();
@@ -115,42 +103,27 @@ test.describe('Stats Page', () => {
 
     test('displays teammate connections section', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       await expect(page.getByText('👥 Teammate Connections')).toBeVisible();
     });
 
     test('displays opponent matchups section', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       await expect(page.getByText('⚔️ Opponent Matchups')).toBeVisible();
     });
 
     test('displays singles matches section', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       await expect(page.getByText('🎯 Singles Matches')).toBeVisible();
     });
@@ -159,14 +132,9 @@ test.describe('Stats Page', () => {
   test.describe('Expandable Sections', () => {
     test('can expand bench counts section', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       const benchDetails = page.locator('summary').filter({ hasText: /View bench counts per player/ });
       await expect(benchDetails).toBeVisible();
@@ -177,28 +145,12 @@ test.describe('Stats Page', () => {
 
     test('can expand repeated pairs section when available', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
+      await playRound(page);
+      await playRound(page);
 
-      await page.waitForTimeout(200);
-
-      const firstTeam = page.locator('.team-clickable').first();
-      await firstTeam.click();
-      await page.waitForTimeout(200);
-
-      const generateNewButton = page.getByTestId('generate-assignments-button');
-      await generateNewButton.click();
-      await page.waitForTimeout(200);
-
-      await firstTeam.click();
-      await page.waitForTimeout(200);
-
-      await generateNewButton.click();
-      await page.waitForTimeout(200);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       const teammateGraph = page.locator('.teammate-graph').first();
       if (await teammateGraph.isVisible()) {
@@ -214,14 +166,9 @@ test.describe('Stats Page', () => {
   test.describe('Graph Visualizations', () => {
     test('renders teammate network graph', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       // Use first() because there are two graphs (teammates and opponents)
       const teammateGraph = page.locator('.teammate-graph').first();
@@ -240,14 +187,9 @@ test.describe('Stats Page', () => {
 
     test('renders bench graph in expanded section', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       const benchDetails = page.locator('summary').filter({ hasText: /View bench counts per player/ });
       await benchDetails.click();
@@ -266,14 +208,9 @@ test.describe('Stats Page', () => {
   test.describe('Data Persistence', () => {
     test('stats page shows data after page reload', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
       await expect(page.locator('.stats-grid')).toBeVisible();
 
       await page.reload();
@@ -284,14 +221,9 @@ test.describe('Stats Page', () => {
 
     test('stats page clears data when localStorage is cleared', async ({ page }) => {
       const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
+      await setupGameWithPlayers(page, players);
 
-      const generateButton = page.getByTestId('generate-assignments-button');
-      await generateButton.click();
-
-      await page.waitForTimeout(300);
-
-      await page.goto('/stats');
+      await navigateToStats(page);
       await expect(page.locator('.stats-grid')).toBeVisible();
 
       await page.evaluate(() => localStorage.clear());
@@ -304,7 +236,7 @@ test.describe('Stats Page', () => {
 
   test.describe('Footer', () => {
     test('displays GitHub feedback link', async ({ page }) => {
-      await page.goto('/stats');
+      await navigateToStats(page);
 
       const footer = page.locator('.stats-footer');
       await expect(footer).toBeVisible();

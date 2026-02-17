@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { goToApp, addSinglePlayer, addBulkPlayers } from './helpers';
+import { goToApp, addSinglePlayer, addBulkPlayers, setCourtCount } from './helpers';
 
 test.describe('Feature Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -164,15 +164,7 @@ test.describe('Feature Tests', () => {
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
 
-    const courtInput = page.getByTestId('court-count-input');
-    await courtInput.evaluate((el: HTMLInputElement) => {
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-      if (nativeInputValueSetter) {
-        nativeInputValueSetter.call(el, '1');
-      }
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await page.waitForTimeout(100);
+    await setCourtCount(page, 1);
 
     const generateButton = page.getByTestId('generate-assignments-button');
     await generateButton.click();
@@ -227,15 +219,7 @@ test.describe('Feature Tests', () => {
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
 
-    const courtInput = page.getByTestId('court-count-input');
-    await courtInput.evaluate((el: HTMLInputElement) => {
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-      if (nativeInputValueSetter) {
-        nativeInputValueSetter.call(el, '1');
-      }
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await page.waitForTimeout(100);
+    await setCourtCount(page, 1);
 
     const generateButton = page.getByTestId('generate-assignments-button');
     await generateButton.click();
@@ -272,15 +256,7 @@ test.describe('Feature Tests', () => {
 
     await addSinglePlayer(page, 'Second Player');
 
-    const newCourtInput = page.getByTestId('court-count-input');
-    await newCourtInput.evaluate((el: HTMLInputElement) => {
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-      if (nativeInputValueSetter) {
-        nativeInputValueSetter.call(el, '1');
-      }
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await page.waitForTimeout(100);
+    await setCourtCount(page, 1);
 
     const newGenerateButton = page.getByTestId('generate-assignments-button');
     await expect(newGenerateButton).toBeVisible();
@@ -295,9 +271,7 @@ test.describe('Feature Tests', () => {
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('10');
 
-    const courtInput = page.locator('#courts');
-    await expect(courtInput).toBeVisible();
-    await courtInput.fill('2');
+    await setCourtCount(page, 2);
 
     const generateButton = page.getByTestId('generate-assignments-button');
     await generateButton.click();

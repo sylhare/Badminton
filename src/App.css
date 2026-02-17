@@ -1952,13 +1952,13 @@ h1 {
     .player-selection-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .manual-court-info {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
-    
+
     .selected-player-list {
         justify-content: flex-start;
     }
@@ -2193,21 +2193,21 @@ h1 {
     .player-selection-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .manual-court-info {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
-    
+
     .selected-player-list {
         justify-content: flex-start;
     }
-    
+
     .manual-court-selection {
         padding: 15px;
     }
-    
+
     .player-selection-button {
         padding: 15px 12px;
         min-height: 44px;

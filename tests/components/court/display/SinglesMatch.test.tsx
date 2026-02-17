@@ -7,8 +7,8 @@ import { SinglesMatch } from '../../../../src/components/court/display';
 import { TEST_PLAYERS } from '../../../data/testData';
 
 describe('SinglesMatch', () => {
-  const team1Player = TEST_PLAYERS[0]; // Alice
-  const team2Player = TEST_PLAYERS[1]; // Bob
+  const team1Player = TEST_PLAYERS[0];
+  const team2Player = TEST_PLAYERS[1];
 
   it('renders both players correctly', () => {
     render(
@@ -52,7 +52,7 @@ describe('SinglesMatch', () => {
   });
 
   it('displays waiting player when provided', () => {
-    const waitingPlayer = TEST_PLAYERS[2]; // Charlie
+    const waitingPlayer = TEST_PLAYERS[2];
     render(
       <SinglesMatch
         team1Player={team1Player}

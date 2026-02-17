@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { GRAPH_COLORS, getColorForCount } from '../constants/graphColors';
+import { getColorForCount, GRAPH_COLORS } from '../constants/graphColors';
 
 type GraphVariant = 'teammate' | 'opponent';
 
@@ -69,7 +69,11 @@ function calculateCanvasSize(radius: number): number {
  * Displays players as nodes in a circle with edges showing pairing frequency.
  * Edge thickness and color indicate how often players have been paired.
  */
-export function TeammateGraph({ teammateData, getPlayerName, variant = 'teammate' }: TeammateGraphProps): React.ReactElement | null {
+export function TeammateGraph({
+  teammateData,
+  getPlayerName,
+  variant = 'teammate',
+}: TeammateGraphProps): React.ReactElement | null {
   const { nodes, edges, maxCount } = useMemo(() => {
     const playerIds = new Set<string>();
     const edgeList: Edge[] = [];
@@ -148,50 +152,50 @@ export function TeammateGraph({ teammateData, getPlayerName, variant = 'teammate
           height={displaySize}
           style={{ display: 'block', flexShrink: 0 }}
         >
-        {edges.map(edge => {
-          const source = nodeMap.get(edge.source);
-          const target = nodeMap.get(edge.target);
-          if (!source || !target) return null;
+          {edges.map(edge => {
+            const source = nodeMap.get(edge.source);
+            const target = nodeMap.get(edge.target);
+            if (!source || !target) return null;
 
-          return (
-            <line
-              key={`${edge.source}-${edge.target}`}
-              x1={source.x}
-              y1={source.y}
-              x2={target.x}
-              y2={target.y}
-              stroke={getColorForCount(edge.count)}
-              strokeWidth={getStrokeWidth(edge.count)}
-              opacity={getOpacity(edge.count)}
-              strokeLinecap="round"
-            />
-          );
-        })}
+            return (
+              <line
+                key={`${edge.source}-${edge.target}`}
+                x1={source.x}
+                y1={source.y}
+                x2={target.x}
+                y2={target.y}
+                stroke={getColorForCount(edge.count)}
+                strokeWidth={getStrokeWidth(edge.count)}
+                opacity={getOpacity(edge.count)}
+                strokeLinecap="round"
+              />
+            );
+          })}
 
-        {nodes.map(node => (
-          <g key={node.id}>
-            <circle
-              cx={node.x}
-              cy={node.y}
-              r={NODE_RADIUS}
-              fill={GRAPH_COLORS.nodeFill}
-              stroke={nodeStrokeColor}
-              strokeWidth={2}
-            />
-            <text
-              x={node.x}
-              y={node.y}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="#c9d1d9"
-              fontSize={FONT_SIZE}
-              fontWeight={500}
-              style={{ pointerEvents: 'none' }}
-            >
-              {node.name.length > MAX_NAME_LENGTH ? node.name.slice(0, MAX_NAME_LENGTH - 1) + '…' : node.name}
-            </text>
-          </g>
-        ))}
+          {nodes.map(node => (
+            <g key={node.id}>
+              <circle
+                cx={node.x}
+                cy={node.y}
+                r={NODE_RADIUS}
+                fill={GRAPH_COLORS.nodeFill}
+                stroke={nodeStrokeColor}
+                strokeWidth={2}
+              />
+              <text
+                x={node.x}
+                y={node.y}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="#c9d1d9"
+                fontSize={FONT_SIZE}
+                fontWeight={500}
+                style={{ pointerEvents: 'none' }}
+              >
+                {node.name.length > MAX_NAME_LENGTH ? node.name.slice(0, MAX_NAME_LENGTH - 1) + '…' : node.name}
+              </text>
+            </g>
+          ))}
         </svg>
       </div>
 
@@ -201,11 +205,13 @@ export function TeammateGraph({ teammateData, getPlayerName, variant = 'teammate
           <span>1×</span>
         </div>
         <div className="legend-item">
-          <span className="legend-line" style={{ background: GRAPH_COLORS.count2, width: '24px', height: '3px' }}></span>
+          <span className="legend-line"
+                style={{ background: GRAPH_COLORS.count2, width: '24px', height: '3px' }}></span>
           <span>2×</span>
         </div>
         <div className="legend-item">
-          <span className="legend-line" style={{ background: GRAPH_COLORS.count3, width: '24px', height: '5px' }}></span>
+          <span className="legend-line"
+                style={{ background: GRAPH_COLORS.count3, width: '24px', height: '5px' }}></span>
           <span>3×</span>
         </div>
         <div className="legend-item">

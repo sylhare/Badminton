@@ -6,7 +6,11 @@ import userEvent from '@testing-library/user-event';
 import ManualPlayerEntry from '../../src/components/ManualPlayerEntry';
 
 vi.mock('../../src/components/ImageUploadModal', () => ({
-  default: ({ isOpen, onClose, onPlayersAdded }: { isOpen: boolean; onClose: () => void; onPlayersAdded: (players: string[]) => void }) => (
+  default: ({ isOpen, onClose, onPlayersAdded }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onPlayersAdded: (players: string[]) => void
+  }) => (
     isOpen ? (
       <div data-testid="mock-image-upload-modal">
         <button onClick={onClose} data-testid="close-modal">Close</button>

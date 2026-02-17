@@ -42,6 +42,28 @@ class ConfettiEffect {
     window.addEventListener('resize', () => this.updateCanvasSize());
   }
 
+  public burst(x: number, y: number, particleCount: number = 50): void {
+    for (let i = 0; i < particleCount; i++) {
+      this.particles.push(this.createParticle(x, y));
+    }
+
+    if (!this.animationId) {
+      document.body.appendChild(this.canvas);
+      this.animate();
+    }
+  }
+
+  public stop(): void {
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+    if (this.canvas.parentNode) {
+      this.canvas.parentNode.removeChild(this.canvas);
+    }
+    this.particles = [];
+  }
+
   private updateCanvasSize() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
@@ -65,36 +87,25 @@ class ConfettiEffect {
 
   private createParticle(x: number, y: number): ConfettiParticle {
     const angle = Math.random() * Math.PI * 2;
-    const velocity = 1 + Math.random() * 4; // Slower initial velocity
+    const velocity = 1 + Math.random() * 4;
 
     return {
       x,
       y,
       vx: Math.cos(angle) * velocity,
-      vy: Math.sin(angle) * velocity - Math.random() * 3, // Less upward bias
-      gravity: 0.08 + Math.random() * 0.04, // Much slower gravity
+      vy: Math.sin(angle) * velocity - Math.random() * 3,
+      gravity: 0.08 + Math.random() * 0.04,
       life: 0,
-      maxLife: 180 + Math.random() * 120, // Longer life (3-5 seconds at 60fps)
+      maxLife: 180 + Math.random() * 120,
       color: this.getRandomColor(),
-      width: 3 + Math.random() * 4, // Width for rectangular confetti
-      height: 8 + Math.random() * 12, // Height - makes it longer like paper strips
+      width: 3 + Math.random() * 4,
+      height: 8 + Math.random() * 12,
       rotation: Math.random() * Math.PI * 2,
-      rotationSpeed: (Math.random() - 0.5) * 0.15, // Slower rotation
+      rotationSpeed: (Math.random() - 0.5) * 0.15,
       oscillation: 0,
-      oscillationSpeed: 0.02 + Math.random() * 0.03, // Speed of side-to-side motion
-      curliness: 0.5 + Math.random() * 1.5, // How much it curves side to side
+      oscillationSpeed: 0.02 + Math.random() * 0.03,
+      curliness: 0.5 + Math.random() * 1.5,
     };
-  }
-
-  public burst(x: number, y: number, particleCount: number = 50): void {
-    for (let i = 0; i < particleCount; i++) {
-      this.particles.push(this.createParticle(x, y));
-    }
-
-    if (!this.animationId) {
-      document.body.appendChild(this.canvas);
-      this.animate();
-    }
   }
 
   private animate = () => {
@@ -148,17 +159,6 @@ class ConfettiEffect {
       this.stop();
     }
   };
-
-  public stop(): void {
-    if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
-      this.animationId = null;
-    }
-    if (this.canvas.parentNode) {
-      this.canvas.parentNode.removeChild(this.canvas);
-    }
-    this.particles = [];
-  }
 }
 
 let confettiInstance: ConfettiEffect | null = null;

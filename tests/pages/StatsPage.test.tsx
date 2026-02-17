@@ -1,23 +1,32 @@
 import React from 'react';
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 import StatsPage from '../../src/pages/StatsPage';
-import { CourtAssignmentEngine } from '../../src/utils/CourtAssignmentEngine';
 import * as storageUtils from '../../src/utils/storageUtils';
 
-// Mock the CourtAssignmentEngine
-vi.mock('../../src/utils/CourtAssignmentEngine', () => ({
-  CourtAssignmentEngine: {
-    loadState: vi.fn(),
-    prepareStateForSaving: vi.fn(),
-    onStateChange: vi.fn(() => vi.fn()),
-  },
+const { mockLoadState, mockPrepareStateForSaving, mockOnStateChange } = vi.hoisted(() => ({
+  mockLoadState: vi.fn(),
+  mockPrepareStateForSaving: vi.fn(),
+  mockOnStateChange: vi.fn(() => vi.fn()),
 }));
 
-// Mock the storageUtils
+vi.mock('../../src/engines/engineSelector', () => ({
+  engine: () => ({
+    loadState: mockLoadState,
+    prepareStateForSaving: mockPrepareStateForSaving,
+    onStateChange: mockOnStateChange,
+    getName: vi.fn(() => 'Test Engine'),
+    getDescription: vi.fn(() => 'Test engine description'),
+  }),
+  getEngineType: vi.fn(() => 'sa'),
+}));
+
 vi.mock('../../src/utils/storageUtils', () => ({
   loadAppState: vi.fn(),
+  loadCourtEngineState: vi.fn(),
+  saveCourtEngineState: vi.fn(),
+  saveAppState: vi.fn(),
 }));
 
 describe('StatsPage Component', () => {
@@ -30,6 +39,7 @@ describe('StatsPage Component', () => {
   ];
 
   const mockEngineState = {
+    engineType: 'sa' as const,
     benchCountMap: { '1': 2, '2': 1, '3': 0 },
     teammateCountMap: { '1|2': 2, '2|3': 1, '3|4': 1 },
     opponentCountMap: { '1|3': 2, '2|4': 1 },
@@ -39,7 +49,7 @@ describe('StatsPage Component', () => {
   };
 
   beforeEach(() => {
-    vi.mocked(CourtAssignmentEngine.prepareStateForSaving).mockReturnValue(mockEngineState);
+    mockPrepareStateForSaving.mockReturnValue(mockEngineState);
     vi.mocked(storageUtils.loadAppState).mockReturnValue({ players: mockPlayers });
   });
 
@@ -50,8 +60,8 @@ describe('StatsPage Component', () => {
   it('renders the page header', () => {
     render(<StatsPage />);
 
-    expect(screen.getByText('Engine Diagnostics')).toBeInTheDocument();
-    expect(screen.getByText(/Monitor algorithm behavior/)).toBeInTheDocument();
+    expect(screen.getByText('Test Engine Diagnostics')).toBeInTheDocument();
+    expect(screen.getByText('Test engine description')).toBeInTheDocument();
   });
 
   it('renders back to app link', () => {
@@ -83,7 +93,7 @@ describe('StatsPage Component', () => {
   });
 
   it('shows no data message when engine state is empty', () => {
-    vi.mocked(CourtAssignmentEngine.prepareStateForSaving).mockReturnValue(null);
+    mockPrepareStateForSaving.mockReturnValue(null);
 
     render(<StatsPage />);
 
@@ -102,8 +112,8 @@ describe('StatsPage Component', () => {
   it('loads engine state on mount', () => {
     render(<StatsPage />);
 
-    expect(CourtAssignmentEngine.loadState).toHaveBeenCalled();
-    expect(CourtAssignmentEngine.prepareStateForSaving).toHaveBeenCalled();
+    expect(mockLoadState).toHaveBeenCalled();
+    expect(mockPrepareStateForSaving).toHaveBeenCalled();
   });
 
   it('loads app state to get player names', () => {
@@ -115,7 +125,7 @@ describe('StatsPage Component', () => {
   it('subscribes to engine state changes', () => {
     render(<StatsPage />);
 
-    expect(CourtAssignmentEngine.onStateChange).toHaveBeenCalled();
+    expect(mockOnStateChange).toHaveBeenCalled();
   });
 
   it('renders bench distribution summary', async () => {
@@ -148,13 +158,14 @@ describe('StatsPage Component', () => {
   });
 
   it('shows no issues message when no teammate pairings', async () => {
-    vi.mocked(CourtAssignmentEngine.prepareStateForSaving).mockReturnValue({
+    mockPrepareStateForSaving.mockReturnValue({
       benchCountMap: { '1': 1 },
       teammateCountMap: {},
       opponentCountMap: {},
       singleCountMap: {},
       winCountMap: { '1': 1 },
       lossCountMap: {},
+      lastUpdatedMap: {},
     });
 
     render(<StatsPage />);
@@ -165,13 +176,14 @@ describe('StatsPage Component', () => {
   });
 
   it('shows no issues message when no opponent matchups', async () => {
-    vi.mocked(CourtAssignmentEngine.prepareStateForSaving).mockReturnValue({
+    mockPrepareStateForSaving.mockReturnValue({
       benchCountMap: { '1': 1 },
       teammateCountMap: { '1|2': 1 },
       opponentCountMap: {},
       singleCountMap: {},
       winCountMap: { '1': 1 },
       lossCountMap: {},
+      lastUpdatedMap: {},
     });
 
     render(<StatsPage />);
@@ -182,13 +194,14 @@ describe('StatsPage Component', () => {
   });
 
   it('shows no singles message when no singles matches', async () => {
-    vi.mocked(CourtAssignmentEngine.prepareStateForSaving).mockReturnValue({
+    mockPrepareStateForSaving.mockReturnValue({
       benchCountMap: { '1': 1 },
       teammateCountMap: { '1|2': 1 },
       opponentCountMap: { '1|3': 1 },
       singleCountMap: {},
       winCountMap: { '1': 1 },
       lossCountMap: {},
+      lastUpdatedMap: {},
     });
 
     render(<StatsPage />);
@@ -200,13 +213,14 @@ describe('StatsPage Component', () => {
 
   describe('warnings', () => {
     it('does not show warnings section when there are no warnings', async () => {
-      vi.mocked(CourtAssignmentEngine.prepareStateForSaving).mockReturnValue({
+      mockPrepareStateForSaving.mockReturnValue({
         benchCountMap: { '1': 1, '2': 1, '3': 1 },
         teammateCountMap: { '1|2': 1, '2|3': 1 },
         opponentCountMap: { '1|3': 1 },
         singleCountMap: { '1': 1 },
         winCountMap: { '1': 1 },
         lossCountMap: {},
+        lastUpdatedMap: {},
       });
 
       render(<StatsPage />);
@@ -217,13 +231,14 @@ describe('StatsPage Component', () => {
     });
 
     it('shows warnings section when bench imbalance is detected', async () => {
-      vi.mocked(CourtAssignmentEngine.prepareStateForSaving).mockReturnValue({
+      mockPrepareStateForSaving.mockReturnValue({
         benchCountMap: { '1': 10, '2': 0, '3': 0, '4': 0, '5': 0 },
         teammateCountMap: { '1|2': 1 },
         opponentCountMap: {},
         singleCountMap: {},
         winCountMap: { '1': 5, '2': 5 },
         lossCountMap: {},
+        lastUpdatedMap: {},
       });
 
       render(<StatsPage />);
@@ -246,13 +261,14 @@ describe('StatsPage Component', () => {
     });
 
     it('displays repeated teammates in descending order by count', async () => {
-      vi.mocked(CourtAssignmentEngine.prepareStateForSaving).mockReturnValue({
+      mockPrepareStateForSaving.mockReturnValue({
         benchCountMap: {},
         teammateCountMap: { '1|2': 3, '2|3': 5, '3|4': 2 },
         opponentCountMap: {},
         singleCountMap: {},
         winCountMap: {},
         lossCountMap: {},
+        lastUpdatedMap: {},
       });
 
       render(<StatsPage />);
