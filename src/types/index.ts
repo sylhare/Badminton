@@ -43,6 +43,15 @@ export interface CourtEngineState {
   lossCountMap: Record<string, number>;
 }
 
+export interface TrackerStats {
+  winCountMap: Map<string, number>;
+  lossCountMap: Map<string, number>;
+  teammateCountMap: Map<string, number>;
+  opponentCountMap: Map<string, number>;
+  benchCountMap: Map<string, number>;
+  singleCountMap: Map<string, number>;
+}
+
 export interface ICourtAssignmentTracker {
   onStateChange(listener: () => void): () => void;
   resetHistory(): void;
@@ -56,7 +65,7 @@ export interface ICourtAssignmentTracker {
   updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];
   reverseWinForCourt(courtNumber: number): void;
   getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
-  getStats(): any;
+  getStats(): TrackerStats;
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {

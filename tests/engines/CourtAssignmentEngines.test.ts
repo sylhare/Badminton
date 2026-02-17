@@ -760,7 +760,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const assignments = engine.generate(players, 1);
       expect(assignments).toHaveLength(1);
       expect(assignments[0].players).toHaveLength(4);
-      expect(engine.getStats()).toHaveProperty('totalTeammatePairs');
+      expect(engine.getStats()).toHaveProperty('teammateCountMap');
     });
 
     it('reverses win if a second recordWins call for the same court has a different winner', () => {
@@ -784,9 +784,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(8);
       engine.generate(players, 2);
       const stats = engine.getStats();
-      expect(stats).toHaveProperty('totalTeammatePairs');
-      expect(stats).toHaveProperty('maxTeammateCount');
-      expect(stats).toHaveProperty('avgTeammateCount');
+      expect(stats).toHaveProperty('teammateCountMap');
+      expect(stats).toHaveProperty('opponentCountMap');
+      expect(stats).toHaveProperty('winCountMap');
+      expect(stats).toHaveProperty('lossCountMap');
+      expect(stats).toHaveProperty('benchCountMap');
+      expect(stats).toHaveProperty('singleCountMap');
     });
 
     it('strictly respects forceBenchPlayerIds', () => {

@@ -1,4 +1,4 @@
-import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player } from '../types';
+import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats } from '../types';
 import { loadCourtEngineState, saveCourtEngineState } from '../utils/storageUtils';
 
 /**
@@ -150,23 +150,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /**
-   * Records wins and losses for a set of matches.
+   * Returns tracking statistics as Maps.
    */
-  getStats(): {
-    winCountMap: Map<string, number>;
-    lossCountMap: Map<string, number>;
-    teammateCountMap: Map<string, number>;
-    opponentCountMap: Map<string, number>;
-    benchCountMap: Map<string, number>;
-    singleCountMap: Map<string, number>;
-    totalTeammatePairs: number;
-    maxTeammateCount: number;
-    avgTeammateCount: number;
-    totalOpponentPairs: number;
-    maxOpponentCount: number;
-  } {
-    const teammateValues = Array.from(CourtAssignmentTracker.teammateCountMap.values());
-    const opponentValues = Array.from(CourtAssignmentTracker.opponentCountMap.values());
+  getStats(): TrackerStats {
     return {
       winCountMap: new Map(CourtAssignmentTracker.winCountMap),
       lossCountMap: new Map(CourtAssignmentTracker.lossCountMap),
@@ -174,11 +160,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       opponentCountMap: new Map(CourtAssignmentTracker.opponentCountMap),
       benchCountMap: new Map(CourtAssignmentTracker.benchCountMap),
       singleCountMap: new Map(CourtAssignmentTracker.singleCountMap),
-      totalTeammatePairs: teammateValues.length,
-      maxTeammateCount: Math.max(0, ...teammateValues),
-      avgTeammateCount: teammateValues.length > 0 ? teammateValues.reduce((a, b) => a + b, 0) / teammateValues.length : 0,
-      totalOpponentPairs: opponentValues.length,
-      maxOpponentCount: Math.max(0, ...opponentValues),
     };
   }
 
