@@ -1,5 +1,6 @@
 import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats } from '../types';
 import { loadCourtEngineState, saveCourtEngineState } from '../utils/storageUtils';
+import { pairKey } from '../utils/playerUtils';
 
 /**
  * CourtAssignmentTracker
@@ -264,7 +265,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * Records a teammate pairing.
    */
   recordTeammatePair(p1: string, p2: string): void {
-    const key = this.pairKey(p1, p2);
+    const key = pairKey(p1, p2);
     this.incrementMapCount(CourtAssignmentTracker.teammateCountMap, key);
     this.updateTimestamp(key);
   }
@@ -273,7 +274,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * Records an opponent pairing.
    */
   recordOpponentPair(p1: string, p2: string): void {
-    const key = this.pairKey(p1, p2);
+    const key = pairKey(p1, p2);
     this.incrementMapCount(CourtAssignmentTracker.opponentCountMap, key);
     this.updateTimestamp(key);
   }
@@ -306,13 +307,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Updates the last seen timestamp for a key */
   protected updateTimestamp(key: string): void {
     CourtAssignmentTracker.lastUpdatedMap.set(key, CourtAssignmentTracker.globalCounter);
-  }
-
-  /**
-   * Generates a sorted pair key for teammate/opponent maps.
-   */
-  protected pairKey(a: string, b: string): string {
-    return a < b ? `${a}|${b}` : `${b}|${a}`;
   }
 
   /**

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Player, Court } from '../../src/types';
+import { pairKey } from '../../src/utils/playerUtils';
 import type {
   MatchEvent,
   MatchPairEvent,
@@ -44,8 +45,6 @@ export const simulateMatchOutcome = (team1Strength: number, team2Strength: numbe
   const pTeam1Wins = 1 / (1 + Math.exp(-k * strengthDiff));
   return Math.random() < pTeam1Wins ? 1 : 2;
 };
-
-export const pairKey = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 export const toPlayerList = (count: number): Player[] =>
   Array.from({ length: count }, (_, i) => ({
