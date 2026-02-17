@@ -1,5 +1,5 @@
 import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../types';
-
+import { pairKey } from '../utils/playerUtils';
 import { CourtAssignmentTracker } from './CourtAssignmentTracker';
 
 /**
@@ -162,7 +162,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     let cost = 0;
     for (let i = 0; i < team.length; i++) {
       for (let j = i + 1; j < team.length; j++) {
-        cost += (this.teammateCountMap.get(this.pairKey(team[i].id, team[j].id)) ?? 0) * penaltyMultiplier;
+        cost += (this.teammateCountMap.get(pairKey(team[i].id, team[j].id)) ?? 0) * penaltyMultiplier;
       }
     }
     return cost;
@@ -193,7 +193,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     let cost = 0;
     team1.forEach(a => {
       team2.forEach(b => {
-        cost += (this.opponentCountMap.get(this.pairKey(a.id, b.id)) ?? 0) * penaltyMultiplier;
+        cost += (this.opponentCountMap.get(pairKey(a.id, b.id)) ?? 0) * penaltyMultiplier;
       });
     });
     return cost;

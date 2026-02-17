@@ -1,5 +1,5 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../types';
-
+import { pairKey } from '../utils/playerUtils';
 import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
 
 /**
@@ -103,7 +103,7 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
   }
 
   private hasTeammateConflict(p1: string, p2: string): boolean {
-    return (this.teammateCountMap.get(this.pairKey(p1, p2)) ?? 0) > 0;
+    return (this.teammateCountMap.get(pairKey(p1, p2)) ?? 0) > 0;
   }
 
   private countConflicts(pid: string, all: Player[]): number {
