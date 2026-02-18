@@ -10,11 +10,11 @@ import { addPlayers, clearTestState, generateAndWaitForAssignments } from './sha
 describe('App Persistence Integration', () => {
   const user = userEvent.setup();
 
-  beforeEach(clearTestState);
+  beforeEach(async () => await clearTestState());
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.restoreAllMocks();
-    clearTestState();
+    await clearTestState();
   });
 
   describe('State persistence across app reload', () => {
@@ -61,16 +61,17 @@ describe('App Persistence Integration', () => {
       await act(async () => {
         await user.tripleClick(courtInput);
         await user.keyboard('6');
+        await new Promise(resolve => setTimeout(resolve, 100));
       });
-
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(courtInput).toHaveValue(6);
 
       unmount();
-      render(<App />);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await act(async () => {
+        render(<App />);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
 
       const restoredCourtInput = screen.getByTestId('court-count-input');
       expect(restoredCourtInput).toHaveValue(6);

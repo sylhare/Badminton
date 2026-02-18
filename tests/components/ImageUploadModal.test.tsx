@@ -1,6 +1,6 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ImageUploadModal from '../../src/components/ImageUploadModal';
@@ -167,9 +167,9 @@ describe('ImageUploadModal', () => {
 
       const { rerender } = renderModal();
 
-      if (extractionCallback) {
+      await act(async () => {
         extractionCallback(['Alice', 'Bob']);
-      }
+      });
 
       rerender(
         <ImageUploadModal
@@ -198,9 +198,9 @@ describe('ImageUploadModal', () => {
 
       const { rerender } = renderModal();
 
-      if (extractionCallback) {
+      await act(async () => {
         extractionCallback(['Alice', 'Bob']);
-      }
+      });
 
       rerender(
         <ImageUploadModal
@@ -230,9 +230,9 @@ describe('ImageUploadModal', () => {
 
       const { rerender } = renderModal();
 
-      if (extractionCallback) {
+      await act(async () => {
         extractionCallback(['Alice']);
-      }
+      });
 
       rerender(
         <ImageUploadModal
@@ -263,9 +263,9 @@ describe('ImageUploadModal', () => {
 
       const { rerender } = renderModal();
 
-      if (extractionCallback) {
+      await act(async () => {
         extractionCallback(['Alice', 'Bob']);
-      }
+      });
 
       rerender(
         <ImageUploadModal
@@ -294,9 +294,9 @@ describe('ImageUploadModal', () => {
 
       const { rerender } = renderModal();
 
-      if (extractionCallback) {
+      await act(async () => {
         extractionCallback(['Alice', 'Bob']);
-      }
+      });
 
       rerender(
         <ImageUploadModal
@@ -330,9 +330,9 @@ describe('ImageUploadModal', () => {
 
       const { rerender } = renderModal();
 
-      if (extractionCallback) {
+      await act(async () => {
         extractionCallback(['Alice']);
-      }
+      });
 
       rerender(
         <ImageUploadModal

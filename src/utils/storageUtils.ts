@@ -53,12 +53,9 @@ export const loadAppState = (): Partial<{
       return {};
     }
 
-    let isManagePlayersCollapsed = false;
-    if (typeof parsed.isManagePlayersCollapsed === 'boolean') {
-      isManagePlayersCollapsed = parsed.isManagePlayersCollapsed;
-    } else if (Array.isArray(parsed.collapsedSteps)) {
-      isManagePlayersCollapsed = parsed.collapsedSteps.includes(1) || parsed.collapsedSteps.includes(2);
-    }
+    const isManagePlayersCollapsed = typeof parsed.isManagePlayersCollapsed === 'boolean'
+      ? parsed.isManagePlayersCollapsed
+      : false;
 
     return {
       players: Array.isArray(parsed.players) ? parsed.players : [],

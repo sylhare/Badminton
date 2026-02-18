@@ -89,34 +89,6 @@ describe('StorageUtils', () => {
 
       expect(() => saveAppState(mockAppState)).not.toThrow();
     });
-
-    it('should migrate old collapsedSteps format to isManagePlayersCollapsed', () => {
-      localStorage.setItem('badminton-app-state', JSON.stringify({
-        players: mockPlayers,
-        numberOfCourts: 4,
-        assignments: [],
-        collapsedSteps: [1, 2],
-        manualCourt: null,
-      }));
-
-      const loaded = loadAppState();
-
-      expect(loaded.isManagePlayersCollapsed).toBe(true);
-    });
-
-    it('should set isManagePlayersCollapsed to false when old collapsedSteps does not include 1 or 2', () => {
-      localStorage.setItem('badminton-app-state', JSON.stringify({
-        players: mockPlayers,
-        numberOfCourts: 4,
-        assignments: [],
-        collapsedSteps: [3, 4],
-        manualCourt: null,
-      }));
-
-      const loaded = loadAppState();
-
-      expect(loaded.isManagePlayersCollapsed).toBe(false);
-    });
   });
 
   describe('saveCourtEngineState and loadCourtEngineState', () => {
