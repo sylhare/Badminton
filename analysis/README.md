@@ -65,14 +65,14 @@ The simulation generates data in `analysis/data/`:
 
 ```bash
 cd analysis
-./.venv/bin/marimo edit ./analysis.py
+./.venv/bin/marimo edit ./engine_analysis.py
 ```
 
 ## Run the notebook (read-only app)
 
 ```bash
 cd analysis
-./.venv/bin/marimo run ./analysis.py --host 127.0.0.1 --port 2786
+./.venv/bin/marimo run ./engine_analysis.py --host 127.0.0.1 --port 2786
 ```
 
 ## Run all notebooks (with hot reload)
@@ -85,9 +85,7 @@ uv run serve.py
 ```
 
 Then open:
-- http://localhost:8765/analysis
 - http://localhost:8765/algorithm_docs
-- http://localhost:8765/bench_analysis
 - http://localhost:8765/engine_analysis
 
 ## Export notebooks to static HTML
