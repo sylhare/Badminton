@@ -29,6 +29,7 @@ export interface AppState {
   assignments: Court[];
   isManagePlayersCollapsed: boolean;
   manualCourt: ManualCourtSelection | null;
+  lastGeneratedAt?: number;
 }
 
 export interface CourtEngineState {

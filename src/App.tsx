@@ -17,6 +17,7 @@ function App(): React.ReactElement {
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
   const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(loadedState.isManagePlayersCollapsed ?? false);
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<number | undefined>(loadedState.lastGeneratedAt);
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
 
@@ -41,9 +42,10 @@ function App(): React.ReactElement {
       assignments,
       isManagePlayersCollapsed,
       manualCourt: manualCourtSelection,
+      lastGeneratedAt,
     });
     engine().saveState(getEngineType());
-  }, [players, numberOfCourts, assignments, isManagePlayersCollapsed, manualCourtSelection]);
+  }, [players, numberOfCourts, assignments, isManagePlayersCollapsed, manualCourtSelection, lastGeneratedAt]);
 
   const handlePlayersAdded = (newNames: string[]) => {
     const newPlayers = createPlayersFromNames(newNames, 'manual');
@@ -77,6 +79,7 @@ function App(): React.ReactElement {
   const handleClearAllPlayers = () => {
     setPlayers([]);
     setAssignments([]);
+    setLastGeneratedAt(undefined);
     setIsManagePlayersCollapsed(false);
     setManualCourtSelection(null);
     engine().resetHistory();
@@ -87,10 +90,12 @@ function App(): React.ReactElement {
     engine().resetHistory();
     engine().saveState(getEngineType());
     setAssignments([]);
+    setLastGeneratedAt(undefined);
   };
 
   const generateAssignments = () => {
     recordCurrentWins();
+    setLastGeneratedAt(Date.now());
     engine().clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
     const courts = engine().generate(
@@ -211,6 +216,7 @@ function App(): React.ReactElement {
               onViewBenchCounts={handleViewBenchCounts}
               manualCourtSelection={manualCourtSelection}
               onManualCourtSelectionChange={setManualCourtSelection}
+              lastGeneratedAt={lastGeneratedAt}
             />
           </div>
         </div>

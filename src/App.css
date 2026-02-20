@@ -961,6 +961,14 @@ h1 {
     color: #2b6cb0;
 }
 
+.last-generated {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    text-align: right;
+    font-style: italic;
+    margin-bottom: -8px;
+}
+
 .regenerate-section {
     display: flex;
     justify-content: center;
