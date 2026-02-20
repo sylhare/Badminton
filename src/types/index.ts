@@ -53,6 +53,7 @@ export interface TrackerStats {
 export interface ICourtAssignmentTracker {
   onStateChange(listener: () => void): () => void;
   resetHistory(): void;
+  removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): void;

@@ -85,6 +85,7 @@ function App(): React.ReactElement {
   const handleResetAlgorithm = () => {
     engine().resetHistory();
     engine().saveState(getEngineType());
+    setAssignments([]);
   };
 
   const generateAssignments = () => {

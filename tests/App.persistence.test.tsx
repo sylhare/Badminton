@@ -264,5 +264,25 @@ describe('App Persistence Integration', () => {
 
       expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
     });
+
+    it('should clear match assignments when reset algorithm is confirmed', async () => {
+      render(<App />);
+
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+      await generateAndWaitForAssignments(user);
+
+      expect(screen.getByTestId('court-1')).toBeInTheDocument();
+
+      await user.click(screen.getByText('Manage Players'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reset-algorithm-button')).toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      await user.click(screen.getByTestId('reset-algorithm-button'));
+      await user.click(screen.getByTestId('confirm-modal-confirm'));
+
+      expect(screen.queryByTestId('court-1')).not.toBeInTheDocument();
+    });
   });
 });
