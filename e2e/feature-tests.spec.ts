@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { goToApp, addSinglePlayer, addBulkPlayers, setCourtCount } from './helpers';
+import { goToApp, addSinglePlayer, addBulkPlayers, setCourtCount, expandSectionIfNeeded } from './helpers';
 
 test.describe('Feature Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -170,6 +170,9 @@ test.describe('Feature Tests', () => {
     await generateButton.click();
 
     await expect(page.locator('.court-card')).toHaveCount(1);
+
+    await expect(page.getByTestId('last-generated')).toBeVisible();
+    await expect(page.getByTestId('last-generated')).toContainText(/Last generated (just now|\d+s ago)/);
 
     const leaderboardBefore = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboardBefore).not.toBeVisible();
@@ -341,6 +344,71 @@ test.describe('Feature Tests', () => {
 
     await expect(aliceItemAfter.locator('.toggle-switch')).not.toHaveClass(/active/);
     await expect(bobItemAfter.locator('.toggle-switch')).not.toHaveClass(/active/);
+  });
+
+  test.describe('Player deletion and leaderboard', () => {
+    test('should remove deleted player from leaderboard', async ({ page }) => {
+      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+      await addBulkPlayers(page, players);
+      await setCourtCount(page, 1);
+
+      await page.getByTestId('generate-assignments-button').click();
+      await expect(page.locator('.court-card')).toHaveCount(1);
+
+      const firstTeam = page.locator('.team-clickable').first();
+      await firstTeam.click();
+      await page.waitForTimeout(200);
+
+      await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
+
+      const firstLeaderboardRow = page.locator('.leaderboard-table tbody tr').first();
+      const nameWithMedal = await firstLeaderboardRow.locator('td').nth(1).textContent() ?? '';
+      const winningPlayerName = nameWithMedal.replace(/^[^\w]+/, '').trim();
+
+      await expandSectionIfNeeded(page, 'Manage Players');
+
+      const playerRow = page.locator('.player-item').filter({ hasText: winningPlayerName });
+      await playerRow.locator('[data-testid^="remove-player-"]').click();
+      await page.getByTestId('player-removal-modal-remove').click();
+      await page.waitForTimeout(200);
+
+      const leaderboardNameCells = page.locator('.leaderboard-table tbody tr td:nth-child(2)');
+      const names = (await leaderboardNameCells.allTextContents()).map(n => n.replace(/^[^\w]+/, '').trim());
+      expect(names).not.toContain(winningPlayerName);
+    });
+
+    test('should not restore deleted player wins after app reload', async ({ page }) => {
+      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+      await addBulkPlayers(page, players);
+      await setCourtCount(page, 1);
+
+      await page.getByTestId('generate-assignments-button').click();
+      await expect(page.locator('.court-card')).toHaveCount(1);
+
+      const firstTeam = page.locator('.team-clickable').first();
+      await firstTeam.click();
+      await page.waitForTimeout(200);
+
+      await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
+
+      const firstLeaderboardRow = page.locator('.leaderboard-table tbody tr').first();
+      const nameWithMedal = await firstLeaderboardRow.locator('td').nth(1).textContent() ?? '';
+      const winningPlayerName = nameWithMedal.replace(/^[^\w]+/, '').trim();
+
+      await expandSectionIfNeeded(page, 'Manage Players');
+
+      const playerRow = page.locator('.player-item').filter({ hasText: winningPlayerName });
+      await playerRow.locator('[data-testid^="remove-player-"]').click();
+      await page.getByTestId('player-removal-modal-remove').click();
+      await page.waitForTimeout(200);
+
+      await page.reload();
+      await expect(page).toHaveTitle(/Badminton/);
+
+      const leaderboardNameCells = page.locator('.leaderboard-table tbody tr td:nth-child(2)');
+      const names = (await leaderboardNameCells.allTextContents()).map(n => n.replace(/^[^\w]+/, '').trim());
+      expect(names).not.toContain(winningPlayerName);
+    });
   });
 
   test('Bench counts are always visible in Manage Players', async ({ page }) => {
