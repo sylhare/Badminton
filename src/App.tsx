@@ -61,6 +61,7 @@ function App(): React.ReactElement {
   };
 
   const handleRemovePlayer = (playerId: string) => {
+    engine().removePlayerHistory(playerId);
     setPlayers(prev => prev.filter(player => player.id !== playerId));
   };
 
