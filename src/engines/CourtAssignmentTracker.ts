@@ -91,6 +91,15 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.notifyStateChange();
   }
 
+  /** Removes all historical tracking data for a specific player. */
+  removePlayerHistory(playerId: string): void {
+    CourtAssignmentTracker.winCountMap.delete(playerId);
+    CourtAssignmentTracker.lossCountMap.delete(playerId);
+    CourtAssignmentTracker.benchCountMap.delete(playerId);
+    CourtAssignmentTracker.singleCountMap.delete(playerId);
+    this.notifyStateChange();
+  }
+
   /** Clears only the current session's recorded match outcomes. */
   clearCurrentSession(): void {
     CourtAssignmentTracker.recordedWinsMap.clear();

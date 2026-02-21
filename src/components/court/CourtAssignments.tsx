@@ -7,6 +7,21 @@ import ManualCourtModal from '../ManualCourtModal';
 import { CourtCard } from './card';
 import { TeamPlayerList } from './team';
 
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+
+export function formatTimeAgo(timestampMs: number): string {
+  const diffMs = Date.now() - timestampMs;
+  const diffSeconds = Math.floor(diffMs / 1000);
+  if (diffSeconds < 1) return 'just now';
+  if (diffSeconds < 60) return `${diffSeconds}s ago`;
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `${diffMinutes}min ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
 interface CourtAssignmentsProps {
   players: Player[];
   assignments: Court[];
@@ -19,6 +34,7 @@ interface CourtAssignmentsProps {
   onViewBenchCounts?: () => void;
   manualCourtSelection: ManualCourtSelection | null;
   onManualCourtSelectionChange: (selection: ManualCourtSelection | null) => void;
+  lastGeneratedAt?: number;
 }
 
 const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
@@ -33,10 +49,12 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   onViewBenchCounts,
   manualCourtSelection,
   onManualCourtSelectionChange,
+  lastGeneratedAt,
 }) => {
   const { trackCourtAction } = useAnalytics();
   const [isAnimating, setIsAnimating] = useState(false);
   const [isButtonShaking, setIsButtonShaking] = useState(false);
+  const [, setTick] = useState(0);
   const [isManualCourtModalOpen, setIsManualCourtModalOpen] = useState(false);
   const [courtInputValue, setCourtInputValue] = useState(String(numberOfCourts));
 
@@ -44,8 +62,15 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     setCourtInputValue(String(numberOfCourts));
   }, [numberOfCourts]);
 
+  useEffect(() => {
+    if (!lastGeneratedAt) return;
+    const interval = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [lastGeneratedAt]);
+
   const hasPlayers = players.some(p => p.isPresent);
   const hasAssignments = assignments.length > 0;
+  const isRecentAssignment = lastGeneratedAt !== undefined && (Date.now() - lastGeneratedAt) < TWO_DAYS_MS;
   const presentPlayerCount = players.filter(p => p.isPresent).length;
   const hasManualSelection = manualCourtSelection && manualCourtSelection.players.length > 0;
 
@@ -126,6 +151,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
       {hasAssignments && (
         <>
+          {isRecentAssignment && (
+            <div className="last-generated" data-testid="last-generated">
+              Last generated {formatTimeAgo(lastGeneratedAt!)}
+            </div>
+          )}
           <div className="courts-grid">
             {assignments.map((court) => {
               const isManualCourt = (court as any).wasManuallyAssigned || (hasManualCourtSelection && court.courtNumber === 1);

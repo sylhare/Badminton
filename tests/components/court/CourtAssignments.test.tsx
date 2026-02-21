@@ -1,9 +1,10 @@
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { CourtAssignments } from '../../../src/components/court';
+import { formatTimeAgo } from '../../../src/components/court/CourtAssignments';
 import { Court, Player } from '../../../src/types';
 import { TEST_COURTS, TEST_PLAYERS } from '../../data/testData';
 
@@ -455,5 +456,94 @@ describe('Winner Selection', () => {
 
       expect(screen.queryByText(/Click on a team to mark them as the winner/)).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('formatTimeAgo', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('returns "just now" for timestamps less than 1 second old', () => {
+    vi.setSystemTime(new Date('2024-01-01T00:00:00.500Z'));
+    expect(formatTimeAgo(new Date('2024-01-01T00:00:00.000Z').getTime())).toBe('just now');
+  });
+
+  it('returns seconds for timestamps under 1 minute old', () => {
+    vi.setSystemTime(new Date('2024-01-01T00:00:30.000Z'));
+    expect(formatTimeAgo(new Date('2024-01-01T00:00:00.000Z').getTime())).toBe('30s ago');
+  });
+
+  it('returns minutes for timestamps 1–59 minutes old', () => {
+    vi.setSystemTime(new Date('2024-01-01T00:10:00.000Z'));
+    expect(formatTimeAgo(new Date('2024-01-01T00:00:00.000Z').getTime())).toBe('10min ago');
+  });
+
+  it('returns hours for timestamps 1–23 hours old', () => {
+    vi.setSystemTime(new Date('2024-01-01T03:00:00.000Z'));
+    expect(formatTimeAgo(new Date('2024-01-01T00:00:00.000Z').getTime())).toBe('3h ago');
+  });
+
+  it('returns days for timestamps 1+ days old', () => {
+    vi.setSystemTime(new Date('2024-01-02T01:00:00.000Z'));
+    expect(formatTimeAgo(new Date('2024-01-01T00:00:00.000Z').getTime())).toBe('1d ago');
+  });
+
+  it('returns 2d ago for timestamps ~2 days old', () => {
+    vi.setSystemTime(new Date('2024-01-03T00:00:00.000Z'));
+    expect(formatTimeAgo(new Date('2024-01-01T00:00:00.000Z').getTime())).toBe('2d ago');
+  });
+});
+
+describe('Last generated badge', () => {
+  const mockOnGenerateAssignments = vi.fn();
+  const mockOnNumberOfCourtsChange = vi.fn();
+  const mockOnManualCourtSelectionChange = vi.fn();
+
+  const baseProps = {
+    players: TEST_PLAYERS,
+    assignments: [TEST_COURTS.doublesWithTeams()],
+    benchedPlayers: [],
+    numberOfCourts: 4,
+    onNumberOfCourtsChange: mockOnNumberOfCourtsChange,
+    onGenerateAssignments: mockOnGenerateAssignments,
+    manualCourtSelection: null,
+    onManualCourtSelectionChange: mockOnManualCourtSelectionChange,
+  };
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T00:10:00.000Z'));
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it('shows badge with correct relative time when lastGeneratedAt is recent', () => {
+    const tenMinutesAgo = new Date('2024-01-01T00:00:00.000Z').getTime();
+    render(<CourtAssignments {...baseProps} lastGeneratedAt={tenMinutesAgo} />);
+
+    expect(screen.getByTestId('last-generated')).toBeInTheDocument();
+    expect(screen.getByTestId('last-generated')).toHaveTextContent('Last generated 10min ago');
+  });
+
+  it('does not show badge when lastGeneratedAt is not provided', () => {
+    render(<CourtAssignments {...baseProps} />);
+    expect(screen.queryByTestId('last-generated')).not.toBeInTheDocument();
+  });
+
+  it('does not show badge when lastGeneratedAt is more than 2 days old', () => {
+    vi.setSystemTime(new Date('2024-01-04T00:00:00.000Z'));
+    const threeDaysAgo = new Date('2024-01-01T00:00:00.000Z').getTime();
+    render(<CourtAssignments {...baseProps} lastGeneratedAt={threeDaysAgo} />);
+
+    expect(screen.queryByTestId('last-generated')).not.toBeInTheDocument();
+  });
+
+  it('does not show badge when there are no assignments', () => {
+    const recentTimestamp = new Date('2024-01-01T00:09:00.000Z').getTime();
+    render(<CourtAssignments {...baseProps} assignments={[]} lastGeneratedAt={recentTimestamp} />);
+
+    expect(screen.queryByTestId('last-generated')).not.toBeInTheDocument();
   });
 });

@@ -11,6 +11,7 @@ export const saveAppState = (state: {
   assignments: Court[];
   isManagePlayersCollapsed: boolean;
   manualCourt: ManualCourtSelection | null;
+  lastGeneratedAt?: number;
 }): void => {
   try {
     const stateToSave: AppState = {
@@ -19,6 +20,7 @@ export const saveAppState = (state: {
       assignments: state.assignments,
       isManagePlayersCollapsed: state.isManagePlayersCollapsed,
       manualCourt: state.manualCourt,
+      lastGeneratedAt: state.lastGeneratedAt,
     };
     localStorage.setItem(STORAGE_KEYS.APP_STATE, JSON.stringify(stateToSave));
   } catch (error) {
@@ -32,6 +34,7 @@ export const loadAppState = (): Partial<{
   assignments: Court[];
   isManagePlayersCollapsed: boolean;
   manualCourt: ManualCourtSelection | null;
+  lastGeneratedAt: number;
 }> => {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.APP_STATE);
@@ -63,6 +66,7 @@ export const loadAppState = (): Partial<{
       assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
       isManagePlayersCollapsed,
       manualCourt: parsed.manualCourt || null,
+      lastGeneratedAt: typeof parsed.lastGeneratedAt === 'number' ? parsed.lastGeneratedAt : undefined,
     };
   } catch (error) {
     console.warn('Failed to load app state from localStorage:', error);
