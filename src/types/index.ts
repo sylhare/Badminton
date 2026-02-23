@@ -27,8 +27,6 @@ export interface AppState {
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
-  isManagePlayersCollapsed: boolean;
-  manualCourt: ManualCourtSelection | null;
   lastGeneratedAt?: number;
 }
 

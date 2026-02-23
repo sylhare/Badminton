@@ -41,8 +41,6 @@ describe('StorageUtils', () => {
       players: mockPlayers,
       numberOfCourts: 6,
       assignments: mockAssignments,
-      isManagePlayersCollapsed: true,
-      manualCourt: null,
     };
 
     it('should save app state to localStorage', () => {
@@ -55,7 +53,6 @@ describe('StorageUtils', () => {
       expect(parsed.players).toEqual(mockPlayers);
       expect(parsed.numberOfCourts).toBe(6);
       expect(parsed.assignments).toEqual(mockAssignments);
-      expect(parsed.isManagePlayersCollapsed).toBe(true);
     });
 
     it('should load app state from localStorage', () => {
@@ -66,7 +63,6 @@ describe('StorageUtils', () => {
       expect(loaded.players).toEqual(mockPlayers);
       expect(loaded.numberOfCourts).toBe(6);
       expect(loaded.assignments).toEqual(mockAssignments);
-      expect(loaded.isManagePlayersCollapsed).toBe(true);
     });
 
     it('should return default state when no saved state exists', () => {
