@@ -35,6 +35,8 @@ describe('App Persistence Integration', () => {
 
       render(<App />);
 
+      await user.click(screen.getByText('Manage Players'));
+
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.getByText('Bob')).toBeInTheDocument();
       expect(screen.getByText('Charlie')).toBeInTheDocument();
@@ -96,18 +98,10 @@ describe('App Persistence Integration', () => {
       }, { timeout: 3000 });
     });
 
-    it('should preserve collapsed state across app reload', async () => {
+    it('should collapse manage players section on reload when players exist', async () => {
       const { unmount } = render(<App />);
 
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
-
-      await act(async () => {
-        await user.click(screen.getByTestId('generate-assignments-button'));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('manage-players-section')).toHaveClass('collapsed');
-      });
 
       unmount();
       render(<App />);
@@ -115,6 +109,12 @@ describe('App Persistence Integration', () => {
       await waitFor(() => {
         expect(screen.getByTestId('manage-players-section')).toHaveClass('collapsed');
       });
+    });
+
+    it('should show manage players section expanded on first load with no players', async () => {
+      render(<App />);
+
+      expect(screen.getByTestId('manage-players-section')).not.toHaveClass('collapsed');
     });
   });
 
@@ -231,6 +231,8 @@ describe('App Persistence Integration', () => {
 
       unmount();
       render(<App />);
+
+      await user.click(screen.getByText('Manage Players'));
 
       expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
     });

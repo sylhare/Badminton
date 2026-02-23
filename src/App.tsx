@@ -15,8 +15,10 @@ function App(): React.ReactElement {
   const [players, setPlayers] = useState<Player[]>(loadedState.players ?? []);
   const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
-  const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(loadedState.isManagePlayersCollapsed ?? false);
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(loadedState.manualCourt ?? null);
+  const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(
+    (loadedState.players ?? []).length > 0,
+  );
   const [lastGeneratedAt, setLastGeneratedAt] = useState<number | undefined>(loadedState.lastGeneratedAt);
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());

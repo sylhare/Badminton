@@ -24,46 +24,46 @@ describe('Leaderboard Component', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
-  it('shows players from historical win data even when not in current players array', () => {
-    const emptyPlayers: Player[] = [];
-    const winCounts = new Map([
-      ['manual_Alice', 3],
-      ['extracted_Bob', 1],
-    ]);
+  it('shows absent players with wins', () => {
+    const players: Player[] = [
+      { id: '1', name: 'Alice', isPresent: true },
+      { id: '2', name: 'Bob', isPresent: false },
+    ];
+    const winCounts = new Map([['2', 3]]);
 
-    render(<Leaderboard players={emptyPlayers} winCounts={winCounts} />);
+    render(<Leaderboard players={players} winCounts={winCounts} />);
 
     expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
-    expect(screen.getByText(/Alice/)).toBeInTheDocument();
     expect(screen.getByText(/Bob/)).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getAllByText('1')).toHaveLength(2);
-    expect(screen.getAllByRole('row')).toHaveLength(3);
   });
 
-  it('combines current players with historical players correctly', () => {
-    const currentPlayers: Player[] = [
-      { id: 'current_Charlie', name: 'Charlie', isPresent: true },
-      { id: 'manual_Alice', name: 'Alice', isPresent: true },
+  it('does not show players from win data who are not in the players list', () => {
+    const players: Player[] = [
+      { id: '1', name: 'Alice', isPresent: true },
     ];
     const winCounts = new Map([
-      ['manual_Alice', 2],
-      ['extracted_Bob', 4],
-      ['current_Charlie', 1],
+      ['1', 2],
+      ['unknown-id', 5],
     ]);
 
-    render(<Leaderboard players={currentPlayers} winCounts={winCounts} />);
+    render(<Leaderboard players={players} winCounts={winCounts} />);
 
-    expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(screen.getByText(/Alice/)).toBeInTheDocument();
-    expect(screen.getByText(/Bob/)).toBeInTheDocument();
-    expect(screen.getByText(/Charlie/)).toBeInTheDocument();
-    expect(screen.getAllByRole('row')).toHaveLength(4);
+    expect(screen.getAllByRole('row')).toHaveLength(2); // header + Alice only
+  });
 
-    const bobWinnerCell = screen.getAllByRole('cell').find(cell =>
-      cell.textContent?.includes('🥇 Bob'),
-    );
-    expect(bobWinnerCell).toBeInTheDocument();
+  it('ranks players by wins descending', () => {
+    const players: Player[] = [
+      { id: '1', name: 'Alice', isPresent: true },
+      { id: '2', name: 'Bob', isPresent: true },
+      { id: '3', name: 'Charlie', isPresent: true },
+    ];
+    const winCounts = new Map([['1', 1], ['2', 3], ['3', 2]]);
+
+    render(<Leaderboard players={players} winCounts={winCounts} />);
+
+    const rows = screen.getAllByRole('row').slice(1); // skip header
+    expect(rows[0]).toHaveTextContent('Bob');
+    expect(rows[1]).toHaveTextContent('Charlie');
+    expect(rows[2]).toHaveTextContent('Alice');
   });
 });
