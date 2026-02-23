@@ -191,7 +191,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             </div>
           )}
 
-          {onWinnerChange && (
+          {onWinnerChange && !assignments.some(c => c.winner !== undefined) && (
             <div className="winner-instructions">
               💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the
               winning

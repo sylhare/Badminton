@@ -177,11 +177,14 @@ test.describe('Feature Tests', () => {
     const leaderboardBefore = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboardBefore).not.toBeVisible();
 
+    await expect(page.locator('.winner-instructions')).toBeVisible();
+
     const firstTeam = page.locator('.team-clickable').first();
     await firstTeam.click();
     await page.waitForTimeout(200);
 
     await expect(page.locator('.crown')).toHaveCount(1);
+    await expect(page.locator('.winner-instructions')).not.toBeVisible();
 
     const leaderboardAfterFirstClick = page.locator('h2').filter({ hasText: 'Leaderboard' });
     await expect(leaderboardAfterFirstClick).toBeVisible();
