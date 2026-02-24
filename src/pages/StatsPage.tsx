@@ -90,7 +90,7 @@ function StatsPage(): React.ReactElement {
    */
   const getPlayerName = (playerId: string): string => {
     const player = players.find(p => p.id === playerId);
-    return player?.name || playerId;
+    return player?.name || 'removed';
   };
 
   /**

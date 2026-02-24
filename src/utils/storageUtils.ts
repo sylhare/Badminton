@@ -1,4 +1,4 @@
-import type { AppState, Court, CourtEngineState, ManualCourtSelection, Player } from '../types';
+import type { AppState, Court, CourtEngineState, Player } from '../types';
 
 const STORAGE_KEYS = {
   APP_STATE: 'badminton-app-state',
@@ -9,8 +9,6 @@ export const saveAppState = (state: {
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
-  isManagePlayersCollapsed: boolean;
-  manualCourt: ManualCourtSelection | null;
   lastGeneratedAt?: number;
 }): void => {
   try {
@@ -18,8 +16,6 @@ export const saveAppState = (state: {
       players: state.players,
       numberOfCourts: state.numberOfCourts,
       assignments: state.assignments,
-      isManagePlayersCollapsed: state.isManagePlayersCollapsed,
-      manualCourt: state.manualCourt,
       lastGeneratedAt: state.lastGeneratedAt,
     };
     localStorage.setItem(STORAGE_KEYS.APP_STATE, JSON.stringify(stateToSave));
@@ -32,8 +28,6 @@ export const loadAppState = (): Partial<{
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
-  isManagePlayersCollapsed: boolean;
-  manualCourt: ManualCourtSelection | null;
   lastGeneratedAt: number;
 }> => {
   try {
@@ -56,16 +50,10 @@ export const loadAppState = (): Partial<{
       return {};
     }
 
-    const isManagePlayersCollapsed = typeof parsed.isManagePlayersCollapsed === 'boolean'
-      ? parsed.isManagePlayersCollapsed
-      : false;
-
     return {
       players: Array.isArray(parsed.players) ? parsed.players : [],
       numberOfCourts: typeof parsed.numberOfCourts === 'number' ? parsed.numberOfCourts : 4,
       assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
-      isManagePlayersCollapsed,
-      manualCourt: parsed.manualCourt || null,
       lastGeneratedAt: typeof parsed.lastGeneratedAt === 'number' ? parsed.lastGeneratedAt : undefined,
     };
   } catch (error) {

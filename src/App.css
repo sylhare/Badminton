@@ -1628,15 +1628,6 @@ h1 {
         align-items: stretch;
     }
 
-    .teams {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .vs-divider {
-        transform: rotate(90deg);
-    }
-
     .add-players-options {
         grid-template-columns: 1fr;
         gap: 20px;
