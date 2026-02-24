@@ -292,43 +292,6 @@ function StatsPage(): React.ReactElement {
           </p>
         </header>
 
-        <section className="notebook-links">
-          <h2>📓 Analysis Notebooks</h2>
-          <div className="notebooks-grid">
-            <a
-              href={`${basePath}algorithm`}
-              className="notebook-card"
-              data-testid="algorithm-link"
-            >
-              <div className="notebook-icon">📐</div>
-              <div className="notebook-content">
-                <h3>Algorithm Documentation</h3>
-                <p>
-                  Mathematical foundations and proofs for Monte Carlo, Simulated Annealing,
-                  and Conflict Graph algorithms with convergence analysis.
-                </p>
-              </div>
-              <span className="notebook-arrow">→</span>
-            </a>
-
-            <a
-              href={`${basePath}engine`}
-              className="notebook-card"
-              data-testid="engine-link"
-            >
-              <div className="notebook-icon">⚙️</div>
-              <div className="notebook-content">
-                <h3>Engine Comparison</h3>
-                <p>
-                  Comprehensive comparison of court assignment engines including
-                  performance benchmarks, fairness metrics, and quality analysis.
-                </p>
-              </div>
-              <span className="notebook-arrow">→</span>
-            </a>
-          </div>
-        </section>
-
         {/* Warnings Section */}
         {hasData && diagnostics.warnings.length > 0 && (
           <section className="warnings-section">
@@ -503,6 +466,43 @@ function StatsPage(): React.ReactElement {
               </a>
             </div>
           )}
+        </section>
+
+        <section className="notebook-links">
+          <h2>📓 Analysis Notebooks</h2>
+          <div className="notebooks-grid">
+            <a
+              href={`${basePath}algorithm`}
+              className="notebook-card"
+              data-testid="algorithm-link"
+            >
+              <div className="notebook-icon">📐</div>
+              <div className="notebook-content">
+                <h3>Algorithm Documentation</h3>
+                <p>
+                  Mathematical foundations and proofs for Monte Carlo, Simulated Annealing,
+                  and Conflict Graph algorithms with convergence analysis.
+                </p>
+              </div>
+              <span className="notebook-arrow">→</span>
+            </a>
+
+            <a
+              href={`${basePath}engine`}
+              className="notebook-card"
+              data-testid="engine-link"
+            >
+              <div className="notebook-icon">⚙️</div>
+              <div className="notebook-content">
+                <h3>Engine Comparison</h3>
+                <p>
+                  Comprehensive comparison of court assignment engines including
+                  performance benchmarks, fairness metrics, and quality analysis.
+                </p>
+              </div>
+              <span className="notebook-arrow">→</span>
+            </a>
+          </div>
         </section>
 
         <footer className="stats-footer">
