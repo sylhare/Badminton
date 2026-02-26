@@ -2,6 +2,8 @@ export interface Player {
   id: string;
   name: string;
   isPresent: boolean;
+  sex?: 'M' | 'F' | 'Unknown';
+  level?: number;
 }
 
 export interface ManualCourtSelection {
@@ -21,13 +23,14 @@ export interface Court {
 
 export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
-export type EngineType = 'sa' | 'mc' | 'cg';
+export type EngineType = 'sa' | 'mc' | 'cg' | 'gl';
 
 export interface AppState {
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
   lastGeneratedAt?: number;
+  isSmartEngineEnabled?: boolean;
 }
 
 export interface CourtEngineState {

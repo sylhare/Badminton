@@ -5,7 +5,7 @@ import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
 import { CourtAssignments } from './components/court';
 import Leaderboard from './components/Leaderboard';
-import { engine, getEngineType } from './engines/engineSelector';
+import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
@@ -22,12 +22,17 @@ function App(): React.ReactElement {
   const [lastGeneratedAt, setLastGeneratedAt] = useState<number | undefined>(loadedState.lastGeneratedAt);
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
+  const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState<boolean>(
+    loadedState.isSmartEngineEnabled ?? false,
+  );
 
   const isInitialLoad = useRef(true);
   const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    engine().loadState(getEngineType());
+    const engineType = isSmartEngineEnabled ? 'gl' : 'sa';
+    setEngine(engineType);
+    engine().loadState(engineType);
     isInitialLoad.current = false;
 
     return engine().onStateChange(() => {
@@ -43,9 +48,10 @@ function App(): React.ReactElement {
       numberOfCourts,
       assignments,
       lastGeneratedAt,
+      isSmartEngineEnabled,
     });
     engine().saveState(getEngineType());
-  }, [players, numberOfCourts, assignments, lastGeneratedAt]);
+  }, [players, numberOfCourts, assignments, lastGeneratedAt, isSmartEngineEnabled]);
 
   const handlePlayersAdded = (newNames: string[]) => {
     const newPlayers = createPlayersFromNames(newNames, 'manual');
@@ -127,6 +133,20 @@ function App(): React.ReactElement {
     );
   };
 
+  const handleToggleSmartEngine = () => {
+    const next = !isSmartEngineEnabled;
+    setIsSmartEngineEnabled(next);
+    setEngine(next ? 'gl' : 'sa');
+  };
+
+  const handleUpdatePlayer = (id: string, sex: Player['sex'], level: number) => {
+    setPlayers(prev =>
+      prev.map(player =>
+        player.id === id ? { ...player, sex, level } : player,
+      ),
+    );
+  };
+
   const handleToggleForceBench = (playerId: string) => {
     setForceBenchPlayerIds(prev => {
       const next = new Set(prev);
@@ -159,7 +179,7 @@ function App(): React.ReactElement {
   const hasPlayers = players.length > 0;
 
   return (
-    <div className="app">
+    <div className={`app${isSmartEngineEnabled ? ' night-theme' : ''}`}>
       <div className="container main-container">
         <h1><span className="title-emoji">🏸 </span>Badminton Court Manager</h1>
 
@@ -191,6 +211,9 @@ function App(): React.ReactElement {
                   benchCounts={engine().getBenchCounts()}
                   forceBenchPlayerIds={forceBenchPlayerIds}
                   onToggleForceBench={handleToggleForceBench}
+                  isSmartEngineEnabled={isSmartEngineEnabled}
+                  onToggleSmartEngine={handleToggleSmartEngine}
+                  onUpdatePlayer={handleUpdatePlayer}
                 />
               )}
             </div>
