@@ -53,7 +53,9 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                   onClick={() => setSex(option)}
                   data-testid={`sex-pill-${option}`}
                 >
-                  {option === 'F' ? '♀ F' : option === 'M' ? '♂ M' : 'Unknown'}
+                  {option === 'F' && '♀ F'}
+                  {option === 'M' && '♂ M'}
+                  {option === 'Unknown' && 'Unknown'}
                 </button>
               ))}
             </div>
