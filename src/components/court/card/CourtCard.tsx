@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { Court } from '../../../types';
 import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
@@ -9,6 +9,7 @@ import CourtHeader from './CourtHeader';
 interface CourtCardProps {
   court: Court;
   onWinnerChange?: (courtNumber: number, teamNumber: number) => void;
+  onScoreChange?: (courtNumber: number, team1Score: number, team2Score: number) => void;
   isManualCourt?: boolean;
   isAnimating?: boolean;
 }
@@ -16,9 +17,19 @@ interface CourtCardProps {
 const CourtCard: React.FC<CourtCardProps> = ({
   court,
   onWinnerChange,
+  onScoreChange,
   isManualCourt = false,
   isAnimating = false,
 }) => {
+  const [score1, setScore1] = useState<string>(court.score?.team1 !== undefined ? String(court.score.team1) : '');
+  const [score2, setScore2] = useState<string>(court.score?.team2 !== undefined ? String(court.score.team2) : '');
+
+  // Reset inputs when court number changes (new assignment generated)
+  useEffect(() => {
+    setScore1(court.score?.team1 !== undefined ? String(court.score.team1) : '');
+    setScore2(court.score?.team2 !== undefined ? String(court.score.team2) : '');
+  }, [court.courtNumber]);
+
   const handleTeamClick = (teamNumber: number) => {
     if (onWinnerChange) {
       onWinnerChange(court.courtNumber, teamNumber);
@@ -37,7 +48,51 @@ const CourtCard: React.FC<CourtCardProps> = ({
     onWinnerChange(court.courtNumber, teamNumber);
   };
 
+  const handleScore1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setScore1(val);
+    const n1 = parseInt(val, 10);
+    const n2 = parseInt(score2, 10);
+    if (!isNaN(n1) && !isNaN(n2) && onScoreChange) {
+      onScoreChange(court.courtNumber, n1, n2);
+    }
+  };
+
+  const handleScore2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setScore2(val);
+    const n1 = parseInt(score1, 10);
+    const n2 = parseInt(val, 10);
+    if (!isNaN(n1) && !isNaN(n2) && onScoreChange) {
+      onScoreChange(court.courtNumber, n1, n2);
+    }
+  };
+
   const { teams } = court;
+
+  const scoreInputs = teams && onScoreChange ? (
+    <div className="court-score-row">
+      <input
+        type="number"
+        min="0"
+        value={score1}
+        onChange={handleScore1Change}
+        className="court-score-input"
+        placeholder="T1"
+        aria-label="Team 1 score"
+      />
+      <span className="court-score-separator">—</span>
+      <input
+        type="number"
+        min="0"
+        value={score2}
+        onChange={handleScore2Change}
+        className="court-score-input"
+        placeholder="T2"
+        aria-label="Team 2 score"
+      />
+    </div>
+  ) : null;
 
   if (!teams) {
     return (
@@ -74,6 +129,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
           onPlayerClick={handleSinglesClick}
           isClickable={!!onWinnerChange}
         />
+        {scoreInputs}
       </div>
     );
   }
@@ -97,6 +153,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
           onTeamClick={handleTeamClick}
           isClickable={!!onWinnerChange}
         />
+        {scoreInputs}
       </div>
     );
   }
@@ -115,9 +172,9 @@ const CourtCard: React.FC<CourtCardProps> = ({
         onTeamClick={handleTeamClick}
         isClickable={!!onWinnerChange}
       />
+      {scoreInputs}
     </div>
   );
 };
 
 export default CourtCard;
-

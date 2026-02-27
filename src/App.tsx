@@ -8,6 +8,7 @@ import Leaderboard from './components/Leaderboard';
 import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
+import { updatePlayersLevels } from './utils/levelUtils';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
 
 function App(): React.ReactElement {
@@ -99,13 +100,31 @@ function App(): React.ReactElement {
     setLastGeneratedAt(undefined);
   };
 
+  const handleScoreChange = (courtNumber: number, team1Score: number, team2Score: number) => {
+    setAssignments(prev =>
+      prev.map(c =>
+        c.courtNumber === courtNumber ? { ...c, score: { team1: team1Score, team2: team2Score } } : c,
+      ),
+    );
+  };
+
   const generateAssignments = () => {
     recordCurrentWins();
+
+    // Update player levels based on completed games (courts with a winner)
+    const assignmentsWithWinners = assignments.filter(c => c.winner);
+    const nextPlayers = assignmentsWithWinners.length > 0
+      ? updatePlayersLevels(assignmentsWithWinners, players)
+      : players;
+    if (assignmentsWithWinners.length > 0) {
+      setPlayers(nextPlayers);
+    }
+
     setLastGeneratedAt(Date.now());
     engine().clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
     const courts = engine().generate(
-      players,
+      nextPlayers,
       numberOfCourts,
       manualCourtSelection || undefined,
       forceBenchPlayerIds,
@@ -235,6 +254,7 @@ function App(): React.ReactElement {
               onNumberOfCourtsChange={setNumberOfCourts}
               onGenerateAssignments={generateAssignments}
               onWinnerChange={handleWinnerChange}
+              onScoreChange={handleScoreChange}
               hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
               onViewBenchCounts={handleViewBenchCounts}
               manualCourtSelection={manualCourtSelection}

@@ -30,6 +30,7 @@ interface CourtAssignmentsProps {
   onNumberOfCourtsChange: (courts: number) => void;
   onGenerateAssignments: () => void;
   onWinnerChange?: (courtNumber: number, winner: WinnerSelection) => void;
+  onScoreChange?: (courtNumber: number, team1Score: number, team2Score: number) => void;
   hasManualCourtSelection?: boolean;
   onViewBenchCounts?: () => void;
   manualCourtSelection: ManualCourtSelection | null;
@@ -45,6 +46,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   onNumberOfCourtsChange,
   onGenerateAssignments,
   onWinnerChange,
+  onScoreChange,
   hasManualCourtSelection = false,
   onViewBenchCounts,
   manualCourtSelection,
@@ -164,6 +166,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
                   key={court.courtNumber}
                   court={court}
                   onWinnerChange={handleWinnerChange}
+                  onScoreChange={onScoreChange}
                   isManualCourt={isManualCourt}
                   isAnimating={isAnimating}
                 />

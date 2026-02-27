@@ -4,6 +4,8 @@ export interface Player {
   isPresent: boolean;
   sex?: 'M' | 'F' | 'Unknown';
   level?: number;
+  averageScore?: number;
+  scoredGames?: number;
 }
 
 export interface ManualCourtSelection {
@@ -19,6 +21,7 @@ export interface Court {
   };
   winner?: 1 | 2;
   wasManuallyAssigned?: boolean;
+  score?: { team1: number; team2: number };
 }
 
 export type TeamNumber = 1 | 2;
