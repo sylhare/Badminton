@@ -2,6 +2,7 @@
     min-height: 100vh;
     background: linear-gradient(135deg, var(--color-primary-start) 0%, var(--color-primary-end) 100%);
     padding: 15px;
+    transition: background 0.5s ease;
 }
 
 .container {
@@ -2136,153 +2137,33 @@ h1 {
     background: #5c8fd4;
 }
 
+/* Tooltip info icon */
+
+.tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    font-size: 0.8rem;
+    color: #a0aec0;
+    cursor: help;
+    vertical-align: middle;
+    transition: color 0.2s ease;
+}
+
+.tooltip-icon:hover {
+    color: var(--color-primary);
+}
+
 /* ============================================================
-   Night Theme
+   Night Theme — only the outer background and primary colour change;
+   white surfaces (cards, modals, inputs) remain white.
    ============================================================ */
 
 .app.night-theme {
-    --color-primary-start: #1e3a5f;
-    --color-primary-end: #2d1b69;
+    --color-primary-start: #1e3a6b;
+    --color-primary-end: #0a1628;
     --color-primary: #5c8fd4;
     --color-primary-hover: #7ba7e8;
-    background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
-}
-
-.app.night-theme .container {
-    background: #0d1117;
-    color: #e6edf3;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-}
-
-.app.night-theme h1 {
-    color: #e6edf3;
-}
-
-.app.night-theme .section {
-    background: #161b22;
-    border-color: #30363d;
-}
-
-.app.night-theme .section-header {
-    color: #e6edf3;
-}
-
-.app.night-theme .section-header:hover {
-    background-color: #21262d;
-}
-
-.app.night-theme .section-header h2 {
-    color: #e6edf3;
-}
-
-.app.night-theme .player-item {
-    background: #21262d;
-    border: 1px solid #30363d;
-    box-shadow: none;
-}
-
-.app.night-theme .player-item:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.app.night-theme .player-item.absent {
-    background: #161b22;
-}
-
-.app.night-theme .player-name {
-    color: #e6edf3;
-}
-
-.app.night-theme .player-bench-row {
-    border-top-color: #30363d;
-}
-
-.app.night-theme .bench-count-emoji {
-    color: #8b949e;
-}
-
-.app.night-theme .bench-next-toggle {
-    color: #c9d1d9;
-}
-
-.app.night-theme .player-stats {
-    background: #161b22;
-    border-color: #30363d;
-    color: #e6edf3;
-}
-
-.app.night-theme .stats-item {
-    color: #e6edf3;
-}
-
-.app.night-theme .stats-number {
-    color: #5c8fd4;
-}
-
-.app.night-theme .add-player-input,
-.app.night-theme .single-player-input,
-.app.night-theme .bulk-input,
-.app.night-theme .player-entry-input {
-    background: #21262d;
-    border-color: #30363d;
-    color: #e6edf3;
-}
-
-.app.night-theme .add-player-input:focus,
-.app.night-theme .single-player-input:focus,
-.app.night-theme .bulk-input:focus,
-.app.night-theme .player-entry-input:focus {
-    border-color: #5c8fd4;
-}
-
-.app.night-theme .modal-overlay {
-    background: rgba(0, 0, 0, 0.7);
-}
-
-.app.night-theme .modal-content {
-    background: #161b22;
-    color: #e6edf3;
-    border: 1px solid #30363d;
-}
-
-.app.night-theme .modal-header {
-    border-bottom-color: #30363d;
-}
-
-.app.night-theme .modal-footer {
-    border-top-color: #30363d;
-}
-
-.app.night-theme .modal-header h3,
-.app.night-theme .modal-body p {
-    color: #e6edf3;
-}
-
-.app.night-theme .player-edit-label {
-    color: #c9d1d9;
-}
-
-.app.night-theme .sex-pill {
-    background: #21262d;
-    border-color: #30363d;
-    color: #c9d1d9;
-}
-
-.app.night-theme .sex-pill:hover {
-    border-color: #5c8fd4;
-    color: #5c8fd4;
-}
-
-.app.night-theme .sex-pill.active {
-    background: #5c8fd4;
-    border-color: #5c8fd4;
-    color: white;
-}
-
-.app.night-theme .smart-engine-toggle-row {
-    border-top-color: #30363d;
-}
-
-.app.night-theme .player-badge {
-    color: #8b949e;
+    background: linear-gradient(135deg, #1e3a6b 0%, #0a1628 100%);
 }
