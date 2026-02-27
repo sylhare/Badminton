@@ -7,6 +7,7 @@ import { useAnalytics } from '../hooks/useAnalytics';
 import ConfirmModal from './ConfirmModal';
 import PlayerEditModal from './PlayerEditModal';
 import PlayerRemovalModal from './PlayerRemovalModal';
+import { Tooltip } from './Tooltip';
 
 interface PlayerListProps {
   players: Player[];
@@ -228,6 +229,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
           />
           <span className={`toggle-switch ${isSmartEngineEnabled ? 'active smart-engine-active' : ''}`}></span>
         </label>
+        <Tooltip testId="smart-engine" text="Smart Engine balances matches using gender and skill level. Enable it then click any player name to set their gender and level." />
       </div>
 
       <ConfirmModal

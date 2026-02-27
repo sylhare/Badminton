@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 
 import type { Player } from '../types';
+import { Tooltip } from './Tooltip';
 
 interface PlayerEditModalProps {
   player: Player | null;
@@ -44,7 +45,10 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
 
         <div className="modal-body">
           <div className="player-edit-field">
-            <label className="player-edit-label">Gender</label>
+            <label className="player-edit-label">
+              Gender
+              <Tooltip testId="gender" text="Setting gender helps Smart Engine balance mixed doubles — it avoids putting all players of the same gender on one team." />
+            </label>
             <div className="sex-selector">
               {(['F', 'M', 'Unknown'] as const).map((option) => (
                 <button
@@ -62,7 +66,10 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
           </div>
 
           <div className="player-edit-field">
-            <label className="player-edit-label">Level: {level}</label>
+            <label className="player-edit-label">
+              Level: {level}
+              <Tooltip testId="level" text="Level (0–100) represents playing skill. Smart Engine pairs players of similar levels together for more competitive and enjoyable matches." />
+            </label>
             <input
               type="range"
               min={0}
