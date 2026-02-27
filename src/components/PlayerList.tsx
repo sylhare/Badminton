@@ -100,7 +100,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const formatBadge = (player: Player): string => {
     const parts: string[] = [];
     if (player.sex && player.sex !== 'Unknown') {
-      parts.push(player.sex === 'F' ? '♀' : '♂');
+      parts.push(player.sex === 'F' ? '💁‍♀️' : '🙋‍♂️');
     }
     if (player.level !== undefined) {
       parts.push(String(player.level));
