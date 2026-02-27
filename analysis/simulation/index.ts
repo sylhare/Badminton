@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { engineMC as CourtAssignmentEngine } from '../../src/engines/MonteCarloEngine.ts';
 import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
 import { engineCG as ConflictGraphEngine } from '../../src/engines/ConflictGraphEngine.ts';
-import { engineGL as GenderLevelEngine } from '../../src/engines/GenderLevelEngine.ts';
+import { engineSL as SmartEngine } from '../../src/engines/SmartEngine.ts';
 
 import { RandomBaselineEngine } from './RandomBaselineEngine.ts';
 import type {
@@ -43,11 +43,11 @@ const ALL_ENGINES = [
   { id: 'mc', name: 'Monte Carlo (MC)', engine: CourtAssignmentEngine, dir: 'mc_algo' },
   { id: 'sa', name: 'Simulated Annealing (SA)', engine: CourtAssignmentEngineSA, dir: 'sa_algo' },
   { id: 'cg', name: 'Conflict Graph (CG)', engine: ConflictGraphEngine, dir: 'cg_algo' },
-  { id: 'gl', name: 'Smart Matching (GL)', engine: GenderLevelEngine, dir: 'gl_algo' },
+  { id: 'sl', name: 'Smart Matching (SL)', engine: SmartEngine, dir: 'sl_algo' },
 ] as const;
 
-// CLI: npx tsx ./simulation/index.ts --engine gl
-//      npx tsx ./simulation/index.ts --engine gl,sa
+// CLI: npx tsx ./simulation/index.ts --engine sl
+//      npx tsx ./simulation/index.ts --engine sl,sa
 //      npx tsx ./simulation/index.ts          (runs all)
 const engineArgIdx = process.argv.indexOf('--engine');
 const engineFilter = engineArgIdx !== -1 ? process.argv[engineArgIdx + 1]?.split(',') : null;

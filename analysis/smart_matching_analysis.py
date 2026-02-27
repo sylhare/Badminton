@@ -21,22 +21,22 @@ def _():
 def _(Path, json, pl):
     data_dir = Path(__file__).parent / "data"
     sa_dir = data_dir / "sa_algo"
-    gl_dir = data_dir / "gl_algo"
+    sl_dir = data_dir / "sl_algo"
 
     sa_match = pl.read_csv(sa_dir / "match_events.csv")
-    gl_match = pl.read_csv(gl_dir / "match_events.csv")
+    sl_match = pl.read_csv(sl_dir / "match_events.csv")
     sa_pairs = pl.read_csv(sa_dir / "match_pair_summary.csv")
-    gl_pairs = pl.read_csv(gl_dir / "match_pair_summary.csv")
+    sl_pairs = pl.read_csv(sl_dir / "match_pair_summary.csv")
     sa_summary = pl.read_csv(sa_dir / "summary.csv")
-    gl_summary = pl.read_csv(gl_dir / "summary.csv")
+    sl_summary = pl.read_csv(sl_dir / "summary.csv")
     sa_config = json.loads((sa_dir / "config.json").read_text())
-    gl_config = json.loads((gl_dir / "config.json").read_text())
+    sl_config = json.loads((sl_dir / "config.json").read_text())
 
     return (
-        gl_config,
-        gl_match,
-        gl_pairs,
-        gl_summary,
+        sl_config,
+        sl_match,
+        sl_pairs,
+        sl_summary,
         sa_config,
         sa_match,
         sa_pairs,
@@ -66,20 +66,20 @@ def _(mo, sa_config):
 
 
 @app.cell(hide_code=True)
-def _(gl_config, mo, sa_config):
+def _(sl_config, mo, sa_config):
     _sa_zero = sa_config["aggregateStats"]["zeroRepeatRate"]
-    _gl_zero = gl_config["aggregateStats"]["zeroRepeatRate"]
+    _sl_zero = sl_config["aggregateStats"]["zeroRepeatRate"]
     _sa_diff = sa_config["levelBasedBalance"]["avgStrengthDifferential"]
-    _gl_diff = gl_config["levelBasedBalance"]["avgStrengthDifferential"]
+    _sl_diff = sl_config["levelBasedBalance"]["avgStrengthDifferential"]
     _sa_win = sa_config["levelBasedBalance"]["strongerTeamWinRate"]
-    _gl_win = gl_config["levelBasedBalance"]["strongerTeamWinRate"]
+    _sl_win = sl_config["levelBasedBalance"]["strongerTeamWinRate"]
     mo.md(
         f"""
     | Metric | SA | GL |
     |:-------|---:|---:|
-    | Zero-repeat rate | {_sa_zero:.1f}% | {_gl_zero:.1f}% |
-    | Avg strength differential | {_sa_diff:.2f} | {_gl_diff:.2f} |
-    | Stronger-team win rate | {_sa_win:.1f}% | {_gl_win:.1f}% |
+    | Zero-repeat rate | {_sa_zero:.1f}% | {_sl_zero:.1f}% |
+    | Avg strength differential | {_sa_diff:.2f} | {_sl_diff:.2f} |
+    | Stronger-team win rate | {_sa_win:.1f}% | {_sl_win:.1f}% |
     """
     )
     return
@@ -92,10 +92,10 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(gl_summary, go, make_subplots, mo, pl, sa_summary):
+def _(sl_summary, go, make_subplots, mo, pl, sa_summary):
     _n = sa_summary.height
     _sa_zero_pct = sa_summary.filter(pl.col("repeatPairCount") == 0).height / _n * 100
-    _gl_zero_pct = gl_summary.filter(pl.col("repeatPairCount") == 0).height / _n * 100
+    _sl_zero_pct = sl_summary.filter(pl.col("repeatPairCount") == 0).height / _n * 100
 
     _fig = make_subplots(
         rows=1,
@@ -106,9 +106,9 @@ def _(gl_summary, go, make_subplots, mo, pl, sa_summary):
     _fig.add_trace(
         go.Bar(
             x=["SA", "GL"],
-            y=[round(_sa_zero_pct, 1), round(_gl_zero_pct, 1)],
+            y=[round(_sa_zero_pct, 1), round(_sl_zero_pct, 1)],
             marker_color=["#54A24B", "#4C78A8"],
-            text=[f"{_sa_zero_pct:.1f}%", f"{_gl_zero_pct:.1f}%"],
+            text=[f"{_sa_zero_pct:.1f}%", f"{_sl_zero_pct:.1f}%"],
             textposition="outside",
             showlegend=False,
         ),
@@ -117,13 +117,13 @@ def _(gl_summary, go, make_subplots, mo, pl, sa_summary):
     )
     _max_repeats = max(
         sa_summary["repeatPairCount"].max(),
-        gl_summary["repeatPairCount"].max(),
+        sl_summary["repeatPairCount"].max(),
     )
     _buckets = list(range(0, _max_repeats + 1))
     _sa_counts = sa_summary["repeatPairCount"].value_counts().sort("repeatPairCount")
-    _gl_counts = gl_summary["repeatPairCount"].value_counts().sort("repeatPairCount")
+    _sl_counts = sl_summary["repeatPairCount"].value_counts().sort("repeatPairCount")
     _sa_map = dict(zip(_sa_counts["repeatPairCount"].to_list(), _sa_counts["count"].to_list()))
-    _gl_map = dict(zip(_gl_counts["repeatPairCount"].to_list(), _gl_counts["count"].to_list()))
+    _sl_map = dict(zip(_sl_counts["repeatPairCount"].to_list(), _sl_counts["count"].to_list()))
 
     _fig.add_trace(
         go.Bar(
@@ -138,7 +138,7 @@ def _(gl_summary, go, make_subplots, mo, pl, sa_summary):
     _fig.add_trace(
         go.Bar(
             x=[str(b) for b in _buckets],
-            y=[_gl_map.get(b, 0) for b in _buckets],
+            y=[_sl_map.get(b, 0) for b in _buckets],
             name="GL",
             marker_color="#4C78A8",
         ),
@@ -178,15 +178,15 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(gl_pairs, go, make_subplots, mo, pl, sa_pairs):
+def _(sl_pairs, go, make_subplots, mo, pl, sa_pairs):
     _sa = sa_pairs.with_columns(
         (pl.col("asTeammate") / pl.col("totalMatches")).alias("teammate_ratio")
     )
-    _gl = gl_pairs.with_columns(
+    _gl = sl_pairs.with_columns(
         (pl.col("asTeammate") / pl.col("totalMatches")).alias("teammate_ratio")
     )
     _sa_ratio = _sa["teammate_ratio"].to_list()
-    _gl_ratio = _gl["teammate_ratio"].to_list()
+    _sl_ratio = _gl["teammate_ratio"].to_list()
 
     _fig = make_subplots(
         rows=1,
@@ -212,7 +212,7 @@ def _(gl_pairs, go, make_subplots, mo, pl, sa_pairs):
     # GL: outline only — wide spread showing level clustering
     _fig.add_trace(
         go.Histogram(
-            x=_gl_ratio,
+            x=_sl_ratio,
             name="GL",
             marker=dict(
                 color="rgba(0,0,0,0)",
@@ -230,7 +230,7 @@ def _(gl_pairs, go, make_subplots, mo, pl, sa_pairs):
         col=2,
     )
     _fig.add_trace(
-        go.Box(y=_gl_ratio, name="GL", marker_color="#4C78A8", showlegend=False),
+        go.Box(y=_sl_ratio, name="GL", marker_color="#4C78A8", showlegend=False),
         row=1,
         col=2,
     )
@@ -271,13 +271,13 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(gl_match, go, make_subplots, mo, sa_match):
+def _(sl_match, go, make_subplots, mo, sa_match):
     _sa_lvl = sa_match["matchAvgLevel"].to_list()
-    _gl_lvl = gl_match["matchAvgLevel"].to_list()
+    _sl_lvl = sl_match["matchAvgLevel"].to_list()
     _sa_std = sa_match["matchAvgLevel"].std()
-    _gl_std = gl_match["matchAvgLevel"].std()
+    _sl_std = sl_match["matchAvgLevel"].std()
     _sa_mean = sa_match["matchAvgLevel"].mean()
-    _gl_mean = gl_match["matchAvgLevel"].mean()
+    _sl_mean = sl_match["matchAvgLevel"].mean()
 
     _fig = make_subplots(
         rows=1,
@@ -300,8 +300,8 @@ def _(gl_match, go, make_subplots, mo, sa_match):
     )
     _fig.add_trace(
         go.Histogram(
-            x=_gl_lvl,
-            name=f"GL (σ={_gl_std:.1f})",
+            x=_sl_lvl,
+            name=f"GL (σ={_sl_std:.1f})",
             opacity=0.7,
             marker_color="#4C78A8",
             xbins=dict(start=15, size=5),
@@ -315,7 +315,7 @@ def _(gl_match, go, make_subplots, mo, sa_match):
         col=2,
     )
     _fig.add_trace(
-        go.Box(y=_gl_lvl, name="GL", marker_color="#4C78A8", showlegend=False),
+        go.Box(y=_sl_lvl, name="GL", marker_color="#4C78A8", showlegend=False),
         row=1,
         col=2,
     )
@@ -334,15 +334,15 @@ def _(gl_match, go, make_subplots, mo, sa_match):
 
 
 @app.cell(hide_code=True)
-def _(gl_match, mo, sa_match):
+def _(sl_match, mo, sa_match):
     _sa_std = sa_match["matchAvgLevel"].std()
-    _gl_std = gl_match["matchAvgLevel"].std()
+    _sl_std = sl_match["matchAvgLevel"].std()
     mo.md(
         f"""
     GL's histogram **pulsates** — peaks at the natural skill tiers (20, 40, 60, 80, 100)
     with valleys in between. This is expected: GL actively groups same-level players on the
     same court, so most courts end up at a pure tier average rather than a blend.
-    The larger σ (**{_gl_std:.1f}** vs **{_sa_std:.1f}** for SA) reflects this tier
+    The larger σ (**{_sl_std:.1f}** vs **{_sa_std:.1f}** for SA) reflects this tier
     segregation — some courts are all-beginners, others all-advanced.
     SA mixes levels randomly, filling in the gaps between tiers and producing a smoother,
     narrower distribution centred near the population mean (~44).
@@ -358,11 +358,11 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(gl_match, go, make_subplots, mo, sa_match):
+def _(sl_match, go, make_subplots, mo, sa_match):
     _sa_diff = sa_match["strengthDifferential"].to_list()
-    _gl_diff = gl_match["strengthDifferential"].to_list()
+    _sl_diff = sl_match["strengthDifferential"].to_list()
     _sa_mean = sa_match["strengthDifferential"].mean()
-    _gl_mean = gl_match["strengthDifferential"].mean()
+    _sl_mean = sl_match["strengthDifferential"].mean()
 
     def _buckets(diff_list):
         n = len(diff_list)
@@ -375,7 +375,7 @@ def _(gl_match, go, make_subplots, mo, sa_match):
 
     _labels = ["diff = 0", "diff = 1", "diff = 2", "diff ≥ 3"]
     _sa_pct = _buckets(_sa_diff)
-    _gl_pct = _buckets(_gl_diff)
+    _sl_pct = _buckets(_sl_diff)
 
     _fig = make_subplots(
         rows=1,
@@ -391,7 +391,7 @@ def _(gl_match, go, make_subplots, mo, sa_match):
         col=1,
     )
     _fig.add_trace(
-        go.Bar(x=_labels, y=_gl_pct, name="GL", marker_color="#4C78A8", opacity=0.85),
+        go.Bar(x=_labels, y=_sl_pct, name="GL", marker_color="#4C78A8", opacity=0.85),
         row=1,
         col=1,
     )
@@ -409,8 +409,8 @@ def _(gl_match, go, make_subplots, mo, sa_match):
     )
     _fig.add_trace(
         go.Histogram(
-            x=_gl_diff,
-            name=f"GL (μ={_gl_mean:.2f})",
+            x=_sl_diff,
+            name=f"GL (μ={_sl_mean:.2f})",
             opacity=0.75,
             marker_color="#4C78A8",
             xbins=dict(start=-0.5, size=1),
@@ -435,25 +435,25 @@ def _(gl_match, go, make_subplots, mo, sa_match):
 
 
 @app.cell(hide_code=True)
-def _(gl_match, mo, pl, sa_match):
+def _(sl_match, mo, pl, sa_match):
     _sa_mean = sa_match["strengthDifferential"].mean()
-    _gl_mean = gl_match["strengthDifferential"].mean()
+    _sl_mean = sl_match["strengthDifferential"].mean()
     _sa_zero_pct = (
         sa_match.filter(pl.col("strengthDifferential") == 0).height
         / sa_match.height
         * 100
     )
-    _gl_zero_pct = (
-        gl_match.filter(pl.col("strengthDifferential") == 0).height
-        / gl_match.height
+    _sl_zero_pct = (
+        sl_match.filter(pl.col("strengthDifferential") == 0).height
+        / sl_match.height
         * 100
     )
-    _ratio = _sa_mean / _gl_mean
+    _ratio = _sa_mean / _sl_mean
     mo.md(
         f"""
-    This is the biggest win for GL. **{_gl_zero_pct:.0f}%** of GL matches have perfectly
+    This is the biggest win for GL. **{_sl_zero_pct:.0f}%** of GL matches have perfectly
     balanced teams (diff = 0) vs **{_sa_zero_pct:.0f}%** for SA. The average strength
-    differential drops from **{_sa_mean:.2f}** (SA) to **{_gl_mean:.2f}** (GL) —
+    differential drops from **{_sa_mean:.2f}** (SA) to **{_sl_mean:.2f}** (GL) —
     a **{_ratio:.1f}×** improvement. The GL engine explicitly minimises the skill gap
     between opposing teams, making games far more competitive.
     """
@@ -468,7 +468,7 @@ def _(mo):
 
 
 @app.cell
-def _(gl_match, pl, sa_match):
+def _(sl_match, pl, sa_match):
     # Use actual jittered levels stored per-match (team1IntraGap, team1AvgLevel, etc.)
     def _team_stats(match_df):
         _t1 = match_df.select([
@@ -486,12 +486,12 @@ def _(gl_match, pl, sa_match):
         return pl.concat([_t1, _t2])
 
     sa_teams = _team_stats(sa_match)
-    gl_teams = _team_stats(gl_match)
-    return gl_teams, sa_teams
+    sl_teams = _team_stats(sl_match)
+    return sl_teams, sa_teams
 
 
 @app.cell(hide_code=True)
-def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
+def _(sl_teams, go, make_subplots, mo, pl, sa_teams):
     # danger zone: ANY of:
     #   - large intra-team gap (partners mismatched internally), OR
     #   - much stronger opponents (opp_advantage >= threshold), OR
@@ -511,7 +511,7 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
         return _bad.height / teams.height * 100
 
     _sa_d = _danger_pct(sa_teams)
-    _gl_d = _danger_pct(gl_teams)
+    _sl_d = _danger_pct(sl_teams)
 
     _fig = make_subplots(
         rows=1,
@@ -534,7 +534,7 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
     )
     _fig.add_trace(
         go.Histogram(
-            x=gl_teams["intra_gap"].to_list(),
+            x=sl_teams["intra_gap"].to_list(),
             name="GL",
             marker=dict(color="rgba(0,0,0,0)", line=dict(color="#4C78A8", width=2)),
             xbins=dict(start=0, size=10),
@@ -545,9 +545,9 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
     _fig.add_trace(
         go.Bar(
             x=["SA", "GL"],
-            y=[round(_sa_d, 2), round(_gl_d, 2)],
+            y=[round(_sa_d, 2), round(_sl_d, 2)],
             marker_color=["#54A24B", "#4C78A8"],
-            text=[f"{_sa_d:.2f}%", f"{_gl_d:.2f}%"],
+            text=[f"{_sa_d:.2f}%", f"{_sl_d:.2f}%"],
             textposition="outside",
             showlegend=False,
         ),
@@ -588,7 +588,7 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
+def _(sl_teams, go, make_subplots, mo, pl, sa_teams):
     # 9×9 heatmap: team avg level vs opponent avg level
     # Balanced matches sit on the diagonal; off-diagonal = mismatch
     _avgs = [20, 30, 40, 50, 60, 70, 80, 90, 100]
@@ -609,7 +609,7 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
         return _mat
 
     _sa_mat = _heat_matrix(sa_teams)
-    _gl_mat = _heat_matrix(gl_teams)
+    _sl_mat = _heat_matrix(sl_teams)
 
     _fig = make_subplots(
         rows=1,
@@ -633,7 +633,7 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
     )
     _fig.add_trace(
         go.Heatmap(
-            z=_gl_mat,
+            z=_sl_mat,
             x=_labels,
             y=_labels,
             colorscale="Blues",
@@ -673,13 +673,13 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(gl_teams, go, mo, sa_teams):
+def _(sl_teams, go, mo, sa_teams):
     import random as _rnd
 
     # Scatter: intra_gap (x) vs opp_advantage (y)
     # Top-right danger zone: big teammate mismatch AND facing stronger opponents
     _sa_s = sa_teams.sample(min(3000, sa_teams.height), seed=42)
-    _gl_s = gl_teams.sample(min(3000, gl_teams.height), seed=99)
+    _sl_s = sl_teams.sample(min(3000, sl_teams.height), seed=99)
 
     _rnd.seed(42)
     _jitter = lambda vals, s=1.2: [v + _rnd.gauss(0, s) for v in vals]
@@ -711,8 +711,8 @@ def _(gl_teams, go, mo, sa_teams):
         marker=dict(color="#54A24B", opacity=0.25, size=4, symbol="circle"),
     ))
     _fig.add_trace(go.Scatter(
-        x=_jitter(_gl_s["intra_gap"].to_list()),
-        y=_jitter(_gl_s["opp_advantage"].to_list()),
+        x=_jitter(_sl_s["intra_gap"].to_list()),
+        y=_jitter(_sl_s["opp_advantage"].to_list()),
         mode="markers",
         name="GL",
         marker=dict(color="#4C78A8", opacity=0.25, size=5, symbol="diamond"),
@@ -759,8 +759,8 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, mo, pl, sa_match, gl_match):
-    # Sex pattern matches simulation/utils.ts SEX_PATTERN = ['M', 'M', 'F', 'M', 'F']
+def _(go, mo, pl, sa_match, sl_match):
+    # Gender pattern matches simulation/utils.ts GENDER_PATTERN = ['M', 'M', 'F', 'M', 'F']
     _SEX = ['M', 'M', 'F', 'M', 'F']
 
     def _player_sex(pid: str) -> str:
@@ -802,7 +802,7 @@ def _(go, mo, pl, sa_match, gl_match):
         return {k: v / total * 100 for k, v in counts.items()}
 
     _sa_pct = _matchup_stats(sa_match)
-    _gl_pct = _matchup_stats(gl_match)
+    _sl_pct = _matchup_stats(sl_match)
 
     _labels = ['MF vs MF', 'MF vs MM', 'MF vs FF', 'MM vs MM', 'FF vs FF', 'MM vs FF']
     _colors = ['#54A24B', '#7fb3d3', '#b3d9b3', '#aaaacc', '#f5c1a5', '#e45756']  # red for bad
@@ -812,9 +812,9 @@ def _(go, mo, pl, sa_match, gl_match):
         _fig.add_trace(go.Bar(
             name=_lbl,
             x=['SA', 'GL'],
-            y=[_sa_pct[_lbl], _gl_pct[_lbl]],
+            y=[_sa_pct[_lbl], _sl_pct[_lbl]],
             marker_color=_col,
-            text=[f"{_sa_pct[_lbl]:.1f}%", f"{_gl_pct[_lbl]:.1f}%"],
+            text=[f"{_sa_pct[_lbl]:.1f}%", f"{_sl_pct[_lbl]:.1f}%"],
             textposition='inside',
         ))
 

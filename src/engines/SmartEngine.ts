@@ -40,12 +40,12 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
   /**
    * Penalizes matchups where one team is entirely F and the other is entirely M.
    * Players with Unknown or undefined gender are ignored.
+   * Only applies to doubles: singles (1 known-gender player per team) are not penalized.
    */
   protected calculateGenderCost(team1: Player[], team2: Player[]): number {
     const knownTeam1 = team1.filter(p => p.sex === 'F' || p.sex === 'M');
     const knownTeam2 = team2.filter(p => p.sex === 'F' || p.sex === 'M');
 
-    // Only penalize doubles: require at least 2 known-gender players per team
     if (knownTeam1.length < 2 || knownTeam2.length < 2) return 0;
 
     const allFemaleTeam1 = knownTeam1.every(p => p.sex === 'F');
@@ -104,4 +104,4 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
   }
 }
 
-export const engineGL = new SmartEngine();
+export const engineSL = new SmartEngine();

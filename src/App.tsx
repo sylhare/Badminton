@@ -30,7 +30,7 @@ function App(): React.ReactElement {
   const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const engineType = isSmartEngineEnabled ? 'gl' : 'sa';
+    const engineType = isSmartEngineEnabled ? 'sl' : 'sa';
     setEngine(engineType);
     engine().loadState(engineType);
     isInitialLoad.current = false;
@@ -136,7 +136,7 @@ function App(): React.ReactElement {
   const handleToggleSmartEngine = () => {
     const next = !isSmartEngineEnabled;
     setIsSmartEngineEnabled(next);
-    setEngine(next ? 'gl' : 'sa');
+    setEngine(next ? 'sl' : 'sa');
   };
 
   const handleUpdatePlayer = (id: string, sex: Player['sex'], level: number) => {

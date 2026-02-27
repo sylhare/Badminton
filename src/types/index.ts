@@ -23,7 +23,7 @@ export interface Court {
 
 export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
-export type EngineType = 'sa' | 'mc' | 'cg' | 'gl';
+export type EngineType = 'sa' | 'mc' | 'cg' | 'sl';
 
 export interface AppState {
   players: Player[];
