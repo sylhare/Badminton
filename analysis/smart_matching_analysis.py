@@ -107,7 +107,7 @@ def _(gl_summary, go, make_subplots, mo, pl, sa_summary):
         go.Bar(
             x=["SA", "GL"],
             y=[round(_sa_zero_pct, 1), round(_gl_zero_pct, 1)],
-            marker_color=["#54A24B", "#F58518"],
+            marker_color=["#54A24B", "#4C78A8"],
             text=[f"{_sa_zero_pct:.1f}%", f"{_gl_zero_pct:.1f}%"],
             textposition="outside",
             showlegend=False,
@@ -140,7 +140,7 @@ def _(gl_summary, go, make_subplots, mo, pl, sa_summary):
             x=[str(b) for b in _buckets],
             y=[_gl_map.get(b, 0) for b in _buckets],
             name="GL",
-            marker_color="#F58518",
+            marker_color="#4C78A8",
         ),
         row=1,
         col=2,
@@ -216,7 +216,7 @@ def _(gl_pairs, go, make_subplots, mo, pl, sa_pairs):
             name="GL",
             marker=dict(
                 color="rgba(0,0,0,0)",
-                line=dict(color="#F58518", width=2),
+                line=dict(color="#4C78A8", width=2),
             ),
             xbins=dict(start=0, end=1, size=0.025),
         ),
@@ -230,7 +230,7 @@ def _(gl_pairs, go, make_subplots, mo, pl, sa_pairs):
         col=2,
     )
     _fig.add_trace(
-        go.Box(y=_gl_ratio, name="GL", marker_color="#F58518", showlegend=False),
+        go.Box(y=_gl_ratio, name="GL", marker_color="#4C78A8", showlegend=False),
         row=1,
         col=2,
     )
@@ -303,7 +303,7 @@ def _(gl_match, go, make_subplots, mo, sa_match):
             x=_gl_lvl,
             name=f"GL (σ={_gl_std:.1f})",
             opacity=0.7,
-            marker_color="#F58518",
+            marker_color="#4C78A8",
             xbins=dict(start=15, size=5),
         ),
         row=1,
@@ -315,7 +315,7 @@ def _(gl_match, go, make_subplots, mo, sa_match):
         col=2,
     )
     _fig.add_trace(
-        go.Box(y=_gl_lvl, name="GL", marker_color="#F58518", showlegend=False),
+        go.Box(y=_gl_lvl, name="GL", marker_color="#4C78A8", showlegend=False),
         row=1,
         col=2,
     )
@@ -391,7 +391,7 @@ def _(gl_match, go, make_subplots, mo, sa_match):
         col=1,
     )
     _fig.add_trace(
-        go.Bar(x=_labels, y=_gl_pct, name="GL", marker_color="#F58518", opacity=0.85),
+        go.Bar(x=_labels, y=_gl_pct, name="GL", marker_color="#4C78A8", opacity=0.85),
         row=1,
         col=1,
     )
@@ -412,7 +412,7 @@ def _(gl_match, go, make_subplots, mo, sa_match):
             x=_gl_diff,
             name=f"GL (μ={_gl_mean:.2f})",
             opacity=0.75,
-            marker_color="#F58518",
+            marker_color="#4C78A8",
             xbins=dict(start=-0.5, size=1),
             showlegend=False,
         ),
@@ -468,44 +468,20 @@ def _(mo):
 
 
 @app.cell
-def _(gl_match, pl, sa_config, sa_match):
-    _profiles = sa_config.get("playerProfiles", {})
-    _level_map = {pid: int(info["level"]) * 20 for pid, info in _profiles.items()}
-    _level_frame = pl.DataFrame({
-        "pid": list(_level_map.keys()),
-        "lvl": list(_level_map.values()),
-    })
-
+def _(gl_match, pl, sa_match):
+    # Use actual jittered levels stored per-match (team1IntraGap, team1AvgLevel, etc.)
     def _team_stats(match_df):
-        _df = match_df.with_columns([
-            pl.col("team1Players").str.split("|").list.get(0).alias("t1a"),
-            pl.col("team1Players").str.split("|").list.get(1).alias("t1b"),
-            pl.col("team2Players").str.split("|").list.get(0).alias("t2a"),
-            pl.col("team2Players").str.split("|").list.get(1).alias("t2b"),
+        _t1 = match_df.select([
+            pl.col("team1IntraGap").alias("intra_gap"),
+            pl.col("team1AvgLevel").alias("team_avg"),
+            pl.col("team2AvgLevel").alias("opp_avg"),
+            (pl.col("team2AvgLevel") - pl.col("team1AvgLevel")).alias("opp_advantage"),
         ])
-        for _col in ["t1a", "t1b", "t2a", "t2b"]:
-            _df = _df.join(
-                _level_frame.rename({"pid": _col, "lvl": f"{_col}_l"}),
-                on=_col,
-                how="left",
-            )
-        _df = _df.with_columns([
-            ((pl.col("t1a_l") + pl.col("t1b_l")) / 2).alias("t1_avg"),
-            ((pl.col("t2a_l") + pl.col("t2b_l")) / 2).alias("t2_avg"),
-            (pl.col("t1a_l") - pl.col("t1b_l")).abs().alias("t1_gap"),
-            (pl.col("t2a_l") - pl.col("t2b_l")).abs().alias("t2_gap"),
-        ])
-        _t1 = _df.select([
-            pl.col("t1_gap").alias("intra_gap"),
-            pl.col("t1_avg").alias("team_avg"),
-            pl.col("t2_avg").alias("opp_avg"),
-            (pl.col("t2_avg") - pl.col("t1_avg")).alias("opp_advantage"),
-        ])
-        _t2 = _df.select([
-            pl.col("t2_gap").alias("intra_gap"),
-            pl.col("t2_avg").alias("team_avg"),
-            pl.col("t1_avg").alias("opp_avg"),
-            (pl.col("t1_avg") - pl.col("t2_avg")).alias("opp_advantage"),
+        _t2 = match_df.select([
+            pl.col("team2IntraGap").alias("intra_gap"),
+            pl.col("team2AvgLevel").alias("team_avg"),
+            pl.col("team1AvgLevel").alias("opp_avg"),
+            (pl.col("team1AvgLevel") - pl.col("team2AvgLevel")).alias("opp_advantage"),
         ])
         return pl.concat([_t1, _t2])
 
@@ -560,7 +536,7 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
         go.Histogram(
             x=gl_teams["intra_gap"].to_list(),
             name="GL",
-            marker=dict(color="rgba(0,0,0,0)", line=dict(color="#F58518", width=2)),
+            marker=dict(color="rgba(0,0,0,0)", line=dict(color="#4C78A8", width=2)),
             xbins=dict(start=0, size=10),
         ),
         row=1,
@@ -570,7 +546,7 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
         go.Bar(
             x=["SA", "GL"],
             y=[round(_sa_d, 2), round(_gl_d, 2)],
-            marker_color=["#54A24B", "#F58518"],
+            marker_color=["#54A24B", "#4C78A8"],
             text=[f"{_sa_d:.2f}%", f"{_gl_d:.2f}%"],
             textposition="outside",
             showlegend=False,
@@ -584,7 +560,7 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
         legend=dict(orientation="h", y=-0.18),
         xaxis1_title="Level gap between teammates (0–100 scale)",
         yaxis1_title="Count",
-        yaxis2=dict(range=[0, 6], title="% of all team slots"),
+        yaxis2=dict(title="% of all team slots"),
         plot_bgcolor="white",
         paper_bgcolor="white",
     )
@@ -660,7 +636,7 @@ def _(gl_teams, go, make_subplots, mo, pl, sa_teams):
             z=_gl_mat,
             x=_labels,
             y=_labels,
-            colorscale="Oranges",
+            colorscale="Blues",
             showscale=False,
             name="GL",
         ),
@@ -723,8 +699,9 @@ def _(gl_teams, go, mo, sa_teams):
                         font=dict(color="rgba(180,30,30,0.85)", size=10))
     _fig.add_annotation(x=20, y=-60, text="Opponents too weak", showarrow=False,
                         font=dict(color="rgba(180,30,30,0.85)", size=10))
-    _fig.add_annotation(x=61, y=0, text="Pair too<br>mismatched", showarrow=False,
-                        font=dict(color="rgba(180,30,30,0.85)", size=10))
+    _fig.add_annotation(x=61, y=15, text="Pair too mismatched", showarrow=False,
+                        font=dict(color="rgba(180,30,30,0.9)", size=10),
+                        bgcolor="rgba(255,255,255,0.75)", borderpad=3)
 
     _fig.add_trace(go.Scatter(
         x=_jitter(_sa_s["intra_gap"].to_list()),
@@ -738,7 +715,7 @@ def _(gl_teams, go, mo, sa_teams):
         y=_jitter(_gl_s["opp_advantage"].to_list()),
         mode="markers",
         name="GL",
-        marker=dict(color="#F58518", opacity=0.25, size=5, symbol="diamond"),
+        marker=dict(color="#4C78A8", opacity=0.25, size=5, symbol="diamond"),
     ))
 
     # Reference lines
@@ -771,6 +748,101 @@ def _(mo):
 
     The **safe zone** is the centre rectangle: balanced pair *and* a fair match.
     GL keeps far more team slots in that safe zone than SA.
+    """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("## Gender Balance")
+
+
+@app.cell(hide_code=True)
+def _(go, mo, pl, sa_match, gl_match):
+    # Sex pattern matches simulation/utils.ts SEX_PATTERN = ['M', 'M', 'F', 'M', 'F']
+    _SEX = ['M', 'M', 'F', 'M', 'F']
+
+    def _player_sex(pid: str) -> str:
+        idx = int(pid[1:]) - 1  # "P3" → 2
+        return _SEX[idx % len(_SEX)]
+
+    def _team_type(ids: list[str]) -> str:
+        """Classify a team ignoring Unknown players."""
+        sexes = [_player_sex(p) for p in ids]
+        known = [s for s in sexes if s in ('M', 'F')]
+        if len(known) < 2:
+            return 'U'   # one or both unknown
+        if all(s == 'M' for s in known):
+            return 'MM'
+        if all(s == 'F' for s in known):
+            return 'FF'
+        return 'MF'
+
+    def _matchup_stats(match_df):
+        counts = {'MM vs FF': 0, 'MF vs MF': 0, 'MF vs MM': 0, 'MF vs FF': 0, 'MM vs MM': 0, 'FF vs FF': 0}
+        for row in match_df.iter_rows(named=True):
+            t1 = _team_type(row['team1Players'].split('|'))
+            t2 = _team_type(row['team2Players'].split('|'))
+            pair = tuple(sorted([t1, t2]))
+            if pair == ('FF', 'MM'):
+                counts['MM vs FF'] += 1
+            elif pair == ('MF', 'MF'):
+                counts['MF vs MF'] += 1
+            elif pair == ('MF', 'MM'):
+                counts['MF vs MM'] += 1
+            elif pair == ('FF', 'MF'):
+                counts['MF vs FF'] += 1
+            elif pair == ('MM', 'MM'):
+                counts['MM vs MM'] += 1
+            elif pair == ('FF', 'FF'):
+                counts['FF vs FF'] += 1
+            # U-type teams (unknown sex) are ignored — not present in simulation
+        total = sum(counts.values())
+        return {k: v / total * 100 for k, v in counts.items()}
+
+    _sa_pct = _matchup_stats(sa_match)
+    _gl_pct = _matchup_stats(gl_match)
+
+    _labels = ['MF vs MF', 'MF vs MM', 'MF vs FF', 'MM vs MM', 'FF vs FF', 'MM vs FF']
+    _colors = ['#54A24B', '#7fb3d3', '#b3d9b3', '#aaaacc', '#f5c1a5', '#e45756']  # red for bad
+
+    _fig = go.Figure()
+    for _lbl, _col in zip(_labels, _colors):
+        _fig.add_trace(go.Bar(
+            name=_lbl,
+            x=['SA', 'GL'],
+            y=[_sa_pct[_lbl], _gl_pct[_lbl]],
+            marker_color=_col,
+            text=[f"{_sa_pct[_lbl]:.1f}%", f"{_gl_pct[_lbl]:.1f}%"],
+            textposition='inside',
+        ))
+
+    _fig.update_layout(
+        barmode='stack',
+        height=400,
+        yaxis_title="% of matches",
+        legend=dict(orientation='h', y=-0.2),
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+    )
+    mo.ui.plotly(_fig)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        """
+    Each bar shows the gender composition of matches. The red segment (**MM vs FF**) is the
+    bad case — one all-male team against one all-female team.
+
+    **MF vs MF** is the ideal — both teams are mixed gender.
+    **MF vs MM** and **MF vs FF** are fine — at least one team has a balanced mix.
+    **MM vs MM** and **FF vs FF** are neutral same-gender mirrors, neither good nor bad.
+
+    GL's `GENDER_MISMATCH_PENALTY` strongly suppresses MM vs FF matchups.
+    SA has no gender awareness, so they occur naturally from the player sex distribution.
     """
     )
     return

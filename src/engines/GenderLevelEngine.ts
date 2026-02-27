@@ -11,9 +11,10 @@ import { SimulatedAnnealingBase } from './SimulatedAnnealingBase';
  * - Provide a small bias toward similar-level teammates
  */
 export class GenderLevelEngine extends SimulatedAnnealingBase implements ICourtAssignmentEngine {
+  protected override readonly COOLING_RATE: number = 0.9985;
   protected readonly GENDER_MISMATCH_PENALTY = 8000;
-  protected readonly LEVEL_BALANCE_PENALTY = 80;
-  protected readonly LEVEL_PAIR_BIAS = 15;
+  protected readonly LEVEL_BALANCE_PENALTY = 250;
+  protected readonly LEVEL_PAIR_BIAS = 120;
 
   getName(): string {
     return 'Smart Matching';

@@ -10,10 +10,10 @@ import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
  * Subclasses implement `evaluateTotalCost` and `evaluateTeamSplitCost`.
  */
 export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine implements ICourtAssignmentEngine {
-  protected readonly SA_ITERATIONS = 5000;
-  protected readonly INITIAL_TEMPERATURE = 2000.0;
-  protected readonly COOLING_RATE = 0.9995;
-  protected readonly MIN_TEMPERATURE = 0.1;
+  protected readonly SA_ITERATIONS: number = 5000;
+  protected readonly INITIAL_TEMPERATURE: number = 2000.0;
+  protected readonly COOLING_RATE: number = 0.9995;
+  protected readonly MIN_TEMPERATURE: number = 0.1;
 
   protected readonly TEAMMATE_REPEAT_PENALTY = 10000;
   protected readonly OPPONENT_REPEAT_PENALTY = 50;
