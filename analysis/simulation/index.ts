@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { engineMC as CourtAssignmentEngine } from '../../src/engines/MonteCarloEngine.ts';
 import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
 import { engineCG as ConflictGraphEngine } from '../../src/engines/ConflictGraphEngine.ts';
+import { engineGL as GenderLevelEngine } from '../../src/engines/GenderLevelEngine.ts';
 
 import { RandomBaselineEngine } from './RandomBaselineEngine.ts';
 import type {
@@ -42,7 +43,17 @@ const ALL_ENGINES = [
   { id: 'mc', name: 'Monte Carlo (MC)', engine: CourtAssignmentEngine, dir: 'mc_algo' },
   { id: 'sa', name: 'Simulated Annealing (SA)', engine: CourtAssignmentEngineSA, dir: 'sa_algo' },
   { id: 'cg', name: 'Conflict Graph (CG)', engine: ConflictGraphEngine, dir: 'cg_algo' },
+  { id: 'gl', name: 'Smart Matching (GL)', engine: GenderLevelEngine, dir: 'gl_algo' },
 ] as const;
+
+// CLI: npx tsx ./simulation/index.ts --engine gl
+//      npx tsx ./simulation/index.ts --engine gl,sa
+//      npx tsx ./simulation/index.ts          (runs all)
+const engineArgIdx = process.argv.indexOf('--engine');
+const engineFilter = engineArgIdx !== -1 ? process.argv[engineArgIdx + 1]?.split(',') : null;
+const enginesToRun = engineFilter
+  ? ALL_ENGINES.filter(e => engineFilter.includes(e.id))
+  : [...ALL_ENGINES];
 
 type EngineType = typeof ALL_ENGINES[number]['engine'];
 
@@ -53,7 +64,7 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
   matchPairEvents: MatchPairEvent[];
   benchStats: SessionBenchStats[];
 } => {
-  const players = toPlayerList(numPlayers);
+  const players = toPlayerList(numPlayers, PLAYER_LEVELS);
   const summaries: SimulationSummary[] = [];
   const pairEvents: PairEvent[] = [];
   const matchEvents: MatchEvent[] = [];
@@ -174,7 +185,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const elapsed = Date.now() - startTime;
 
   const pairEventHeaders = ['simulationId', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
-  const matchEventHeaders = ['simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
+  const matchEventHeaders = ['simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'matchAvgLevel', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
   const benchStatsHeaders = ['simulationId', 'numPlayers', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
 
   writeFileSync(resolve(engineDir, 'summary.csv'), toCsv(summaries));
@@ -319,7 +330,7 @@ console.log(`  Max courts: ${MAX_COURTS}`);
 
 const allResults: Record<string, ReturnType<typeof runEngine>> = {};
 
-for (const engineConfig of ALL_ENGINES) {
+for (const engineConfig of enginesToRun) {
   allResults[engineConfig.id] = runEngine(engineConfig);
 }
 
@@ -327,7 +338,7 @@ console.log(`\n${'═'.repeat(60)}`);
 console.log('FINAL COMPARISON SUMMARY');
 console.log(`${'═'.repeat(60)}`);
 
-const comparisonData = ALL_ENGINES.map(({ id, name }) => {
+const comparisonData = enginesToRun.map(({ id, name }) => {
   const result = allResults[id];
   return {
     engine: id,
@@ -375,5 +386,5 @@ for (const row of comparisonData) {
 
 console.log(`\n✓ Data saved to ${DATA_DIR}`);
 console.log(`  Files per engine: summary.csv, pair_events.csv, match_events.csv, bench_stats.csv, match_pair_summary.csv, player_stats.csv, config.json`);
-console.log(`  - random_baseline/, mc_algo/, sa_algo/, cg_algo/`);
+console.log(`  - ${enginesToRun.map(e => e.dir).join(', ')}`);
 console.log(`  - comparison_summary.csv`);
