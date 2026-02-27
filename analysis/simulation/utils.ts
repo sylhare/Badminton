@@ -47,7 +47,7 @@ export const simulateMatchOutcome = (team1Strength: number, team2Strength: numbe
   return Math.random() < pTeam1Wins ? 1 : 2;
 };
 
-const SEX_PATTERN: Array<'M' | 'F'> = ['M', 'M', 'F', 'M', 'F'];
+const GENDER_PATTERN: Array<'M' | 'F'> = ['M', 'M', 'F', 'M', 'F'];
 
 /**
  * Creates the player list for a simulation.
@@ -65,7 +65,7 @@ export const toPlayerList = (count: number, playerLevels?: Map<string, number>):
       isPresent: true,
       ...(playerLevels && {
         level: Math.min(100, Math.max(0, Math.round((skillLevel ?? 3) * 20 + (Math.random() - 0.5) * 10))),
-        sex: SEX_PATTERN[i % SEX_PATTERN.length],
+        sex: GENDER_PATTERN[i % GENDER_PATTERN.length],
       }),
     };
   });

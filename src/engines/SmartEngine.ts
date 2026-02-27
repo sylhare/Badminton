@@ -10,7 +10,7 @@ import { SimulatedAnnealingBase } from './SimulatedAnnealingBase';
  * - Penalize large level gaps between teams
  * - Provide a small bias toward similar-level teammates
  */
-export class GenderLevelEngine extends SimulatedAnnealingBase implements ICourtAssignmentEngine {
+export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignmentEngine {
   protected override readonly COOLING_RATE: number = 0.9985;
   protected readonly GENDER_MISMATCH_PENALTY = 8000;
   protected readonly LEVEL_BALANCE_PENALTY = 250;
@@ -104,4 +104,4 @@ export class GenderLevelEngine extends SimulatedAnnealingBase implements ICourtA
   }
 }
 
-export const engineGL = new GenderLevelEngine();
+export const engineGL = new SmartEngine();

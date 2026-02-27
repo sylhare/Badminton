@@ -24,7 +24,7 @@
 
 import type { EngineType, ICourtAssignmentEngine } from '../types';
 
-import { engineGL } from './GenderLevelEngine';
+import { engineGL } from './SmartEngine';
 import { engineMC } from './MonteCarloEngine';
 import { engineSA } from './SimulatedAnnealingEngine';
 import { engineCG } from './ConflictGraphEngine';

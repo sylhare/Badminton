@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { GenderLevelEngine } from '../../src/engines/GenderLevelEngine';
+import { SmartEngine } from '../../src/engines/SmartEngine';
 import type { Court, Player } from '../../src/types';
 
 /**
  * Test subclass that exposes protected methods as public.
  */
-class TestGenderLevelEngine extends GenderLevelEngine {
+class TestSmartEngine extends SmartEngine {
   public testCalculateGenderCost(team1: Player[], team2: Player[]): number {
     return this.calculateGenderCost(team1, team2);
   }
@@ -24,11 +24,11 @@ function makePlayer(id: string, sex?: Player['sex'], level?: number): Player {
   return { id, name: `Player ${id}`, isPresent: true, sex, level };
 }
 
-describe('GenderLevelEngine', () => {
-  let engine: TestGenderLevelEngine;
+describe('SmartEngine', () => {
+  let engine: TestSmartEngine;
 
   beforeEach(() => {
-    engine = new TestGenderLevelEngine();
+    engine = new TestSmartEngine();
     engine.resetHistory();
   });
 
