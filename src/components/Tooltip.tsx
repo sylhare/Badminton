@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const HOVER_DELAY_MS = 1500;
 
@@ -13,7 +13,7 @@ export function Tooltip({ text, testId }: TooltipProps) {
   const iconRef = useRef<HTMLSpanElement>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const computePos = (el: HTMLSpanElement) => {
+  const computePos = (el: HTMLSpanElement): { top: number; left: number } => {
     const rect = el.getBoundingClientRect();
     return { top: rect.bottom + 6, left: rect.left + rect.width / 2 };
   };

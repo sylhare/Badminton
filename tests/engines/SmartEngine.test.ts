@@ -107,21 +107,21 @@ describe('SmartEngine', () => {
     it('returns proportional cost for imbalanced teams (90+90 vs 10+10)', () => {
       const team1 = [makePlayer('1', undefined, 90), makePlayer('2', undefined, 90)];
       const team2 = [makePlayer('3', undefined, 10), makePlayer('4', undefined, 10)];
-      
+
       expect(engine.testCalculateLevelBalanceCost(team1, team2)).toBe(80 * engine.balancePenalty);
     });
 
     it('uses 50 as default level when undefined', () => {
       const team1 = [makePlayer('1'), makePlayer('2')];
       const team2 = [makePlayer('3'), makePlayer('4')];
-      
+
       expect(engine.testCalculateLevelBalanceCost(team1, team2)).toBe(0);
     });
 
     it('uses 50 as default for missing level', () => {
       const team1 = [makePlayer('1', undefined, 100), makePlayer('2', undefined, 100)];
-      const team2 = [makePlayer('3'), makePlayer('4')]; 
-      
+      const team2 = [makePlayer('3'), makePlayer('4')];
+
       expect(engine.testCalculateLevelBalanceCost(team1, team2)).toBe(50 * engine.balancePenalty);
     });
 
@@ -146,7 +146,7 @@ describe('SmartEngine', () => {
 
     it('returns proportional cost for very different teammates (100, 0)', () => {
       const team = [makePlayer('1', undefined, 100), makePlayer('2', undefined, 0)];
-      
+
       expect(engine.testCalculateLevelTeammateBias(team)).toBe(100 * engine.pairBias);
     });
 

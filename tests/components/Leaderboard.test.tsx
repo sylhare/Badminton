@@ -48,7 +48,7 @@ describe('Leaderboard Component', () => {
 
     render(<Leaderboard players={players} winCounts={winCounts} />);
 
-    expect(screen.getAllByRole('row')).toHaveLength(2); 
+    expect(screen.getAllByRole('row')).toHaveLength(2);
   });
 
   it('ranks players by wins descending', () => {
@@ -61,7 +61,7 @@ describe('Leaderboard Component', () => {
 
     render(<Leaderboard players={players} winCounts={winCounts} />);
 
-    const rows = screen.getAllByRole('row').slice(1); 
+    const rows = screen.getAllByRole('row').slice(1);
     expect(rows[0]).toHaveTextContent('Bob');
     expect(rows[1]).toHaveTextContent('Charlie');
     expect(rows[2]).toHaveTextContent('Alice');
