@@ -8,7 +8,7 @@ import Leaderboard from './components/Leaderboard';
 import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
-import { updatePlayersLevels } from './utils/levelUtils';
+import { levelRatingEngine } from './engines/LevelRatingEngine';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
 
 function App(): React.ReactElement {
@@ -100,10 +100,10 @@ function App(): React.ReactElement {
     setLastGeneratedAt(undefined);
   };
 
-  const handleScoreChange = (courtNumber: number, team1Score: number, team2Score: number) => {
+  const handleScoreChange = (courtNumber: number, score?: { team1: number; team2: number }) => {
     setAssignments(prev =>
       prev.map(c =>
-        c.courtNumber === courtNumber ? { ...c, score: { team1: team1Score, team2: team2Score } } : c,
+        c.courtNumber === courtNumber ? { ...c, score } : c,
       ),
     );
   };
@@ -114,7 +114,7 @@ function App(): React.ReactElement {
     // Update player levels based on completed games (courts with a winner)
     const assignmentsWithWinners = assignments.filter(c => c.winner);
     const nextPlayers = assignmentsWithWinners.length > 0
-      ? updatePlayersLevels(assignmentsWithWinners, players)
+      ? levelRatingEngine.updatePlayersLevels(assignmentsWithWinners, players)
       : players;
     if (assignmentsWithWinners.length > 0) {
       setPlayers(nextPlayers);
@@ -264,7 +264,12 @@ function App(): React.ReactElement {
           </div>
         </div>
 
-        <Leaderboard players={players} winCounts={engine().getWinCounts()} />
+        <Leaderboard
+          players={players}
+          winCounts={engine().getWinCounts()}
+          lossCounts={engine().getStats().lossCountMap}
+          isSmartEngineEnabled={isSmartEngineEnabled}
+        />
       </div>
 
       <footer className="app-footer">

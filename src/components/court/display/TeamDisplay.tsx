@@ -1,7 +1,6 @@
 import React from 'react';
 
 import type { Player } from '../../../types';
-import { triggerConfetti } from '../../../utils/confetti';
 import TeamPlayerList from '../team/TeamPlayerList';
 
 interface TeamDisplayProps {
@@ -9,7 +8,7 @@ interface TeamDisplayProps {
   players: Player[];
   showVsDivider?: boolean;
   isWinner?: boolean;
-  onTeamClick?: (teamNumber: number) => void;
+  onTeamClick?: (event: React.MouseEvent, teamNumber: number) => void;
   isClickable?: boolean;
 }
 
@@ -23,12 +22,7 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({
 }) => {
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (isClickable && onTeamClick) {
-      if (!isWinner) {
-        const x = event.clientX;
-        const y = event.clientY;
-        triggerConfetti(x, y, 40);
-      }
-      onTeamClick(teamNumber);
+      onTeamClick(event, teamNumber);
     }
   };
 

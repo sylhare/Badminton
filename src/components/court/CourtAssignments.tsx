@@ -30,7 +30,7 @@ interface CourtAssignmentsProps {
   onNumberOfCourtsChange: (courts: number) => void;
   onGenerateAssignments: () => void;
   onWinnerChange?: (courtNumber: number, winner: WinnerSelection) => void;
-  onScoreChange?: (courtNumber: number, team1Score: number, team2Score: number) => void;
+  onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
   hasManualCourtSelection?: boolean;
   onViewBenchCounts?: () => void;
   manualCourtSelection: ManualCourtSelection | null;

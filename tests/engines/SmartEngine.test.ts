@@ -7,6 +7,9 @@ import type { Court, Player } from '../../src/types';
  * Test subclass that exposes protected methods as public.
  */
 class TestSmartEngine extends SmartEngine {
+  public get pairBias(): number { return this.LEVEL_PAIR_BIAS; }
+  public get balancePenalty(): number { return this.LEVEL_BALANCE_PENALTY; }
+
   public testCalculateGenderCost(team1: Player[], team2: Player[]): number {
     return this.calculateGenderCost(team1, team2);
   }
@@ -104,22 +107,22 @@ describe('SmartEngine', () => {
     it('returns proportional cost for imbalanced teams (90+90 vs 10+10)', () => {
       const team1 = [makePlayer('1', undefined, 90), makePlayer('2', undefined, 90)];
       const team2 = [makePlayer('3', undefined, 10), makePlayer('4', undefined, 10)];
-      // avg1 = 90, avg2 = 10, diff = 80, cost = 80 * 80 = 6400
-      expect(engine.testCalculateLevelBalanceCost(team1, team2)).toBe(6400);
+      
+      expect(engine.testCalculateLevelBalanceCost(team1, team2)).toBe(80 * engine.balancePenalty);
     });
 
     it('uses 50 as default level when undefined', () => {
       const team1 = [makePlayer('1'), makePlayer('2')];
       const team2 = [makePlayer('3'), makePlayer('4')];
-      // Both default to 50, diff = 0
+      
       expect(engine.testCalculateLevelBalanceCost(team1, team2)).toBe(0);
     });
 
     it('uses 50 as default for missing level', () => {
       const team1 = [makePlayer('1', undefined, 100), makePlayer('2', undefined, 100)];
-      const team2 = [makePlayer('3'), makePlayer('4')]; // defaults to 50 each
-      // avg1 = 100, avg2 = 50, diff = 50, cost = 50 * 80 = 4000
-      expect(engine.testCalculateLevelBalanceCost(team1, team2)).toBe(4000);
+      const team2 = [makePlayer('3'), makePlayer('4')]; 
+      
+      expect(engine.testCalculateLevelBalanceCost(team1, team2)).toBe(50 * engine.balancePenalty);
     });
 
     it('scales proportionally with level difference', () => {
@@ -143,8 +146,8 @@ describe('SmartEngine', () => {
 
     it('returns proportional cost for very different teammates (100, 0)', () => {
       const team = [makePlayer('1', undefined, 100), makePlayer('2', undefined, 0)];
-      // |100 - 0| * 15 = 1500
-      expect(engine.testCalculateLevelTeammateBias(team)).toBe(1500);
+      
+      expect(engine.testCalculateLevelTeammateBias(team)).toBe(100 * engine.pairBias);
     });
 
     it('returns lower cost for similar levels (70, 80) vs very different (20, 100)', () => {
@@ -161,7 +164,6 @@ describe('SmartEngine', () => {
 
     it('uses 50 as default level when undefined', () => {
       const team = [makePlayer('1'), makePlayer('2')];
-      // |50 - 50| * 15 = 0
       expect(engine.testCalculateLevelTeammateBias(team)).toBe(0);
     });
   });
@@ -188,7 +190,6 @@ describe('SmartEngine', () => {
     });
 
     it('produces better gender balance than a random all-same-gender split', () => {
-      // Run multiple times and verify gender cost is 0 more often than not
       const players: Player[] = [
         makePlayer('1', 'F', 80),
         makePlayer('2', 'M', 20),
@@ -206,7 +207,6 @@ describe('SmartEngine', () => {
           if (cost > 0) genderMismatchCount++;
         }
       }
-      // With smart engine, gender mismatch should be rare/zero
       expect(genderMismatchCount).toBeLessThan(5);
     });
 

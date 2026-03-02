@@ -223,6 +223,15 @@ export async function completeFullWorkflow(
 }
 
 /**
+ * Toggles the Smart Engine on or off.
+ * Expands the Manage Players section first if it is collapsed.
+ */
+export async function toggleSmartEngine(page: Page): Promise<void> {
+  await expandSectionIfNeeded(page, 'Manage Players');
+  await page.getByTestId('smart-engine-toggle').click();
+}
+
+/**
  * Sets up a game with the given players and generates initial court assignments
  */
 export async function setupGameWithPlayers(page: Page, players: string[]): Promise<void> {

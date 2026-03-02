@@ -62,7 +62,7 @@ describe('CourtCard', () => {
       expect(screen.getByText('👑')).toBeInTheDocument();
     });
 
-    it('calls onWinnerChange when singles player is clicked', async () => {
+    it('calls onWinnerChange when singles player is clicked and modal is skipped', async () => {
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
 
@@ -75,6 +75,10 @@ describe('CourtCard', () => {
 
       const aliceContainer = screen.getByText('Alice').closest('.singles-player');
       await user.click(aliceContainer!);
+
+      // Modal should open — skip it to confirm winner without score
+      const skipButton = screen.getByTestId('score-modal-skip');
+      await user.click(skipButton);
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(2, 1);
     });
@@ -125,7 +129,7 @@ describe('CourtCard', () => {
       expect(team2).toHaveClass('team-winner');
     });
 
-    it('calls onWinnerChange when doubles team is clicked', async () => {
+    it('calls onWinnerChange when doubles team is clicked and modal is skipped', async () => {
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
 
@@ -138,6 +142,10 @@ describe('CourtCard', () => {
 
       const team1 = container.querySelector('[data-testid="team-1"]');
       await user.click(team1!);
+
+      // Modal should open — skip it to confirm winner without score
+      const skipButton = screen.getByTestId('score-modal-skip');
+      await user.click(skipButton);
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(3, 1);
     });

@@ -78,7 +78,7 @@ describe('DoublesMatch', () => {
     await user.click(team1Container!);
 
     expect(mockOnTeamClick).toHaveBeenCalledTimes(1);
-    expect(mockOnTeamClick).toHaveBeenCalledWith(1);
+    expect(mockOnTeamClick).toHaveBeenCalledWith(expect.any(Object), 1);
   });
 
   it('applies animating-blur class when isAnimating is true', () => {
