@@ -33,6 +33,7 @@ interface CourtAssignmentsProps {
   onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
   hasManualCourtSelection?: boolean;
   onViewBenchCounts?: () => void;
+  hasHistoricalWinners?: boolean;
   manualCourtSelection: ManualCourtSelection | null;
   onManualCourtSelectionChange: (selection: ManualCourtSelection | null) => void;
   lastGeneratedAt?: number;
@@ -49,6 +50,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   onScoreChange,
   hasManualCourtSelection = false,
   onViewBenchCounts,
+  hasHistoricalWinners = false,
   manualCourtSelection,
   onManualCourtSelectionChange,
   lastGeneratedAt,
@@ -194,7 +196,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             </div>
           )}
 
-          {onWinnerChange && !assignments.some(c => c.winner !== undefined) && (
+          {onWinnerChange && !hasHistoricalWinners && !assignments.some(c => c.winner !== undefined) && (
             <div className="winner-instructions">
               💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the
               winning

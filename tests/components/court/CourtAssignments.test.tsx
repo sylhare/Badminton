@@ -336,6 +336,32 @@ describe('Winner Selection', () => {
       expect(screen.getByText(/Click on a team to mark them as the winner/)).toBeInTheDocument();
     });
 
+    it('should not show winner instructions when there are historical winners but no current winners', () => {
+      render(
+        <CourtAssignments
+          {...baseProps}
+          assignments={doublesAssignment}
+          onWinnerChange={mockOnWinnerChange}
+          hasHistoricalWinners={true}
+        />,
+      );
+
+      expect(screen.queryByText(/Click on a team to mark them as the winner/)).not.toBeInTheDocument();
+    });
+
+    it('should show winner instructions when there are no historical or current winners', () => {
+      render(
+        <CourtAssignments
+          {...baseProps}
+          assignments={doublesAssignment}
+          onWinnerChange={mockOnWinnerChange}
+          hasHistoricalWinners={false}
+        />,
+      );
+
+      expect(screen.getByText(/Click on a team to mark them as the winner/)).toBeInTheDocument();
+    });
+
     it('should handle winner toggle workflow', async () => {
       const user = userEvent.setup();
 

@@ -32,6 +32,22 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleScore1Change = (value: string) => {
+    setScore1(value);
+    if (winnerTeam === 1) {
+      const n = parseInt(value, 10);
+      if (!isNaN(n) && n > 21) setScore2(String(n - 2));
+    }
+  };
+
+  const handleScore2Change = (value: string) => {
+    setScore2(value);
+    if (winnerTeam === 2) {
+      const n = parseInt(value, 10);
+      if (!isNaN(n) && n > 21) setScore1(String(n - 2));
+    }
+  };
+
   const handleConfirm = () => {
     const n1 = parseInt(score1, 10);
     const n2 = parseInt(score2, 10);
@@ -87,7 +103,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
               type="number"
               min="0"
               value={score1}
-              onChange={(e) => setScore1(e.target.value)}
+              onChange={(e) => handleScore1Change(e.target.value)}
               placeholder="T1"
               aria-label="Team 1 score"
               data-testid="score-input-team1"
@@ -97,7 +113,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
               type="number"
               min="0"
               value={score2}
-              onChange={(e) => setScore2(e.target.value)}
+              onChange={(e) => handleScore2Change(e.target.value)}
               placeholder="T2"
               aria-label="Team 2 score"
               data-testid="score-input-team2"

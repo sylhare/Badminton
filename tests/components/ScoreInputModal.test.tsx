@@ -82,6 +82,43 @@ describe('ScoreInputModal', () => {
     });
   });
 
+  describe('loser auto-fill when winner scores above 21', () => {
+    it('sets loser score to winner − 2 when team 1 winner scores 23', async () => {
+      const { input1, input2 } = renderModal(1);
+      await user.clear(input1());
+      await user.type(input1(), '23');
+      expect(input2().value).toBe('21');
+    });
+
+    it('sets loser score to winner − 2 when team 1 winner scores 25', async () => {
+      const { input1, input2 } = renderModal(1);
+      await user.clear(input1());
+      await user.type(input1(), '25');
+      expect(input2().value).toBe('23');
+    });
+
+    it('sets loser score to winner − 2 when team 2 winner scores 23', async () => {
+      const { input1, input2 } = renderModal(2);
+      await user.clear(input2());
+      await user.type(input2(), '23');
+      expect(input1().value).toBe('21');
+    });
+
+    it('does not auto-fill loser when winner scores exactly 21', async () => {
+      const { input1, input2 } = renderModal(1);
+      await user.clear(input1());
+      await user.type(input1(), '21');
+      expect(input2().value).toBe('');
+    });
+
+    it('does not auto-fill winner when loser score changes above 21', async () => {
+      const { input1, input2 } = renderModal(1);
+      await user.clear(input1());
+      await user.type(input2(), '23');
+      expect(input1().value).toBe('');
+    });
+  });
+
   describe('confirm enabled with valid scores', () => {
     it('is enabled when winner score equals loser score', async () => {
       const { input1, input2, confirmBtn } = renderModal(1);
