@@ -1052,45 +1052,6 @@ h1 {
     animation: courtShake 0.4s ease-in-out;
 }
 
-.court-score-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.court-score-input {
-    width: 52px;
-    padding: 4px 6px;
-    font-size: 0.85rem;
-    text-align: center;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    background: #f8f8f8;
-    color: #555;
-    -moz-appearance: textfield;
-}
-
-.court-score-input::-webkit-outer-spin-button,
-.court-score-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.court-score-input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    background: white;
-}
-
-.court-score-separator {
-    font-size: 0.9rem;
-    color: #999;
-    user-select: none;
-}
 
 @keyframes courtShake {
     0%, 100% {
@@ -1414,6 +1375,66 @@ h1 {
     margin: 0;
     color: #4a5568;
     line-height: 1.5;
+}
+
+.score-modal-teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 12px 0 8px;
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+
+.score-modal-team-name {
+    font-weight: 600;
+    text-align: center;
+}
+
+.score-modal-vs {
+    color: #a0aec0;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.score-modal-inputs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.score-modal-inputs input[type="number"] {
+    width: 60px;
+    padding: 6px 8px;
+    font-size: 1rem;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #f8f8f8;
+    color: #2d3748;
+    -moz-appearance: textfield;
+}
+
+.score-modal-inputs input[type="number"]::-webkit-outer-spin-button,
+.score-modal-inputs input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.score-modal-inputs input[type="number"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: white;
+}
+
+.court-score-separator {
+    font-size: 0.9rem;
+    color: #999;
+    user-select: none;
 }
 
 .modal-footer {

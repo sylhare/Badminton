@@ -71,16 +71,16 @@ class ConfettiEffect {
 
   private getRandomColor(): string {
     const colors = [
-      '#FFD700', // Gold
-      '#FF6B6B', // Red
-      '#4ECDC4', // Teal
-      '#45B7D1', // Blue
-      '#96CEB4', // Green
-      '#FECA57', // Yellow
-      '#FF9FF3', // Pink
-      '#54A0FF', // Light Blue
-      '#F8B500', // Orange
-      '#A8E6CF', // Mint
+      '#FFD700', 
+      '#FF6B6B', 
+      '#4ECDC4', 
+      '#45B7D1', 
+      '#96CEB4', 
+      '#FECA57', 
+      '#FF9FF3', 
+      '#54A0FF', 
+      '#F8B500', 
+      '#A8E6CF', 
     ];
     return colors[Math.floor(Math.random() * colors.length)];
   }

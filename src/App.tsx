@@ -8,7 +8,7 @@ import Leaderboard from './components/Leaderboard';
 import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
-import { levelRatingEngine } from './engines/LevelRatingEngine';
+import { levelTracker } from './engines/LevelTracker';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
 
 function App(): React.ReactElement {
@@ -114,7 +114,7 @@ function App(): React.ReactElement {
     // Update player levels based on completed games (courts with a winner)
     const assignmentsWithWinners = assignments.filter(c => c.winner);
     const nextPlayers = assignmentsWithWinners.length > 0
-      ? levelRatingEngine.updatePlayersLevels(assignmentsWithWinners, players)
+      ? levelTracker.updatePlayersLevels(assignmentsWithWinners, players)
       : players;
     if (assignmentsWithWinners.length > 0) {
       setPlayers(nextPlayers);
