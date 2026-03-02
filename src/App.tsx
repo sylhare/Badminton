@@ -255,6 +255,7 @@ function App(): React.ReactElement {
               onGenerateAssignments={generateAssignments}
               onWinnerChange={handleWinnerChange}
               onScoreChange={handleScoreChange}
+              hasHistoricalWinners={engine().getWinCounts().size > 0}
               hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
               onViewBenchCounts={handleViewBenchCounts}
               manualCourtSelection={manualCourtSelection}

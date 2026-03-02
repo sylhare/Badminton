@@ -106,8 +106,9 @@ export class LevelTracker {
       applyLevelDelta(team2, team2Actual, team2Expected);
 
       if (court.score) {
-        const updateAvgScore = (teamPlayers: Player[], teamScore: number) => {
-          const cappedScore = Math.min(teamScore, 21);
+        const updateAvgScore = (teamPlayers: Player[], teamScore: number, isWinner: boolean) => {
+          const cap = isWinner ? 21 : 20;
+          const cappedScore = Math.min(teamScore, cap);
           for (const p of teamPlayers) {
             const current = updatedPlayers.get(p.id);
             if (!current) continue;
@@ -119,8 +120,8 @@ export class LevelTracker {
           }
         };
 
-        updateAvgScore(team1, court.score.team1);
-        updateAvgScore(team2, court.score.team2);
+        updateAvgScore(team1, court.score.team1, court.winner === 1);
+        updateAvgScore(team2, court.score.team2, court.winner === 2);
       }
     }
 
