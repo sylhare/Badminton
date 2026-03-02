@@ -14,21 +14,45 @@ export class LevelTracker {
    * - Loser < 6           → K = 24  (most dominant win)
    *
    * Returns K = 8 when no score is available (neutral baseline).
+   *
+   * When teamPlayers is provided, the raw K is further scaled by a balance factor
+   * [0.5, 1.0] based on within-team level spread — the more unbalanced the team,
+   * the less informative the result is about individual ability.
+   *
+   * Balance factor:
+   * - Balanced team / singles → 1.0  (no reduction)
+   * - [0, 100] team           → 0.5  (K halved)
    */
-  getKFactor(score?: { team1: number; team2: number }, winner?: 1 | 2): number {
-    if (!score || !winner) return 8;
+  getKFactor(
+    score?: { team1: number; team2: number },
+    winner?: 1 | 2,
+    teamPlayers?: Player[]
+  ): number {
+    if (!score || !winner) return 8 * this.teamBalanceFactor(teamPlayers);
 
     const winnerScore = winner === 1 ? score.team1 : score.team2;
     const loserScore = winner === 1 ? score.team2 : score.team1;
 
-    if (winnerScore !== 21) return 6;
+    let rawK: number;
+    if (winnerScore !== 21) {
+      rawK = 6;
+    } else {
+      const diff = 21 - loserScore;
+      if (diff <= 3) rawK = 8;
+      else if (diff <= 6) rawK = 12;
+      else if (diff <= 10) rawK = 16;
+      else if (diff <= 15) rawK = 20;
+      else rawK = 24;
+    }
 
-    const diff = 21 - loserScore;
-    if (diff <= 3) return 8;
-    if (diff <= 6) return 12;
-    if (diff <= 10) return 16;
-    if (diff <= 15) return 20;
-    return 24;
+    return rawK * this.teamBalanceFactor(teamPlayers);
+  }
+
+  private teamBalanceFactor(players?: Player[]): number {
+    if (!players || players.length <= 1) return 1;
+    const avg = players.reduce((s, p) => s + (p.level ?? 50), 0) / players.length;
+    const variance = players.reduce((s, p) => s + Math.pow((p.level ?? 50) - avg, 2), 0) / players.length;
+    return 1 - 0.5 * Math.min(1, Math.sqrt(variance) / 50);
   }
 
   /**
@@ -45,6 +69,9 @@ export class LevelTracker {
    * Only courts with both a winner and teams assigned are processed.
    * Uses the Elo formula with a scale factor of 50 to compute expected win probabilities.
    * Average score tracking is updated when a score is recorded.
+   *
+   * Each team's K-factor is adjusted by a per-team balance factor [0.5, 1.0] based on
+   * within-team level spread — the more unbalanced the team, the smaller the rating change.
    */
   updatePlayersLevels(courts: Court[], players: Player[]): Player[] {
     const updatedPlayers = new Map<string, Player>(players.map(p => [p.id, { ...p }]));
@@ -53,7 +80,6 @@ export class LevelTracker {
       if (!court.winner || !court.teams) continue;
 
       const { team1, team2 } = court.teams;
-      const k = this.getKFactor(court.score, court.winner);
 
       const team1Avg = this.getTeamAvgLevel(team1);
       const team2Avg = this.getTeamAvgLevel(team2);
@@ -65,6 +91,7 @@ export class LevelTracker {
       const team2Actual = court.winner === 2 ? 1 : 0;
 
       const applyLevelDelta = (teamPlayers: Player[], actual: number, expected: number) => {
+        const k = this.getKFactor(court.score, court.winner, teamPlayers);
         const delta = k * (actual - expected);
         for (const p of teamPlayers) {
           const current = updatedPlayers.get(p.id);

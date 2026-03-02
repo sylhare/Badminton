@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 
 import type { Player } from '../types';
@@ -22,6 +22,13 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
 }) => {
   const [score1, setScore1] = useState('');
   const [score2, setScore2] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setScore1(winnerTeam === 1 ? '21' : '');
+      setScore2(winnerTeam === 2 ? '21' : '');
+    }
+  }, [isOpen, winnerTeam]);
 
   if (!isOpen) return null;
 
@@ -48,6 +55,13 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     setScore2('');
     onCancel();
   };
+
+  const n1 = parseInt(score1, 10);
+  const n2 = parseInt(score2, 10);
+  const isConfirmDisabled = !isNaN(n1) && !isNaN(n2) && (
+    (winnerTeam === 1 && n1 < n2) ||
+    (winnerTeam === 2 && n2 < n1)
+  );
 
   const teamNames = (players: Player[]) => players.map(p => p.name).join(' & ');
 
@@ -102,6 +116,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
           <button
             className="button button-primary"
             onClick={handleConfirm}
+            disabled={isConfirmDisabled}
             data-testid="score-modal-confirm"
           >
             Confirm
