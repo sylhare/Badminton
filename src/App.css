@@ -2132,12 +2132,12 @@ h1 {
     font-size: 0.95rem;
 }
 
-.sex-selector {
+.gender-selector {
     display: flex;
     gap: 10px;
 }
 
-.sex-pill {
+.gender-pill {
     padding: 8px 20px;
     border-radius: 20px;
     border: 2px solid #e2e8f0;
@@ -2149,12 +2149,12 @@ h1 {
     transition: all 0.2s ease;
 }
 
-.sex-pill:hover {
+.gender-pill:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
 }
 
-.sex-pill.active {
+.gender-pill.active {
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: white;

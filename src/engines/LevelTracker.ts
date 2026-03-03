@@ -13,7 +13,7 @@ export class LevelTracker {
    * - Loser 6–10          → K = 20
    * - Loser < 6           → K = 24  (most dominant win)
    *
-   * Returns K = 8 when no score is available (neutral baseline).
+   * Returns K = 6 when no score is available (same as deuce).
    *
    * When teamPlayers is provided, the raw K is further scaled by a balance factor
    * [0.5, 1.0] based on within-team level spread — the more unbalanced the team,
@@ -28,7 +28,7 @@ export class LevelTracker {
     winner?: 1 | 2,
     teamPlayers?: Player[]
   ): number {
-    if (!score || !winner) return 8 * this.teamBalanceFactor(teamPlayers);
+    if (!score || !winner) return 6 * this.teamBalanceFactor(teamPlayers);
 
     const winnerScore = winner === 1 ? score.team1 : score.team2;
     const loserScore = winner === 1 ? score.team2 : score.team1;

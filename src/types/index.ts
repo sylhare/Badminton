@@ -2,7 +2,7 @@ export interface Player {
   id: string;
   name: string;
   isPresent: boolean;
-  sex?: 'M' | 'F' | 'Unknown';
+  gender?: 'M' | 'F' | 'Unknown';
   level?: number;
   averageScore?: number;
   scoredGames?: number;

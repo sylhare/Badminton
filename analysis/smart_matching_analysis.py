@@ -51,16 +51,18 @@ def _(mo, sa_config):
     _counts = ", ".join(str(c) for c in sa_config.get("playerCounts", []))
     mo.md(
         f"""
-    # Smart Matching (GL) vs Simulated Annealing (SA)
+    # Smart Matching (SL) vs Simulated Annealing (SA)
 
-    Comparing the standard SA engine against the Gender/Level-aware GL engine across
+    Comparing the standard SA engine against the **Smart (SL)** engine across
     **{_runs} simulations × {_rounds} rounds** for player counts [{_counts}].
 
+    **SL is the Smart engine** — it uses player sex and skill level to avoid gender-homogeneous
+    courts and minimise level gaps between teams, producing fairer and more balanced matchups.
+
     Players are assigned a **sex** (60% M / 40% F) and a **skill level** (1–5 → 20–100).
-    The GL engine uses these to avoid gender-homogeneous courts and minimise level gaps between teams.
 
     ---
-    """
+"""
     )
     return
 
@@ -75,7 +77,7 @@ def _(sl_config, mo, sa_config):
     _sl_win = sl_config["levelBasedBalance"]["strongerTeamWinRate"]
     mo.md(
         f"""
-    | Metric | SA | GL |
+    | Metric | SA | SL |
     |:-------|---:|---:|
     | Zero-repeat rate | {_sa_zero:.1f}% | {_sl_zero:.1f}% |
     | Avg strength differential | {_sa_diff:.2f} | {_sl_diff:.2f} |
@@ -105,7 +107,7 @@ def _(sl_summary, go, make_subplots, mo, pl, sa_summary):
 
     _fig.add_trace(
         go.Bar(
-            x=["SA", "GL"],
+            x=["SA", "SL"],
             y=[round(_sa_zero_pct, 1), round(_sl_zero_pct, 1)],
             marker_color=["#54A24B", "#4C78A8"],
             text=[f"{_sa_zero_pct:.1f}%", f"{_sl_zero_pct:.1f}%"],
@@ -139,7 +141,7 @@ def _(sl_summary, go, make_subplots, mo, pl, sa_summary):
         go.Bar(
             x=[str(b) for b in _buckets],
             y=[_sl_map.get(b, 0) for b in _buckets],
-            name="GL",
+            name="SL",
             marker_color="#4C78A8",
         ),
         row=1,
@@ -163,8 +165,8 @@ def _(sl_summary, go, make_subplots, mo, pl, sa_summary):
 def _(mo):
     mo.md(
         """
-    Both engines avoid repeat pairings well. GL shows a slightly higher repeat rate because
-    its level/gender constraints narrow the valid partner pool, occasionally forcing the same
+    Both engines avoid repeat pairings well. SL shows a slightly higher repeat rate because
+    its smart constraints narrow the valid partner pool, occasionally forcing the same
     pair together again.
     """
     )
@@ -209,11 +211,11 @@ def _(sl_pairs, go, make_subplots, mo, pl, sa_pairs):
         row=1,
         col=1,
     )
-    # GL: outline only — wide spread showing level clustering
+    # SL: outline only — wide spread showing level clustering
     _fig.add_trace(
         go.Histogram(
             x=_sl_ratio,
-            name="GL",
+            name="SL",
             marker=dict(
                 color="rgba(0,0,0,0)",
                 line=dict(color="#4C78A8", width=2),
@@ -230,7 +232,7 @@ def _(sl_pairs, go, make_subplots, mo, pl, sa_pairs):
         col=2,
     )
     _fig.add_trace(
-        go.Box(y=_sl_ratio, name="GL", marker_color="#4C78A8", showlegend=False),
+        go.Box(y=_sl_ratio, name="SL", marker_color="#4C78A8", showlegend=False),
         row=1,
         col=2,
     )
@@ -256,9 +258,9 @@ def _(mo):
     **SA** assigns all pairs an almost identical teammate probability (~33%, std = 0.016) —
     every pair is equally likely to be teammates or opponents regardless of skill.
 
-    **GL** polarises pairs by level: compatible-level pairs end up as teammates far more often
+    **SL** polarises pairs by level: compatible-level pairs end up as teammates far more often
     (ratio up to 0.87), while cross-level pairs are rarely teammates (ratio as low as 0.05).
-    The spread of the teammate rate is **10× wider** for GL (std = 0.16 vs 0.016).
+    The spread of the teammate rate is **10× wider** for SL (std = 0.16 vs 0.016).
     """
     )
     return
@@ -301,7 +303,7 @@ def _(sl_match, go, make_subplots, mo, sa_match):
     _fig.add_trace(
         go.Histogram(
             x=_sl_lvl,
-            name=f"GL (σ={_sl_std:.1f})",
+            name=f"SL (σ={_sl_std:.1f})",
             opacity=0.7,
             marker_color="#4C78A8",
             xbins=dict(start=15, size=5),
@@ -315,7 +317,7 @@ def _(sl_match, go, make_subplots, mo, sa_match):
         col=2,
     )
     _fig.add_trace(
-        go.Box(y=_sl_lvl, name="GL", marker_color="#4C78A8", showlegend=False),
+        go.Box(y=_sl_lvl, name="SL", marker_color="#4C78A8", showlegend=False),
         row=1,
         col=2,
     )
@@ -339,8 +341,8 @@ def _(sl_match, mo, sa_match):
     _sl_std = sl_match["matchAvgLevel"].std()
     mo.md(
         f"""
-    GL's histogram **pulsates** — peaks at the natural skill tiers (20, 40, 60, 80, 100)
-    with valleys in between. This is expected: GL actively groups same-level players on the
+    SL's histogram **pulsates** — peaks at the natural skill tiers (20, 40, 60, 80, 100)
+    with valleys in between. This is expected: SL actively groups same-level players on the
     same court, so most courts end up at a pure tier average rather than a blend.
     The larger σ (**{_sl_std:.1f}** vs **{_sa_std:.1f}** for SA) reflects this tier
     segregation — some courts are all-beginners, others all-advanced.
@@ -391,7 +393,7 @@ def _(sl_match, go, make_subplots, mo, sa_match):
         col=1,
     )
     _fig.add_trace(
-        go.Bar(x=_labels, y=_sl_pct, name="GL", marker_color="#4C78A8", opacity=0.85),
+        go.Bar(x=_labels, y=_sl_pct, name="SL", marker_color="#4C78A8", opacity=0.85),
         row=1,
         col=1,
     )
@@ -410,7 +412,7 @@ def _(sl_match, go, make_subplots, mo, sa_match):
     _fig.add_trace(
         go.Histogram(
             x=_sl_diff,
-            name=f"GL (μ={_sl_mean:.2f})",
+            name=f"SL (μ={_sl_mean:.2f})",
             opacity=0.75,
             marker_color="#4C78A8",
             xbins=dict(start=-0.5, size=1),
@@ -451,10 +453,10 @@ def _(sl_match, mo, pl, sa_match):
     _ratio = _sa_mean / _sl_mean
     mo.md(
         f"""
-    This is the biggest win for GL. **{_sl_zero_pct:.0f}%** of GL matches have perfectly
+    This is the biggest win for SL. **{_sl_zero_pct:.0f}%** of SL matches have perfectly
     balanced teams (diff = 0) vs **{_sa_zero_pct:.0f}%** for SA. The average strength
-    differential drops from **{_sa_mean:.2f}** (SA) to **{_sl_mean:.2f}** (GL) —
-    a **{_ratio:.1f}×** improvement. The GL engine explicitly minimises the skill gap
+    differential drops from **{_sa_mean:.2f}** (SA) to **{_sl_mean:.2f}** (SL) —
+    a **{_ratio:.1f}×** improvement. The SL engine explicitly minimises the skill gap
     between opposing teams, making games far more competitive.
     """
     )
@@ -535,7 +537,7 @@ def _(sl_teams, go, make_subplots, mo, pl, sa_teams):
     _fig.add_trace(
         go.Histogram(
             x=sl_teams["intra_gap"].to_list(),
-            name="GL",
+            name="SL",
             marker=dict(color="rgba(0,0,0,0)", line=dict(color="#4C78A8", width=2)),
             xbins=dict(start=0, size=10),
         ),
@@ -544,7 +546,7 @@ def _(sl_teams, go, make_subplots, mo, pl, sa_teams):
     )
     _fig.add_trace(
         go.Bar(
-            x=["SA", "GL"],
+            x=["SA", "SL"],
             y=[round(_sa_d, 2), round(_sl_d, 2)],
             marker_color=["#54A24B", "#4C78A8"],
             text=[f"{_sa_d:.2f}%", f"{_sl_d:.2f}%"],
@@ -574,14 +576,14 @@ def _(mo):
     mo.md(
         """
     **Partner Level Gap**: how far apart (in level) two teammates are.
-    GL's level-pair bias pairs similar-level players together, so most teammates
+    SL's level-pair bias pairs similar-level players together, so most teammates
     are within 20 points. SA assigns partners randomly — mismatched pairs (60+ gap)
     are much more common.
 
     **Danger Zone**: share of team slots that fall outside the safe zone — flagged when ANY of:
     a large internal pair gap (≥ 40), facing much stronger opponents (advantage ≥ 20), or
     facing much weaker opponents (advantage ≤ -20). Even a balanced pair in a hopelessly
-    uneven match counts. GL produces significantly fewer such slots than SA.
+    uneven match counts. SL produces significantly fewer such slots than SA.
     """
     )
     return
@@ -616,7 +618,7 @@ def _(sl_teams, go, make_subplots, mo, pl, sa_teams):
         cols=2,
         subplot_titles=(
             "SA — Team vs Opponent avg level",
-            "GL — Team vs Opponent avg level",
+            "SL — Team vs Opponent avg level",
         ),
     )
     _fig.add_trace(
@@ -638,7 +640,7 @@ def _(sl_teams, go, make_subplots, mo, pl, sa_teams):
             y=_labels,
             colorscale="Blues",
             showscale=False,
-            name="GL",
+            name="SL",
         ),
         row=1,
         col=2,
@@ -664,7 +666,7 @@ def _(mo):
     Each cell is the number of team slots where **my team averaged X** and the
     **opponent averaged Y**. Balanced matches sit on the diagonal (X = Y).
 
-    GL clusters tightly on the diagonal — teams almost always face opponents of
+    SL clusters tightly on the diagonal — teams almost always face opponents of
     the same average level. SA spreads off-diagonal, producing many unequal matchups
     where one team is systematically stronger.
     """
@@ -714,7 +716,7 @@ def _(sl_teams, go, mo, sa_teams):
         x=_jitter(_sl_s["intra_gap"].to_list()),
         y=_jitter(_sl_s["opp_advantage"].to_list()),
         mode="markers",
-        name="GL",
+        name="SL",
         marker=dict(color="#4C78A8", opacity=0.25, size=5, symbol="diamond"),
     ))
 
@@ -747,7 +749,7 @@ def _(mo):
     - **Right strip** (x ≥ 40): large internal gap regardless of match balance — e.g. 100+0 vs 50+50
 
     The **safe zone** is the centre rectangle: balanced pair *and* a fair match.
-    GL keeps far more team slots in that safe zone than SA.
+    SL keeps far more team slots in that safe zone than SA.
     """
     )
     return
@@ -811,7 +813,7 @@ def _(go, mo, pl, sa_match, sl_match):
     for _lbl, _col in zip(_labels, _colors):
         _fig.add_trace(go.Bar(
             name=_lbl,
-            x=['SA', 'GL'],
+            x=['SA', 'SL'],
             y=[_sa_pct[_lbl], _sl_pct[_lbl]],
             marker_color=_col,
             text=[f"{_sa_pct[_lbl]:.1f}%", f"{_sl_pct[_lbl]:.1f}%"],
@@ -841,8 +843,8 @@ def _(mo):
     **MF vs MM** and **MF vs FF** are fine — at least one team has a balanced mix.
     **MM vs MM** and **FF vs FF** are neutral same-gender mirrors, neither good nor bad.
 
-    GL's `GENDER_MISMATCH_PENALTY` strongly suppresses MM vs FF matchups.
-    SA has no gender awareness, so they occur naturally from the player sex distribution.
+    SL's `GENDER_MISMATCH_PENALTY` strongly suppresses MM vs FF matchups.
+    SA has no smart awareness, so they occur naturally from the player sex distribution.
     """
     )
     return

@@ -23,8 +23,8 @@ class TestSmartEngine extends SmartEngine {
   }
 }
 
-function makePlayer(id: string, sex?: Player['sex'], level?: number): Player {
-  return { id, name: `Player ${id}`, isPresent: true, sex, level };
+function makePlayer(id: string, gender?: Player['gender'], level?: number): Player {
+  return { id, name: `Player ${id}`, isPresent: true, gender, level };
 }
 
 describe('SmartEngine', () => {
@@ -210,7 +210,7 @@ describe('SmartEngine', () => {
       expect(genderMismatchCount).toBeLessThan(5);
     });
 
-    it('works with players without sex/level attributes', () => {
+    it('works with players without gender/level attributes', () => {
       const players: Player[] = [
         makePlayer('1'),
         makePlayer('2'),

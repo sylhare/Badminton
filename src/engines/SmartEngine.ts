@@ -43,15 +43,15 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
    * Only applies to doubles: singles (1 known-gender player per team) are not penalized.
    */
   protected calculateGenderCost(team1: Player[], team2: Player[]): number {
-    const knownTeam1 = team1.filter(p => p.sex === 'F' || p.sex === 'M');
-    const knownTeam2 = team2.filter(p => p.sex === 'F' || p.sex === 'M');
+    const knownTeam1 = team1.filter(p => p.gender === 'F' || p.gender === 'M');
+    const knownTeam2 = team2.filter(p => p.gender === 'F' || p.gender === 'M');
 
     if (knownTeam1.length < 2 || knownTeam2.length < 2) return 0;
 
-    const allFemaleTeam1 = knownTeam1.every(p => p.sex === 'F');
-    const allMaleTeam1 = knownTeam1.every(p => p.sex === 'M');
-    const allFemaleTeam2 = knownTeam2.every(p => p.sex === 'F');
-    const allMaleTeam2 = knownTeam2.every(p => p.sex === 'M');
+    const allFemaleTeam1 = knownTeam1.every(p => p.gender === 'F');
+    const allMaleTeam1 = knownTeam1.every(p => p.gender === 'M');
+    const allFemaleTeam2 = knownTeam2.every(p => p.gender === 'F');
+    const allMaleTeam2 = knownTeam2.every(p => p.gender === 'M');
 
     if ((allFemaleTeam1 && allMaleTeam2) || (allMaleTeam1 && allFemaleTeam2)) {
       return this.GENDER_MISMATCH_PENALTY;

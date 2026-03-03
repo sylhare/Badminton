@@ -163,10 +163,10 @@ function App(): React.ReactElement {
     setEngine(next ? 'sl' : 'sa');
   };
 
-  const handleUpdatePlayer = (id: string, sex: Player['sex'], level: number) => {
+  const handleUpdatePlayer = (id: string, gender: Player['gender'], level: number) => {
     setPlayers(prev =>
       prev.map(player =>
-        player.id === id ? { ...player, sex, level } : player,
+        player.id === id ? { ...player, gender, level } : player,
       ),
     );
   };

@@ -699,9 +699,9 @@ describe('PlayerList Component', () => {
   });
 
   describe('Gender/level badges', () => {
-    it('shows badges when isSmartEngineEnabled is true and player has sex/level', () => {
+    it('shows badges when isSmartEngineEnabled is true and player has gender/level', () => {
       const players = [
-        createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true, sex: 'F', level: 80 }),
+        createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true, gender: 'F', level: 80 }),
       ];
 
       render(
@@ -720,7 +720,7 @@ describe('PlayerList Component', () => {
 
     it('does not show badges when isSmartEngineEnabled is false', () => {
       const players = [
-        createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true, sex: 'F', level: 80 }),
+        createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true, gender: 'F', level: 80 }),
       ];
 
       render(
@@ -737,7 +737,7 @@ describe('PlayerList Component', () => {
       expect(screen.queryByTestId('player-badge-p1')).not.toBeInTheDocument();
     });
 
-    it('does not show badge when player has no sex or level set', () => {
+    it('does not show badge when player has no gender or level set', () => {
       const players = [
         createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true }),
       ];

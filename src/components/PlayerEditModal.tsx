@@ -8,7 +8,7 @@ import { Tooltip } from './Tooltip';
 interface PlayerEditModalProps {
   player: Player | null;
   isOpen: boolean;
-  onSave: (id: string, sex: Player['sex'], level: number) => void;
+  onSave: (id: string, gender: Player['gender'], level: number) => void;
   onCancel: () => void;
 }
 
@@ -18,12 +18,12 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   onSave,
   onCancel,
 }) => {
-  const [sex, setSex] = useState<Player['sex']>('Unknown');
+  const [gender, setGender] = useState<Player['gender']>('Unknown');
   const [level, setLevel] = useState<number>(50);
 
   useEffect(() => {
     if (player) {
-      setSex(player.sex ?? 'Unknown');
+      setGender(player.gender ?? 'Unknown');
       setLevel(player.level ?? 50);
     }
   }, [player]);
@@ -31,7 +31,7 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   if (!isOpen || !player) return null;
 
   const handleSave = () => {
-    onSave(player.id, sex, level);
+    onSave(player.id, gender, level);
   };
 
   return (
@@ -50,13 +50,13 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
               Gender
               <Tooltip testId="gender" text="Setting gender helps Smart Engine balance mixed doubles — it avoids putting all players of the same gender on one team." />
             </label>
-            <div className="sex-selector">
+            <div className="gender-selector">
               {(['F', 'M', 'Unknown'] as const).map((option) => (
                 <button
                   key={option}
-                  className={`sex-pill ${sex === option ? 'active' : ''}`}
-                  onClick={() => setSex(option)}
-                  data-testid={`sex-pill-${option}`}
+                  className={`gender-pill ${gender === option ? 'active' : ''}`}
+                  onClick={() => setGender(option)}
+                  data-testid={`gender-pill-${option}`}
                 >
                   {option === 'F' && '💁‍♀️ F'}
                   {option === 'M' && '🙋‍♂️ M'}

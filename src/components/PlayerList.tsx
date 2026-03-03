@@ -20,7 +20,7 @@ interface PlayerListProps {
   onToggleForceBench?: (playerId: string) => void;
   isSmartEngineEnabled?: boolean;
   onToggleSmartEngine?: () => void;
-  onUpdatePlayer?: (id: string, sex: Player['sex'], level: number) => void;
+  onUpdatePlayer?: (id: string, gender: Player['gender'], level: number) => void;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({
@@ -93,15 +93,15 @@ const PlayerList: React.FC<PlayerListProps> = ({
     setPlayerToEdit(player);
   };
 
-  const handleSavePlayerEdit = (id: string, sex: Player['sex'], level: number) => {
-    onUpdatePlayer?.(id, sex, level);
+  const handleSavePlayerEdit = (id: string, gender: Player['gender'], level: number) => {
+    onUpdatePlayer?.(id, gender, level);
     setPlayerToEdit(null);
   };
 
   const formatBadge = (player: Player): string => {
     const parts: string[] = [];
-    if (player.sex && player.sex !== 'Unknown') {
-      parts.push(player.sex === 'F' ? '💁‍♀️' : '🙋‍♂️');
+    if (player.gender && player.gender !== 'Unknown') {
+      parts.push(player.gender === 'F' ? '💁‍♀️' : '🙋‍♂️');
     }
     if (player.level !== undefined) {
       parts.push(String(player.level));

@@ -11,7 +11,7 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
     id: 'player-1',
     name: 'Alice',
     isPresent: true,
-    sex: 'Unknown',
+    gender: 'Unknown',
     level: 50,
     ...overrides,
   };
@@ -62,7 +62,7 @@ describe('PlayerEditModal', () => {
       expect(screen.getByRole('heading', { name: 'Alice' })).toBeInTheDocument();
     });
 
-    it('renders all three sex buttons (F, M, Unknown)', () => {
+    it('renders all three gender buttons (F, M, Unknown)', () => {
       render(
         <PlayerEditModal
           player={makePlayer()}
@@ -71,9 +71,9 @@ describe('PlayerEditModal', () => {
           onCancel={mockOnCancel}
         />,
       );
-      expect(screen.getByTestId('sex-pill-F')).toBeInTheDocument();
-      expect(screen.getByTestId('sex-pill-M')).toBeInTheDocument();
-      expect(screen.getByTestId('sex-pill-Unknown')).toBeInTheDocument();
+      expect(screen.getByTestId('gender-pill-F')).toBeInTheDocument();
+      expect(screen.getByTestId('gender-pill-M')).toBeInTheDocument();
+      expect(screen.getByTestId('gender-pill-Unknown')).toBeInTheDocument();
     });
 
     it('renders level slider', () => {
@@ -102,17 +102,17 @@ describe('PlayerEditModal', () => {
       expect(screen.getByText(/Level: 75/)).toBeInTheDocument();
     });
 
-    it('initializes sex pill from player sex', () => {
+    it('initializes gender pill from player gender', () => {
       render(
         <PlayerEditModal
-          player={makePlayer({ sex: 'F' })}
+          player={makePlayer({ gender: 'F' })}
           isOpen={true}
           onSave={mockOnSave}
           onCancel={mockOnCancel}
         />,
       );
-      expect(screen.getByTestId('sex-pill-F')).toHaveClass('active');
-      expect(screen.getByTestId('sex-pill-M')).not.toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-F')).toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-M')).not.toHaveClass('active');
     });
 
     it('renders Save and Cancel buttons', () => {
@@ -132,19 +132,19 @@ describe('PlayerEditModal', () => {
   describe('Interactions', () => {
     const user = userEvent.setup();
 
-    it('clicking a sex button selects it (visual active state)', async () => {
+    it('clicking a gender button selects it (visual active state)', async () => {
       render(
         <PlayerEditModal
-          player={makePlayer({ sex: 'Unknown' })}
+          player={makePlayer({ gender: 'Unknown' })}
           isOpen={true}
           onSave={mockOnSave}
           onCancel={mockOnCancel}
         />,
       );
 
-      await user.click(screen.getByTestId('sex-pill-M'));
-      expect(screen.getByTestId('sex-pill-M')).toHaveClass('active');
-      expect(screen.getByTestId('sex-pill-Unknown')).not.toHaveClass('active');
+      await user.click(screen.getByTestId('gender-pill-M'));
+      expect(screen.getByTestId('gender-pill-M')).toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-Unknown')).not.toHaveClass('active');
     });
 
     it('moving slider updates the displayed level value', async () => {
@@ -163,17 +163,17 @@ describe('PlayerEditModal', () => {
       expect(screen.getByText(/Level: 80/)).toBeInTheDocument();
     });
 
-    it('Save calls onSave with correct id, sex, and level', async () => {
+    it('Save calls onSave with correct id, gender, and level', async () => {
       render(
         <PlayerEditModal
-          player={makePlayer({ id: 'p-42', sex: 'Unknown', level: 50 })}
+          player={makePlayer({ id: 'p-42', gender: 'Unknown', level: 50 })}
           isOpen={true}
           onSave={mockOnSave}
           onCancel={mockOnCancel}
         />,
       );
 
-      await user.click(screen.getByTestId('sex-pill-F'));
+      await user.click(screen.getByTestId('gender-pill-F'));
       const slider = screen.getByTestId('level-slider') as HTMLInputElement;
       fireEvent.change(slider, { target: { value: '90' } });
 
@@ -249,26 +249,26 @@ describe('PlayerEditModal', () => {
     it('re-renders with new player data when player prop changes', async () => {
       const { rerender } = render(
         <PlayerEditModal
-          player={makePlayer({ name: 'Alice', sex: 'F', level: 80 })}
+          player={makePlayer({ name: 'Alice', gender: 'F', level: 80 })}
           isOpen={true}
           onSave={mockOnSave}
           onCancel={mockOnCancel}
         />,
       );
 
-      expect(screen.getByTestId('sex-pill-F')).toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-F')).toHaveClass('active');
       expect(screen.getByText(/Level: 80/)).toBeInTheDocument();
 
       rerender(
         <PlayerEditModal
-          player={makePlayer({ name: 'Bob', sex: 'M', level: 30 })}
+          player={makePlayer({ name: 'Bob', gender: 'M', level: 30 })}
           isOpen={true}
           onSave={mockOnSave}
           onCancel={mockOnCancel}
         />,
       );
 
-      expect(screen.getByTestId('sex-pill-M')).toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-M')).toHaveClass('active');
       expect(screen.getByText(/Level: 30/)).toBeInTheDocument();
     });
   });
