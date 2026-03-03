@@ -116,7 +116,7 @@ describe('TeamDisplay Component', () => {
       const teamElement = screen.getByText('Team 2').closest('.team');
       await user.click(teamElement!);
 
-      expect(mockOnTeamClick).toHaveBeenCalledWith(2);
+      expect(mockOnTeamClick).toHaveBeenCalledWith(expect.any(Object), 2);
       expect(mockOnTeamClick).toHaveBeenCalledTimes(1);
     });
 

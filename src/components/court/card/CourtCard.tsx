@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 
 import type { Court } from '../../../types';
 import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
+import ScoreInputModal from '../../ScoreInputModal';
 
 import CourtHeader from './CourtHeader';
 
 interface CourtCardProps {
   court: Court;
   onWinnerChange?: (courtNumber: number, teamNumber: number) => void;
+  onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
   isManualCourt?: boolean;
   isAnimating?: boolean;
 }
@@ -16,28 +18,52 @@ interface CourtCardProps {
 const CourtCard: React.FC<CourtCardProps> = ({
   court,
   onWinnerChange,
+  onScoreChange,
   isManualCourt = false,
   isAnimating = false,
 }) => {
-  const handleTeamClick = (teamNumber: number) => {
-    if (onWinnerChange) {
+  const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
+  const clickCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const handleTeamClick = (event: React.MouseEvent, teamNumber: 1 | 2) => {
+    if (!onWinnerChange) return;
+
+    if (court.winner === teamNumber) {
       onWinnerChange(court.courtNumber, teamNumber);
+      onScoreChange?.(court.courtNumber, undefined);
+    } else {
+      clickCoordsRef.current = { x: event.clientX, y: event.clientY };
+      setPendingWinner(teamNumber);
     }
   };
 
-  const handleSinglesClick = async (event: React.MouseEvent<HTMLDivElement>, teamNumber: number) => {
-    if (!onWinnerChange) return;
+  const handleModalConfirm = (score?: { team1: number; team2: number }) => {
+    if (pendingWinner === null || !onWinnerChange) return;
+    onWinnerChange(court.courtNumber, pendingWinner);
+    onScoreChange?.(court.courtNumber, score);
+    triggerConfetti(clickCoordsRef.current.x, clickCoordsRef.current.y, 30);
+    setPendingWinner(null);
+  };
 
-    const newWinner = court.winner === teamNumber ? undefined : (teamNumber as 1 | 2);
-
-    if (court.winner !== teamNumber && newWinner !== undefined) {
-      triggerConfetti(event.clientX, event.clientY, 30);
-    }
-
-    onWinnerChange(court.courtNumber, teamNumber);
+  const handleModalCancel = () => {
+    setPendingWinner(null);
   };
 
   const { teams } = court;
+
+  const team1Players = teams?.team1 ?? [];
+  const team2Players = teams?.team2 ?? [];
+
+  const scoreModal = (
+    <ScoreInputModal
+      isOpen={pendingWinner !== null}
+      winnerTeam={pendingWinner ?? 1}
+      team1Players={team1Players}
+      team2Players={team2Players}
+      onConfirm={handleModalConfirm}
+      onCancel={handleModalCancel}
+    />
+  );
 
   if (!teams) {
     return (
@@ -47,6 +73,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
       >
         <CourtHeader courtNumber={court.courtNumber} isManualCourt={isManualCourt} />
         <NoTeamsDisplay players={court.players} isAnimating={isAnimating} />
+        {scoreModal}
       </div>
     );
   }
@@ -71,9 +98,10 @@ const CourtCard: React.FC<CourtCardProps> = ({
           waitingPlayer={court.players[2]}
           winner={court.winner}
           isAnimating={isAnimating}
-          onPlayerClick={handleSinglesClick}
+          onPlayerClick={(event, teamNumber) => handleTeamClick(event, teamNumber as 1 | 2)}
           isClickable={!!onWinnerChange}
         />
+        {scoreModal}
       </div>
     );
   }
@@ -94,9 +122,10 @@ const CourtCard: React.FC<CourtCardProps> = ({
           team2Players={teams.team2}
           winner={court.winner}
           isAnimating={isAnimating}
-          onTeamClick={handleTeamClick}
+          onTeamClick={(event, teamNumber) => handleTeamClick(event, teamNumber as 1 | 2)}
           isClickable={!!onWinnerChange}
         />
+        {scoreModal}
       </div>
     );
   }
@@ -112,12 +141,12 @@ const CourtCard: React.FC<CourtCardProps> = ({
         team2Players={teams.team2}
         winner={court.winner}
         isAnimating={isAnimating}
-        onTeamClick={handleTeamClick}
+        onTeamClick={(event, teamNumber) => handleTeamClick(event, teamNumber as 1 | 2)}
         isClickable={!!onWinnerChange}
       />
+      {scoreModal}
     </div>
   );
 };
 
 export default CourtCard;
-

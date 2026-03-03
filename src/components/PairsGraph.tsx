@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 
 import { getColorForCount, getGlowColorForCount, GRAPH_COLORS } from '../constants/graphColors';
 
+import { SvgChart } from './SvgChart';
+
 /**
  * Props for the PairsGraph component
  */
@@ -96,12 +98,7 @@ export function PairsGraph({ pairsData }: PairsGraphProps): React.ReactElement |
 
   return (
     <div className="pairs-graph">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        width="100%"
-        height={Math.min(350, height)}
-        style={{ maxWidth: '600px', margin: '0 auto', display: 'block' }}
-      >
+      <SvgChart viewBoxWidth={width} viewBoxHeight={height} maxWidth={600}>
         {bubbles.map(bubble => {
           const { line1, line2 } = truncatePairName(bubble.pair);
           return (
@@ -164,7 +161,7 @@ export function PairsGraph({ pairsData }: PairsGraphProps): React.ReactElement |
             </g>
           );
         })}
-      </svg>
+      </SvgChart>
 
       <div className="graph-legend">
         <div className="legend-item">

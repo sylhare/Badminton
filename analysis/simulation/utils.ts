@@ -47,12 +47,28 @@ export const simulateMatchOutcome = (team1Strength: number, team2Strength: numbe
   return Math.random() < pTeam1Wins ? 1 : 2;
 };
 
-export const toPlayerList = (count: number): Player[] =>
-  Array.from({ length: count }, (_, i) => ({
-    id: `P${i + 1}`,
-    name: `Player ${i + 1}`,
-    isPresent: true,
-  }));
+const GENDER_PATTERN: Array<'M' | 'F'> = ['M', 'M', 'F', 'M', 'F'];
+
+/**
+ * Creates the player list for a simulation.
+ * When `playerLevels` is provided, each player also gets a `level` (0-100 scale,
+ * mapped from the 1-5 skill distribution) and a `sex` (60% M / 40% F repeating
+ * pattern), so gender/level-aware engines (GL) can apply their cost functions.
+ */
+export const toPlayerList = (count: number, playerLevels?: Map<string, number>): Player[] =>
+  Array.from({ length: count }, (_, i) => {
+    const id = `P${i + 1}`;
+    const skillLevel = playerLevels?.get(id);
+    return {
+      id,
+      name: `Player ${i + 1}`,
+      isPresent: true,
+      ...(playerLevels && {
+        level: Math.min(100, Math.max(0, Math.round((skillLevel ?? 3) * 20 + (Math.random() - 0.5) * 10))),
+        sex: GENDER_PATTERN[i % GENDER_PATTERN.length],
+      }),
+    };
+  });
 
 export const toCsv = (rows: Array<Record<string, string | number | boolean>>, defaultHeaders?: string[]): string => {
   const escape = (value: string | number | boolean) => {
@@ -119,6 +135,13 @@ export const extractRoundPairs = (
     const team1Strength = calculateTeamStrength(court.teams.team1, playerLevels);
     const team2Strength = calculateTeamStrength(court.teams.team2, playerLevels);
     const strengthDiff = Math.abs(team1Strength - team2Strength);
+    const matchAvgLevel = court.players.reduce((sum, p) => sum + (p.level ?? 0), 0) / court.players.length;
+    const [ta1, ta2] = [a1, a2].map(p => p.level ?? 50);
+    const [tb1, tb2] = [b1, b2].map(p => p.level ?? 50);
+    const team1AvgLevel = (ta1 + ta2) / 2;
+    const team2AvgLevel = (tb1 + tb2) / 2;
+    const team1IntraGap = Math.abs(ta1 - ta2);
+    const team2IntraGap = Math.abs(tb1 - tb2);
     const winner = simulateMatchOutcome(team1Strength, team2Strength);
     const strongerTeam = team1Strength >= team2Strength ? 1 : 2;
 
@@ -138,6 +161,11 @@ export const extractRoundPairs = (
       team1Strength,
       team2Strength,
       strengthDifferential: strengthDiff,
+      matchAvgLevel,
+      team1IntraGap,
+      team2IntraGap,
+      team1AvgLevel,
+      team2AvgLevel,
       winner,
       strongerTeamWon: winner === strongerTeam,
       team1EngineWins,

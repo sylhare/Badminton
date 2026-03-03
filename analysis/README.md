@@ -87,6 +87,7 @@ uv run serve.py
 Then open:
 - http://localhost:8765/algorithm_docs
 - http://localhost:8765/engine_analysis
+- http://localhost:8765/level_tracker_analysis
 
 ## Export notebooks to static HTML
 

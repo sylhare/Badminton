@@ -8,6 +8,11 @@ export type MatchEvent = {
   team1Strength: number;
   team2Strength: number;
   strengthDifferential: number;
+  matchAvgLevel: number;
+  team1IntraGap: number;
+  team2IntraGap: number;
+  team1AvgLevel: number;
+  team2AvgLevel: number;
   winner: 1 | 2;
   strongerTeamWon: boolean;
   team1EngineWins: number;

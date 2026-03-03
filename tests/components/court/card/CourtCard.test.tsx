@@ -62,7 +62,7 @@ describe('CourtCard', () => {
       expect(screen.getByText('👑')).toBeInTheDocument();
     });
 
-    it('calls onWinnerChange when singles player is clicked', async () => {
+    it('calls onWinnerChange when singles player is clicked and modal is skipped', async () => {
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
 
@@ -75,6 +75,9 @@ describe('CourtCard', () => {
 
       const aliceContainer = screen.getByText('Alice').closest('.singles-player');
       await user.click(aliceContainer!);
+
+      const skipButton = screen.getByTestId('score-modal-skip');
+      await user.click(skipButton);
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(2, 1);
     });
@@ -125,7 +128,7 @@ describe('CourtCard', () => {
       expect(team2).toHaveClass('team-winner');
     });
 
-    it('calls onWinnerChange when doubles team is clicked', async () => {
+    it('calls onWinnerChange when doubles team is clicked and modal is skipped', async () => {
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
 
@@ -139,7 +142,40 @@ describe('CourtCard', () => {
       const team1 = container.querySelector('[data-testid="team-1"]');
       await user.click(team1!);
 
+      const skipButton = screen.getByTestId('score-modal-skip');
+      await user.click(skipButton);
+
       expect(mockOnWinnerChange).toHaveBeenCalledWith(3, 1);
+    });
+
+    it('calls onWinnerChange and onScoreChange when team is clicked and score is confirmed', async () => {
+      const user = userEvent.setup();
+      const mockOnWinnerChange = vi.fn();
+      const mockOnScoreChange = vi.fn();
+
+      const { container } = render(
+        <CourtCard
+          court={doublesCourt}
+          onWinnerChange={mockOnWinnerChange}
+          onScoreChange={mockOnScoreChange}
+        />,
+      );
+
+      const team1 = container.querySelector('[data-testid="team-1"]');
+      await user.click(team1!);
+
+      const team1Input = screen.getByTestId('score-input-team1');
+      await user.clear(team1Input);
+      await user.type(team1Input, '21');
+
+      const team2Input = screen.getByTestId('score-input-team2');
+      await user.clear(team2Input);
+      await user.type(team2Input, '15');
+
+      await user.click(screen.getByTestId('score-modal-confirm'));
+
+      expect(mockOnWinnerChange).toHaveBeenCalledWith(3, 1);
+      expect(mockOnScoreChange).toHaveBeenCalledWith(3, { team1: 21, team2: 15 });
     });
   });
 

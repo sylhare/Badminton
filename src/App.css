@@ -2,6 +2,7 @@
     min-height: 100vh;
     background: linear-gradient(135deg, var(--color-primary-start) 0%, var(--color-primary-end) 100%);
     padding: 15px;
+    transition: background 0.5s ease;
 }
 
 .container {
@@ -1051,6 +1052,7 @@ h1 {
     animation: courtShake 0.4s ease-in-out;
 }
 
+
 @keyframes courtShake {
     0%, 100% {
         transform: translateX(0) rotate(0);
@@ -1373,6 +1375,66 @@ h1 {
     margin: 0;
     color: #4a5568;
     line-height: 1.5;
+}
+
+.score-modal-teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 12px 0 8px;
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+
+.score-modal-team-name {
+    font-weight: 600;
+    text-align: center;
+}
+
+.score-modal-vs {
+    color: #a0aec0;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.score-modal-inputs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.score-modal-inputs input[type="number"] {
+    width: 60px;
+    padding: 6px 8px;
+    font-size: 1rem;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #f8f8f8;
+    color: #2d3748;
+    -moz-appearance: textfield;
+}
+
+.score-modal-inputs input[type="number"]::-webkit-outer-spin-button,
+.score-modal-inputs input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.score-modal-inputs input[type="number"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: white;
+}
+
+.court-score-separator {
+    font-size: 0.9rem;
+    color: #999;
+    user-select: none;
 }
 
 .modal-footer {
@@ -2052,4 +2114,142 @@ h1 {
         margin: 0;
         padding: 15px 0;
     }
+}
+
+/* ============================================================
+   Player Edit Modal Styles
+   ============================================================ */
+
+.player-edit-field {
+    margin-bottom: 20px;
+}
+
+.player-edit-label {
+    display: block;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+}
+
+.gender-selector {
+    display: flex;
+    gap: 10px;
+}
+
+.gender-pill {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #4a5568;
+    transition: all 0.2s ease;
+}
+
+.gender-pill:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.gender-pill.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+
+.level-slider {
+    width: 100%;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+/* Player name clickable + badge */
+
+.player-name-clickable {
+    cursor: pointer;
+}
+
+.player-name-clickable:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.player-badge {
+    margin-left: 6px;
+    font-size: 0.78rem;
+    color: #718096;
+    font-weight: 400;
+}
+
+/* Smart Engine toggle row */
+
+.smart-engine-toggle-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px 0 0;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 10px;
+}
+
+.toggle-switch.smart-engine-active {
+    background: #5c8fd4;
+}
+
+/* Tooltip */
+
+.tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    font-size: 0.8rem;
+    color: #a0aec0;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: color 0.2s ease;
+    user-select: none;
+}
+
+.tooltip-icon:hover,
+.tooltip-icon.active {
+    color: var(--color-primary);
+}
+
+.tooltip-popup {
+    position: fixed;
+    transform: translateX(-50%);
+    background: #2d3748;
+    color: #f7fafc;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    width: 220px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    border-top: 3px solid var(--color-primary);
+    z-index: 1000;
+    pointer-events: none;
+    font-weight: normal;
+}
+
+/* ============================================================
+   Night Theme — only the outer background and primary colour change;
+   white surfaces (cards, modals, inputs) remain white.
+   ============================================================ */
+
+.app.night-theme {
+    --color-primary-start: #1e3a6b;
+    --color-primary-end: #0a1628;
+    --color-primary: #5c8fd4;
+    --color-primary-hover: #7ba7e8;
+    background: linear-gradient(135deg, #1e3a6b 0%, #0a1628 100%);
 }

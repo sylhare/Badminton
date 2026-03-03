@@ -24,6 +24,7 @@
 
 import type { EngineType, ICourtAssignmentEngine } from '../types';
 
+import { engineSL } from './SmartEngine';
 import { engineMC } from './MonteCarloEngine';
 import { engineSA } from './SimulatedAnnealingEngine';
 import { engineCG } from './ConflictGraphEngine';
@@ -42,6 +43,8 @@ const getEngineInstance = (type: EngineType): ICourtAssignmentEngine => {
       return engineCG;
     case 'mc':
       return engineMC;
+    case 'sl':
+      return engineSL;
     case 'sa':
     default:
       return engineSA;

@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import PlayerList from '../../src/components/PlayerList';
-import { createMockPlayers } from '../data/testFactories';
+import { createMockPlayer, createMockPlayers } from '../data/testFactories';
 
 describe('PlayerList Component', () => {
   const user = userEvent.setup();
@@ -584,6 +584,176 @@ describe('PlayerList Component', () => {
 
       const aliceElements = screen.getAllByText(/Alice Johnson/);
       expect(aliceElements).toHaveLength(1);
+    });
+  });
+
+  describe('Smart Engine toggle', () => {
+    const mockOnToggleSmartEngine = vi.fn();
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('shows smart engine toggle unchecked when isSmartEngineEnabled is false', () => {
+      render(
+        <PlayerList
+          players={createMockPlayers(1)}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={false}
+          onToggleSmartEngine={mockOnToggleSmartEngine}
+        />,
+      );
+
+      const toggle = screen.getByTestId('smart-engine-toggle') as HTMLInputElement;
+      expect(toggle.checked).toBe(false);
+    });
+
+    it('shows smart engine toggle checked when isSmartEngineEnabled is true', () => {
+      render(
+        <PlayerList
+          players={createMockPlayers(1)}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={true}
+          onToggleSmartEngine={mockOnToggleSmartEngine}
+        />,
+      );
+
+      const toggle = screen.getByTestId('smart-engine-toggle') as HTMLInputElement;
+      expect(toggle.checked).toBe(true);
+    });
+
+    it('calls onToggleSmartEngine when toggle is clicked', async () => {
+      render(
+        <PlayerList
+          players={createMockPlayers(1)}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={false}
+          onToggleSmartEngine={mockOnToggleSmartEngine}
+        />,
+      );
+
+      const toggle = screen.getByTestId('smart-engine-toggle');
+      await user.click(toggle);
+
+      expect(mockOnToggleSmartEngine).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Player name click to edit', () => {
+    const mockOnUpdatePlayer = vi.fn();
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('opens PlayerEditModal when player name is clicked with smart engine enabled', async () => {
+      const players = [createMockPlayer({ id: 'edit-p', name: 'Alice', isPresent: true })];
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={true}
+          onUpdatePlayer={mockOnUpdatePlayer}
+        />,
+      );
+
+      const nameSpan = screen.getByTestId('player-name-edit-p');
+      await user.click(nameSpan);
+
+      expect(screen.getByTestId('player-edit-modal')).toBeInTheDocument();
+    });
+
+    it('does not open edit modal when smart engine is disabled', async () => {
+      const players = [createMockPlayer({ id: 'edit-p', name: 'Alice', isPresent: true })];
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={false}
+          onUpdatePlayer={mockOnUpdatePlayer}
+        />,
+      );
+
+      const nameSpan = screen.getByTestId('player-name-edit-p');
+      await user.click(nameSpan);
+
+      expect(screen.queryByTestId('player-edit-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Gender/level badges', () => {
+    it('shows badges when isSmartEngineEnabled is true and player has gender/level', () => {
+      const players = [
+        createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true, gender: 'F', level: 80 }),
+      ];
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={true}
+        />,
+      );
+
+      expect(screen.getByTestId('player-badge-p1')).toBeInTheDocument();
+    });
+
+    it('does not show badges when isSmartEngineEnabled is false', () => {
+      const players = [
+        createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true, gender: 'F', level: 80 }),
+      ];
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={false}
+        />,
+      );
+
+      expect(screen.queryByTestId('player-badge-p1')).not.toBeInTheDocument();
+    });
+
+    it('does not show badge when player has no gender or level set', () => {
+      const players = [
+        createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true }),
+      ];
+
+      render(
+        <PlayerList
+          players={players}
+          onPlayerToggle={mockToggle}
+          onRemovePlayer={mockRemove}
+          onClearAllPlayers={mockClearAll}
+          onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={true}
+        />,
+      );
+
+      expect(screen.queryByTestId('player-badge-p1')).not.toBeInTheDocument();
     });
   });
 

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { engine, getEngineType } from '../engines/engineSelector';
+import { engine, getEngineType, setEngine } from '../engines/engineSelector';
 import { loadAppState } from '../utils/storageUtils';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
 import BenchGraph from '../components/BenchGraph';
 import PairsGraph from '../components/PairsGraph';
+import LevelHistoryGraph from '../components/LevelHistoryGraph';
 import type { CourtEngineState, Player } from '../types';
 import './StatsPage.css';
 
@@ -65,13 +66,15 @@ interface DiagnosticStats {
 function StatsPage(): React.ReactElement {
   const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [isSmartEngine] = useState(() => loadAppState().isSmartEngineEnabled ?? false);
 
   useEffect(() => {
-    const engineType = getEngineType();
+    const appState = loadAppState();
+    const engineType = appState.isSmartEngineEnabled ? 'sl' : 'sa';
+    setEngine(engineType);
     engine().loadState(engineType);
     setEngineState(engine().prepareStateForSaving(engineType));
 
-    const appState = loadAppState();
     if (appState.players) {
       setPlayers(appState.players);
     }
@@ -135,7 +138,14 @@ function StatsPage(): React.ReactElement {
     single: engineState?.singleCountMap || {},
     win: engineState?.winCountMap || {},
     loss: engineState?.lossCountMap || {},
+    levelHistory: engineState?.levelHistory,
   }), [engineState]);
+
+  /** Gender map for TeammateGraph node colouring (smart engine only) */
+  const playerGenderMap = useMemo(
+    () => Object.fromEntries(players.filter(p => p.gender).map(p => [p.id, p.gender!])),
+    [players],
+  );
 
   /**
    * Extracts repeated pairs from a count map.
@@ -386,6 +396,7 @@ function StatsPage(): React.ReactElement {
                     <TeammateGraph
                       teammateData={maps.teammate}
                       getPlayerName={getPlayerName}
+                      playerGender={isSmartEngine ? playerGenderMap : undefined}
                     />
                     {diagnostics.repeatedTeammates.length > 0 && (
                       <details className="collapsible-section">
@@ -410,6 +421,7 @@ function StatsPage(): React.ReactElement {
                       teammateData={maps.opponent}
                       getPlayerName={getPlayerName}
                       variant="opponent"
+                      playerGender={isSmartEngine ? playerGenderMap : undefined}
                     />
                     {diagnostics.repeatedOpponents.length > 0 && (
                       <details className="collapsible-section">
@@ -457,6 +469,16 @@ function StatsPage(): React.ReactElement {
                   <p className="no-issues">No singles matches recorded</p>
                 )}
               </div>
+              {/* Level Progression - Smart Engine only */}
+              {isSmartEngine && maps.levelHistory && Object.keys(maps.levelHistory).length > 0 && (
+                <div className="diagnostic-section">
+                  <h3>📈 Level Progression</h3>
+                  <LevelHistoryGraph
+                    levelHistory={maps.levelHistory}
+                    getPlayerName={getPlayerName}
+                  />
+                </div>
+              )}
             </>
           ) : (
             <div className="no-data">

@@ -35,6 +35,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     losingPlayers: string[]
   }> = new Map();
 
+  /** Level history per player - tracks level after each round snapshot */
+  protected static levelHistoryMap: Map<string, number[]> = new Map();
+
   /** Timestamps for pruning stale pairings - tracks last update time */
   protected static lastUpdatedMap: Map<string, number> = new Map();
 
@@ -87,6 +90,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lossCountMap.clear();
     CourtAssignmentTracker.recordedWinsMap.clear();
     CourtAssignmentTracker.lastUpdatedMap.clear();
+    CourtAssignmentTracker.levelHistoryMap.clear();
     CourtAssignmentTracker.globalCounter = 0;
     this.notifyStateChange();
   }
@@ -118,6 +122,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       opponentCountMap: Object.fromEntries(CourtAssignmentTracker.opponentCountMap),
       winCountMap: Object.fromEntries(CourtAssignmentTracker.winCountMap),
       lossCountMap: Object.fromEntries(CourtAssignmentTracker.lossCountMap),
+      levelHistory: Object.fromEntries(CourtAssignmentTracker.levelHistoryMap),
     };
   }
 
@@ -156,6 +161,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
     if (state.lossCountMap) {
       CourtAssignmentTracker.lossCountMap = new Map(Object.entries(state.lossCountMap));
+    }
+    if (state.levelHistory) {
+      CourtAssignmentTracker.levelHistoryMap = new Map(
+        Object.entries(state.levelHistory) as [string, number[]][],
+      );
     }
   }
 
@@ -213,6 +223,15 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     if (stateChanged) {
       CourtAssignmentTracker.globalCounter++;
       this.notifyStateChange();
+    }
+  }
+
+  /** Records a level snapshot for all players after a round. */
+  recordLevelSnapshot(players: Player[]): void {
+    for (const p of players) {
+      const history = CourtAssignmentTracker.levelHistoryMap.get(p.id) ?? [];
+      history.push(p.level ?? 50);
+      CourtAssignmentTracker.levelHistoryMap.set(p.id, history);
     }
   }
 

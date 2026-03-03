@@ -2,6 +2,10 @@ export interface Player {
   id: string;
   name: string;
   isPresent: boolean;
+  gender?: 'M' | 'F' | 'Unknown';
+  level?: number;
+  averageScore?: number;
+  scoredGames?: number;
 }
 
 export interface ManualCourtSelection {
@@ -17,17 +21,19 @@ export interface Court {
   };
   winner?: 1 | 2;
   wasManuallyAssigned?: boolean;
+  score?: { team1: number; team2: number };
 }
 
 export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
-export type EngineType = 'sa' | 'mc' | 'cg';
+export type EngineType = 'sa' | 'mc' | 'cg' | 'sl';
 
 export interface AppState {
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
   lastGeneratedAt?: number;
+  isSmartEngineEnabled?: boolean;
 }
 
 export interface CourtEngineState {
@@ -38,6 +44,7 @@ export interface CourtEngineState {
   opponentCountMap: Record<string, number>;
   winCountMap: Record<string, number>;
   lossCountMap: Record<string, number>;
+  levelHistory?: Record<string, number[]>;
 }
 
 export interface TrackerStats {
@@ -58,6 +65,7 @@ export interface ICourtAssignmentTracker {
   saveState(engineType: EngineType): void;
   loadState(engineType: EngineType): void;
   recordWins(courts: Court[]): void;
+  recordLevelSnapshot(players: Player[]): void;
   getWinCounts(): Map<string, number>;
   getBenchCounts(): Map<string, number>;
   updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];

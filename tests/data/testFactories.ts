@@ -86,6 +86,13 @@ export const MOCK_PLAYERS = {
   doubles: createMockPlayers(4, { isPresent: true }),
 
   team: createMockPlayers(2, { isPresent: true }),
+
+  withGenderLevel: [
+    createMockPlayer({ id: 'gl-1', name: 'Alice', isPresent: true, gender: 'F', level: 80 }),
+    createMockPlayer({ id: 'gl-2', name: 'Bob', isPresent: true, gender: 'M', level: 20 }),
+    createMockPlayer({ id: 'gl-3', name: 'Carol', isPresent: true, gender: 'F', level: 75 }),
+    createMockPlayer({ id: 'gl-4', name: 'Dave', isPresent: true, gender: 'M', level: 25 }),
+  ],
 };
 
 export function createMockFile(

@@ -9,7 +9,7 @@ interface GenericCourtDisplayProps {
   team2Players: Player[];
   winner?: 1 | 2;
   isAnimating?: boolean;
-  onTeamClick?: (teamNumber: number) => void;
+  onTeamClick?: (event: React.MouseEvent, teamNumber: number) => void;
   isClickable?: boolean;
 }
 

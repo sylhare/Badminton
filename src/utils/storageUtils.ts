@@ -10,6 +10,7 @@ export const saveAppState = (state: {
   numberOfCourts: number;
   assignments: Court[];
   lastGeneratedAt?: number;
+  isSmartEngineEnabled?: boolean;
 }): void => {
   try {
     const stateToSave: AppState = {
@@ -17,6 +18,7 @@ export const saveAppState = (state: {
       numberOfCourts: state.numberOfCourts,
       assignments: state.assignments,
       lastGeneratedAt: state.lastGeneratedAt,
+      isSmartEngineEnabled: state.isSmartEngineEnabled,
     };
     localStorage.setItem(STORAGE_KEYS.APP_STATE, JSON.stringify(stateToSave));
   } catch (error) {
@@ -29,6 +31,7 @@ export const loadAppState = (): Partial<{
   numberOfCourts: number;
   assignments: Court[];
   lastGeneratedAt: number;
+  isSmartEngineEnabled: boolean;
 }> => {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.APP_STATE);
@@ -55,6 +58,7 @@ export const loadAppState = (): Partial<{
       numberOfCourts: typeof parsed.numberOfCourts === 'number' ? parsed.numberOfCourts : 4,
       assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
       lastGeneratedAt: typeof parsed.lastGeneratedAt === 'number' ? parsed.lastGeneratedAt : undefined,
+      isSmartEngineEnabled: typeof parsed.isSmartEngineEnabled === 'boolean' ? parsed.isSmartEngineEnabled : undefined,
     };
   } catch (error) {
     console.warn('Failed to load app state from localStorage:', error);
@@ -74,6 +78,7 @@ export const saveCourtEngineState = (state: CourtEngineState): void => {
       opponentCountMap: state.opponentCountMap,
       winCountMap: state.winCountMap,
       lossCountMap: state.lossCountMap,
+      levelHistory: state.levelHistory,
     };
     localStorage.setItem(STORAGE_KEYS.COURT_ENGINE_STATE, JSON.stringify(stateToSave));
   } catch (error) {

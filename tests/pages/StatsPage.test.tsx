@@ -20,6 +20,7 @@ vi.mock('../../src/engines/engineSelector', () => ({
     getDescription: vi.fn(() => 'Test engine description'),
   }),
   getEngineType: vi.fn(() => 'sa'),
+  setEngine: vi.fn(),
 }));
 
 vi.mock('../../src/utils/storageUtils', () => ({

@@ -101,7 +101,7 @@ describe('GenericCourtDisplay', () => {
     await user.click(team2Container!);
 
     expect(mockOnTeamClick).toHaveBeenCalledTimes(1);
-    expect(mockOnTeamClick).toHaveBeenCalledWith(2);
+    expect(mockOnTeamClick).toHaveBeenCalledWith(expect.any(Object), 2);
   });
 
   it('applies animating-blur class when isAnimating is true', () => {

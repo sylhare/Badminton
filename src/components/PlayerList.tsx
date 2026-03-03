@@ -5,7 +5,9 @@ import type { Player } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 
 import ConfirmModal from './ConfirmModal';
+import PlayerEditModal from './PlayerEditModal';
 import PlayerRemovalModal from './PlayerRemovalModal';
+import { Tooltip } from './Tooltip';
 
 interface PlayerListProps {
   players: Player[];
@@ -16,6 +18,9 @@ interface PlayerListProps {
   benchCounts?: Map<string, number>;
   forceBenchPlayerIds?: Set<string>;
   onToggleForceBench?: (playerId: string) => void;
+  isSmartEngineEnabled?: boolean;
+  onToggleSmartEngine?: () => void;
+  onUpdatePlayer?: (id: string, gender: Player['gender'], level: number) => void;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({
@@ -27,10 +32,14 @@ const PlayerList: React.FC<PlayerListProps> = ({
   benchCounts,
   forceBenchPlayerIds,
   onToggleForceBench,
+  isSmartEngineEnabled = false,
+  onToggleSmartEngine,
+  onUpdatePlayer,
 }) => {
   const [showClearModal, setShowClearModal] = useState(false);
   const [showResetAlgorithmModal, setShowResetAlgorithmModal] = useState(false);
   const [playerToRemove, setPlayerToRemove] = useState<Player | null>(null);
+  const [playerToEdit, setPlayerToEdit] = useState<Player | null>(null);
   const { trackPlayerAction, trackGameAction } = useAnalytics();
 
   const presentCount = players.filter(p => p.isPresent).length;
@@ -80,6 +89,26 @@ const PlayerList: React.FC<PlayerListProps> = ({
     setPlayerToRemove(null);
   };
 
+  const handlePlayerNameClick = (player: Player) => {
+    setPlayerToEdit(player);
+  };
+
+  const handleSavePlayerEdit = (id: string, gender: Player['gender'], level: number) => {
+    onUpdatePlayer?.(id, gender, level);
+    setPlayerToEdit(null);
+  };
+
+  const formatBadge = (player: Player): string => {
+    const parts: string[] = [];
+    if (player.gender && player.gender !== 'Unknown') {
+      parts.push(player.gender === 'F' ? '💁‍♀️' : '🙋‍♂️');
+    }
+    if (player.level !== undefined) {
+      parts.push(String(player.level));
+    }
+    return parts.join(' · ');
+  };
+
   return (
     <div>
       <div className="player-stats" data-testid="player-stats">
@@ -101,6 +130,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
         {players.map(player => {
           const benchCount = benchCounts?.get(player.id) ?? 0;
           const isForceBenched = forceBenchPlayerIds?.has(player.id) ?? false;
+          const badge = isSmartEngineEnabled ? formatBadge(player) : '';
 
           return (
             <div
@@ -108,7 +138,17 @@ const PlayerList: React.FC<PlayerListProps> = ({
               className={`player-item ${!player.isPresent ? 'absent' : ''} with-bench-info`}
             >
               <div className="player-main-row">
-                <span className="player-name" data-testid={`player-name-${player.id}`}>{player.name}</span>
+                <span
+                  className={`player-name ${isSmartEngineEnabled ? 'player-name-clickable' : ''}`}
+                  data-testid={`player-name-${player.id}`}
+                  onClick={isSmartEngineEnabled ? () => handlePlayerNameClick(player) : undefined}
+                  title={isSmartEngineEnabled ? 'Click to edit gender/level' : undefined}
+                >
+                  {player.name}
+                  {badge && (
+                    <span className="player-badge" data-testid={`player-badge-${player.id}`}>{badge}</span>
+                  )}
+                </span>
                 <div className="player-action-buttons">
                   <button
                     onClick={() => handlePlayerToggle(player.id)}
@@ -178,6 +218,20 @@ const PlayerList: React.FC<PlayerListProps> = ({
         </div>
       )}
 
+      <div className="smart-engine-toggle-row">
+        <label className="bench-next-toggle" data-testid="smart-engine-toggle-label">
+          <span>Smart Engine</span>
+          <input
+            type="checkbox"
+            checked={isSmartEngineEnabled}
+            onChange={() => onToggleSmartEngine?.()}
+            data-testid="smart-engine-toggle"
+          />
+          <span className={`toggle-switch ${isSmartEngineEnabled ? 'active smart-engine-active' : ''}`}></span>
+        </label>
+        <Tooltip testId="smart-engine" text="Smart Engine balances matches using gender and skill level. Enable it then click any player name to set their gender and level." />
+      </div>
+
       <ConfirmModal
         isOpen={showClearModal}
         title="Clear All Players"
@@ -206,6 +260,13 @@ const PlayerList: React.FC<PlayerListProps> = ({
         onRemove={handleConfirmRemove}
         onMarkAbsent={handleMarkAbsent}
         onCancel={handleCancelRemoval}
+      />
+
+      <PlayerEditModal
+        player={playerToEdit}
+        isOpen={playerToEdit !== null}
+        onSave={handleSavePlayerEdit}
+        onCancel={() => setPlayerToEdit(null)}
       />
     </div>
   );

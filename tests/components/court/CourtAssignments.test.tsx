@@ -296,6 +296,8 @@ describe('Winner Selection', () => {
       const team1Element = screen.getByText('Team 1').closest('.team');
       await user.click(team1Element!);
 
+      await user.click(screen.getByTestId('score-modal-skip'));
+
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
     });
 
@@ -313,6 +315,8 @@ describe('Winner Selection', () => {
       const aliceElement = screen.getByText('Alice');
       await user.click(aliceElement);
 
+      await user.click(screen.getByTestId('score-modal-skip'));
+
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
     });
   });
@@ -324,6 +328,32 @@ describe('Winner Selection', () => {
           {...baseProps}
           assignments={doublesAssignment}
           onWinnerChange={mockOnWinnerChange}
+        />,
+      );
+
+      expect(screen.getByText(/Click on a team to mark them as the winner/)).toBeInTheDocument();
+    });
+
+    it('should not show winner instructions when there are historical winners but no current winners', () => {
+      render(
+        <CourtAssignments
+          {...baseProps}
+          assignments={doublesAssignment}
+          onWinnerChange={mockOnWinnerChange}
+          hasHistoricalWinners={true}
+        />,
+      );
+
+      expect(screen.queryByText(/Click on a team to mark them as the winner/)).not.toBeInTheDocument();
+    });
+
+    it('should show winner instructions when there are no historical or current winners', () => {
+      render(
+        <CourtAssignments
+          {...baseProps}
+          assignments={doublesAssignment}
+          onWinnerChange={mockOnWinnerChange}
+          hasHistoricalWinners={false}
         />,
       );
 
@@ -367,10 +397,14 @@ describe('Winner Selection', () => {
       const court1Team1 = screen.getAllByText('Team 1')[0].closest('.team');
       await user.click(court1Team1!);
 
+      await user.click(screen.getByTestId('score-modal-skip'));
+
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
 
       const eveElement = screen.getByText('Eve');
       await user.click(eveElement);
+
+      await user.click(screen.getByTestId('score-modal-skip'));
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(2, 1);
 
@@ -410,6 +444,8 @@ describe('Winner Selection', () => {
 
       const team2Element = screen.getByText('Team 2').closest('.team');
       await user.click(team2Element!);
+
+      await user.click(screen.getByTestId('score-modal-skip'));
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 2);
     });
