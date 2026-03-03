@@ -37,6 +37,21 @@ export const addPlayers = async (
   });
 };
 
+/** Click a team element and dismiss the score input modal via the skip button */
+export const clickTeamAndSkip = async (
+  user: ReturnType<typeof userEvent.setup>,
+  teamElement: HTMLElement,
+): Promise<void> => {
+  await act(async () => {
+    await user.click(teamElement);
+    await new Promise(resolve => setTimeout(resolve, 50));
+  });
+  await act(async () => {
+    await user.click(screen.getByTestId('score-modal-skip'));
+    await new Promise(resolve => setTimeout(resolve, 50));
+  });
+};
+
 /** Helper to generate assignments and wait for them to appear */
 export const generateAndWaitForAssignments = async (
   user: ReturnType<typeof userEvent.setup>,

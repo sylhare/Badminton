@@ -57,85 +57,43 @@ const CourtCard: React.FC<CourtCardProps> = ({
   };
 
   const { teams } = court;
+  const isSingles = teams && teams.team1.length === 1 && teams.team2.length === 1;
+  const isDoubles = teams && teams.team1.length === 2 && teams.team2.length === 2;
 
-  const team1Players = teams?.team1 ?? [];
-  const team2Players = teams?.team2 ?? [];
+  const onTeamClick = (event: React.MouseEvent, teamNumber: number) =>
+    handleTeamClick(event, teamNumber as 1 | 2);
+  const isClickable = !!onWinnerChange;
 
-  const scoreModal = (
-    <ScoreInputModal
-      isOpen={pendingWinner !== null}
-      winnerTeam={pendingWinner ?? 1}
-      team1Players={team1Players}
-      team2Players={team2Players}
-      onConfirm={handleModalConfirm}
-      onCancel={handleModalCancel}
-    />
-  );
+  let matchType: string | undefined;
+  let matchContent: React.ReactNode;
 
   if (!teams) {
-    return (
-      <div
-        className={`court-card ${isAnimating ? 'animating-shake' : ''}`}
-        data-testid={`court-${court.courtNumber}`}
-      >
-        <CourtHeader courtNumber={court.courtNumber} isManualCourt={isManualCourt} />
-        <NoTeamsDisplay players={court.players} isAnimating={isAnimating} />
-        {scoreModal}
-      </div>
+    matchContent = <NoTeamsDisplay players={court.players} isAnimating={isAnimating} />;
+  } else if (isSingles) {
+    matchType = 'Singles';
+    matchContent = (
+      <SinglesMatch
+        team1Player={teams.team1[0]}
+        team2Player={teams.team2[0]}
+        waitingPlayer={court.players[2]}
+        winner={court.winner}
+        isAnimating={isAnimating}
+        onPlayerClick={onTeamClick}
+        isClickable={isClickable}
+      />
     );
-  }
-
-  const isSingles = teams.team1.length === 1 && teams.team2.length === 1;
-  const isDoubles = teams.team1.length === 2 && teams.team2.length === 2;
-
-  if (isSingles) {
-    return (
-      <div
-        className={`court-card ${isAnimating ? 'animating-shake' : ''}`}
-        data-testid={`court-${court.courtNumber}`}
-      >
-        <CourtHeader
-          courtNumber={court.courtNumber}
-          matchType="Singles"
-          isManualCourt={isManualCourt}
-          onRotateTeams={handleRotateTeams}
-        />
-        <SinglesMatch
-          team1Player={teams.team1[0]}
-          team2Player={teams.team2[0]}
-          waitingPlayer={court.players[2]}
-          winner={court.winner}
-          isAnimating={isAnimating}
-          onPlayerClick={(event, teamNumber) => handleTeamClick(event, teamNumber as 1 | 2)}
-          isClickable={!!onWinnerChange}
-        />
-        {scoreModal}
-      </div>
-    );
-  }
-
-  if (isDoubles) {
-    return (
-      <div
-        className={`court-card ${isAnimating ? 'animating-shake' : ''}`}
-        data-testid={`court-${court.courtNumber}`}
-      >
-        <CourtHeader
-          courtNumber={court.courtNumber}
-          matchType="Doubles"
-          isManualCourt={isManualCourt}
-          onRotateTeams={handleRotateTeams}
-        />
-        <DoublesMatch
-          team1Players={teams.team1}
-          team2Players={teams.team2}
-          winner={court.winner}
-          isAnimating={isAnimating}
-          onTeamClick={(event, teamNumber) => handleTeamClick(event, teamNumber as 1 | 2)}
-          isClickable={!!onWinnerChange}
-        />
-        {scoreModal}
-      </div>
+  } else {
+    const MatchComponent = isDoubles ? DoublesMatch : GenericCourtDisplay;
+    matchType = isDoubles ? 'Doubles' : undefined;
+    matchContent = (
+      <MatchComponent
+        team1Players={teams.team1}
+        team2Players={teams.team2}
+        winner={court.winner}
+        isAnimating={isAnimating}
+        onTeamClick={onTeamClick}
+        isClickable={isClickable}
+      />
     );
   }
 
@@ -146,18 +104,19 @@ const CourtCard: React.FC<CourtCardProps> = ({
     >
       <CourtHeader
         courtNumber={court.courtNumber}
+        matchType={matchType}
         isManualCourt={isManualCourt}
-        onRotateTeams={handleRotateTeams}
+        onRotateTeams={teams ? handleRotateTeams : undefined}
       />
-      <GenericCourtDisplay
-        team1Players={teams.team1}
-        team2Players={teams.team2}
-        winner={court.winner}
-        isAnimating={isAnimating}
-        onTeamClick={(event, teamNumber) => handleTeamClick(event, teamNumber as 1 | 2)}
-        isClickable={!!onWinnerChange}
+      {matchContent}
+      <ScoreInputModal
+        isOpen={pendingWinner !== null}
+        winnerTeam={pendingWinner ?? 1}
+        team1Players={teams?.team1 ?? []}
+        team2Players={teams?.team2 ?? []}
+        onConfirm={handleModalConfirm}
+        onCancel={handleModalCancel}
       />
-      {scoreModal}
     </div>
   );
 };

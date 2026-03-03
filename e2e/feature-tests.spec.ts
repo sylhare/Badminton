@@ -421,45 +421,37 @@ test.describe('Feature Tests', () => {
 
     await expect(page.locator('.court-card')).toHaveCount(1);
 
-    // Capture initial team assignments
     const court1 = page.getByTestId('court-1');
-    const team1PlayersBefore = await court1.locator('[data-testid="team-1"] .player-name').allTextContents();
-    const team2PlayersBefore = await court1.locator('[data-testid="team-2"] .player-name').allTextContents();
+    const team1PlayersBefore = await court1.locator('[data-testid="team-1"] .team-player').allTextContents();
+    const team2PlayersBefore = await court1.locator('[data-testid="team-2"] .team-player').allTextContents();
 
-    // Select team 1 as winner
     const firstTeam = court1.locator('.team-clickable').first();
     await firstTeam.click();
     await page.waitForTimeout(200);
 
     await expect(page.locator('.crown')).toHaveCount(1);
 
-    // Click rotate button
     const rotateButton = page.getByTestId('rotate-teams-button');
     await expect(rotateButton).toBeVisible();
     await rotateButton.click();
     await page.waitForTimeout(200);
 
-    // Winner crown should be gone
     await expect(page.locator('.crown')).toHaveCount(0);
 
-    // Team assignments should have changed
-    const team1PlayersAfter = await court1.locator('[data-testid="team-1"] .player-name').allTextContents();
-    const team2PlayersAfter = await court1.locator('[data-testid="team-2"] .player-name').allTextContents();
+    const team1PlayersAfter = await court1.locator('[data-testid="team-1"] .team-player').allTextContents();
+    const team2PlayersAfter = await court1.locator('[data-testid="team-2"] .team-player').allTextContents();
 
     const sameTeams =
       JSON.stringify(team1PlayersBefore.sort()) === JSON.stringify(team1PlayersAfter.sort()) &&
       JSON.stringify(team2PlayersBefore.sort()) === JSON.stringify(team2PlayersAfter.sort());
     expect(sameTeams).toBe(false);
 
-    // Select team 1 as winner on the new rotation
     const firstTeamAfter = court1.locator('.team-clickable').first();
     await firstTeamAfter.click();
     await page.waitForTimeout(200);
 
-    // Crown should be back
     await expect(page.locator('.crown')).toHaveCount(1);
 
-    // Regenerate and verify leaderboard shows exactly 2 winners
     await generateButton.click();
     await page.waitForTimeout(500);
 

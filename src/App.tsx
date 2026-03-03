@@ -20,18 +20,14 @@ export function rotateCourtTeams(court: Court): Court {
     const team1Ids = new Set(teams.team1.map(p => p.id));
 
     if (team1Ids.has(p0.id) && team1Ids.has(p1.id)) {
-      // [p0,p1] vs [p2,p3] → [p0,p2] vs [p1,p3]
       return { ...court, teams: { team1: [p0, p2], team2: [p1, p3] }, winner: undefined };
     } else if (team1Ids.has(p0.id) && team1Ids.has(p2.id)) {
-      // [p0,p2] vs [p1,p3] → [p0,p3] vs [p1,p2]
       return { ...court, teams: { team1: [p0, p3], team2: [p1, p2] }, winner: undefined };
     } else {
-      // [p0,p3] vs [p1,p2] (or any other config) → [p0,p1] vs [p2,p3]
       return { ...court, teams: { team1: [p0, p1], team2: [p2, p3] }, winner: undefined };
     }
   }
 
-  // For singles and other sizes: swap teams
   return { ...court, teams: { team1: teams.team2, team2: teams.team1 }, winner: undefined };
 }
 

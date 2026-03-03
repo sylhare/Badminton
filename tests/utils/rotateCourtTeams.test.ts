@@ -101,7 +101,6 @@ describe('rotateCourtTeams', () => {
 
       const rotated = rotateCourtTeams(court);
 
-      // Falls into the else branch → config 0 ([A,B] vs [C,D])
       expect(rotated.teams!.team1.map(p => p.id)).toEqual([A.id, B.id]);
       expect(rotated.teams!.team2.map(p => p.id)).toEqual([C.id, D.id]);
     });
