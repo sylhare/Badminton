@@ -12,6 +12,7 @@ interface CourtCardProps {
   court: Court;
   onWinnerChange?: (courtNumber: number, teamNumber: number) => void;
   onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
+  onRotateTeams?: (courtNumber: number) => void;
   isManualCourt?: boolean;
   isAnimating?: boolean;
 }
@@ -20,6 +21,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   court,
   onWinnerChange,
   onScoreChange,
+  onRotateTeams,
   isManualCourt = false,
   isAnimating = false,
 }) => {
@@ -41,6 +43,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
     }
   };
 
+  const handleRotateTeams = onRotateTeams ? () => onRotateTeams(court.courtNumber) : undefined;
   const handleModalConfirm = (score?: { team1: number; team2: number }) => {
     if (pendingWinner === null || !onWinnerChange) return;
     onWinnerChange(court.courtNumber, pendingWinner);
@@ -95,6 +98,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
           courtNumber={court.courtNumber}
           matchType="Singles"
           isManualCourt={isManualCourt}
+          onRotateTeams={handleRotateTeams}
         />
         <SinglesMatch
           team1Player={teams.team1[0]}
@@ -120,6 +124,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
           courtNumber={court.courtNumber}
           matchType="Doubles"
           isManualCourt={isManualCourt}
+          onRotateTeams={handleRotateTeams}
         />
         <DoublesMatch
           team1Players={teams.team1}
@@ -139,7 +144,11 @@ const CourtCard: React.FC<CourtCardProps> = ({
       className={`court-card ${isAnimating ? 'animating-shake' : ''}`}
       data-testid={`court-${court.courtNumber}`}
     >
-      <CourtHeader courtNumber={court.courtNumber} isManualCourt={isManualCourt} />
+      <CourtHeader
+        courtNumber={court.courtNumber}
+        isManualCourt={isManualCourt}
+        onRotateTeams={handleRotateTeams}
+      />
       <GenericCourtDisplay
         team1Players={teams.team1}
         team2Players={teams.team2}

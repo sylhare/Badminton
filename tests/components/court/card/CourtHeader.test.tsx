@@ -1,6 +1,7 @@
 import React from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { CourtHeader } from '../../../../src/components/court/card';
 
@@ -42,6 +43,28 @@ describe('CourtHeader', () => {
     expect(screen.getByText('Court 5')).toBeInTheDocument();
     expect(screen.queryByText('Singles')).not.toBeInTheDocument();
     expect(screen.queryByText('Doubles')).not.toBeInTheDocument();
+  });
+
+  describe('Rotate teams button', () => {
+    it('renders rotate button when onRotateTeams is provided', () => {
+      render(<CourtHeader courtNumber={1} onRotateTeams={vi.fn()} />);
+      expect(screen.getByTestId('rotate-teams-button')).toBeInTheDocument();
+    });
+
+    it('does not render rotate button when onRotateTeams is not provided', () => {
+      render(<CourtHeader courtNumber={1} />);
+      expect(screen.queryByTestId('rotate-teams-button')).not.toBeInTheDocument();
+    });
+
+    it('calls onRotateTeams when rotate button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockRotate = vi.fn();
+      render(<CourtHeader courtNumber={1} onRotateTeams={mockRotate} />);
+
+      await user.click(screen.getByTestId('rotate-teams-button'));
+
+      expect(mockRotate).toHaveBeenCalledTimes(1);
+    });
   });
 });
 
