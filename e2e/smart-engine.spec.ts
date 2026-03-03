@@ -6,6 +6,7 @@ import {
   addBulkPlayers,
   setCourtCount,
   toggleSmartEngine,
+  playRound,
 } from './helpers';
 
 test.describe('Smart Engine', () => {
@@ -270,6 +271,99 @@ test.describe('Smart Engine', () => {
 
       await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
       await expect(page.getByTestId('leaderboard-level-header')).not.toBeVisible();
+    });
+  });
+
+  test.describe('Stats Integration', () => {
+    test('TeammateGraph shows gender legend when smart engine is enabled', async ({ page }) => {
+      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+      await addBulkPlayers(page, players);
+      await toggleSmartEngine(page);
+      await setCourtCount(page, 1);
+
+      await page.getByTestId('generate-assignments-button').click();
+      await page.waitForTimeout(300);
+      await playRound(page);
+
+      await page.locator('a[href*="stats"]').click();
+
+      const teammateGraph = page.locator('.teammate-graph').first();
+      await expect(teammateGraph).toBeVisible();
+      // Smart engine: two legend rows — edge-count legend + gender legend
+      await expect(teammateGraph.locator('.graph-legend')).toHaveCount(2);
+      await expect(teammateGraph.locator('.graph-legend').last()).toContainText('M');
+      await expect(teammateGraph.locator('.graph-legend').last()).toContainText('F');
+    });
+
+    test('TeammateGraph gender legend is absent in normal mode', async ({ page }) => {
+      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+      await addBulkPlayers(page, players);
+      await setCourtCount(page, 1);
+
+      await page.getByTestId('generate-assignments-button').click();
+      await page.waitForTimeout(300);
+      await playRound(page);
+
+      await page.locator('a[href*="stats"]').click();
+
+      const teammateGraph = page.locator('.teammate-graph').first();
+      await expect(teammateGraph).toBeVisible();
+      // Normal mode: only the edge-count legend, no gender legend
+      await expect(teammateGraph.locator('.graph-legend')).toHaveCount(1);
+    });
+
+    test('Level Progression section shows updated lines after a scored round', async ({ page }) => {
+      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+      await addBulkPlayers(page, players);
+      await toggleSmartEngine(page);
+      await setCourtCount(page, 1);
+
+      // First generate — records initial level baseline
+      await page.getByTestId('generate-assignments-button').click();
+      await page.waitForTimeout(300);
+
+      // Set winner and regenerate — levels update, second snapshot recorded
+      await playRound(page);
+
+      await page.locator('a[href*="stats"]').click();
+
+      await expect(page.getByText('📈 Level Progression')).toBeVisible();
+      await expect(page.locator('.level-history-graph')).toBeVisible();
+      await expect(page.locator('.level-history-graph svg')).toBeVisible();
+      // Legend should list at least one player name
+      await expect(page.locator('.level-history-graph').getByText('Alice').or(
+        page.locator('.level-history-graph').getByText('Bob'),
+      )).toBeVisible();
+    });
+
+    test('Level Progression section is absent in normal mode', async ({ page }) => {
+      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+      await addBulkPlayers(page, players);
+      await setCourtCount(page, 1);
+
+      await page.getByTestId('generate-assignments-button').click();
+      await page.waitForTimeout(300);
+      await playRound(page);
+
+      await page.locator('a[href*="stats"]').click();
+
+      await expect(page.getByText('📈 Level Progression')).not.toBeVisible();
+    });
+
+    test('Level Progression section appears after first generate even without winners', async ({ page }) => {
+      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+      await addBulkPlayers(page, players);
+      await toggleSmartEngine(page);
+      await setCourtCount(page, 1);
+
+      // Generate courts without setting any winner — snapshot still recorded
+      await page.getByTestId('generate-assignments-button').click();
+      await page.waitForTimeout(300);
+
+      await page.locator('a[href*="stats"]').click();
+
+      await expect(page.getByText('📈 Level Progression')).toBeVisible();
+      await expect(page.locator('.level-history-graph')).toBeVisible();
     });
   });
 });

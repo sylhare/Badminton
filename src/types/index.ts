@@ -44,6 +44,7 @@ export interface CourtEngineState {
   opponentCountMap: Record<string, number>;
   winCountMap: Record<string, number>;
   lossCountMap: Record<string, number>;
+  levelHistory?: Record<string, number[]>;
 }
 
 export interface TrackerStats {
@@ -64,6 +65,7 @@ export interface ICourtAssignmentTracker {
   saveState(engineType: EngineType): void;
   loadState(engineType: EngineType): void;
   recordWins(courts: Court[]): void;
+  recordLevelSnapshot(players: Player[]): void;
   getWinCounts(): Map<string, number>;
   getBenchCounts(): Map<string, number>;
   updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];

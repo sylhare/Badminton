@@ -163,7 +163,8 @@ export async function generateCourtAssignments(page: Page, expectedCourts?: numb
 }
 
 /**
- * Selects the first team as winner on court 1 and verifies the winner indicator appears
+ * Selects the first team as winner on court 1 and verifies the winner indicator appears.
+ * Dismisses the score input modal (skip) if it appears after clicking.
  */
 export async function selectWinnerOnFirstCourt(page: Page): Promise<void> {
   const firstCourt = page.getByTestId('court-1');
@@ -172,6 +173,11 @@ export async function selectWinnerOnFirstCourt(page: Page): Promise<void> {
   const firstTeam = firstCourt.locator('.team-clickable').first();
   await expect(firstTeam).toBeVisible();
   await firstTeam.click();
+
+  const modal = page.getByTestId('score-input-modal');
+  if (await modal.isVisible()) {
+    await page.getByTestId('score-modal-skip').click();
+  }
 
   await page.waitForTimeout(300);
 
@@ -242,12 +248,19 @@ export async function setupGameWithPlayers(page: Page, players: string[]): Promi
 }
 
 /**
- * Plays a round by selecting the first team as winner and generating new assignments
+ * Plays a round by selecting the first team as winner and generating new assignments.
+ * Dismisses the score input modal (skip) if it appears after clicking.
  */
 export async function playRound(page: Page): Promise<void> {
   const firstTeam = page.locator('.team-clickable').first();
   await firstTeam.click();
   await page.waitForTimeout(200);
+
+  const modal = page.getByTestId('score-input-modal');
+  if (await modal.isVisible()) {
+    await page.getByTestId('score-modal-skip').click();
+    await page.waitForTimeout(100);
+  }
 
   const generateButton = page.getByTestId('generate-assignments-button');
   await generateButton.click();

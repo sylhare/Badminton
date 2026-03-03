@@ -34,6 +34,7 @@ function App(): React.ReactElement {
     const engineType = isSmartEngineEnabled ? 'sl' : 'sa';
     setEngine(engineType);
     engine().loadState(engineType);
+    setEngineStateVersion(prev => prev + 1);
     isInitialLoad.current = false;
 
     return engine().onStateChange(() => {
@@ -119,6 +120,10 @@ function App(): React.ReactElement {
     if (assignmentsWithWinners.length > 0) {
       setPlayers(nextPlayers);
     }
+    // Record a level snapshot on every generate so the chart is always populated.
+    // When winners were set the snapshot reflects updated levels; otherwise it
+    // captures the current baseline (flat lines until the first scored round).
+    engine().recordLevelSnapshot(nextPlayers);
 
     setLastGeneratedAt(Date.now());
     engine().clearCurrentSession();

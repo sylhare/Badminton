@@ -78,6 +78,7 @@ export const saveCourtEngineState = (state: CourtEngineState): void => {
       opponentCountMap: state.opponentCountMap,
       winCountMap: state.winCountMap,
       lossCountMap: state.lossCountMap,
+      levelHistory: state.levelHistory,
     };
     localStorage.setItem(STORAGE_KEYS.COURT_ENGINE_STATE, JSON.stringify(stateToSave));
   } catch (error) {
