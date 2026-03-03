@@ -231,7 +231,6 @@ function App(): React.ReactElement {
                   benchCounts={engine().getBenchCounts()}
                   forceBenchPlayerIds={forceBenchPlayerIds}
                   onToggleForceBench={handleToggleForceBench}
-                  isSmartEngineEnabled={isSmartEngineEnabled}
                   onToggleSmartEngine={handleToggleSmartEngine}
                   onUpdatePlayer={handleUpdatePlayer}
                 />
@@ -256,7 +255,6 @@ function App(): React.ReactElement {
               onGenerateAssignments={generateAssignments}
               onWinnerChange={handleWinnerChange}
               onScoreChange={handleScoreChange}
-              isSmartEngineEnabled={isSmartEngineEnabled}
               hasHistoricalWinners={engine().getWinCounts().size > 0}
               hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
               onViewBenchCounts={handleViewBenchCounts}
@@ -271,7 +269,6 @@ function App(): React.ReactElement {
           players={players}
           winCounts={engine().getWinCounts()}
           lossCounts={engine().getStats().lossCountMap}
-          isSmartEngineEnabled={isSmartEngineEnabled}
         />
       </div>
 

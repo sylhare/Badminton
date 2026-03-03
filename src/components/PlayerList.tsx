@@ -3,6 +3,7 @@ import { ArrowClockwise, Pause, Play, Trash } from '@phosphor-icons/react';
 
 import type { Player } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { engine } from '../engines/engineSelector';
 
 import ConfirmModal from './ConfirmModal';
 import PlayerEditModal from './PlayerEditModal';
@@ -18,7 +19,6 @@ interface PlayerListProps {
   benchCounts?: Map<string, number>;
   forceBenchPlayerIds?: Set<string>;
   onToggleForceBench?: (playerId: string) => void;
-  isSmartEngineEnabled?: boolean;
   onToggleSmartEngine?: () => void;
   onUpdatePlayer?: (id: string, gender: Player['gender'], level: number) => void;
 }
@@ -32,7 +32,6 @@ const PlayerList: React.FC<PlayerListProps> = ({
   benchCounts,
   forceBenchPlayerIds,
   onToggleForceBench,
-  isSmartEngineEnabled = false,
   onToggleSmartEngine,
   onUpdatePlayer,
 }) => {
@@ -130,7 +129,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
         {players.map(player => {
           const benchCount = benchCounts?.get(player.id) ?? 0;
           const isForceBenched = forceBenchPlayerIds?.has(player.id) ?? false;
-          const badge = isSmartEngineEnabled ? formatBadge(player) : '';
+          const badge = engine().supportsScoreTracking() ? formatBadge(player) : '';
 
           return (
             <div
@@ -139,10 +138,10 @@ const PlayerList: React.FC<PlayerListProps> = ({
             >
               <div className="player-main-row">
                 <span
-                  className={`player-name ${isSmartEngineEnabled ? 'player-name-clickable' : ''}`}
+                  className={`player-name ${engine().supportsScoreTracking() ? 'player-name-clickable' : ''}`}
                   data-testid={`player-name-${player.id}`}
-                  onClick={isSmartEngineEnabled ? () => handlePlayerNameClick(player) : undefined}
-                  title={isSmartEngineEnabled ? 'Click to edit gender/level' : undefined}
+                  onClick={engine().supportsScoreTracking() ? () => handlePlayerNameClick(player) : undefined}
+                  title={engine().supportsScoreTracking() ? 'Click to edit gender/level' : undefined}
                 >
                   {player.name}
                   {badge && (
@@ -223,11 +222,11 @@ const PlayerList: React.FC<PlayerListProps> = ({
           <span>Smart Engine</span>
           <input
             type="checkbox"
-            checked={isSmartEngineEnabled}
+            checked={engine().supportsScoreTracking()}
             onChange={() => onToggleSmartEngine?.()}
             data-testid="smart-engine-toggle"
           />
-          <span className={`toggle-switch ${isSmartEngineEnabled ? 'active smart-engine-active' : ''}`}></span>
+          <span className={`toggle-switch ${engine().supportsScoreTracking() ? 'active smart-engine-active' : ''}`}></span>
         </label>
         <Tooltip testId="smart-engine" text="Smart Engine balances matches using gender and skill level. Enable it then click any player name to set their gender and level." />
       </div>

@@ -37,7 +37,6 @@ interface CourtAssignmentsProps {
   manualCourtSelection: ManualCourtSelection | null;
   onManualCourtSelectionChange: (selection: ManualCourtSelection | null) => void;
   lastGeneratedAt?: number;
-  isSmartEngineEnabled?: boolean;
 }
 
 const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
@@ -55,7 +54,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   manualCourtSelection,
   onManualCourtSelectionChange,
   lastGeneratedAt,
-  isSmartEngineEnabled = false,
 }) => {
   const { trackCourtAction } = useAnalytics();
   const [isAnimating, setIsAnimating] = useState(false);
@@ -173,7 +171,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
                   onScoreChange={onScoreChange}
                   isManualCourt={isManualCourt}
                   isAnimating={isAnimating}
-                  isSmartEngineEnabled={isSmartEngineEnabled}
                 />
               );
             })}

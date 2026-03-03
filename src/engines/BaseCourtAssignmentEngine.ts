@@ -22,6 +22,10 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
 
   abstract getName(): string;
 
+  supportsScoreTracking(): boolean {
+    return false;
+  }
+
   /**
    * Generates court assignments for a set of players.
    * This template method defines the skeletal implementation of the assignment process.
