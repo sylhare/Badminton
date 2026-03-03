@@ -4,6 +4,12 @@ import { getColorForCount, GRAPH_COLORS } from '../constants/graphColors';
 
 type GraphVariant = 'teammate' | 'opponent';
 
+const GENDER_NODE_COLORS = {
+  M: '#1f4e8c',
+  F: '#6e2352',
+  Unknown: GRAPH_COLORS.nodeFill,
+} as const;
+
 /**
  * Props for the TeammateGraph component
  */
@@ -14,6 +20,8 @@ interface TeammateGraphProps {
   getPlayerName: (id: string) => string;
   /** Visual variant - affects node border color */
   variant?: GraphVariant;
+  /** Optional gender map for colouring nodes by gender */
+  playerGender?: Record<string, 'M' | 'F' | 'Unknown'>;
 }
 
 interface Node {
@@ -73,6 +81,7 @@ export function TeammateGraph({
   teammateData,
   getPlayerName,
   variant = 'teammate',
+  playerGender,
 }: TeammateGraphProps): React.ReactElement | null {
   const { nodes, edges, maxCount } = useMemo(() => {
     const playerIds = new Set<string>();
@@ -172,13 +181,16 @@ export function TeammateGraph({
             );
           })}
 
-          {nodes.map(node => (
+          {nodes.map(node => {
+            const gender = playerGender?.[node.id];
+            const nodeFill = gender ? GENDER_NODE_COLORS[gender] : GRAPH_COLORS.nodeFill;
+            return (
             <g key={node.id}>
               <circle
                 cx={node.x}
                 cy={node.y}
                 r={NODE_RADIUS}
-                fill={GRAPH_COLORS.nodeFill}
+                fill={nodeFill}
                 stroke={nodeStrokeColor}
                 strokeWidth={2}
               />
@@ -195,7 +207,8 @@ export function TeammateGraph({
                 {node.name.length > MAX_NAME_LENGTH ? node.name.slice(0, MAX_NAME_LENGTH - 1) + '…' : node.name}
               </text>
             </g>
-          ))}
+            );
+          })}
         </svg>
       </div>
 
@@ -219,6 +232,23 @@ export function TeammateGraph({
           <span>4×+</span>
         </div>
       </div>
+
+      {playerGender && (
+        <div className="graph-legend" style={{ marginTop: '4px' }}>
+          <div className="legend-item">
+            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: SEX_NODE_COLORS.M, flexShrink: 0 }}></span>
+            <span>M</span>
+          </div>
+          <div className="legend-item">
+            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: SEX_NODE_COLORS.F, flexShrink: 0 }}></span>
+            <span>F</span>
+          </div>
+          <div className="legend-item">
+            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: SEX_NODE_COLORS.Unknown, border: '1px solid #444', flexShrink: 0 }}></span>
+            <span>?</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

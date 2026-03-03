@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 
 import { getColorForCount, getGlowColorForCount, GRAPH_COLORS } from '../constants/graphColors';
+import { SvgChart } from './SvgChart';
 
 /**
  * Props for the BubbleGraph component
@@ -82,12 +83,7 @@ export function BubbleGraph({ data, getPlayerName, className = 'bubble-graph' }:
 
   return (
     <div className={className}>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        width="100%"
-        height={Math.min(300, height)}
-        style={{ maxWidth: '500px', margin: '0 auto', display: 'block' }}
-      >
+      <SvgChart viewBoxWidth={width} viewBoxHeight={height} maxWidth={500}>
         {bubbles.map(bubble => (
           <g key={bubble.id}>
             <circle
@@ -133,7 +129,7 @@ export function BubbleGraph({ data, getPlayerName, className = 'bubble-graph' }:
             </text>
           </g>
         ))}
-      </svg>
+      </SvgChart>
 
       <div className="graph-legend">
         <div className="legend-item">

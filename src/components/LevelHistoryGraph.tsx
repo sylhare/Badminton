@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 
+import { SvgChart } from './SvgChart';
+
 interface LevelHistoryGraphProps {
   /** playerId -> [levelAfterRound1, levelAfterRound2, ...] */
   levelHistory: Record<string, number[]>;
@@ -21,7 +23,7 @@ const LEVEL_COLORS = [
 
 const MARGIN = { top: 16, right: 90, bottom: 32, left: 36 };
 const CANVAS_WIDTH = 600;
-const CANVAS_HEIGHT = 380;
+const CANVAS_HEIGHT = 400;
 const INNER_W = CANVAS_WIDTH - MARGIN.left - MARGIN.right;
 const INNER_H = CANVAS_HEIGHT - MARGIN.top - MARGIN.bottom;
 
@@ -83,12 +85,7 @@ export function LevelHistoryGraph({
 
   return (
     <div className="level-history-graph">
-      <svg
-        viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
-        width="100%"
-        style={{ display: 'block', maxWidth: `${CANVAS_WIDTH}px`, margin: '0 auto' }}
-        aria-label="Level progression chart"
-      >
+      <SvgChart viewBoxWidth={CANVAS_WIDTH} viewBoxHeight={CANVAS_HEIGHT} maxWidth={CANVAS_WIDTH} ariaLabel="Level progression chart">
         {/* Y gridlines and labels */}
         {Y_TICKS.map(tick => {
           const y = toY(tick);
@@ -194,7 +191,7 @@ export function LevelHistoryGraph({
             </g>
           );
         })}
-      </svg>
+      </SvgChart>
 
       {/* Legend for top-10 players */}
       {topPlayers.length > 0 && (
