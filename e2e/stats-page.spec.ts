@@ -170,7 +170,6 @@ test.describe('Stats Page', () => {
 
       await navigateToStats(page);
 
-      // Use first() because there are two graphs (teammates and opponents)
       const teammateGraph = page.locator('.teammate-graph').first();
       await expect(teammateGraph).toBeVisible();
 

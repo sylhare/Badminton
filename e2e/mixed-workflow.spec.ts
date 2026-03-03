@@ -23,7 +23,6 @@ test.describe('Mixed Player Workflow', () => {
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('7');
 
-    // Section may be collapsed after adding players, expand if needed
     await expandSectionIfNeeded(page, 'Manage Players');
 
     await addSinglePlayer(page, SINGLE_PLAYERS[0]);

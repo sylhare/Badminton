@@ -181,7 +181,7 @@ test.describe('Feature Tests', () => {
 
     const firstTeam = page.locator('.team-clickable').first();
     await firstTeam.click();
-    await page.waitForTimeout(200);
+    await page.getByTestId('score-modal-skip').click();
 
     await expect(page.locator('.crown')).toHaveCount(1);
     await expect(page.locator('.winner-instructions')).not.toBeVisible();
@@ -197,7 +197,7 @@ test.describe('Feature Tests', () => {
 
     const secondTeam = page.locator('.team-clickable').last();
     await secondTeam.click();
-    await page.waitForTimeout(200);
+    await page.getByTestId('score-modal-skip').click();
 
     await expect(page.locator('.crown')).toHaveCount(1);
 
@@ -234,7 +234,7 @@ test.describe('Feature Tests', () => {
 
     const firstTeam = page.locator('.team-clickable').first();
     await firstTeam.click();
-    await page.waitForTimeout(300);
+    await page.getByTestId('score-modal-skip').click();
 
     await expect(page.locator('.crown')).toHaveCount(1);
 
@@ -360,7 +360,7 @@ test.describe('Feature Tests', () => {
 
       const firstTeam = page.locator('.team-clickable').first();
       await firstTeam.click();
-      await page.waitForTimeout(200);
+      await page.getByTestId('score-modal-skip').click();
 
       await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
 
@@ -390,7 +390,7 @@ test.describe('Feature Tests', () => {
 
       const firstTeam = page.locator('.team-clickable').first();
       await firstTeam.click();
-      await page.waitForTimeout(200);
+      await page.getByTestId('score-modal-skip').click();
 
       await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
 

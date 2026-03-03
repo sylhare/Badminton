@@ -173,11 +173,7 @@ export async function selectWinnerOnFirstCourt(page: Page): Promise<void> {
   const firstTeam = firstCourt.locator('.team-clickable').first();
   await expect(firstTeam).toBeVisible();
   await firstTeam.click();
-
-  const modal = page.getByTestId('score-input-modal');
-  if (await modal.isVisible()) {
-    await page.getByTestId('score-modal-skip').click();
-  }
+  await page.getByTestId('score-modal-skip').click();
 
   await page.waitForTimeout(300);
 
@@ -234,7 +230,7 @@ export async function completeFullWorkflow(
  */
 export async function toggleSmartEngine(page: Page): Promise<void> {
   await expandSectionIfNeeded(page, 'Manage Players');
-  await page.getByTestId('smart-engine-toggle').click();
+  await page.getByTestId('smart-engine-toggle-label').click();
 }
 
 /**
@@ -254,13 +250,7 @@ export async function setupGameWithPlayers(page: Page, players: string[]): Promi
 export async function playRound(page: Page): Promise<void> {
   const firstTeam = page.locator('.team-clickable').first();
   await firstTeam.click();
-  await page.waitForTimeout(200);
-
-  const modal = page.getByTestId('score-input-modal');
-  if (await modal.isVisible()) {
-    await page.getByTestId('score-modal-skip').click();
-    await page.waitForTimeout(100);
-  }
+  await page.getByTestId('score-modal-skip').click();
 
   const generateButton = page.getByTestId('generate-assignments-button');
   await generateButton.click();

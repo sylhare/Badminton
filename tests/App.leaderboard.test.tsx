@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
@@ -245,5 +245,49 @@ describe('App Leaderboard Persistence', () => {
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
     });
+  });
+});
+
+describe('Smart engine — player update', () => {
+  const user = userEvent.setup();
+
+  beforeEach(async () => await clearTestState());
+  afterEach(async () => await clearTestState());
+
+  it("updating a player's gender and level via the modal reflects in the badge", async () => {
+    render(<App />);
+    await addPlayers(user, 'Alice,Bob');
+
+    await act(async () => {
+      await user.click(screen.getByTestId('smart-engine-toggle'));
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    const playerNameEl = await waitFor(() =>
+      screen.getAllByTestId(/^player-name-/)[0],
+    );
+
+    const playerId = playerNameEl.getAttribute('data-testid')!.replace('player-name-', '');
+
+    await act(async () => {
+      await user.click(playerNameEl);
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    await act(async () => {
+      await user.click(screen.getByTestId('gender-pill-F'));
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('level-slider'), { target: { value: '70' } });
+    });
+
+    await act(async () => {
+      await user.click(screen.getByText('Save'));
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    const badge = screen.getByTestId(`player-badge-${playerId}`);
+    expect(badge.textContent).toContain('70');
   });
 });

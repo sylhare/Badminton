@@ -146,7 +146,6 @@ test.describe('Smart Engine', () => {
 
       await expect(page.getByTestId('score-input-modal')).toBeVisible();
 
-      // Cancel via X button
       await page.locator('[data-testid="score-input-modal"] .modal-close').click();
 
       await expect(page.getByTestId('score-input-modal')).not.toBeVisible();
@@ -191,11 +190,9 @@ test.describe('Smart Engine', () => {
       await expect(page.getByTestId('score-input-modal')).not.toBeVisible();
       await expect(page.locator('.crown')).toHaveCount(1);
 
-      // Regenerate to trigger level updates
       await page.getByTestId('generate-assignments-button').click();
       await page.waitForTimeout(300);
 
-      // Leaderboard should show Avg Pts column
       const leaderboard = page.locator('.leaderboard-table');
       await expect(leaderboard).toBeVisible();
       const avgPtsHeader = page.getByTestId('leaderboard-avg-pts-header');
@@ -241,14 +238,12 @@ test.describe('Smart Engine', () => {
       await page.getByTestId('score-input-team2').fill('15');
       await page.getByTestId('score-modal-confirm').click();
 
-      // Regenerate to compute avg scores
       await page.getByTestId('generate-assignments-button').click();
       await page.waitForTimeout(300);
 
       const leaderboardRows = page.locator('.leaderboard-table tbody tr');
       await expect(leaderboardRows.first()).toBeVisible();
 
-      // The Avg Pts column (index 3) for the winning team's players should show a number
       const avgPtsCell = leaderboardRows.first().locator('td').nth(3);
       const text = await avgPtsCell.textContent();
       expect(text).not.toBe('—');
@@ -289,7 +284,7 @@ test.describe('Smart Engine', () => {
 
       const teammateGraph = page.locator('.teammate-graph').first();
       await expect(teammateGraph).toBeVisible();
-      // Smart engine: two legend rows — edge-count legend + gender legend
+      
       await expect(teammateGraph.locator('.graph-legend')).toHaveCount(2);
       await expect(teammateGraph.locator('.graph-legend').last()).toContainText('M');
       await expect(teammateGraph.locator('.graph-legend').last()).toContainText('F');
@@ -308,7 +303,6 @@ test.describe('Smart Engine', () => {
 
       const teammateGraph = page.locator('.teammate-graph').first();
       await expect(teammateGraph).toBeVisible();
-      // Normal mode: only the edge-count legend, no gender legend
       await expect(teammateGraph.locator('.graph-legend')).toHaveCount(1);
     });
 
@@ -318,11 +312,9 @@ test.describe('Smart Engine', () => {
       await toggleSmartEngine(page);
       await setCourtCount(page, 1);
 
-      // First generate — records initial level baseline
       await page.getByTestId('generate-assignments-button').click();
       await page.waitForTimeout(300);
 
-      // Set winner and regenerate — levels update, second snapshot recorded
       await playRound(page);
 
       await page.locator('a[href*="stats"]').click();
@@ -330,10 +322,7 @@ test.describe('Smart Engine', () => {
       await expect(page.getByText('📈 Level Progression')).toBeVisible();
       await expect(page.locator('.level-history-graph')).toBeVisible();
       await expect(page.locator('.level-history-graph svg')).toBeVisible();
-      // Legend should list at least one player name
-      await expect(page.locator('.level-history-graph').getByText('Alice').or(
-        page.locator('.level-history-graph').getByText('Bob'),
-      )).toBeVisible();
+      await expect(page.locator('.level-history-graph svg polyline').first()).toBeVisible();
     });
 
     test('Level Progression section is absent in normal mode', async ({ page }) => {
@@ -356,7 +345,6 @@ test.describe('Smart Engine', () => {
       await toggleSmartEngine(page);
       await setCourtCount(page, 1);
 
-      // Generate courts without setting any winner — snapshot still recorded
       await page.getByTestId('generate-assignments-button').click();
       await page.waitForTimeout(300);
 

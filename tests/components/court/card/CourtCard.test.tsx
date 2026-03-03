@@ -147,6 +147,36 @@ describe('CourtCard', () => {
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(3, 1);
     });
+
+    it('calls onWinnerChange and onScoreChange when team is clicked and score is confirmed', async () => {
+      const user = userEvent.setup();
+      const mockOnWinnerChange = vi.fn();
+      const mockOnScoreChange = vi.fn();
+
+      const { container } = render(
+        <CourtCard
+          court={doublesCourt}
+          onWinnerChange={mockOnWinnerChange}
+          onScoreChange={mockOnScoreChange}
+        />,
+      );
+
+      const team1 = container.querySelector('[data-testid="team-1"]');
+      await user.click(team1!);
+
+      const team1Input = screen.getByTestId('score-input-team1');
+      await user.clear(team1Input);
+      await user.type(team1Input, '21');
+
+      const team2Input = screen.getByTestId('score-input-team2');
+      await user.clear(team2Input);
+      await user.type(team2Input, '15');
+
+      await user.click(screen.getByTestId('score-modal-confirm'));
+
+      expect(mockOnWinnerChange).toHaveBeenCalledWith(3, 1);
+      expect(mockOnScoreChange).toHaveBeenCalledWith(3, { team1: 21, team2: 15 });
+    });
   });
 
   describe('Generic court (mixed teams)', () => {
