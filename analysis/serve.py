@@ -10,6 +10,7 @@ server = (
     .with_app(path="/algorithm_docs", root="./algorithm_docs.py")
     .with_app(path="/engine_analysis", root="./engine_analysis.py")
     .with_app(path="/smart_matching_analysis", root="./smart_matching_analysis.py")
+    .with_app(path="/level_tracker_analysis", root="./level_tracker_analysis.py")
     .build()
 )
 
@@ -22,6 +23,7 @@ if __name__ == "__main__":
     print("  • http://localhost:8765/algorithm_docs")
     print("  • http://localhost:8765/engine_analysis")
     print("  • http://localhost:8765/smart_matching_analysis")
+    print("  • http://localhost:8765/level_tracker_analysis")
     print("=" * 40)
     print("Watching for file changes...\n")
 

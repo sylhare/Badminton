@@ -254,7 +254,7 @@ describe('Smart engine — player update', () => {
   beforeEach(async () => await clearTestState());
   afterEach(async () => await clearTestState());
 
-  it("updating a player's gender and level via the modal reflects in the badge", async () => {
+  it('updating a player\'s gender and level via the modal reflects in the badge', async () => {
     render(<App />);
     await addPlayers(user, 'Alice,Bob');
 

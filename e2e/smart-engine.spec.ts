@@ -284,7 +284,7 @@ test.describe('Smart Engine', () => {
 
       const teammateGraph = page.locator('.teammate-graph').first();
       await expect(teammateGraph).toBeVisible();
-      
+
       await expect(teammateGraph.locator('.graph-legend')).toHaveCount(2);
       await expect(teammateGraph.locator('.graph-legend').last()).toContainText('M');
       await expect(teammateGraph.locator('.graph-legend').last()).toContainText('F');
