@@ -296,7 +296,6 @@ describe('Winner Selection', () => {
       const team1Element = screen.getByText('Team 1').closest('.team');
       await user.click(team1Element!);
 
-      // Modal should open — skip it to confirm winner without score
       await user.click(screen.getByTestId('score-modal-skip'));
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
@@ -316,7 +315,6 @@ describe('Winner Selection', () => {
       const aliceElement = screen.getByText('Alice');
       await user.click(aliceElement);
 
-      // Modal should open — skip it to confirm winner without score
       await user.click(screen.getByTestId('score-modal-skip'));
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
@@ -399,7 +397,6 @@ describe('Winner Selection', () => {
       const court1Team1 = screen.getAllByText('Team 1')[0].closest('.team');
       await user.click(court1Team1!);
 
-      // Modal should open — skip it to confirm winner without score
       await user.click(screen.getByTestId('score-modal-skip'));
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 1);
@@ -407,7 +404,6 @@ describe('Winner Selection', () => {
       const eveElement = screen.getByText('Eve');
       await user.click(eveElement);
 
-      // Modal should open again — skip it
       await user.click(screen.getByTestId('score-modal-skip'));
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(2, 1);
@@ -449,7 +445,6 @@ describe('Winner Selection', () => {
       const team2Element = screen.getByText('Team 2').closest('.team');
       await user.click(team2Element!);
 
-      // Modal should open — skip it to confirm winner without score
       await user.click(screen.getByTestId('score-modal-skip'));
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(1, 2);

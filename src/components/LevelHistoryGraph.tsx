@@ -52,7 +52,6 @@ export function LevelHistoryGraph({
 
     const rounds = Math.max(...entries.map(([, h]) => h.length));
 
-    // Sort by final level descending
     entries.sort((a, b) => {
       const aFinal = a[1][a[1].length - 1] ?? 50;
       const bFinal = b[1][b[1].length - 1] ?? 50;

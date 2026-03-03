@@ -236,15 +236,15 @@ export function TeammateGraph({
       {playerGender && (
         <div className="graph-legend" style={{ marginTop: '4px' }}>
           <div className="legend-item">
-            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: SEX_NODE_COLORS.M, flexShrink: 0 }}></span>
+            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: GENDER_NODE_COLORS.M, flexShrink: 0 }}></span>
             <span>M</span>
           </div>
           <div className="legend-item">
-            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: SEX_NODE_COLORS.F, flexShrink: 0 }}></span>
+            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: GENDER_NODE_COLORS.F, flexShrink: 0 }}></span>
             <span>F</span>
           </div>
           <div className="legend-item">
-            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: SEX_NODE_COLORS.Unknown, border: '1px solid #444', flexShrink: 0 }}></span>
+            <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: GENDER_NODE_COLORS.Unknown, border: '1px solid #444', flexShrink: 0 }}></span>
             <span>?</span>
           </div>
         </div>

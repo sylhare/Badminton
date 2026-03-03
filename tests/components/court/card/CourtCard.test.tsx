@@ -76,7 +76,6 @@ describe('CourtCard', () => {
       const aliceContainer = screen.getByText('Alice').closest('.singles-player');
       await user.click(aliceContainer!);
 
-      // Modal should open — skip it to confirm winner without score
       const skipButton = screen.getByTestId('score-modal-skip');
       await user.click(skipButton);
 
@@ -143,7 +142,6 @@ describe('CourtCard', () => {
       const team1 = container.querySelector('[data-testid="team-1"]');
       await user.click(team1!);
 
-      // Modal should open — skip it to confirm winner without score
       const skipButton = screen.getByTestId('score-modal-skip');
       await user.click(skipButton);
 

@@ -26,7 +26,7 @@ export class LevelTracker {
   getKFactor(
     score?: { team1: number; team2: number },
     winner?: 1 | 2,
-    teamPlayers?: Player[]
+    teamPlayers?: Player[],
   ): number {
     if (!score || !winner) return 6 * this.teamBalanceFactor(teamPlayers);
 

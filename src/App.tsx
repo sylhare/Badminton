@@ -112,7 +112,6 @@ function App(): React.ReactElement {
   const generateAssignments = () => {
     recordCurrentWins();
 
-    // Update player levels based on completed games (courts with a winner)
     const assignmentsWithWinners = assignments.filter(c => c.winner);
     const nextPlayers = assignmentsWithWinners.length > 0
       ? levelTracker.updatePlayersLevels(assignmentsWithWinners, players)
@@ -120,9 +119,6 @@ function App(): React.ReactElement {
     if (assignmentsWithWinners.length > 0) {
       setPlayers(nextPlayers);
     }
-    // Record a level snapshot on every generate so the chart is always populated.
-    // When winners were set the snapshot reflects updated levels; otherwise it
-    // captures the current baseline (flat lines until the first scored round).
     engine().recordLevelSnapshot(nextPlayers);
 
     setLastGeneratedAt(Date.now());

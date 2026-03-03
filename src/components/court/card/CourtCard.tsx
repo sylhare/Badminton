@@ -29,7 +29,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
     if (!onWinnerChange) return;
 
     if (court.winner === teamNumber) {
-      // Deselect: clear winner and score
       onWinnerChange(court.courtNumber, teamNumber);
       onScoreChange?.(court.courtNumber, undefined);
     } else {

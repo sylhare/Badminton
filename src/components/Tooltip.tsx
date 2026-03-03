@@ -25,9 +25,6 @@ export function Tooltip({ text, testId }: TooltipProps) {
     }
   };
 
-  // Native click listener: stopPropagation() must run at the DOM level before
-  // the event bubbles to any ancestor <label> — React synthetic handlers fire
-  // at the React root, which is too late (the label has already activated).
   useEffect(() => {
     const el = iconRef.current;
     if (!el) return;
@@ -41,10 +38,8 @@ export function Tooltip({ text, testId }: TooltipProps) {
     return () => el.removeEventListener('click', handleClick);
   }, []);
 
-  // Cleanup hover timer on unmount.
   useEffect(() => () => clearHoverTimer(), []);
 
-  // Close on outside click.
   useEffect(() => {
     if (!open) return;
     const handleOutside = (e: MouseEvent) => {

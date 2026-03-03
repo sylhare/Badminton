@@ -33,7 +33,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it to confirm winner without score
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -56,7 +55,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it to confirm winner without score
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -76,7 +74,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it to confirm winner without score
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -87,7 +84,6 @@ describe('App Leaderboard Persistence', () => {
       const totalWinsAfterSelection = Array.from(winCountsAfterSelection.values()).reduce((sum, wins) => sum + wins, 0);
       expect(totalWinsAfterSelection).toBeGreaterThan(0);
 
-      // Click team1 again (already winner) → deselect, no modal
       await act(async () => {
         await user.click(team1Elements[0]);
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -113,7 +109,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it to confirm winner without score
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -148,7 +143,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it to confirm winner without score
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -169,7 +163,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -181,7 +174,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -202,7 +194,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -214,7 +205,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -243,7 +233,6 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      // Modal opens — skip it to confirm winner without score
       await act(async () => {
         await user.click(screen.getByTestId('score-modal-skip'));
         await new Promise(resolve => setTimeout(resolve, 100));
