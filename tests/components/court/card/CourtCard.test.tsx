@@ -62,7 +62,7 @@ describe('CourtCard', () => {
       expect(screen.getByText('👑')).toBeInTheDocument();
     });
 
-    it('calls onWinnerChange when singles player is clicked and modal is skipped', async () => {
+    it('calls onWinnerChange when singles player is clicked', async () => {
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
 
@@ -75,9 +75,6 @@ describe('CourtCard', () => {
 
       const aliceContainer = screen.getByText('Alice').closest('.singles-player');
       await user.click(aliceContainer!);
-
-      const skipButton = screen.getByTestId('score-modal-skip');
-      await user.click(skipButton);
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(2, 1);
     });
@@ -128,7 +125,7 @@ describe('CourtCard', () => {
       expect(team2).toHaveClass('team-winner');
     });
 
-    it('calls onWinnerChange when doubles team is clicked and modal is skipped', async () => {
+    it('calls onWinnerChange when doubles team is clicked', async () => {
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
 
@@ -141,9 +138,6 @@ describe('CourtCard', () => {
 
       const team1 = container.querySelector('[data-testid="team-1"]');
       await user.click(team1!);
-
-      const skipButton = screen.getByTestId('score-modal-skip');
-      await user.click(skipButton);
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(3, 1);
     });
@@ -158,6 +152,7 @@ describe('CourtCard', () => {
           court={doublesCourt}
           onWinnerChange={mockOnWinnerChange}
           onScoreChange={mockOnScoreChange}
+          isSmartEngineEnabled={true}
         />,
       );
 

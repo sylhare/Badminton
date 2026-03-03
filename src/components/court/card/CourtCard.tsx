@@ -13,6 +13,7 @@ interface CourtCardProps {
   onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
   isManualCourt?: boolean;
   isAnimating?: boolean;
+  isSmartEngineEnabled?: boolean;
 }
 
 const CourtCard: React.FC<CourtCardProps> = ({
@@ -21,6 +22,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   onScoreChange,
   isManualCourt = false,
   isAnimating = false,
+  isSmartEngineEnabled = false,
 }) => {
   const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
   const clickCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -31,6 +33,9 @@ const CourtCard: React.FC<CourtCardProps> = ({
     if (court.winner === teamNumber) {
       onWinnerChange(court.courtNumber, teamNumber);
       onScoreChange?.(court.courtNumber, undefined);
+    } else if (!isSmartEngineEnabled) {
+      onWinnerChange(court.courtNumber, teamNumber);
+      triggerConfetti(event.clientX, event.clientY, 30);
     } else {
       clickCoordsRef.current = { x: event.clientX, y: event.clientY };
       setPendingWinner(teamNumber);
