@@ -21,104 +21,74 @@ test.describe('Smart Engine', () => {
   });
 
   test.describe('Tooltip', () => {
-    test('clicking tooltip icon shows popup without toggling smart engine', async ({ page }) => {
+    test('tooltip click interactions', async ({ page }) => {
       await addSinglePlayer(page, 'Test Player');
 
       const toggle = page.getByTestId('smart-engine-toggle');
-      await expect(toggle).not.toBeChecked();
-
       const tooltipIcon = page.getByTestId('smart-engine-tooltip-icon');
-      await tooltipIcon.click();
+      const tooltipPopup = page.getByTestId('smart-engine-tooltip-popup');
 
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).toBeVisible();
-      await expect(toggle).not.toBeChecked();
+      await test.step('clicking shows popup without toggling smart engine', async () => {
+        await expect(toggle).not.toBeChecked();
+        await tooltipIcon.click();
+        await expect(tooltipPopup).toBeVisible();
+        await expect(toggle).not.toBeChecked();
+      });
+
+      await test.step('clicking icon again closes tooltip', async () => {
+        await tooltipIcon.click();
+        await expect(tooltipPopup).not.toBeVisible();
+        await expect(toggle).not.toBeChecked();
+      });
+
+      await test.step('clicking outside closes the tooltip', async () => {
+        await tooltipIcon.click();
+        await expect(tooltipPopup).toBeVisible();
+        await page.mouse.click(10, 10);
+        await expect(tooltipPopup).not.toBeVisible();
+      });
     });
 
-    test('clicking outside closes the tooltip', async ({ page }) => {
+    test('tooltip hover interactions', async ({ page }) => {
       await addSinglePlayer(page, 'Test Player');
 
       const tooltipIcon = page.getByTestId('smart-engine-tooltip-icon');
-      await tooltipIcon.click();
+      const tooltipPopup = page.getByTestId('smart-engine-tooltip-popup');
 
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).toBeVisible();
+      await test.step('moving mouse away before delay keeps tooltip hidden', async () => {
+        await tooltipIcon.hover();
+        await page.waitForTimeout(500);
+        await page.mouse.move(10, 10);
+        await expect(tooltipPopup).not.toBeVisible();
+      });
 
-      await page.mouse.click(10, 10);
+      await test.step('hovering 1.5s shows the tooltip', async () => {
+        await tooltipIcon.hover();
+        await page.waitForTimeout(1800);
+        await expect(tooltipPopup).toBeVisible();
+      });
 
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).not.toBeVisible();
-    });
-
-    test('clicking icon again toggles the tooltip closed', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player');
-
-      const tooltipIcon = page.getByTestId('smart-engine-tooltip-icon');
-      await tooltipIcon.click();
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).toBeVisible();
-
-      await tooltipIcon.click();
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).not.toBeVisible();
-
-      const toggle = page.getByTestId('smart-engine-toggle');
-      await expect(toggle).not.toBeChecked();
-    });
-
-    test('hovering over the icon for 1.5s shows the tooltip', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player');
-
-      const tooltipIcon = page.getByTestId('smart-engine-tooltip-icon');
-
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).not.toBeVisible();
-
-      await tooltipIcon.hover();
-      await page.waitForTimeout(1800);
-
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).toBeVisible();
-    });
-
-    test('moving mouse away before delay hides tooltip', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player');
-
-      const tooltipIcon = page.getByTestId('smart-engine-tooltip-icon');
-
-      await tooltipIcon.hover();
-      await page.waitForTimeout(500);
-      await page.mouse.move(10, 10);
-
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).not.toBeVisible();
-    });
-
-    test('moving mouse away after hover closes the tooltip', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player');
-
-      const tooltipIcon = page.getByTestId('smart-engine-tooltip-icon');
-
-      await tooltipIcon.hover();
-      await page.waitForTimeout(1800);
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).toBeVisible();
-
-      await page.mouse.move(10, 10);
-      await expect(page.getByTestId('smart-engine-tooltip-popup')).not.toBeVisible();
+      await test.step('moving mouse away after hover closes the tooltip', async () => {
+        await page.mouse.move(10, 10);
+        await expect(tooltipPopup).not.toBeVisible();
+      });
     });
   });
 
   test.describe('Toggle & theme', () => {
-    test('toggling on applies .night-theme', async ({ page }) => {
+    test('theme toggle - on applies night-theme, off removes it', async ({ page }) => {
       await addSinglePlayer(page, 'Test Player');
 
-      await expect(page.locator('.app')).not.toHaveClass(/night-theme/);
+      await test.step('toggling on applies .night-theme', async () => {
+        await expect(page.locator('.app')).not.toHaveClass(/night-theme/);
+        await toggleSmartEngine(page);
+        await expect(page.locator('.app')).toHaveClass(/night-theme/);
+      });
 
-      await toggleSmartEngine(page);
-
-      await expect(page.locator('.app')).toHaveClass(/night-theme/);
-    });
-
-    test('toggling off removes .night-theme', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player');
-
-      await toggleSmartEngine(page);
-      await expect(page.locator('.app')).toHaveClass(/night-theme/);
-
-      await toggleSmartEngine(page);
-      await expect(page.locator('.app')).not.toHaveClass(/night-theme/);
+      await test.step('toggling off removes .night-theme', async () => {
+        await toggleSmartEngine(page);
+        await expect(page.locator('.app')).not.toHaveClass(/night-theme/);
+      });
     });
   });
 
@@ -199,19 +169,6 @@ test.describe('Smart Engine', () => {
       await enterAndConfirmScore(page, '21', '15');
       await assertAvgPtsNumeric(page);
     });
-
-    test('normal mode leaderboard does not show Level column', async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await setCourtCount(page, 1);
-
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
-
-      await page.locator('.team-clickable').first().click();
-
-      await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
-      await expect(page.getByTestId('leaderboard-level-header')).not.toBeVisible();
-    });
   });
 
   test.describe('Stats Integration', () => {
@@ -236,19 +193,32 @@ test.describe('Smart Engine', () => {
       await expect(teammateGraph.locator('.graph-legend').last()).toContainText('F');
     });
 
-    test('TeammateGraph gender legend is absent in normal mode', async ({ page }) => {
+    test('normal mode - no Level column, no gender legend, no Level Progression', async ({ page }) => {
       await addBulkPlayers(page, PLAYERS);
       await setCourtCount(page, 1);
 
       await page.getByTestId('generate-assignments-button').click();
-      await page.waitForTimeout(300);
-      await playRound(page);
+      await expect(page.locator('.court-card')).toHaveCount(1);
+      await page.locator('.team-clickable').first().click();
 
+      await test.step('leaderboard does not show Level column', async () => {
+        await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
+        await expect(page.getByTestId('leaderboard-level-header')).not.toBeVisible();
+      });
+
+      await page.getByTestId('generate-assignments-button').click();
+      await page.waitForTimeout(200);
       await page.locator('a[href*="stats"]').click();
 
-      const teammateGraph = page.locator('.teammate-graph').first();
-      await expect(teammateGraph).toBeVisible();
-      await expect(teammateGraph.locator('.graph-legend')).toHaveCount(1);
+      await test.step('TeammateGraph gender legend is absent', async () => {
+        const teammateGraph = page.locator('.teammate-graph').first();
+        await expect(teammateGraph).toBeVisible();
+        await expect(teammateGraph.locator('.graph-legend')).toHaveCount(1);
+      });
+
+      await test.step('Level Progression section is absent', async () => {
+        await expect(page.getByText('📈 Level Progression')).not.toBeVisible();
+      });
     });
 
     test('Level Progression section shows updated lines after a scored round', async ({ page }) => {
@@ -269,19 +239,6 @@ test.describe('Smart Engine', () => {
       await expect(page.locator('.level-history-graph')).toBeVisible();
       await expect(page.locator('.level-history-graph svg')).toBeVisible();
       await expect(page.locator('.level-history-graph svg polyline').first()).toBeVisible();
-    });
-
-    test('Level Progression section is absent in normal mode', async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await setCourtCount(page, 1);
-
-      await page.getByTestId('generate-assignments-button').click();
-      await page.waitForTimeout(300);
-      await playRound(page);
-
-      await page.locator('a[href*="stats"]').click();
-
-      await expect(page.getByText('📈 Level Progression')).not.toBeVisible();
     });
 
     test('Level Progression section appears after first generate even without winners', async ({ page }) => {

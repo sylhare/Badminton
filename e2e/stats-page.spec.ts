@@ -9,79 +9,68 @@ test.describe('Stats Page', () => {
     await page.reload();
   });
 
-  test.describe('Navigation', () => {
-    test('can navigate to stats page from main app', async ({ page }) => {
+  test('stats page navigation - to and from app', async ({ page }) => {
+    await test.step('can navigate to stats page', async () => {
       await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
-
       const statsLink = page.locator('a[href*="stats"]');
       await expect(statsLink).toBeVisible();
       await statsLink.click();
-
       await expect(page.locator('h1')).toContainText('Simulated Annealing Diagnostics');
       await expect(page.locator('.stats-subtitle')).toContainText('Simulated Annealing with iterative improvement');
     });
 
-    test('can navigate back to app from stats page', async ({ page }) => {
-      await navigateToStats(page);
-
+    await test.step('can navigate back to app', async () => {
       const backLink = page.getByTestId('back-to-app');
       await expect(backLink).toBeVisible();
       await backLink.click();
+      await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
+    });
 
+    await test.step('start game link navigates back to app', async () => {
+      await navigateToStats(page);
+      await page.getByText('Start a Game →').click();
       await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
     });
   });
 
-  test.describe('No Data State', () => {
-    test('shows no data message when no session data exists', async ({ page }) => {
-      await navigateToStats(page);
+  test('stats page empty state - no data message, notebook links and footer', async ({ page }) => {
+    await navigateToStats(page);
 
+    await test.step('shows no data message', async () => {
       await expect(page.locator('.no-data')).toBeVisible();
       await expect(page.getByText('No session data yet')).toBeVisible();
       await expect(page.getByText('Start a Game →')).toBeVisible();
     });
 
-    test('start game link navigates back to app', async ({ page }) => {
-      await navigateToStats(page);
-
-      await page.getByText('Start a Game →').click();
-
-      await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
-    });
-  });
-
-  test.describe('Notebook Links', () => {
-    test('displays algorithm documentation link', async ({ page }) => {
-      await navigateToStats(page);
-
+    await test.step('algorithm documentation link', async () => {
       const algorithmLink = page.getByTestId('algorithm-link');
       await expect(algorithmLink).toBeVisible();
       await expect(algorithmLink).toContainText('Algorithm Documentation');
     });
 
-    test('displays engine comparison link', async ({ page }) => {
-      await navigateToStats(page);
-
+    await test.step('engine comparison link', async () => {
       const engineLink = page.getByTestId('engine-link');
       await expect(engineLink).toBeVisible();
       await expect(engineLink).toContainText('Engine Comparison');
     });
+
+    await test.step('GitHub feedback link in footer', async () => {
+      const footer = page.locator('.stats-footer');
+      await expect(footer).toBeVisible();
+      await expect(footer.getByText('Let us know on GitHub')).toBeVisible();
+      const githubLink = footer.locator('a[href*="github.com"]');
+      await expect(githubLink).toHaveAttribute('href', 'https://github.com/sylhare/Badminton/issues/new/choose');
+    });
   });
 
-  test.describe('Session Diagnostics', () => {
-    test('shows diagnostics after playing games', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await setupGameWithPlayers(page, players);
+  test('session diagnostics - all sections visible after playing', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
+    await setupGameWithPlayers(page, players);
+    await playRound(page);
+    await page.locator('a[href*="stats"]').click();
 
-      await expect(page.locator('[data-testid^="court-"]').first()).toBeVisible();
-
-      await playRound(page);
-
-      const statsLink = page.locator('a[href*="stats"]');
-      await statsLink.click();
-
+    await test.step('stats grid visible with key cards', async () => {
       await expect(page.locator('h1')).toContainText('Simulated Annealing Diagnostics');
-
       await expect(page.locator('.stats-grid')).toBeVisible();
       await expect(page.getByText('Total Players')).toBeVisible();
       await expect(page.getByText('Rounds Played')).toBeVisible();
@@ -89,160 +78,96 @@ test.describe('Stats Page', () => {
       await expect(page.locator('.stat-card').filter({ hasText: 'Warnings' })).toBeVisible();
     });
 
-    test('displays bench distribution section', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-      await setupGameWithPlayers(page, players);
-
-      await navigateToStats(page);
-
+    await test.step('bench distribution section', async () => {
       await expect(page.getByText('🪑 Bench Distribution')).toBeVisible();
       await expect(page.getByText(/Never benched/)).toBeVisible();
       await expect(page.getByText(/Benched once/)).toBeVisible();
       await expect(page.getByText(/Fairness score/)).toBeVisible();
     });
 
-    test('displays teammate connections section', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await setupGameWithPlayers(page, players);
-
-      await navigateToStats(page);
-
+    await test.step('teammate connections section', async () => {
       await expect(page.getByText('👥 Teammate Connections')).toBeVisible();
     });
 
-    test('displays opponent matchups section', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await setupGameWithPlayers(page, players);
-
-      await navigateToStats(page);
-
+    await test.step('opponent matchups section', async () => {
       await expect(page.getByText('⚔️ Opponent Matchups')).toBeVisible();
     });
 
-    test('displays singles matches section', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await setupGameWithPlayers(page, players);
-
-      await navigateToStats(page);
-
+    await test.step('singles matches section', async () => {
       await expect(page.getByText('🎯 Singles Matches')).toBeVisible();
     });
   });
 
-  test.describe('Expandable Sections', () => {
-    test('can expand bench counts section', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-      await setupGameWithPlayers(page, players);
+  test('bench section - expand and graph', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
+    await setupGameWithPlayers(page, players);
+    await navigateToStats(page);
 
-      await navigateToStats(page);
-
+    await test.step('can expand bench counts section', async () => {
       const benchDetails = page.locator('summary').filter({ hasText: /View bench counts per player/ });
       await expect(benchDetails).toBeVisible();
       await benchDetails.click();
-
       await expect(page.locator('.bench-graph')).toBeVisible();
     });
 
-    test('can expand repeated pairs section when available', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await setupGameWithPlayers(page, players);
-
-      await playRound(page);
-      await playRound(page);
-
-      await navigateToStats(page);
-
-      const teammateGraph = page.locator('.teammate-graph').first();
-      if (await teammateGraph.isVisible()) {
-        const pairsDetails = page.locator('summary').filter({ hasText: /View repeated pairs/ });
-        if (await pairsDetails.isVisible()) {
-          await pairsDetails.click();
-          await expect(page.locator('.pairs-graph').first()).toBeVisible();
-        }
-      }
-    });
-  });
-
-  test.describe('Graph Visualizations', () => {
-    test('renders teammate network graph', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await setupGameWithPlayers(page, players);
-
-      await navigateToStats(page);
-
-      const teammateGraph = page.locator('.teammate-graph').first();
-      await expect(teammateGraph).toBeVisible();
-
-      const svg = teammateGraph.locator('svg');
-      await expect(svg).toBeVisible();
-
-      const legend = teammateGraph.locator('.graph-legend');
-      await expect(legend).toBeVisible();
-      await expect(legend).toContainText('1×');
-      await expect(legend).toContainText('2×');
-      await expect(legend).toContainText('3×');
-      await expect(legend).toContainText('4×+');
-    });
-
-    test('renders bench graph in expanded section', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-      await setupGameWithPlayers(page, players);
-
-      await navigateToStats(page);
-
-      const benchDetails = page.locator('summary').filter({ hasText: /View bench counts per player/ });
-      await benchDetails.click();
-
+    await test.step('bench graph has svg and legend', async () => {
       const benchGraph = page.locator('.bench-graph');
-      await expect(benchGraph).toBeVisible();
-
-      const svg = benchGraph.locator('svg');
-      await expect(svg).toBeVisible();
-
-      const legend = benchGraph.locator('.graph-legend');
-      await expect(legend).toBeVisible();
+      await expect(benchGraph.locator('svg')).toBeVisible();
+      await expect(benchGraph.locator('.graph-legend')).toBeVisible();
     });
   });
 
-  test.describe('Data Persistence', () => {
-    test('stats page shows data after page reload', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await setupGameWithPlayers(page, players);
+  test('can expand repeated pairs section when available', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+    await setupGameWithPlayers(page, players);
+    await playRound(page);
+    await playRound(page);
+    await navigateToStats(page);
 
-      await navigateToStats(page);
+    const teammateGraph = page.locator('.teammate-graph').first();
+    if (await teammateGraph.isVisible()) {
+      const pairsDetails = page.locator('summary').filter({ hasText: /View repeated pairs/ });
+      if (await pairsDetails.isVisible()) {
+        await pairsDetails.click();
+        await expect(page.locator('.pairs-graph').first()).toBeVisible();
+      }
+    }
+  });
+
+  test('renders teammate network graph', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+    await setupGameWithPlayers(page, players);
+    await navigateToStats(page);
+
+    const teammateGraph = page.locator('.teammate-graph').first();
+    await expect(teammateGraph).toBeVisible();
+    await expect(teammateGraph.locator('svg')).toBeVisible();
+
+    const legend = teammateGraph.locator('.graph-legend');
+    await expect(legend).toBeVisible();
+    await expect(legend).toContainText('1×');
+    await expect(legend).toContainText('2×');
+    await expect(legend).toContainText('3×');
+    await expect(legend).toContainText('4×+');
+  });
+
+  test('data persistence - shows data after reload, clears after localStorage clear', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+    await setupGameWithPlayers(page, players);
+    await navigateToStats(page);
+
+    await test.step('shows data after page reload', async () => {
       await expect(page.locator('.stats-grid')).toBeVisible();
-
       await page.reload();
-
       await expect(page.locator('.stats-grid')).toBeVisible();
       await expect(page.getByText('Total Players')).toBeVisible();
     });
 
-    test('stats page clears data when localStorage is cleared', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await setupGameWithPlayers(page, players);
-
-      await navigateToStats(page);
-      await expect(page.locator('.stats-grid')).toBeVisible();
-
+    await test.step('clears data after localStorage clear', async () => {
       await page.evaluate(() => localStorage.clear());
       await page.reload();
-
       await expect(page.locator('.no-data')).toBeVisible();
       await expect(page.getByText('No session data yet')).toBeVisible();
-    });
-  });
-
-  test.describe('Footer', () => {
-    test('displays GitHub feedback link', async ({ page }) => {
-      await navigateToStats(page);
-
-      const footer = page.locator('.stats-footer');
-      await expect(footer).toBeVisible();
-      await expect(footer.getByText('Let us know on GitHub')).toBeVisible();
-
-      const githubLink = footer.locator('a[href*="github.com"]');
-      await expect(githubLink).toHaveAttribute('href', 'https://github.com/sylhare/Badminton/issues/new/choose');
     });
   });
 });

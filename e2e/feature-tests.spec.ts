@@ -9,23 +9,33 @@ test.describe('Feature Tests', () => {
     await page.reload();
   });
 
-  test('Player toggle functionality', async ({ page }) => {
-    await addSinglePlayer(page, 'Test Player 1');
-    await addSinglePlayer(page, 'Test Player 2');
+  test('Player toggle and bench counts always visible', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+    await addBulkPlayers(page, players);
 
-    await expect(page.getByTestId('stats-present-count')).toHaveText('2');
-    await expect(page.getByTestId('stats-absent-count')).toHaveText('0');
+    await test.step('toggle player changes present/absent counts', async () => {
+      await expect(page.getByTestId('stats-present-count')).toHaveText('4');
+      await expect(page.getByTestId('stats-absent-count')).toHaveText('0');
 
-    const firstToggleButton = page.locator('[data-testid^="toggle-presence-"]').first();
-    await firstToggleButton.click();
+      const firstToggleButton = page.locator('[data-testid^="toggle-presence-"]').first();
+      await firstToggleButton.click();
 
-    await expect(page.getByTestId('stats-present-count')).toHaveText('1');
-    await expect(page.getByTestId('stats-absent-count')).toHaveText('1');
+      await expect(page.getByTestId('stats-present-count')).toHaveText('3');
+      await expect(page.getByTestId('stats-absent-count')).toHaveText('1');
 
-    await firstToggleButton.click();
+      await firstToggleButton.click();
 
-    await expect(page.getByTestId('stats-present-count')).toHaveText('2');
-    await expect(page.getByTestId('stats-absent-count')).toHaveText('0');
+      await expect(page.getByTestId('stats-present-count')).toHaveText('4');
+      await expect(page.getByTestId('stats-absent-count')).toHaveText('0');
+    });
+
+    await test.step('bench counts always visible in player list', async () => {
+      await expect(page.locator('.player-bench-row').first()).toBeVisible();
+
+      const aliceItem = page.locator('.player-item').filter({ hasText: 'Alice' });
+      await expect(aliceItem.locator('.bench-count-emoji')).toContainText('0');
+      await expect(aliceItem.locator('.bench-next-toggle')).toBeVisible();
+    });
   });
 
   test('Manual court assignment functionality', async ({ page }) => {
@@ -66,11 +76,11 @@ test.describe('Feature Tests', () => {
     await expect(court1.locator('.manual-court-icon')).toBeVisible();
   });
 
-  test.describe('Player removal modal', () => {
-    test('confirm removal', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player 1');
-      await addSinglePlayer(page, 'Test Player 2');
+  test('Player removal modal - all scenarios', async ({ page }) => {
+    await addSinglePlayer(page, 'Test Player 1');
+    await addSinglePlayer(page, 'Test Player 2');
 
+    await test.step('confirm removal drops total count', async () => {
       await expect(page.getByTestId('stats-total-count')).toHaveText('2');
 
       const firstRemoveButton = page.locator('[data-testid^="remove-player-"]').first();
@@ -83,14 +93,14 @@ test.describe('Feature Tests', () => {
 
       await page.getByTestId('player-removal-modal-remove').click();
 
-      await expect(page.getByTestId('player-removal-modal')).not.toBeVisible();
+      await expect(modal).not.toBeVisible();
       await expect(page.getByTestId('stats-total-count')).toHaveText('1');
     });
 
-    test('mark as absent', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player 1');
-      await addSinglePlayer(page, 'Test Player 2');
+    // Restore state for next steps
+    await addSinglePlayer(page, 'Test Player 1');
 
+    await test.step('mark as absent keeps total but marks player absent', async () => {
       await expect(page.getByTestId('stats-total-count')).toHaveText('2');
       await expect(page.getByTestId('stats-present-count')).toHaveText('2');
 
@@ -98,7 +108,6 @@ test.describe('Feature Tests', () => {
       await firstRemoveButton.click();
 
       await expect(page.getByTestId('player-removal-modal')).toBeVisible();
-
       await page.getByTestId('player-removal-modal-absent').click();
 
       await expect(page.getByTestId('player-removal-modal')).not.toBeVisible();
@@ -107,29 +116,18 @@ test.describe('Feature Tests', () => {
       await expect(page.getByTestId('stats-absent-count')).toHaveText('1');
     });
 
-    test('cancel with X button', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player 1');
-      await addSinglePlayer(page, 'Test Player 2');
-
-      await expect(page.getByTestId('stats-total-count')).toHaveText('2');
-
+    await test.step('cancel with X button closes modal without changes', async () => {
       const firstRemoveButton = page.locator('[data-testid^="remove-player-"]').first();
       await firstRemoveButton.click();
 
       await expect(page.getByTestId('player-removal-modal')).toBeVisible();
-
       await page.getByTestId('player-removal-modal-close').click();
 
       await expect(page.getByTestId('player-removal-modal')).not.toBeVisible();
       await expect(page.getByTestId('stats-total-count')).toHaveText('2');
-      await expect(page.getByTestId('stats-present-count')).toHaveText('2');
     });
 
-    test('cancel by clicking overlay', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player 1');
-
-      await expect(page.getByTestId('stats-total-count')).toHaveText('1');
-
+    await test.step('cancel by clicking overlay closes modal without changes', async () => {
       const removeButton = page.locator('[data-testid^="remove-player-"]').first();
       await removeButton.click();
 
@@ -139,7 +137,7 @@ test.describe('Feature Tests', () => {
       await overlay.click({ position: { x: 10, y: 10 } });
 
       await expect(page.getByTestId('player-removal-modal')).not.toBeVisible();
-      await expect(page.getByTestId('stats-total-count')).toHaveText('1');
+      await expect(page.getByTestId('stats-total-count')).toHaveText('2');
     });
   });
 
@@ -346,63 +344,40 @@ test.describe('Feature Tests', () => {
     await expect(bobItemAfter.locator('.toggle-switch')).not.toHaveClass(/active/);
   });
 
-  test.describe('Player deletion and leaderboard', () => {
-    test('should remove deleted player from leaderboard', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
-      await setCourtCount(page, 1);
+  test('Player deletion and leaderboard - removed immediately and persists after reload', async ({ page }) => {
+    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+    await addBulkPlayers(page, players);
+    await setCourtCount(page, 1);
 
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
+    await page.getByTestId('generate-assignments-button').click();
+    await expect(page.locator('.court-card')).toHaveCount(1);
 
-      const firstTeam = page.locator('.team-clickable').first();
-      await firstTeam.click();
+    const firstTeam = page.locator('.team-clickable').first();
+    await firstTeam.click();
 
-      await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
+    await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
 
-      const firstLeaderboardRow = page.locator('.leaderboard-table tbody tr').first();
-      const nameWithMedal = await firstLeaderboardRow.locator('td').nth(1).textContent() ?? '';
-      const winningPlayerName = nameWithMedal.replace(/^[^\w]+/, '').trim();
+    const firstLeaderboardRow = page.locator('.leaderboard-table tbody tr').first();
+    const nameWithMedal = await firstLeaderboardRow.locator('td').nth(1).textContent() ?? '';
+    const winningPlayerName = nameWithMedal.replace(/^[^\w]+/, '').trim();
 
-      await expandSectionIfNeeded(page, 'Manage Players');
+    await expandSectionIfNeeded(page, 'Manage Players');
 
-      const playerRow = page.locator('.player-item').filter({ hasText: winningPlayerName });
-      await playerRow.locator('[data-testid^="remove-player-"]').click();
-      await page.getByTestId('player-removal-modal-remove').click();
-      await page.waitForTimeout(200);
+    const playerRow = page.locator('.player-item').filter({ hasText: winningPlayerName });
+    await playerRow.locator('[data-testid^="remove-player-"]').click();
+    await page.getByTestId('player-removal-modal-remove').click();
+    await page.waitForTimeout(200);
 
+    await test.step('player removed from leaderboard immediately', async () => {
       const leaderboardNameCells = page.locator('.leaderboard-table tbody tr td:nth-child(2)');
       const names = (await leaderboardNameCells.allTextContents()).map(n => n.replace(/^[^\w]+/, '').trim());
       expect(names).not.toContain(winningPlayerName);
     });
 
-    test('should not restore deleted player wins after app reload', async ({ page }) => {
-      const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-      await addBulkPlayers(page, players);
-      await setCourtCount(page, 1);
+    await page.reload();
+    await expect(page).toHaveTitle(/Badminton/);
 
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
-
-      const firstTeam = page.locator('.team-clickable').first();
-      await firstTeam.click();
-
-      await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
-
-      const firstLeaderboardRow = page.locator('.leaderboard-table tbody tr').first();
-      const nameWithMedal = await firstLeaderboardRow.locator('td').nth(1).textContent() ?? '';
-      const winningPlayerName = nameWithMedal.replace(/^[^\w]+/, '').trim();
-
-      await expandSectionIfNeeded(page, 'Manage Players');
-
-      const playerRow = page.locator('.player-item').filter({ hasText: winningPlayerName });
-      await playerRow.locator('[data-testid^="remove-player-"]').click();
-      await page.getByTestId('player-removal-modal-remove').click();
-      await page.waitForTimeout(200);
-
-      await page.reload();
-      await expect(page).toHaveTitle(/Badminton/);
-
+    await test.step('deleted player wins not restored after reload', async () => {
       const leaderboardNameCells = page.locator('.leaderboard-table tbody tr td:nth-child(2)');
       const names = (await leaderboardNameCells.allTextContents()).map(n => n.replace(/^[^\w]+/, '').trim());
       expect(names).not.toContain(winningPlayerName);
@@ -460,22 +435,5 @@ test.describe('Feature Tests', () => {
 
     const leaderboardRows = page.locator('.leaderboard-table tbody tr');
     await expect(leaderboardRows).toHaveCount(2);
-  });
-
-  test('Bench counts are always visible in Manage Players', async ({ page }) => {
-    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-    await addBulkPlayers(page, players);
-
-    await expect(page.locator('.player-list')).toBeVisible();
-
-    const playerBenchRows = page.locator('.player-bench-row');
-    await expect(playerBenchRows.first()).toBeVisible();
-
-    const aliceItem = page.locator('.player-item').filter({ hasText: 'Alice' });
-    const benchCount = aliceItem.locator('.bench-count-emoji');
-    await expect(benchCount).toContainText('0');
-
-    const benchToggle = aliceItem.locator('.bench-next-toggle');
-    await expect(benchToggle).toBeVisible();
   });
 });
