@@ -130,6 +130,15 @@ describe('StorageManager', () => {
 
       expect(() => storageManager.saveEngine(mockEngineState)).not.toThrow();
     });
+
+    it('should handle corrupted data for loadEngine gracefully', () => {
+      localStorage.setItem(STORAGE_KEY, 'invalid-json');
+
+      const loaded = storageManager.loadEngine();
+
+      expect(loaded).toEqual({});
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
   });
 
   describe('clearAll', () => {
@@ -176,6 +185,17 @@ describe('StorageManager', () => {
       expect(loadedEngine.benchCountMap).toEqual({ 'p1': 2 });
       expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
     });
+
+    it('should handle corrupted old key values gracefully and still remove them', () => {
+      localStorage.setItem(OLD_APP_KEY, 'invalid-json');
+      localStorage.setItem(OLD_ENGINE_KEY, 'invalid-json');
+
+      const loaded = storageManager.loadApp();
+
+      expect(loaded).toEqual({});
+      expect(localStorage.getItem(OLD_APP_KEY)).toBeNull();
+      expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
+    });
   });
 
   describe('size-based pruning', () => {
@@ -206,6 +226,60 @@ describe('StorageManager', () => {
       });
 
       expect(raw.length).toBeLessThanOrEqual(150_000);
+    });
+
+    it('should clear levelHistory entirely when trimming to 10 entries is still too large', () => {
+      const levelHistory: Record<string, number[]> = {};
+      for (let i = 0; i < 4000; i++) {
+        levelHistory[`player-${i}`] = Array.from({ length: 50 }, (_, j) => 50 + j);
+      }
+
+      storageManager.saveEngine({
+        benchCountMap: {},
+        singleCountMap: {},
+        teammateCountMap: {},
+        opponentCountMap: {},
+        winCountMap: {},
+        lossCountMap: {},
+        levelHistory,
+      });
+
+      const raw = localStorage.getItem(STORAGE_KEY)!;
+      const parsed = JSON.parse(raw);
+
+      expect(parsed.engine.levelHistory).toEqual({});
+      expect(raw.length).toBeLessThanOrEqual(150_000);
+    });
+
+    it('should prune teammateCountMap and opponentCountMap to 200 keys when still too large', () => {
+      const teammate: Record<string, number> = {};
+      const opponent: Record<string, number> = {};
+      for (let i = 0; i < 100; i++) {
+        for (let j = i + 1; j < 100; j++) {
+          teammate[`player-${i}|player-${j}`] = 1;
+          opponent[`player-${i}|player-${j}`] = 1;
+        }
+      }
+
+      storageManager.saveEngine({
+        benchCountMap: {},
+        singleCountMap: {},
+        teammateCountMap: teammate,
+        opponentCountMap: opponent,
+        winCountMap: {},
+        lossCountMap: {},
+      });
+
+      const raw = localStorage.getItem(STORAGE_KEY)!;
+      const parsed = JSON.parse(raw);
+
+      const allKeys = [
+        ...new Set([
+          ...Object.keys(parsed.engine.teammateCountMap as Record<string, number>),
+          ...Object.keys(parsed.engine.opponentCountMap as Record<string, number>),
+        ]),
+      ];
+      expect(allKeys.length).toBeLessThanOrEqual(200);
     });
   });
 });
