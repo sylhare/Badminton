@@ -11,7 +11,20 @@ test.describe('Feature Tests', () => {
 
   test('Player toggle and bench counts always visible', async ({ page }) => {
     const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
+
+    await test.step('no players hint visible with disabled generate button', async () => {
+      await expect(page.locator('.no-players-hint')).toBeVisible();
+      await expect(page.locator('.no-players-hint')).toContainText('Add some players above');
+      await expect(page.getByTestId('generate-assignments-button')).toBeDisabled();
+    });
+
     await addBulkPlayers(page, players);
+
+    await test.step('no assignments hint visible after adding players', async () => {
+      await expect(page.locator('.no-assignments-hint')).toBeVisible();
+      await expect(page.locator('.no-assignments-hint')).toContainText('How it works');
+      await expect(page.getByTestId('generate-assignments-button')).toBeEnabled();
+    });
 
     await test.step('toggle player changes present/absent counts', async () => {
       await expect(page.getByTestId('stats-present-count')).toHaveText('4');
@@ -63,6 +76,15 @@ test.describe('Feature Tests', () => {
     await expect(page.locator('.selection-count')).toContainText('2/4 players selected');
     await expect(page.locator('.match-preview')).toContainText('Will create: Singles match');
 
+    await test.step('clear selection resets to 0 players', async () => {
+      await page.getByTestId('clear-manual-selection').click();
+      await expect(page.locator('.selection-count')).toContainText('0/4 players selected');
+    });
+
+    await firstPlayer.click();
+    await secondPlayer.click();
+    await expect(page.locator('.selection-count')).toContainText('2/4 players selected');
+
     await page.getByText('Done').click();
     await page.waitForTimeout(200);
 
@@ -97,7 +119,6 @@ test.describe('Feature Tests', () => {
       await expect(page.getByTestId('stats-total-count')).toHaveText('1');
     });
 
-    // Restore state for next steps
     await addSinglePlayer(page, 'Test Player 1');
 
     await test.step('mark as absent keeps total but marks player absent', async () => {

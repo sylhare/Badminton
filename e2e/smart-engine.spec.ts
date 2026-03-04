@@ -6,7 +6,6 @@ import {
   addBulkPlayers,
   setCourtCount,
   toggleSmartEngine,
-  playRound,
   enterAndConfirmScore,
   assertAvgPtsNumeric,
 } from './helpers';
@@ -127,6 +126,15 @@ test.describe('Smart Engine', () => {
 
     test('entering score and confirming saves score; avg pts shows after regenerate', async ({ page }) => {
       await page.locator('.team-clickable').first().click();
+
+      await test.step('confirm disabled when winner score is lower than opponent', async () => {
+        await page.getByTestId('score-input-team1').fill('10');
+        await page.getByTestId('score-input-team2').fill('21');
+        await expect(page.getByTestId('score-modal-confirm')).toBeDisabled();
+        await page.getByTestId('score-input-team1').fill('');
+        await page.getByTestId('score-input-team2').fill('');
+      });
+
       await enterAndConfirmScore(page, '21', '10');
       await expect(page.locator('.crown')).toHaveCount(1);
 

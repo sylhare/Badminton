@@ -1,3 +1,5 @@
+import path from 'path';
+
 import { test, expect } from '@playwright/test';
 
 import {
@@ -8,6 +10,10 @@ import {
   removeFirstPlayer,
   toggleFirstPlayer,
   completeFullWorkflow,
+  generateCourtAssignments,
+  selectWinnerOnFirstCourt,
+  generateNewAssignments,
+  verifyLeaderboard,
   BULK_PLAYERS,
   SINGLE_PLAYERS,
 } from './helpers';
@@ -20,7 +26,17 @@ test.describe('Player Input Workflows', () => {
   });
 
   test('Bulk workflow - add all at once, remove one, then play', async ({ page }) => {
-    await addBulkPlayers(page, BULK_PLAYERS);
+    const input = page.getByTestId('player-entry-input');
+    await input.fill(BULK_PLAYERS.join(','));
+
+    await test.step('multi-player hint shows with correct count and button label', async () => {
+      await expect(page.locator('.multi-input-hint')).toBeVisible();
+      await expect(page.locator('.multi-input-hint')).toContainText(`Detected ${BULK_PLAYERS.length} players`);
+      await expect(page.getByTestId('add-player-button')).toContainText(`Add ${BULK_PLAYERS.length} Players`);
+    });
+
+    await page.getByTestId('add-player-button').click();
+    await page.waitForTimeout(100);
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('7');
     await expect(page.getByTestId('stats-total-count')).toHaveText('7');
@@ -102,5 +118,41 @@ test.describe('Player Input Workflows', () => {
     await expect(page.getByTestId('stats-present-count')).toHaveText('6');
 
     await completeFullWorkflow(page, 6, 2);
+  });
+
+  test('Image workflow - import players from image', async ({ page }) => {
+    const imagePath = path.join(__dirname, '../tests/data/names.png');
+
+    await test.step('open image upload modal', async () => {
+      await page.getByTestId('open-image-modal-button').click();
+      await expect(page.getByTestId('image-upload-modal')).toBeVisible();
+    });
+
+    await test.step('upload image and wait for OCR results', async () => {
+      await page.getByTestId('image-file-input').setInputFiles(imagePath);
+      await expect(page.locator('.extracted-players-section')).toBeVisible({ timeout: 30000 });
+      const extractedCount = await page.locator('[data-testid^="extracted-player-"]').count();
+      expect(extractedCount).toBeGreaterThanOrEqual(4);
+      await expect(page.getByTestId('add-extracted-players-button')).toBeEnabled();
+    });
+
+    await test.step('deselect all disables button, select all re-enables it', async () => {
+      await page.getByRole('button', { name: 'Deselect all' }).click();
+      await expect(page.getByTestId('add-extracted-players-button')).toBeDisabled();
+      await page.getByRole('button', { name: 'Select all' }).click();
+      await expect(page.getByTestId('add-extracted-players-button')).toBeEnabled();
+    });
+
+    await test.step('add extracted players closes modal and updates count', async () => {
+      await page.getByTestId('add-extracted-players-button').click();
+      await expect(page.getByTestId('image-upload-modal')).not.toBeVisible();
+      const totalCount = parseInt(await page.getByTestId('stats-total-count').textContent() ?? '0');
+      expect(totalCount).toBeGreaterThanOrEqual(4);
+    });
+
+    await generateCourtAssignments(page);
+    await selectWinnerOnFirstCourt(page);
+    await generateNewAssignments(page);
+    await verifyLeaderboard(page);
   });
 });

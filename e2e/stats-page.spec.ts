@@ -31,6 +31,12 @@ test.describe('Stats Page', () => {
       await page.getByText('Start a Game →').click();
       await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
     });
+
+    await test.step('app footer has GitHub feedback link', async () => {
+      const footer = page.locator('.app-footer');
+      await expect(footer).toBeVisible();
+      await expect(footer.locator('a[href*="github.com"]')).toBeVisible();
+    });
   });
 
   test('stats page empty state - no data message, notebook links and footer', async ({ page }) => {
