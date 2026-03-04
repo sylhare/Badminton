@@ -231,7 +231,6 @@ function App(): React.ReactElement {
                   benchCounts={engine().getBenchCounts()}
                   forceBenchPlayerIds={forceBenchPlayerIds}
                   onToggleForceBench={handleToggleForceBench}
-                  isSmartEngineEnabled={isSmartEngineEnabled}
                   onToggleSmartEngine={handleToggleSmartEngine}
                   onUpdatePlayer={handleUpdatePlayer}
                 />
@@ -270,7 +269,6 @@ function App(): React.ReactElement {
           players={players}
           winCounts={engine().getWinCounts()}
           lossCounts={engine().getStats().lossCountMap}
-          isSmartEngineEnabled={isSmartEngineEnabled}
         />
       </div>
 

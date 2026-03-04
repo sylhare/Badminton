@@ -164,7 +164,6 @@ export async function generateCourtAssignments(page: Page, expectedCourts?: numb
 
 /**
  * Selects the first team as winner on court 1 and verifies the winner indicator appears.
- * Dismisses the score input modal (skip) if it appears after clicking.
  */
 export async function selectWinnerOnFirstCourt(page: Page): Promise<void> {
   const firstCourt = page.getByTestId('court-1');
@@ -173,7 +172,6 @@ export async function selectWinnerOnFirstCourt(page: Page): Promise<void> {
   const firstTeam = firstCourt.locator('.team-clickable').first();
   await expect(firstTeam).toBeVisible();
   await firstTeam.click();
-  await page.getByTestId('score-modal-skip').click();
 
   await page.waitForTimeout(300);
 
@@ -244,13 +242,37 @@ export async function setupGameWithPlayers(page: Page, players: string[]): Promi
 }
 
 /**
+ * Enters a score in the score input modal and confirms it.
+ * Asserts the modal is visible before filling and gone after confirming.
+ */
+export async function enterAndConfirmScore(page: Page, team1Score: string, team2Score: string): Promise<void> {
+  await expect(page.getByTestId('score-input-modal')).toBeVisible();
+  await page.getByTestId('score-input-team1').fill(team1Score);
+  await page.getByTestId('score-input-team2').fill(team2Score);
+  await page.getByTestId('score-modal-confirm').click();
+  await expect(page.getByTestId('score-input-modal')).not.toBeVisible();
+}
+
+/**
+ * Regenerates court assignments and asserts the Avg Pts column shows a numeric value.
+ */
+export async function assertAvgPtsNumeric(page: Page): Promise<void> {
+  await page.getByTestId('generate-assignments-button').click();
+  await page.waitForTimeout(300);
+  const leaderboardRows = page.locator('.leaderboard-table tbody tr');
+  await expect(leaderboardRows.first()).toBeVisible();
+  const avgPts = await leaderboardRows.first().locator('td').nth(3).textContent();
+  expect(avgPts).not.toBe('—');
+  expect(parseFloat(avgPts ?? '')).toBeGreaterThan(0);
+}
+
+/**
  * Plays a round by selecting the first team as winner and generating new assignments.
- * Dismisses the score input modal (skip) if it appears after clicking.
+ * For use in normal mode only (no score modal).
  */
 export async function playRound(page: Page): Promise<void> {
   const firstTeam = page.locator('.team-clickable').first();
   await firstTeam.click();
-  await page.getByTestId('score-modal-skip').click();
 
   const generateButton = page.getByTestId('generate-assignments-button');
   await generateButton.click();

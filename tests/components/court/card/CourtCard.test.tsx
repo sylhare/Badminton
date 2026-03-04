@@ -1,10 +1,11 @@
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { CourtCard } from '../../../../src/components/court/card';
 import { Court } from '../../../../src/types';
+import { setEngine } from '../../../../src/engines/engineSelector';
 import { TEST_PLAYERS } from '../../../data/testData';
 
 describe('CourtCard', () => {
@@ -62,7 +63,7 @@ describe('CourtCard', () => {
       expect(screen.getByText('👑')).toBeInTheDocument();
     });
 
-    it('calls onWinnerChange when singles player is clicked and modal is skipped', async () => {
+    it('calls onWinnerChange when singles player is clicked', async () => {
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
 
@@ -75,9 +76,6 @@ describe('CourtCard', () => {
 
       const aliceContainer = screen.getByText('Alice').closest('.singles-player');
       await user.click(aliceContainer!);
-
-      const skipButton = screen.getByTestId('score-modal-skip');
-      await user.click(skipButton);
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(2, 1);
     });
@@ -98,6 +96,8 @@ describe('CourtCard', () => {
   });
 
   describe('Doubles match', () => {
+    afterEach(() => setEngine('sa'));
+
     const doublesCourt: Court = {
       courtNumber: 3,
       players: [TEST_PLAYERS[0], TEST_PLAYERS[1], TEST_PLAYERS[2], TEST_PLAYERS[3]],
@@ -128,7 +128,7 @@ describe('CourtCard', () => {
       expect(team2).toHaveClass('team-winner');
     });
 
-    it('calls onWinnerChange when doubles team is clicked and modal is skipped', async () => {
+    it('calls onWinnerChange when doubles team is clicked', async () => {
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
 
@@ -142,13 +142,11 @@ describe('CourtCard', () => {
       const team1 = container.querySelector('[data-testid="team-1"]');
       await user.click(team1!);
 
-      const skipButton = screen.getByTestId('score-modal-skip');
-      await user.click(skipButton);
-
       expect(mockOnWinnerChange).toHaveBeenCalledWith(3, 1);
     });
 
     it('calls onWinnerChange and onScoreChange when team is clicked and score is confirmed', async () => {
+      setEngine('sl');
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
       const mockOnScoreChange = vi.fn();

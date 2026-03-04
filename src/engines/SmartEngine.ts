@@ -20,6 +20,10 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
     return 'Smart Matching';
   }
 
+  supportsScoreTracking(): boolean {
+    return true;
+  }
+
   getDescription(): string {
     return 'Gender/Level-aware matching. Avoids gender-homogeneous matchups (FF vs MM) and extreme level gaps. Includes a small bias for similar-level teammates.';
   }

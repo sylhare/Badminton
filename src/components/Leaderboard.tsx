@@ -1,12 +1,12 @@
 import React from 'react';
 
 import type { Player } from '../types';
+import { engine } from '../engines/engineSelector';
 
 interface LeaderboardProps {
   players: Player[];
   winCounts: Map<string, number>;
   lossCounts?: Map<string, number>;
-  isSmartEngineEnabled?: boolean;
 }
 
 const medalForRank = (idx: number): string => {
@@ -16,14 +16,14 @@ const medalForRank = (idx: number): string => {
   return '';
 };
 
-const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCounts, isSmartEngineEnabled }) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCounts }) => {
   const allPlayersWithData = players.map(p => ({
     ...p,
     wins: winCounts.get(p.id) ?? 0,
     losses: lossCounts?.get(p.id) ?? 0,
   }));
 
-  if (isSmartEngineEnabled) {
+  if (engine().supportsScoreTracking()) {
     const ranked = allPlayersWithData
       .filter(p => p.wins > 0 || p.losses > 0)
       .sort((a, b) => (b.level ?? 50) - (a.level ?? 50) || b.wins - a.wins || a.name.localeCompare(b.name));

@@ -4,6 +4,7 @@ import type { Court } from '../../../types';
 import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
 import ScoreInputModal from '../../ScoreInputModal';
+import { engine } from '../../../engines/engineSelector';
 
 import CourtHeader from './CourtHeader';
 
@@ -31,6 +32,9 @@ const CourtCard: React.FC<CourtCardProps> = ({
     if (court.winner === teamNumber) {
       onWinnerChange(court.courtNumber, teamNumber);
       onScoreChange?.(court.courtNumber, undefined);
+    } else if (!engine().supportsScoreTracking()) {
+      onWinnerChange(court.courtNumber, teamNumber);
+      triggerConfetti(event.clientX, event.clientY, 30);
     } else {
       clickCoordsRef.current = { x: event.clientX, y: event.clientY };
       setPendingWinner(teamNumber);
