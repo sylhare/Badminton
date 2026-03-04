@@ -116,7 +116,7 @@ function App(): React.ReactElement {
     setIsManagePlayersCollapsed(false);
     setManualCourtSelection(null);
     engine().resetHistory();
-    setTimeout(() => storageManager.clearAll(), 0);
+    storageManager.clearAll();
   };
 
   const handleResetAlgorithm = () => {

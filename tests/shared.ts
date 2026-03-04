@@ -48,15 +48,13 @@ export const addPlayers = async (
     await user.click(screen.getByTestId('add-player-button'));
     await new Promise(resolve => setTimeout(resolve, 50));
   });
-  // Flush any remaining async save microtasks (serialised queue may still be
-  // draining after the act() callback's 50 ms timer)
+
   await flushPendingSaves();
-  // Verify that player data is actually persisted (key may already exist from
-  // the initial-load save of empty state, so we must check the content)
+
   await waitFor(() => {
     const raw = localStorage.getItem('badminton-state');
     if (!raw) throw new Error('No storage data');
-    // Mock CompressionStream stores btoa(utf8_binary_of_json); decode it
+
     const binary = atob(raw);
     const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
     const json = new TextDecoder().decode(bytes);
@@ -104,6 +102,6 @@ export const generateAndWaitForAssignments = async (
     },
     { timeout: 3000 },
   );
-  // Wait for the async save to complete
+
   await waitFor(() => expect(localStorage.getItem('badminton-state')).toBeTruthy());
 };

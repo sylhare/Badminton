@@ -1,11 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { storageManager } from '../../src/utils/StorageManager';
-import type { Court, Player } from '../../src/types';
+import type { Court, CourtEngineState, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
 const OLD_APP_KEY = 'badminton-app-state';
 const OLD_ENGINE_KEY = 'badminton-court-engine-state';
+
+async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
+  const chunks: Uint8Array[] = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+  return result;
+}
 
 async function readDecompressed(): Promise<unknown> {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -18,20 +32,10 @@ async function readDecompressed(): Promise<unknown> {
     const writer = stream.writable.getWriter();
     writer.write(bytes);
     writer.close();
-    const chunks: Uint8Array[] = [];
-    const reader = stream.readable.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-    }
-    const total = chunks.reduce((n, c) => n + c.length, 0);
-    const result = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+    const result = await readAllChunks(stream.readable.getReader());
     return JSON.parse(new TextDecoder().decode(result));
   } catch {
-    return JSON.parse(raw); // backward compat fallback
+    return JSON.parse(raw);
   }
 }
 
@@ -208,6 +212,7 @@ describe('StorageManager', () => {
       localStorage.setItem('other-data', 'should remain');
 
       storageManager.clearAll();
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
       expect(localStorage.getItem('other-data')).toBe('should remain');
@@ -336,6 +341,60 @@ describe('StorageManager', () => {
 
       const allKeys = Object.keys(parsed.engine.pc);
       expect(allKeys.length).toBeLessThanOrEqual(200);
+    });
+  });
+
+  describe('write queue correctness', () => {
+    const minimalEngineState: CourtEngineState = {
+      benchCountMap: {},
+      singleCountMap: {},
+      teammateCountMap: {},
+      opponentCountMap: {},
+      winCountMap: {},
+      lossCountMap: {},
+    };
+
+    it('should not lose data when saveApp and saveEngine are called concurrently', async () => {
+      await Promise.all([
+        storageManager.saveApp({ numberOfCourts: 3 }),
+        storageManager.saveEngine({ ...minimalEngineState }),
+      ]);
+      const app = await storageManager.loadApp();
+      const eng = await storageManager.loadEngine();
+      expect(app.numberOfCourts).toBe(3);
+      expect(eng).toBeDefined();
+    });
+
+    it('should leave storage empty when clearAll is called after pending saves', async () => {
+      storageManager.saveApp({ numberOfCourts: 5 });
+      storageManager.clearAll();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('should prune pair map to 200 keys when data exceeds MAX_SIZE after clearing level history', async () => {
+
+      const bigState: CourtEngineState = {
+        benchCountMap: {}, singleCountMap: {}, winCountMap: {}, lossCountMap: {},
+        teammateCountMap: Object.fromEntries(Array.from({ length: 15_000 }, (_, i) => [`p${i}|p${i + 1}`, 1])),
+        opponentCountMap: {},
+      };
+      await storageManager.saveEngine(bigState);
+      const loaded = await storageManager.loadEngine();
+      const pairCount = Object.keys(loaded.teammateCountMap ?? {}).length;
+      expect(pairCount).toBeLessThanOrEqual(200);
+    });
+
+    it('should read old uncompressed JSON format and write back compressed', async () => {
+      const oldData = { app: { players: [{ id: '1', name: 'Alice', isPresent: true }], numberOfCourts: 2 } };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(oldData));
+      const app = await storageManager.loadApp();
+      expect(app.players?.[0].name).toBe('Alice');
+      expect(app.numberOfCourts).toBe(2);
+
+      await storageManager.saveApp({ numberOfCourts: 3 });
+      const raw = localStorage.getItem(STORAGE_KEY)!;
+      expect(() => JSON.parse(raw)).toThrow();
     });
   });
 });

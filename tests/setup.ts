@@ -33,12 +33,10 @@ class MockTransformStream {
   }
 }
 
-// @ts-expect-error – replacing native global with test double
 globalThis.CompressionStream = class MockCompressionStream extends MockTransformStream {
   constructor(_format: string) { super(); }
 };
 
-// @ts-expect-error – replacing native global with test double
 globalThis.DecompressionStream = class MockDecompressionStream extends MockTransformStream {
   constructor(_format: string) { super(); }
 };

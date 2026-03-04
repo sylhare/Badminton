@@ -8,18 +8,13 @@ const OLD_KEYS = {
 interface CompactEngineState {
   v: 2;
   et?: EngineType;
-  ps: Record<string, [number, number, number, number]>;  // [bench, singles, wins, losses]
-  pc: Record<string, [number, number]>;                  // [teammate, opponent]
+  ps: Record<string, [number, number, number, number]>;
+  pc: Record<string, [number, number]>;
   lh?: Record<string, number[]>;
 }
 
-async function compress(data: string): Promise<string> {
-  const stream = new CompressionStream('gzip');
-  const writer = stream.writable.getWriter();
-  writer.write(new TextEncoder().encode(data));
-  writer.close();
+async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
-  const reader = stream.readable.getReader();
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -29,6 +24,15 @@ async function compress(data: string): Promise<string> {
   const result = new Uint8Array(total);
   let offset = 0;
   for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+  return result;
+}
+
+async function compress(data: string): Promise<string> {
+  const stream = new CompressionStream('gzip');
+  const writer = stream.writable.getWriter();
+  writer.write(new TextEncoder().encode(data));
+  writer.close();
+  const result = await readAllChunks(stream.readable.getReader());
   let binary = '';
   for (let i = 0; i < result.length; i++) binary += String.fromCharCode(result[i]);
   return btoa(binary);
@@ -42,18 +46,7 @@ async function decompress(data: string): Promise<string> {
   const writer = stream.writable.getWriter();
   writer.write(bytes);
   writer.close();
-  const chunks: Uint8Array[] = [];
-  const reader = stream.readable.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  const total = chunks.reduce((n, c) => n + c.length, 0);
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
-  return new TextDecoder().decode(result);
+  return new TextDecoder().decode(await readAllChunks(stream.readable.getReader()));
 }
 
 class StorageManager {
@@ -127,11 +120,13 @@ class StorageManager {
   }
 
   clearAll(): void {
-    try {
-      localStorage.removeItem(StorageManager.KEY);
-    } catch (error) {
-      console.warn('Failed to clear stored state:', error);
-    }
+    this.enqueue(async () => {
+      try {
+        localStorage.removeItem(StorageManager.KEY);
+      } catch (error) {
+        console.warn('Failed to clear stored state:', error);
+      }
+    });
   }
 
   private toCompact(state: CourtEngineState): CompactEngineState {
@@ -207,12 +202,11 @@ class StorageManager {
       return {};
     }
 
-    // Try decompressing first (new format); fall back to raw JSON (old uncompressed format)
     try {
       const decompressed = await decompress(raw);
       const parsed = JSON.parse(decompressed);
       if (typeof parsed === 'object' && parsed !== null) return parsed as Partial<StorageData>;
-    } catch { /* fall through to plain JSON for old uncompressed data */ }
+    } catch {  }
     const parsed = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) return {};
     return parsed as Partial<StorageData>;
@@ -231,7 +225,6 @@ class StorageManager {
     const engine = data.engine as unknown as CompactEngineState;
     if (!engine) return data;
 
-    // Step 1: trim level history to last 10 per player
     if (engine.lh && Object.keys(engine.lh).length > 0) {
       const trimmed: Record<string, number[]> = {};
       for (const [id, history] of Object.entries(engine.lh)) {
@@ -241,11 +234,9 @@ class StorageManager {
       if (JSON.stringify(pruned).length <= StorageManager.MAX_SIZE) return pruned;
     }
 
-    // Step 2: clear level history entirely
     const noLh = { ...data, engine: { ...engine, lh: {} } as unknown as CourtEngineState };
     if (JSON.stringify(noLh).length <= StorageManager.MAX_SIZE) return noLh;
 
-    // Step 3: prune pair map to 200 keys
     const pc = engine.pc ?? {};
     const allKeys = Object.keys(pc);
     if (allKeys.length > 200) {
