@@ -95,6 +95,66 @@ describe('Team rotation', () => {
     });
   });
 
+  describe('Teammate stats updated on rotation', () => {
+    it('replaces old teammate pairs with new ones after rotation', async () => {
+      render(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+      await generateAndWaitForAssignments(user);
+
+      const statsBefore = engine().getStats();
+      const pairsBefore = new Set(
+        [...statsBefore.teammateCountMap.entries()]
+          .filter(([, count]) => count > 0)
+          .map(([pair]) => pair),
+      );
+      expect(pairsBefore.size).toBe(2);
+
+      await act(async () => {
+        await user.click(screen.getByTestId('rotate-teams-button'));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      const statsAfter = engine().getStats();
+      const pairsAfter = new Set(
+        [...statsAfter.teammateCountMap.entries()]
+          .filter(([, count]) => count > 0)
+          .map(([pair]) => pair),
+      );
+      expect(pairsAfter.size).toBe(2);
+      const unchanged = [...pairsBefore].filter(pair => pairsAfter.has(pair));
+      expect(unchanged).toHaveLength(0);
+    });
+
+    it('replaces old opponent pairs with new ones after rotation', async () => {
+      render(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+      await generateAndWaitForAssignments(user);
+
+      const statsBefore = engine().getStats();
+      const opponentsBefore = new Set(
+        [...statsBefore.opponentCountMap.entries()]
+          .filter(([, count]) => count > 0)
+          .map(([pair]) => pair),
+      );
+      expect(opponentsBefore.size).toBe(4);
+
+      await act(async () => {
+        await user.click(screen.getByTestId('rotate-teams-button'));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      const statsAfter = engine().getStats();
+      const opponentsAfter = new Set(
+        [...statsAfter.opponentCountMap.entries()]
+          .filter(([, count]) => count > 0)
+          .map(([pair]) => pair),
+      );
+      expect(opponentsAfter.size).toBe(4);
+      const unchanged = [...opponentsBefore].filter(pair => opponentsAfter.has(pair));
+      expect(unchanged).not.toHaveLength(4);
+    });
+  });
+
   describe('Smart engine', () => {
     it('rotate button is available and clears winner when smart engine is enabled', async () => {
       render(<App />);

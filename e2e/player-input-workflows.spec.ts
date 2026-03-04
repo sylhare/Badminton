@@ -1,6 +1,9 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { test, expect } from '@playwright/test';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import {
   goToApp,
@@ -139,7 +142,7 @@ test.describe('Player Input Workflows', () => {
     await test.step('deselect all disables button, select all re-enables it', async () => {
       await page.getByRole('button', { name: 'Deselect all' }).click();
       await expect(page.getByTestId('add-extracted-players-button')).toBeDisabled();
-      await page.getByRole('button', { name: 'Select all' }).click();
+      await page.getByRole('button', { name: 'Select all', exact: true }).click();
       await expect(page.getByTestId('add-extracted-players-button')).toBeEnabled();
     });
 

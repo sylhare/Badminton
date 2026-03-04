@@ -196,7 +196,9 @@ function App(): React.ReactElement {
           engine().reverseWinForCourt(courtNumber);
         }
 
-        return rotateCourtTeams(court);
+        const rotated = rotateCourtTeams(court);
+        engine().updateCourtTeamStats(rotated, court);
+        return rotated;
       }),
     );
   };
