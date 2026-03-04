@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { engine, getEngineType, setEngine } from '../engines/engineSelector';
-import { storageManager } from '../utils/storageUtils';
+import { storageManager } from '../utils/StorageManager';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
 import BenchGraph from '../components/BenchGraph';

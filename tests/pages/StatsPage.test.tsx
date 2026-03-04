@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 import StatsPage from '../../src/pages/StatsPage';
-import * as storageUtils from '../../src/utils/storageUtils';
 
-const { mockLoadState, mockPrepareStateForSaving, mockOnStateChange } = vi.hoisted(() => ({
+const { mockLoadState, mockPrepareStateForSaving, mockOnStateChange, mockLoadApp } = vi.hoisted(() => ({
   mockLoadState: vi.fn(),
   mockPrepareStateForSaving: vi.fn(),
   mockOnStateChange: vi.fn(() => vi.fn()),
+  mockLoadApp: vi.fn(),
 }));
 
 vi.mock('../../src/engines/engineSelector', () => ({
@@ -23,9 +23,9 @@ vi.mock('../../src/engines/engineSelector', () => ({
   setEngine: vi.fn(),
 }));
 
-vi.mock('../../src/utils/storageUtils', () => ({
+vi.mock('../../src/utils/StorageManager', () => ({
   storageManager: {
-    loadApp: vi.fn(),
+    loadApp: mockLoadApp,
     loadEngine: vi.fn(),
     saveApp: vi.fn(),
     saveEngine: vi.fn(),
@@ -54,7 +54,7 @@ describe('StatsPage Component', () => {
 
   beforeEach(() => {
     mockPrepareStateForSaving.mockReturnValue(mockEngineState);
-    vi.mocked(storageUtils.storageManager.loadApp).mockReturnValue({ players: mockPlayers });
+    mockLoadApp.mockReturnValue({ players: mockPlayers });
   });
 
   afterEach(() => {
@@ -123,7 +123,7 @@ describe('StatsPage Component', () => {
   it('loads app state to get player names', () => {
     render(<StatsPage />);
 
-    expect(storageUtils.storageManager.loadApp).toHaveBeenCalled();
+    expect(mockLoadApp).toHaveBeenCalled();
   });
 
   it('subscribes to engine state changes', () => {

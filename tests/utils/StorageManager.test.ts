@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { storageManager } from '../../src/utils/storageUtils';
+import { storageManager } from '../../src/utils/StorageManager';
 import type { Court, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
@@ -180,7 +180,6 @@ describe('StorageManager', () => {
 
   describe('size-based pruning', () => {
     it('should trim levelHistory to last 10 entries when payload is too large', () => {
-      // Build a large levelHistory: 1000 players * 50 entries ≈ 165 KB
       const levelHistory: Record<string, number[]> = {};
       for (let i = 0; i < 1000; i++) {
         levelHistory[`player-${i}`] = Array.from({ length: 50 }, (_, j) => 50 + j);
@@ -201,7 +200,6 @@ describe('StorageManager', () => {
       const raw = localStorage.getItem(STORAGE_KEY)!;
       const parsed = JSON.parse(raw);
 
-      // Pruning must have occurred: each history trimmed to ≤10 entries
       const histories = Object.values(parsed.engine.levelHistory as Record<string, number[]>);
       histories.forEach(h => {
         expect(h.length).toBeLessThanOrEqual(10);

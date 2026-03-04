@@ -7,7 +7,7 @@ import { CourtAssignments } from './components/court';
 import Leaderboard from './components/Leaderboard';
 import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
-import { storageManager } from './utils/storageUtils';
+import { storageManager } from './utils/StorageManager';
 import { levelTracker } from './engines/LevelTracker';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
 

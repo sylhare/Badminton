@@ -69,7 +69,6 @@ class StorageManager {
   }
 
   private read(): Partial<StorageData> {
-    // Migration: if new key absent but old keys exist, merge and migrate
     const newRaw = localStorage.getItem(StorageManager.KEY);
     if (!newRaw) {
       const oldApp = localStorage.getItem(OLD_KEYS.APP_STATE);
@@ -77,10 +76,10 @@ class StorageManager {
       if (oldApp || oldEngine) {
         const merged: Partial<StorageData> = {};
         if (oldApp) {
-          try { merged.app = JSON.parse(oldApp); } catch { /* ignore */ }
+          try { merged.app = JSON.parse(oldApp); } catch {  }
         }
         if (oldEngine) {
-          try { merged.engine = JSON.parse(oldEngine); } catch { /* ignore */ }
+          try { merged.engine = JSON.parse(oldEngine); } catch {  }
         }
         localStorage.removeItem(OLD_KEYS.APP_STATE);
         localStorage.removeItem(OLD_KEYS.COURT_ENGINE_STATE);
@@ -104,7 +103,6 @@ class StorageManager {
   }
 
   private pruneToFit(data: StorageData): StorageData {
-    // Step 1: trim levelHistory arrays to last 10 entries per player
     if (data.engine?.levelHistory) {
       const trimmed: Record<string, number[]> = {};
       for (const [id, history] of Object.entries(data.engine.levelHistory)) {
@@ -114,13 +112,11 @@ class StorageManager {
       if (JSON.stringify(data).length <= StorageManager.MAX_SIZE) return data;
     }
 
-    // Step 2: clear levelHistory entirely
     if (data.engine) {
       data = { ...data, engine: { ...data.engine, levelHistory: {} } };
       if (JSON.stringify(data).length <= StorageManager.MAX_SIZE) return data;
     }
 
-    // Step 3: prune teammateCountMap + opponentCountMap to 200 most-recent entries
     if (data.engine) {
       const teammate = data.engine.teammateCountMap ?? {};
       const opponent = data.engine.opponentCountMap ?? {};
