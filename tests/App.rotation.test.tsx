@@ -71,6 +71,36 @@ describe('Team rotation', () => {
       expect(totalWins).toBe(2);
     });
 
+    it('records wins for the new team identity after set-winner → rotate → set-winner', async () => {
+      render(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+      await generateAndWaitForAssignments(user);
+
+      await clickTeam(user, screen.getAllByText('Team 1')[0]);
+      const firstWinnerIds = new Set(
+        Array.from(engine().getWinCounts().entries())
+          .filter(([, count]) => count > 0)
+          .map(([id]) => id),
+      );
+
+      await clickTeam(user, screen.getByTestId('rotate-teams-button'));
+
+      await clickTeam(user, screen.getAllByText('Team 1')[0]);
+      const secondWinnerIds = new Set(
+        Array.from(engine().getWinCounts().entries())
+          .filter(([, count]) => count > 0)
+          .map(([id]) => id),
+      );
+
+      const totalWins = Array.from(engine().getWinCounts().values()).reduce((sum, w) => sum + w, 0);
+      expect(totalWins).toBe(2);
+
+      const sameSet =
+        firstWinnerIds.size === secondWinnerIds.size &&
+        [...firstWinnerIds].every(id => secondWinnerIds.has(id));
+      expect(sameSet).toBe(false);
+    });
+
     it('does not double-count wins when rotating after a winner was set', async () => {
       render(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { goToApp, addSinglePlayer, addBulkPlayers, setCourtCount, expandSectionIfNeeded } from './helpers';
+import { goToApp, addSinglePlayer, addBulkPlayers, setCourtCount, expandSectionIfNeeded, generateCourtAssignments, generateNewAssignments, verifyLeaderboard } from './helpers';
 
 test.describe('Feature Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -456,5 +456,44 @@ test.describe('Feature Tests', () => {
 
     const leaderboardRows = page.locator('.leaderboard-table tbody tr');
     await expect(leaderboardRows).toHaveCount(2);
+  });
+
+  test('rotation: leaderboard reflects rotated team winners, not original team', async ({ page }) => {
+    await addBulkPlayers(page, ['Alice', 'Bob', 'Charlie', 'Diana']);
+    await generateCourtAssignments(page, 1);
+
+    const court1 = page.getByTestId('court-1');
+
+    const team1NamesBefore = await court1.locator('[data-testid="team-1"] .team-player').allTextContents();
+
+    await court1.locator('.team-clickable').first().click();
+    await page.waitForTimeout(200);
+
+    await page.getByTestId('rotate-teams-button').click();
+    await page.waitForTimeout(200);
+
+    const team1NamesAfter = await court1.locator('[data-testid="team-1"] .team-player').allTextContents();
+
+    await court1.locator('.team-clickable').first().click();
+    await page.waitForTimeout(200);
+
+    await generateNewAssignments(page);
+    await verifyLeaderboard(page);
+
+    const leaderboardNameCells = page.locator('.leaderboard-table tbody tr td:nth-child(2)');
+    const leaderboardNames = (await leaderboardNameCells.allTextContents()).map(n =>
+      n.replace(/^[^\w]+/, '').trim(),
+    );
+
+    for (const name of team1NamesAfter) {
+      expect(leaderboardNames).toContain(name.trim());
+    }
+
+    const droppedPlayer = team1NamesBefore
+      .map(n => n.trim())
+      .find(n => !team1NamesAfter.map(a => a.trim()).includes(n));
+    if (droppedPlayer) {
+      expect(leaderboardNames).not.toContain(droppedPlayer);
+    }
   });
 });
