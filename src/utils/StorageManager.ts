@@ -1,5 +1,3 @@
-import LZString from 'lz-string';
-
 import type { AppState, CourtEngineState, EngineType, StorageData } from '../types';
 
 const OLD_KEYS = {
@@ -15,22 +13,75 @@ interface CompactEngineState {
   lh?: Record<string, number[]>;
 }
 
+async function compress(data: string): Promise<string> {
+  const stream = new CompressionStream('gzip');
+  const writer = stream.writable.getWriter();
+  writer.write(new TextEncoder().encode(data));
+  writer.close();
+  const chunks: Uint8Array[] = [];
+  const reader = stream.readable.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+  let binary = '';
+  for (let i = 0; i < result.length; i++) binary += String.fromCharCode(result[i]);
+  return btoa(binary);
+}
+
+async function decompress(data: string): Promise<string> {
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const stream = new DecompressionStream('gzip');
+  const writer = stream.writable.getWriter();
+  writer.write(bytes);
+  writer.close();
+  const chunks: Uint8Array[] = [];
+  const reader = stream.readable.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+  return new TextDecoder().decode(result);
+}
+
 class StorageManager {
   private static readonly KEY = 'badminton-state';
   private static readonly MAX_SIZE = 150_000;
 
-  saveApp(state: Partial<AppState>): void {
-    try {
-      const current = this.read();
-      this.write({ ...current, app: { ...(current.app ?? {}), ...state } as AppState });
-    } catch (error) {
-      console.warn('Failed to save app state to localStorage:', error);
-    }
+  /** Serialises all writes so concurrent save calls never race on read→write. */
+  private writeQueue: Promise<void> = Promise.resolve();
+
+  private enqueue(task: () => Promise<void>): Promise<void> {
+    this.writeQueue = this.writeQueue.then(task, task);
+    return this.writeQueue;
   }
 
-  loadApp(): Partial<AppState> {
+  async saveApp(state: Partial<AppState>): Promise<void> {
+    return this.enqueue(async () => {
+      try {
+        const current = await this.read();
+        await this.write({ ...current, app: { ...(current.app ?? {}), ...state } as AppState });
+      } catch (error) {
+        console.warn('Failed to save app state to localStorage:', error);
+      }
+    });
+  }
+
+  async loadApp(): Promise<Partial<AppState>> {
     try {
-      const data = this.read();
+      const data = await this.read();
       const app = data.app;
       if (!app) return {};
 
@@ -51,18 +102,20 @@ class StorageManager {
     }
   }
 
-  saveEngine(state: CourtEngineState): void {
-    try {
-      const current = this.read();
-      this.write({ ...current, engine: this.toCompact(state) as unknown as CourtEngineState });
-    } catch (error) {
-      console.warn('Failed to save engine state to localStorage:', error);
-    }
+  async saveEngine(state: CourtEngineState): Promise<void> {
+    return this.enqueue(async () => {
+      try {
+        const current = await this.read();
+        await this.write({ ...current, engine: this.toCompact(state) as unknown as CourtEngineState });
+      } catch (error) {
+        console.warn('Failed to save engine state to localStorage:', error);
+      }
+    });
   }
 
-  loadEngine(): Partial<CourtEngineState> {
+  async loadEngine(): Promise<Partial<CourtEngineState>> {
     try {
-      const data = this.read();
+      const data = await this.read();
       const raw = data.engine as unknown as CompactEngineState | CourtEngineState | undefined;
       if (!raw) return {};
       if ((raw as CompactEngineState).v === 2) return this.fromCompact(raw as CompactEngineState);
@@ -134,7 +187,7 @@ class StorageManager {
     };
   }
 
-  private read(): Partial<StorageData> {
+  private async read(): Promise<Partial<StorageData>> {
     const raw = localStorage.getItem(StorageManager.KEY);
     if (!raw) {
       const oldApp = localStorage.getItem(OLD_KEYS.APP_STATE);
@@ -155,25 +208,23 @@ class StorageManager {
     }
 
     // Try decompressing first (new format); fall back to raw JSON (old uncompressed format)
-    const decompressed = LZString.decompressFromUTF16(raw);
-    if (decompressed) {
-      try {
-        const parsed = JSON.parse(decompressed);
-        if (typeof parsed === 'object' && parsed !== null) return parsed as Partial<StorageData>;
-      } catch { /* fall through to plain JSON */ }
-    }
+    try {
+      const decompressed = await decompress(raw);
+      const parsed = JSON.parse(decompressed);
+      if (typeof parsed === 'object' && parsed !== null) return parsed as Partial<StorageData>;
+    } catch { /* fall through to plain JSON for old uncompressed data */ }
     const parsed = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) return {};
     return parsed as Partial<StorageData>;
   }
 
-  private write(data: Partial<StorageData>): void {
+  private async write(data: Partial<StorageData>): Promise<void> {
     let serialized = JSON.stringify(data);
     if (serialized.length > StorageManager.MAX_SIZE) {
       const pruned = this.pruneToFit(data as StorageData);
       serialized = JSON.stringify(pruned);
     }
-    localStorage.setItem(StorageManager.KEY, LZString.compressToUTF16(serialized));
+    localStorage.setItem(StorageManager.KEY, await compress(serialized));
   }
 
   private pruneToFit(data: StorageData): StorageData {

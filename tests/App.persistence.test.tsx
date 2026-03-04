@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
 
-import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
+import { addPlayers, clearTestState, flushPendingSaves, generateAndWaitForAssignments, waitForAppLoad } from './shared';
 
 describe('App Persistence Integration', () => {
   const user = userEvent.setup();
@@ -30,10 +30,12 @@ describe('App Persistence Integration', () => {
 
       const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
       await user.click(toggleButtons[1]);
+      await flushPendingSaves();
 
       unmount();
 
       render(<App />);
+      await waitForAppLoad();
 
       await user.click(screen.getByText('Manage Players'));
 
@@ -65,15 +67,14 @@ describe('App Persistence Integration', () => {
         await user.keyboard('6');
         await new Promise(resolve => setTimeout(resolve, 100));
       });
+      await flushPendingSaves();
 
       expect(courtInput).toHaveValue(6);
 
       unmount();
 
-      await act(async () => {
-        render(<App />);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
+      render(<App />);
+      await waitForAppLoad();
 
       const restoredCourtInput = screen.getByTestId('court-count-input');
       expect(restoredCourtInput).toHaveValue(6);
@@ -85,6 +86,7 @@ describe('App Persistence Integration', () => {
       await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Hank');
 
       await generateAndWaitForAssignments(user);
+      await flushPendingSaves();
 
       expect(screen.getByTestId('court-1')).toBeInTheDocument();
       expect(screen.getByTestId('court-2')).toBeInTheDocument();
@@ -228,9 +230,11 @@ describe('App Persistence Integration', () => {
 
       await user.click(screen.getByTestId('reset-algorithm-button'));
       await user.click(screen.getByTestId('confirm-modal-confirm'));
+      await flushPendingSaves();
 
       unmount();
       render(<App />);
+      await waitForAppLoad();
 
       await user.click(screen.getByText('Manage Players'));
 

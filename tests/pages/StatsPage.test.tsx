@@ -113,17 +113,21 @@ describe('StatsPage Component', () => {
     });
   });
 
-  it('loads engine state on mount', () => {
+  it('loads engine state on mount', async () => {
     render(<StatsPage />);
 
-    expect(mockLoadState).toHaveBeenCalled();
-    expect(mockPrepareStateForSaving).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockLoadState).toHaveBeenCalled();
+      expect(mockPrepareStateForSaving).toHaveBeenCalled();
+    });
   });
 
-  it('loads app state to get player names', () => {
+  it('loads app state to get player names', async () => {
     render(<StatsPage />);
 
-    expect(mockLoadApp).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockLoadApp).toHaveBeenCalled();
+    });
   });
 
   it('subscribes to engine state changes', () => {

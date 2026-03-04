@@ -1,4 +1,3 @@
-import LZString from 'lz-string';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { storageManager } from '../../src/utils/StorageManager';
@@ -8,11 +7,32 @@ const STORAGE_KEY = 'badminton-state';
 const OLD_APP_KEY = 'badminton-app-state';
 const OLD_ENGINE_KEY = 'badminton-court-engine-state';
 
-function readDecompressed(): unknown {
+async function readDecompressed(): Promise<unknown> {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
-  const decompressed = LZString.decompressFromUTF16(raw);
-  return JSON.parse(decompressed ?? raw);
+  try {
+    const binary = atob(raw);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const stream = new DecompressionStream('gzip');
+    const writer = stream.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    const chunks: Uint8Array[] = [];
+    const reader = stream.readable.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const result = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+    return JSON.parse(new TextDecoder().decode(result));
+  } catch {
+    return JSON.parse(raw); // backward compat fallback
+  }
 }
 
 describe('StorageManager', () => {
@@ -49,46 +69,46 @@ describe('StorageManager', () => {
       assignments: mockAssignments,
     };
 
-    it('should save app state under single key', () => {
-      storageManager.saveApp(mockAppState);
+    it('should save app state under single key', async () => {
+      await storageManager.saveApp(mockAppState);
 
       const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
-      const parsed = readDecompressed() as { app: { players: Player[]; numberOfCourts: number; assignments: Court[] } };
+      const parsed = await readDecompressed() as { app: { players: Player[]; numberOfCourts: number; assignments: Court[] } };
       expect(parsed.app.players).toEqual(mockPlayers);
       expect(parsed.app.numberOfCourts).toBe(6);
       expect(parsed.app.assignments).toEqual(mockAssignments);
     });
 
-    it('should load app state', () => {
-      storageManager.saveApp(mockAppState);
+    it('should load app state', async () => {
+      await storageManager.saveApp(mockAppState);
 
-      const loaded = storageManager.loadApp();
+      const loaded = await storageManager.loadApp();
 
       expect(loaded.players).toEqual(mockPlayers);
       expect(loaded.numberOfCourts).toBe(6);
       expect(loaded.assignments).toEqual(mockAssignments);
     });
 
-    it('should return empty object when no saved state exists', () => {
-      const loaded = storageManager.loadApp();
+    it('should return empty object when no saved state exists', async () => {
+      const loaded = await storageManager.loadApp();
       expect(loaded).toEqual({});
     });
 
-    it('should handle corrupted localStorage data gracefully', () => {
+    it('should handle corrupted localStorage data gracefully', async () => {
       localStorage.setItem(STORAGE_KEY, 'invalid-json');
 
-      const loaded = storageManager.loadApp();
+      const loaded = await storageManager.loadApp();
       expect(loaded).toEqual({});
     });
 
-    it('should handle localStorage save errors gracefully', () => {
+    it('should handle localStorage save errors gracefully', async () => {
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 
-      expect(() => storageManager.saveApp(mockAppState)).not.toThrow();
+      await expect(storageManager.saveApp(mockAppState)).resolves.not.toThrow();
     });
   });
 
@@ -102,13 +122,13 @@ describe('StorageManager', () => {
       lossCountMap: { 'player-1': 2, 'player-2': 4 },
     };
 
-    it('should save engine state in compact format under single key', () => {
-      storageManager.saveEngine(mockEngineState);
+    it('should save engine state in compact format under single key', async () => {
+      await storageManager.saveEngine(mockEngineState);
 
       const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
-      const parsed = readDecompressed() as { engine: { v: number; ps: Record<string, number[]>; pc: Record<string, number[]> } };
+      const parsed = await readDecompressed() as { engine: { v: number; ps: Record<string, number[]>; pc: Record<string, number[]> } };
       expect(parsed.engine.v).toBe(2);
       expect(parsed.engine.ps['player-1']).toEqual([2, 0, 5, 2]);
       expect(parsed.engine.ps['player-2']).toEqual([1, 0, 3, 4]);
@@ -116,10 +136,10 @@ describe('StorageManager', () => {
       expect(parsed.engine.pc['player-1|player-3']).toEqual([0, 2]);
     });
 
-    it('should load engine state', () => {
-      storageManager.saveEngine(mockEngineState);
+    it('should load engine state', async () => {
+      await storageManager.saveEngine(mockEngineState);
 
-      const loaded = storageManager.loadEngine();
+      const loaded = await storageManager.loadEngine();
 
       expect(loaded.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
       expect(loaded.teammateCountMap).toEqual({ 'player-1|player-2': 3 });
@@ -128,40 +148,40 @@ describe('StorageManager', () => {
       expect(loaded.lossCountMap).toEqual({ 'player-1': 2, 'player-2': 4 });
     });
 
-    it('should return empty object when no saved engine state exists', () => {
-      const loaded = storageManager.loadEngine();
+    it('should return empty object when no saved engine state exists', async () => {
+      const loaded = await storageManager.loadEngine();
       expect(loaded).toEqual({});
     });
 
-    it('should handle localStorage save errors gracefully', () => {
+    it('should handle localStorage save errors gracefully', async () => {
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
 
-      expect(() => storageManager.saveEngine(mockEngineState)).not.toThrow();
+      await expect(storageManager.saveEngine(mockEngineState)).resolves.not.toThrow();
     });
 
-    it('should handle corrupted data for loadEngine gracefully', () => {
+    it('should handle corrupted data for loadEngine gracefully', async () => {
       localStorage.setItem(STORAGE_KEY, 'invalid-json');
 
-      const loaded = storageManager.loadEngine();
+      const loaded = await storageManager.loadEngine();
 
       expect(loaded).toEqual({});
       expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     });
 
-    it('should compress data — raw localStorage value is not plain JSON', () => {
-      storageManager.saveEngine(mockEngineState);
+    it('should compress data — raw localStorage value is not plain JSON', async () => {
+      await storageManager.saveEngine(mockEngineState);
 
       const raw = localStorage.getItem(STORAGE_KEY)!;
       expect(() => JSON.parse(raw)).toThrow();
 
-      const loaded = storageManager.loadEngine();
+      const loaded = await storageManager.loadEngine();
       expect(loaded.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
       expect(loaded.winCountMap).toEqual({ 'player-1': 5, 'player-2': 3 });
     });
 
-    it('should load old uncompressed plain-JSON format (backward compat)', () => {
+    it('should load old uncompressed plain-JSON format (backward compat)', async () => {
       const oldFormat = {
         engine: {
           benchCountMap: { 'player-1': 3 },
@@ -174,7 +194,7 @@ describe('StorageManager', () => {
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(oldFormat));
 
-      const loaded = storageManager.loadEngine();
+      const loaded = await storageManager.loadEngine();
 
       expect(loaded.benchCountMap).toEqual({ 'player-1': 3 });
       expect(loaded.winCountMap).toEqual({ 'player-1': 7 });
@@ -183,8 +203,8 @@ describe('StorageManager', () => {
   });
 
   describe('clearAll', () => {
-    it('should remove the single storage key', () => {
-      storageManager.saveApp({ players: [], numberOfCourts: 4, assignments: [] });
+    it('should remove the single storage key', async () => {
+      await storageManager.saveApp({ players: [], numberOfCourts: 4, assignments: [] });
       localStorage.setItem('other-data', 'should remain');
 
       storageManager.clearAll();
@@ -203,35 +223,35 @@ describe('StorageManager', () => {
   });
 
   describe('migration from old keys', () => {
-    it('should migrate data from old keys to new key on first load', () => {
+    it('should migrate data from old keys to new key on first load', async () => {
       const oldApp = { players: [{ id: 'p1', name: 'Alice', isPresent: true }], numberOfCourts: 4, assignments: [] };
       const oldEngine = { benchCountMap: { 'p1': 1 }, singleCountMap: {}, teammateCountMap: {}, opponentCountMap: {}, winCountMap: {}, lossCountMap: {} };
 
       localStorage.setItem(OLD_APP_KEY, JSON.stringify(oldApp));
       localStorage.setItem(OLD_ENGINE_KEY, JSON.stringify(oldEngine));
 
-      const loadedApp = storageManager.loadApp();
+      const loadedApp = await storageManager.loadApp();
 
       expect(loadedApp.players).toEqual(oldApp.players);
       expect(localStorage.getItem(OLD_APP_KEY)).toBeNull();
       expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
     });
 
-    it('should migrate engine data from old key', () => {
+    it('should migrate engine data from old key', async () => {
       const oldEngine = { benchCountMap: { 'p1': 2 }, singleCountMap: {}, teammateCountMap: {}, opponentCountMap: {}, winCountMap: {}, lossCountMap: {} };
       localStorage.setItem(OLD_ENGINE_KEY, JSON.stringify(oldEngine));
 
-      const loadedEngine = storageManager.loadEngine();
+      const loadedEngine = await storageManager.loadEngine();
 
       expect(loadedEngine.benchCountMap).toEqual({ 'p1': 2 });
       expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
     });
 
-    it('should handle corrupted old key values gracefully and still remove them', () => {
+    it('should handle corrupted old key values gracefully and still remove them', async () => {
       localStorage.setItem(OLD_APP_KEY, 'invalid-json');
       localStorage.setItem(OLD_ENGINE_KEY, 'invalid-json');
 
-      const loaded = storageManager.loadApp();
+      const loaded = await storageManager.loadApp();
 
       expect(loaded).toEqual({});
       expect(localStorage.getItem(OLD_APP_KEY)).toBeNull();
@@ -240,7 +260,7 @@ describe('StorageManager', () => {
   });
 
   describe('size-based pruning', () => {
-    it('should trim levelHistory to last 10 entries when payload is too large', () => {
+    it('should trim levelHistory to last 10 entries when payload is too large', async () => {
       const levelHistory: Record<string, number[]> = {};
       for (let i = 0; i < 1000; i++) {
         levelHistory[`player-${i}`] = Array.from({ length: 50 }, (_, j) => 50 + j);
@@ -256,9 +276,9 @@ describe('StorageManager', () => {
         levelHistory,
       };
 
-      storageManager.saveEngine(engineState);
+      await storageManager.saveEngine(engineState);
 
-      const parsed = readDecompressed() as { engine: { lh: Record<string, number[]> } };
+      const parsed = await readDecompressed() as { engine: { lh: Record<string, number[]> } };
 
       const histories = Object.values(parsed.engine.lh);
       histories.forEach(h => {
@@ -269,13 +289,13 @@ describe('StorageManager', () => {
       expect(raw.length).toBeLessThanOrEqual(150_000);
     });
 
-    it('should clear levelHistory entirely when trimming to 10 entries is still too large', () => {
+    it('should clear levelHistory entirely when trimming to 10 entries is still too large', async () => {
       const levelHistory: Record<string, number[]> = {};
       for (let i = 0; i < 4000; i++) {
         levelHistory[`player-${i}`] = Array.from({ length: 50 }, (_, j) => 50 + j);
       }
 
-      storageManager.saveEngine({
+      await storageManager.saveEngine({
         benchCountMap: {},
         singleCountMap: {},
         teammateCountMap: {},
@@ -285,7 +305,7 @@ describe('StorageManager', () => {
         levelHistory,
       });
 
-      const parsed = readDecompressed() as { engine: { lh: Record<string, number[]> } };
+      const parsed = await readDecompressed() as { engine: { lh: Record<string, number[]> } };
 
       expect(parsed.engine.lh).toEqual({});
 
@@ -293,7 +313,7 @@ describe('StorageManager', () => {
       expect(raw.length).toBeLessThanOrEqual(150_000);
     });
 
-    it('should prune pair map to 200 keys when still too large', () => {
+    it('should prune pair map to 200 keys when still too large', async () => {
       const teammate: Record<string, number> = {};
       const opponent: Record<string, number> = {};
       for (let i = 0; i < 200; i++) {
@@ -303,7 +323,7 @@ describe('StorageManager', () => {
         }
       }
 
-      storageManager.saveEngine({
+      await storageManager.saveEngine({
         benchCountMap: {},
         singleCountMap: {},
         teammateCountMap: teammate,
@@ -312,7 +332,7 @@ describe('StorageManager', () => {
         lossCountMap: {},
       });
 
-      const parsed = readDecompressed() as { engine: { pc: Record<string, [number, number]> } };
+      const parsed = await readDecompressed() as { engine: { pc: Record<string, [number, number]> } };
 
       const allKeys = Object.keys(parsed.engine.pc);
       expect(allKeys.length).toBeLessThanOrEqual(200);

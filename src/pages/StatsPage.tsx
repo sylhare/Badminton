@@ -66,19 +66,20 @@ interface DiagnosticStats {
 function StatsPage(): React.ReactElement {
   const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [isSmartEngine] = useState(() => storageManager.loadApp().isSmartEngineEnabled ?? false);
+  const [isSmartEngine, setIsSmartEngine] = useState(false);
 
   useEffect(() => {
-    const appState = storageManager.loadApp();
-    const engineType = appState.isSmartEngineEnabled ? 'sl' : 'sa';
-    setEngine(engineType);
-    engine().loadState(engineType);
-    setEngineState(engine().prepareStateForSaving(engineType));
-
-    if (appState.players) {
-      setPlayers(appState.players);
-    }
-
+    const load = async () => {
+      const appState = await storageManager.loadApp();
+      const smart = appState.isSmartEngineEnabled ?? false;
+      setIsSmartEngine(smart);
+      const engineType = smart ? 'sl' : 'sa';
+      setEngine(engineType);
+      await engine().loadState(engineType);
+      setEngineState(engine().prepareStateForSaving(engineType));
+      if (appState.players) setPlayers(appState.players);
+    };
+    load();
     return engine().onStateChange(() => {
       setEngineState(engine().prepareStateForSaving(getEngineType()));
     });

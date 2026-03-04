@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../src/App';
 import { engine } from '../src/engines/engineSelector';
 
-import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
+import { addPlayers, clearTestState, flushPendingSaves, generateAndWaitForAssignments, waitForAppLoad } from './shared';
 
 describe('App Leaderboard Persistence', () => {
   const user = userEvent.setup();
@@ -95,12 +95,14 @@ describe('App Leaderboard Persistence', () => {
       });
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
+      await flushPendingSaves();
 
       unmount();
 
       render(<App />);
+      await waitForAppLoad();
 
-      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument());
     });
 
     it('should maintain correct win counts for specific players', async () => {
@@ -189,11 +191,13 @@ describe('App Leaderboard Persistence', () => {
       });
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
+      await flushPendingSaves();
 
       unmount();
       render(<App />);
+      await waitForAppLoad();
 
-      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument(), { timeout: 3000 });
     });
   });
 });

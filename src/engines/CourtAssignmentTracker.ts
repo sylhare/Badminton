@@ -127,13 +127,13 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /** Saves the current state to persistent storage. */
-  saveState(engineType: EngineType): void {
-    storageManager.saveEngine(this.prepareStateForSaving(engineType));
+  async saveState(engineType: EngineType): Promise<void> {
+    await storageManager.saveEngine(this.prepareStateForSaving(engineType));
   }
 
   /** Loads tracking data from persistent storage. */
-  loadState(currentEngineType: EngineType): void {
-    const state = storageManager.loadEngine();
+  async loadState(currentEngineType: EngineType): Promise<void> {
+    const state = await storageManager.loadEngine();
 
     if (state.engineType && state.engineType !== currentEngineType) {
       console.warn(

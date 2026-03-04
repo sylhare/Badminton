@@ -74,8 +74,8 @@ export interface ICourtAssignmentTracker {
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
-  saveState(engineType: EngineType): void;
-  loadState(engineType: EngineType): void;
+  saveState(engineType: EngineType): Promise<void>;
+  loadState(engineType: EngineType): Promise<void>;
   recordWins(courts: Court[]): void;
   recordLevelSnapshot(players: Player[]): void;
   getWinCounts(): Map<string, number>;

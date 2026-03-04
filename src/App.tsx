@@ -32,38 +32,43 @@ export function rotateCourtTeams(court: Court): Court {
 }
 
 function App(): React.ReactElement {
-  const loadedState = storageManager.loadApp();
-  const [players, setPlayers] = useState<Player[]>(loadedState.players ?? []);
-  const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
-  const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
-  const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(
-    (loadedState.players ?? []).length > 0,
-  );
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
+  const [assignments, setAssignments] = useState<Court[]>([]);
+  const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(false);
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(null);
-  const [lastGeneratedAt, setLastGeneratedAt] = useState<number | undefined>(loadedState.lastGeneratedAt);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<number | undefined>();
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
-  const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState<boolean>(
-    loadedState.isSmartEngineEnabled ?? false,
-  );
+  const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState<boolean>(false);
 
-  const isInitialLoad = useRef(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const engineType = isSmartEngineEnabled ? 'sl' : 'sa';
-    setEngine(engineType);
-    engine().loadState(engineType);
-    setEngineStateVersion(prev => prev + 1);
-    isInitialLoad.current = false;
-
-    return engine().onStateChange(() => {
+    const load = async () => {
+      const loadedState = await storageManager.loadApp();
+      if (loadedState.players?.length) {
+        setPlayers(loadedState.players);
+        setIsManagePlayersCollapsed(true);
+      }
+      if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
+      if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
+      if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
+      const smart = loadedState.isSmartEngineEnabled ?? false;
+      if (smart) setIsSmartEngineEnabled(true);
+      const engineType = smart ? 'sl' : 'sa';
+      setEngine(engineType);
+      await engine().loadState(engineType);
       setEngineStateVersion(prev => prev + 1);
-    });
+      setIsInitialLoad(false);
+    };
+    load();
+    return engine().onStateChange(() => setEngineStateVersion(prev => prev + 1));
   }, []);
 
   useEffect(() => {
-    if (isInitialLoad.current) return;
+    if (isInitialLoad) return;
 
     storageManager.saveApp({
       players,
@@ -73,7 +78,7 @@ function App(): React.ReactElement {
       isSmartEngineEnabled,
     });
     engine().saveState(getEngineType());
-  }, [players, numberOfCourts, assignments, lastGeneratedAt, isSmartEngineEnabled]);
+  }, [players, numberOfCourts, assignments, lastGeneratedAt, isSmartEngineEnabled, isInitialLoad]);
 
   const handlePlayersAdded = (newNames: string[]) => {
     const newPlayers = createPlayersFromNames(newNames, 'manual');
@@ -228,7 +233,7 @@ function App(): React.ReactElement {
   const hasPlayers = players.length > 0;
 
   return (
-    <div className={`app${isSmartEngineEnabled ? ' night-theme' : ''}`}>
+    <div className={`app${isSmartEngineEnabled ? ' night-theme' : ''}`} data-loaded={!isInitialLoad}>
       <div className="container main-container">
         <h1><span className="title-emoji">🏸 </span>Badminton Court Manager</h1>
 
