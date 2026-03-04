@@ -1,113 +1,148 @@
-import type { AppState, Court, CourtEngineState, Player } from '../types';
+import type { AppState, CourtEngineState, StorageData } from '../types';
 
-const STORAGE_KEYS = {
+const OLD_KEYS = {
   APP_STATE: 'badminton-app-state',
   COURT_ENGINE_STATE: 'badminton-court-engine-state',
 } as const;
 
-export const saveAppState = (state: {
-  players: Player[];
-  numberOfCourts: number;
-  assignments: Court[];
-  lastGeneratedAt?: number;
-  isSmartEngineEnabled?: boolean;
-}): void => {
-  try {
-    const stateToSave: AppState = {
-      players: state.players,
-      numberOfCourts: state.numberOfCourts,
-      assignments: state.assignments,
-      lastGeneratedAt: state.lastGeneratedAt,
-      isSmartEngineEnabled: state.isSmartEngineEnabled,
-    };
-    localStorage.setItem(STORAGE_KEYS.APP_STATE, JSON.stringify(stateToSave));
-  } catch (error) {
-    console.warn('Failed to save app state to localStorage:', error);
+class StorageManager {
+  private static readonly KEY = 'badminton-state';
+  private static readonly MAX_SIZE = 150_000;
+
+  saveApp(state: Partial<AppState>): void {
+    try {
+      const current = this.read();
+      this.write({ ...current, app: { ...(current.app ?? {}), ...state } as AppState });
+    } catch (error) {
+      console.warn('Failed to save app state to localStorage:', error);
+    }
   }
-};
 
-export const loadAppState = (): Partial<{
-  players: Player[];
-  numberOfCourts: number;
-  assignments: Court[];
-  lastGeneratedAt: number;
-  isSmartEngineEnabled: boolean;
-}> => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.APP_STATE);
-    if (!saved) return {};
+  loadApp(): Partial<AppState> {
+    try {
+      const data = this.read();
+      const app = data.app;
+      if (!app) return {};
 
-    const parsed: AppState = JSON.parse(saved);
-    if (typeof parsed !== 'object' || parsed === null) {
-      localStorage.removeItem(STORAGE_KEYS.APP_STATE);
+      if (app.players && !Array.isArray(app.players)) return {};
+      if (app.assignments && !Array.isArray(app.assignments)) return {};
+
+      return {
+        players: Array.isArray(app.players) ? app.players : [],
+        numberOfCourts: typeof app.numberOfCourts === 'number' ? app.numberOfCourts : 4,
+        assignments: Array.isArray(app.assignments) ? app.assignments : [],
+        lastGeneratedAt: typeof app.lastGeneratedAt === 'number' ? app.lastGeneratedAt : undefined,
+        isSmartEngineEnabled: typeof app.isSmartEngineEnabled === 'boolean' ? app.isSmartEngineEnabled : undefined,
+      };
+    } catch (error) {
+      console.warn('Failed to load app state from localStorage:', error);
+      localStorage.removeItem(StorageManager.KEY);
+      return {};
+    }
+  }
+
+  saveEngine(state: CourtEngineState): void {
+    try {
+      const current = this.read();
+      this.write({ ...current, engine: state } as StorageData);
+    } catch (error) {
+      console.warn('Failed to save engine state to localStorage:', error);
+    }
+  }
+
+  loadEngine(): Partial<CourtEngineState> {
+    try {
+      const data = this.read();
+      return data.engine ?? {};
+    } catch (_error) {
+      localStorage.removeItem(StorageManager.KEY);
+      return {};
+    }
+  }
+
+  clearAll(): void {
+    try {
+      localStorage.removeItem(StorageManager.KEY);
+    } catch (error) {
+      console.warn('Failed to clear stored state:', error);
+    }
+  }
+
+  private read(): Partial<StorageData> {
+    // Migration: if new key absent but old keys exist, merge and migrate
+    const newRaw = localStorage.getItem(StorageManager.KEY);
+    if (!newRaw) {
+      const oldApp = localStorage.getItem(OLD_KEYS.APP_STATE);
+      const oldEngine = localStorage.getItem(OLD_KEYS.COURT_ENGINE_STATE);
+      if (oldApp || oldEngine) {
+        const merged: Partial<StorageData> = {};
+        if (oldApp) {
+          try { merged.app = JSON.parse(oldApp); } catch { /* ignore */ }
+        }
+        if (oldEngine) {
+          try { merged.engine = JSON.parse(oldEngine); } catch { /* ignore */ }
+        }
+        localStorage.removeItem(OLD_KEYS.APP_STATE);
+        localStorage.removeItem(OLD_KEYS.COURT_ENGINE_STATE);
+        return merged;
+      }
       return {};
     }
 
-    if (parsed.players && !Array.isArray(parsed.players)) {
-      localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-      return {};
+    const parsed = JSON.parse(newRaw);
+    if (typeof parsed !== 'object' || parsed === null) return {};
+    return parsed as Partial<StorageData>;
+  }
+
+  private write(data: Partial<StorageData>): void {
+    let serialized = JSON.stringify(data);
+    if (serialized.length > StorageManager.MAX_SIZE) {
+      const pruned = this.pruneToFit(data as StorageData);
+      serialized = JSON.stringify(pruned);
+    }
+    localStorage.setItem(StorageManager.KEY, serialized);
+  }
+
+  private pruneToFit(data: StorageData): StorageData {
+    // Step 1: trim levelHistory arrays to last 10 entries per player
+    if (data.engine?.levelHistory) {
+      const trimmed: Record<string, number[]> = {};
+      for (const [id, history] of Object.entries(data.engine.levelHistory)) {
+        trimmed[id] = history.slice(-10);
+      }
+      data = { ...data, engine: { ...data.engine, levelHistory: trimmed } };
+      if (JSON.stringify(data).length <= StorageManager.MAX_SIZE) return data;
     }
 
-    if (parsed.assignments && !Array.isArray(parsed.assignments)) {
-      localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-      return {};
+    // Step 2: clear levelHistory entirely
+    if (data.engine) {
+      data = { ...data, engine: { ...data.engine, levelHistory: {} } };
+      if (JSON.stringify(data).length <= StorageManager.MAX_SIZE) return data;
     }
 
-    return {
-      players: Array.isArray(parsed.players) ? parsed.players : [],
-      numberOfCourts: typeof parsed.numberOfCourts === 'number' ? parsed.numberOfCourts : 4,
-      assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
-      lastGeneratedAt: typeof parsed.lastGeneratedAt === 'number' ? parsed.lastGeneratedAt : undefined,
-      isSmartEngineEnabled: typeof parsed.isSmartEngineEnabled === 'boolean' ? parsed.isSmartEngineEnabled : undefined,
-    };
-  } catch (error) {
-    console.warn('Failed to load app state from localStorage:', error);
-    localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-    localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
-    return {};
-  }
-};
-
-export const saveCourtEngineState = (state: CourtEngineState): void => {
-  try {
-    const stateToSave: CourtEngineState = {
-      engineType: state.engineType,
-      benchCountMap: state.benchCountMap,
-      singleCountMap: state.singleCountMap,
-      teammateCountMap: state.teammateCountMap,
-      opponentCountMap: state.opponentCountMap,
-      winCountMap: state.winCountMap,
-      lossCountMap: state.lossCountMap,
-      levelHistory: state.levelHistory,
-    };
-    localStorage.setItem(STORAGE_KEYS.COURT_ENGINE_STATE, JSON.stringify(stateToSave));
-  } catch (error) {
-    console.warn('Failed to save court engine state to localStorage:', error);
-  }
-};
-
-export const loadCourtEngineState = (): Partial<CourtEngineState> => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.COURT_ENGINE_STATE);
-    if (!saved) return {};
-
-    const parsed: CourtEngineState = JSON.parse(saved);
-    if (typeof parsed !== 'object' || parsed === null) {
-      localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
-      return {};
+    // Step 3: prune teammateCountMap + opponentCountMap to 200 most-recent entries
+    if (data.engine) {
+      const teammate = data.engine.teammateCountMap ?? {};
+      const opponent = data.engine.opponentCountMap ?? {};
+      const allKeys = [...new Set([...Object.keys(teammate), ...Object.keys(opponent)])];
+      if (allKeys.length > 200) {
+        const kept = allKeys.slice(0, 200);
+        const keptSet = new Set(kept);
+        const prunedTeammate: Record<string, number> = {};
+        const prunedOpponent: Record<string, number> = {};
+        for (const k of keptSet) {
+          if (teammate[k] !== undefined) prunedTeammate[k] = teammate[k];
+          if (opponent[k] !== undefined) prunedOpponent[k] = opponent[k];
+        }
+        data = {
+          ...data,
+          engine: { ...data.engine, teammateCountMap: prunedTeammate, opponentCountMap: prunedOpponent },
+        };
+      }
     }
-    return parsed;
-  } catch (_error) {
-    localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
-    return {};
-  }
-};
 
-export const clearAllStoredState = (): void => {
-  try {
-    localStorage.removeItem(STORAGE_KEYS.APP_STATE);
-    localStorage.removeItem(STORAGE_KEYS.COURT_ENGINE_STATE);
-  } catch (error) {
-    console.warn('Failed to clear stored state:', error);
+    return data;
   }
-};
+}
+
+export const storageManager = new StorageManager();

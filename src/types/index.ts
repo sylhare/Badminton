@@ -36,6 +36,11 @@ export interface AppState {
   isSmartEngineEnabled?: boolean;
 }
 
+export interface StorageData {
+  app: AppState;
+  engine: CourtEngineState;
+}
+
 export interface CourtEngineState {
   engineType?: EngineType;
   benchCountMap: Record<string, number>;

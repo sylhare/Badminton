@@ -24,10 +24,13 @@ vi.mock('../../src/engines/engineSelector', () => ({
 }));
 
 vi.mock('../../src/utils/storageUtils', () => ({
-  loadAppState: vi.fn(),
-  loadCourtEngineState: vi.fn(),
-  saveCourtEngineState: vi.fn(),
-  saveAppState: vi.fn(),
+  storageManager: {
+    loadApp: vi.fn(),
+    loadEngine: vi.fn(),
+    saveApp: vi.fn(),
+    saveEngine: vi.fn(),
+    clearAll: vi.fn(),
+  },
 }));
 
 describe('StatsPage Component', () => {
@@ -51,7 +54,7 @@ describe('StatsPage Component', () => {
 
   beforeEach(() => {
     mockPrepareStateForSaving.mockReturnValue(mockEngineState);
-    vi.mocked(storageUtils.loadAppState).mockReturnValue({ players: mockPlayers });
+    vi.mocked(storageUtils.storageManager.loadApp).mockReturnValue({ players: mockPlayers });
   });
 
   afterEach(() => {
@@ -120,7 +123,7 @@ describe('StatsPage Component', () => {
   it('loads app state to get player names', () => {
     render(<StatsPage />);
 
-    expect(storageUtils.loadAppState).toHaveBeenCalled();
+    expect(storageUtils.storageManager.loadApp).toHaveBeenCalled();
   });
 
   it('subscribes to engine state changes', () => {

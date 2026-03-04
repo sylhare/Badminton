@@ -7,7 +7,7 @@ import { CourtAssignments } from './components/court';
 import Leaderboard from './components/Leaderboard';
 import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
-import { clearAllStoredState, loadAppState, saveAppState } from './utils/storageUtils';
+import { storageManager } from './utils/storageUtils';
 import { levelTracker } from './engines/LevelTracker';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
 
@@ -32,7 +32,7 @@ export function rotateCourtTeams(court: Court): Court {
 }
 
 function App(): React.ReactElement {
-  const loadedState = loadAppState();
+  const loadedState = storageManager.loadApp();
   const [players, setPlayers] = useState<Player[]>(loadedState.players ?? []);
   const [numberOfCourts, setNumberOfCourts] = useState<number>(loadedState.numberOfCourts ?? 4);
   const [assignments, setAssignments] = useState<Court[]>(loadedState.assignments ?? []);
@@ -65,7 +65,7 @@ function App(): React.ReactElement {
   useEffect(() => {
     if (isInitialLoad.current) return;
 
-    saveAppState({
+    storageManager.saveApp({
       players,
       numberOfCourts,
       assignments,
@@ -111,7 +111,7 @@ function App(): React.ReactElement {
     setIsManagePlayersCollapsed(false);
     setManualCourtSelection(null);
     engine().resetHistory();
-    setTimeout(() => clearAllStoredState(), 0);
+    setTimeout(() => storageManager.clearAll(), 0);
   };
 
   const handleResetAlgorithm = () => {

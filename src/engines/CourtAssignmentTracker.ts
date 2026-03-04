@@ -1,5 +1,5 @@
 import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats, UpdateWinnerParams } from '../types';
-import { loadCourtEngineState, saveCourtEngineState } from '../utils/storageUtils';
+import { storageManager } from '../utils/storageUtils';
 import { pairKey } from '../utils/playerUtils';
 
 /**
@@ -128,12 +128,12 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Saves the current state to persistent storage. */
   saveState(engineType: EngineType): void {
-    saveCourtEngineState(this.prepareStateForSaving(engineType));
+    storageManager.saveEngine(this.prepareStateForSaving(engineType));
   }
 
   /** Loads tracking data from persistent storage. */
   loadState(currentEngineType: EngineType): void {
-    const state = loadCourtEngineState();
+    const state = storageManager.loadEngine();
 
     if (state.engineType && state.engineType !== currentEngineType) {
       console.warn(

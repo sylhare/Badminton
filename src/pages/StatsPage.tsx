@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { engine, getEngineType, setEngine } from '../engines/engineSelector';
-import { loadAppState } from '../utils/storageUtils';
+import { storageManager } from '../utils/storageUtils';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
 import BenchGraph from '../components/BenchGraph';
@@ -66,10 +66,10 @@ interface DiagnosticStats {
 function StatsPage(): React.ReactElement {
   const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [isSmartEngine] = useState(() => loadAppState().isSmartEngineEnabled ?? false);
+  const [isSmartEngine] = useState(() => storageManager.loadApp().isSmartEngineEnabled ?? false);
 
   useEffect(() => {
-    const appState = loadAppState();
+    const appState = storageManager.loadApp();
     const engineType = appState.isSmartEngineEnabled ? 'sl' : 'sa';
     setEngine(engineType);
     engine().loadState(engineType);

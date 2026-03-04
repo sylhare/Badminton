@@ -1,15 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  clearAllStoredState,
-  loadAppState,
-  loadCourtEngineState,
-  saveAppState,
-  saveCourtEngineState,
-} from '../../src/utils/storageUtils';
+import { storageManager } from '../../src/utils/storageUtils';
 import type { Court, Player } from '../../src/types';
 
-describe('StorageUtils', () => {
+const STORAGE_KEY = 'badminton-state';
+const OLD_APP_KEY = 'badminton-app-state';
+const OLD_ENGINE_KEY = 'badminton-court-engine-state';
+
+describe('StorageManager', () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -19,7 +17,7 @@ describe('StorageUtils', () => {
     localStorage.clear();
   });
 
-  describe('saveAppState and loadAppState', () => {
+  describe('saveApp and loadApp', () => {
     const mockPlayers: Player[] = [
       { id: 'player-1', name: 'Alice', isPresent: true },
       { id: 'player-2', name: 'Bob', isPresent: false },
@@ -43,39 +41,38 @@ describe('StorageUtils', () => {
       assignments: mockAssignments,
     };
 
-    it('should save app state to localStorage', () => {
-      saveAppState(mockAppState);
+    it('should save app state under single key', () => {
+      storageManager.saveApp(mockAppState);
 
-      const savedData = localStorage.getItem('badminton-app-state');
+      const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
       const parsed = JSON.parse(savedData!);
-      expect(parsed.players).toEqual(mockPlayers);
-      expect(parsed.numberOfCourts).toBe(6);
-      expect(parsed.assignments).toEqual(mockAssignments);
+      expect(parsed.app.players).toEqual(mockPlayers);
+      expect(parsed.app.numberOfCourts).toBe(6);
+      expect(parsed.app.assignments).toEqual(mockAssignments);
     });
 
-    it('should load app state from localStorage', () => {
-      saveAppState(mockAppState);
+    it('should load app state', () => {
+      storageManager.saveApp(mockAppState);
 
-      const loaded = loadAppState();
+      const loaded = storageManager.loadApp();
 
       expect(loaded.players).toEqual(mockPlayers);
       expect(loaded.numberOfCourts).toBe(6);
       expect(loaded.assignments).toEqual(mockAssignments);
     });
 
-    it('should return default state when no saved state exists', () => {
-      const loaded = loadAppState();
+    it('should return empty object when no saved state exists', () => {
+      const loaded = storageManager.loadApp();
       expect(loaded).toEqual({});
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
-      localStorage.setItem('badminton-app-state', 'invalid-json');
+      localStorage.setItem(STORAGE_KEY, 'invalid-json');
 
-      const loaded = loadAppState();
+      const loaded = storageManager.loadApp();
       expect(loaded).toEqual({});
-      expect(localStorage.getItem('badminton-app-state')).toBeNull();
     });
 
     it('should handle localStorage save errors gracefully', () => {
@@ -83,12 +80,12 @@ describe('StorageUtils', () => {
         throw new Error('Storage quota exceeded');
       });
 
-      expect(() => saveAppState(mockAppState)).not.toThrow();
+      expect(() => storageManager.saveApp(mockAppState)).not.toThrow();
     });
   });
 
-  describe('saveCourtEngineState and loadCourtEngineState', () => {
-    const mockCourtEngineState = {
+  describe('saveEngine and loadEngine', () => {
+    const mockEngineState = {
       benchCountMap: { 'player-1': 2, 'player-2': 1 },
       singleCountMap: {},
       teammateCountMap: { 'player-1|player-2': 3 },
@@ -97,24 +94,22 @@ describe('StorageUtils', () => {
       lossCountMap: { 'player-1': 2, 'player-2': 4 },
     };
 
-    it('should save court engine state to localStorage', () => {
-      saveCourtEngineState(mockCourtEngineState);
+    it('should save engine state under single key', () => {
+      storageManager.saveEngine(mockEngineState);
 
-      const savedData = localStorage.getItem('badminton-court-engine-state');
+      const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
       const parsed = JSON.parse(savedData!);
-      expect(parsed.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
-      expect(parsed.teammateCountMap).toEqual({ 'player-1|player-2': 3 });
-      expect(parsed.opponentCountMap).toEqual({ 'player-1|player-3': 2 });
-      expect(parsed.winCountMap).toEqual({ 'player-1': 5, 'player-2': 3 });
-      expect(parsed.lossCountMap).toEqual({ 'player-1': 2, 'player-2': 4 });
+      expect(parsed.engine.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
+      expect(parsed.engine.teammateCountMap).toEqual({ 'player-1|player-2': 3 });
+      expect(parsed.engine.winCountMap).toEqual({ 'player-1': 5, 'player-2': 3 });
     });
 
-    it('should load court engine state from localStorage', () => {
-      saveCourtEngineState(mockCourtEngineState);
+    it('should load engine state', () => {
+      storageManager.saveEngine(mockEngineState);
 
-      const loaded = loadCourtEngineState();
+      const loaded = storageManager.loadEngine();
 
       expect(loaded.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
       expect(loaded.teammateCountMap).toEqual({ 'player-1|player-2': 3 });
@@ -123,15 +118,8 @@ describe('StorageUtils', () => {
       expect(loaded.lossCountMap).toEqual({ 'player-1': 2, 'player-2': 4 });
     });
 
-    it('should return empty object when no saved court engine state exists', () => {
-      const loaded = loadCourtEngineState();
-      expect(loaded).toEqual({});
-    });
-
-    it('should handle corrupted court engine data gracefully', () => {
-      localStorage.setItem('badminton-court-engine-state', 'invalid-json');
-
-      const loaded = loadCourtEngineState();
+    it('should return empty object when no saved engine state exists', () => {
+      const loaded = storageManager.loadEngine();
       expect(loaded).toEqual({});
     });
 
@@ -140,24 +128,18 @@ describe('StorageUtils', () => {
         throw new Error('Storage quota exceeded');
       });
 
-      expect(() => saveCourtEngineState(mockCourtEngineState)).not.toThrow();
+      expect(() => storageManager.saveEngine(mockEngineState)).not.toThrow();
     });
   });
 
-  describe('clearAllStoredState', () => {
-    it('should remove all stored state from localStorage', () => {
-      localStorage.setItem('badminton-app-state', '{"test": "data"}');
-      localStorage.setItem('badminton-court-engine-state', '{"test": "data"}');
+  describe('clearAll', () => {
+    it('should remove the single storage key', () => {
+      storageManager.saveApp({ players: [], numberOfCourts: 4, assignments: [] });
       localStorage.setItem('other-data', 'should remain');
 
-      expect(localStorage.getItem('badminton-app-state')).toBeTruthy();
-      expect(localStorage.getItem('badminton-court-engine-state')).toBeTruthy();
-      expect(localStorage.getItem('other-data')).toBeTruthy();
+      storageManager.clearAll();
 
-      clearAllStoredState();
-
-      expect(localStorage.getItem('badminton-app-state')).toBeNull();
-      expect(localStorage.getItem('badminton-court-engine-state')).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
       expect(localStorage.getItem('other-data')).toBe('should remain');
     });
 
@@ -166,7 +148,66 @@ describe('StorageUtils', () => {
         throw new Error('Cannot remove item');
       });
 
-      expect(() => clearAllStoredState()).not.toThrow();
+      expect(() => storageManager.clearAll()).not.toThrow();
+    });
+  });
+
+  describe('migration from old keys', () => {
+    it('should migrate data from old keys to new key on first load', () => {
+      const oldApp = { players: [{ id: 'p1', name: 'Alice', isPresent: true }], numberOfCourts: 4, assignments: [] };
+      const oldEngine = { benchCountMap: { 'p1': 1 }, singleCountMap: {}, teammateCountMap: {}, opponentCountMap: {}, winCountMap: {}, lossCountMap: {} };
+
+      localStorage.setItem(OLD_APP_KEY, JSON.stringify(oldApp));
+      localStorage.setItem(OLD_ENGINE_KEY, JSON.stringify(oldEngine));
+
+      const loadedApp = storageManager.loadApp();
+
+      expect(loadedApp.players).toEqual(oldApp.players);
+      expect(localStorage.getItem(OLD_APP_KEY)).toBeNull();
+      expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
+    });
+
+    it('should migrate engine data from old key', () => {
+      const oldEngine = { benchCountMap: { 'p1': 2 }, singleCountMap: {}, teammateCountMap: {}, opponentCountMap: {}, winCountMap: {}, lossCountMap: {} };
+      localStorage.setItem(OLD_ENGINE_KEY, JSON.stringify(oldEngine));
+
+      const loadedEngine = storageManager.loadEngine();
+
+      expect(loadedEngine.benchCountMap).toEqual({ 'p1': 2 });
+      expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
+    });
+  });
+
+  describe('size-based pruning', () => {
+    it('should trim levelHistory to last 10 entries when payload is too large', () => {
+      // Build a large levelHistory: 1000 players * 50 entries ≈ 165 KB
+      const levelHistory: Record<string, number[]> = {};
+      for (let i = 0; i < 1000; i++) {
+        levelHistory[`player-${i}`] = Array.from({ length: 50 }, (_, j) => 50 + j);
+      }
+
+      const engineState = {
+        benchCountMap: {},
+        singleCountMap: {},
+        teammateCountMap: {},
+        opponentCountMap: {},
+        winCountMap: {},
+        lossCountMap: {},
+        levelHistory,
+      };
+
+      storageManager.saveEngine(engineState);
+
+      const raw = localStorage.getItem(STORAGE_KEY)!;
+      const parsed = JSON.parse(raw);
+
+      // Pruning must have occurred: each history trimmed to ≤10 entries
+      const histories = Object.values(parsed.engine.levelHistory as Record<string, number[]>);
+      histories.forEach(h => {
+        expect(h.length).toBeLessThanOrEqual(10);
+      });
+
+      expect(raw.length).toBeLessThanOrEqual(150_000);
     });
   });
 });
