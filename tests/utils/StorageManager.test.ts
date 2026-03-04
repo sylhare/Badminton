@@ -1,3 +1,4 @@
+import LZString from 'lz-string';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { storageManager } from '../../src/utils/StorageManager';
@@ -6,6 +7,13 @@ import type { Court, Player } from '../../src/types';
 const STORAGE_KEY = 'badminton-state';
 const OLD_APP_KEY = 'badminton-app-state';
 const OLD_ENGINE_KEY = 'badminton-court-engine-state';
+
+function readDecompressed(): unknown {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  const decompressed = LZString.decompressFromUTF16(raw);
+  return JSON.parse(decompressed ?? raw);
+}
 
 describe('StorageManager', () => {
   beforeEach(() => {
@@ -47,7 +55,7 @@ describe('StorageManager', () => {
       const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
-      const parsed = JSON.parse(savedData!);
+      const parsed = readDecompressed() as { app: { players: Player[]; numberOfCourts: number; assignments: Court[] } };
       expect(parsed.app.players).toEqual(mockPlayers);
       expect(parsed.app.numberOfCourts).toBe(6);
       expect(parsed.app.assignments).toEqual(mockAssignments);
@@ -94,16 +102,18 @@ describe('StorageManager', () => {
       lossCountMap: { 'player-1': 2, 'player-2': 4 },
     };
 
-    it('should save engine state under single key', () => {
+    it('should save engine state in compact format under single key', () => {
       storageManager.saveEngine(mockEngineState);
 
       const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
-      const parsed = JSON.parse(savedData!);
-      expect(parsed.engine.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
-      expect(parsed.engine.teammateCountMap).toEqual({ 'player-1|player-2': 3 });
-      expect(parsed.engine.winCountMap).toEqual({ 'player-1': 5, 'player-2': 3 });
+      const parsed = readDecompressed() as { engine: { v: number; ps: Record<string, number[]>; pc: Record<string, number[]> } };
+      expect(parsed.engine.v).toBe(2);
+      expect(parsed.engine.ps['player-1']).toEqual([2, 0, 5, 2]);
+      expect(parsed.engine.ps['player-2']).toEqual([1, 0, 3, 4]);
+      expect(parsed.engine.pc['player-1|player-2']).toEqual([3, 0]);
+      expect(parsed.engine.pc['player-1|player-3']).toEqual([0, 2]);
     });
 
     it('should load engine state', () => {
@@ -138,6 +148,37 @@ describe('StorageManager', () => {
 
       expect(loaded).toEqual({});
       expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('should compress data — raw localStorage value is not plain JSON', () => {
+      storageManager.saveEngine(mockEngineState);
+
+      const raw = localStorage.getItem(STORAGE_KEY)!;
+      expect(() => JSON.parse(raw)).toThrow();
+
+      const loaded = storageManager.loadEngine();
+      expect(loaded.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
+      expect(loaded.winCountMap).toEqual({ 'player-1': 5, 'player-2': 3 });
+    });
+
+    it('should load old uncompressed plain-JSON format (backward compat)', () => {
+      const oldFormat = {
+        engine: {
+          benchCountMap: { 'player-1': 3 },
+          singleCountMap: {},
+          teammateCountMap: { 'player-1|player-2': 1 },
+          opponentCountMap: {},
+          winCountMap: { 'player-1': 7 },
+          lossCountMap: { 'player-1': 1 },
+        },
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(oldFormat));
+
+      const loaded = storageManager.loadEngine();
+
+      expect(loaded.benchCountMap).toEqual({ 'player-1': 3 });
+      expect(loaded.winCountMap).toEqual({ 'player-1': 7 });
+      expect(loaded.teammateCountMap).toEqual({ 'player-1|player-2': 1 });
     });
   });
 
@@ -217,14 +258,14 @@ describe('StorageManager', () => {
 
       storageManager.saveEngine(engineState);
 
-      const raw = localStorage.getItem(STORAGE_KEY)!;
-      const parsed = JSON.parse(raw);
+      const parsed = readDecompressed() as { engine: { lh: Record<string, number[]> } };
 
-      const histories = Object.values(parsed.engine.levelHistory as Record<string, number[]>);
+      const histories = Object.values(parsed.engine.lh);
       histories.forEach(h => {
         expect(h.length).toBeLessThanOrEqual(10);
       });
 
+      const raw = localStorage.getItem(STORAGE_KEY)!;
       expect(raw.length).toBeLessThanOrEqual(150_000);
     });
 
@@ -244,18 +285,19 @@ describe('StorageManager', () => {
         levelHistory,
       });
 
-      const raw = localStorage.getItem(STORAGE_KEY)!;
-      const parsed = JSON.parse(raw);
+      const parsed = readDecompressed() as { engine: { lh: Record<string, number[]> } };
 
-      expect(parsed.engine.levelHistory).toEqual({});
+      expect(parsed.engine.lh).toEqual({});
+
+      const raw = localStorage.getItem(STORAGE_KEY)!;
       expect(raw.length).toBeLessThanOrEqual(150_000);
     });
 
-    it('should prune teammateCountMap and opponentCountMap to 200 keys when still too large', () => {
+    it('should prune pair map to 200 keys when still too large', () => {
       const teammate: Record<string, number> = {};
       const opponent: Record<string, number> = {};
-      for (let i = 0; i < 100; i++) {
-        for (let j = i + 1; j < 100; j++) {
+      for (let i = 0; i < 200; i++) {
+        for (let j = i + 1; j < 200; j++) {
           teammate[`player-${i}|player-${j}`] = 1;
           opponent[`player-${i}|player-${j}`] = 1;
         }
@@ -270,15 +312,9 @@ describe('StorageManager', () => {
         lossCountMap: {},
       });
 
-      const raw = localStorage.getItem(STORAGE_KEY)!;
-      const parsed = JSON.parse(raw);
+      const parsed = readDecompressed() as { engine: { pc: Record<string, [number, number]> } };
 
-      const allKeys = [
-        ...new Set([
-          ...Object.keys(parsed.engine.teammateCountMap as Record<string, number>),
-          ...Object.keys(parsed.engine.opponentCountMap as Record<string, number>),
-        ]),
-      ];
+      const allKeys = Object.keys(parsed.engine.pc);
       expect(allKeys.length).toBeLessThanOrEqual(200);
     });
   });
