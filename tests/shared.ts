@@ -37,6 +37,17 @@ export const addPlayers = async (
   });
 };
 
+/** Click a team element (no score modal expected, e.g. SA engine) */
+export const clickTeam = async (
+  user: ReturnType<typeof userEvent.setup>,
+  teamElement: HTMLElement,
+): Promise<void> => {
+  await act(async () => {
+    await user.click(teamElement);
+    await new Promise(resolve => setTimeout(resolve, 50));
+  });
+};
+
 /** Click a team element and dismiss the score input modal via the skip button */
 export const clickTeamAndSkip = async (
   user: ReturnType<typeof userEvent.setup>,
