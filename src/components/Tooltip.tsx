@@ -7,7 +7,7 @@ interface TooltipProps {
   testId: string;
 }
 
-export function Tooltip({ text, testId }: TooltipProps) {
+export function Tooltip({ text, testId }: TooltipProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const iconRef = useRef<HTMLSpanElement>(null);

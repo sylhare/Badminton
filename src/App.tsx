@@ -11,6 +11,26 @@ import { clearAllStoredState, loadAppState, saveAppState } from './utils/storage
 import { levelTracker } from './engines/LevelTracker';
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
 
+export function rotateCourtTeams(court: Court): Court {
+  const { teams, players } = court;
+  if (!teams) return court;
+
+  if (players.length === 4) {
+    const [p0, p1, p2, p3] = players;
+    const team1Ids = new Set(teams.team1.map(p => p.id));
+
+    if (team1Ids.has(p0.id) && team1Ids.has(p1.id)) {
+      return { ...court, teams: { team1: [p0, p2], team2: [p1, p3] }, winner: undefined };
+    } else if (team1Ids.has(p0.id) && team1Ids.has(p2.id)) {
+      return { ...court, teams: { team1: [p0, p3], team2: [p1, p2] }, winner: undefined };
+    } else {
+      return { ...court, teams: { team1: [p0, p1], team2: [p2, p3] }, winner: undefined };
+    }
+  }
+
+  return { ...court, teams: { team1: teams.team2, team2: teams.team1 }, winner: undefined };
+}
+
 function App(): React.ReactElement {
   const loadedState = loadAppState();
   const [players, setPlayers] = useState<Player[]>(loadedState.players ?? []);
@@ -167,6 +187,22 @@ function App(): React.ReactElement {
     );
   };
 
+  const handleRotateTeams = (courtNumber: number) => {
+    setAssignments(prevAssignments =>
+      prevAssignments.map(court => {
+        if (court.courtNumber !== courtNumber || !court.teams) return court;
+
+        if (court.winner !== undefined) {
+          engine().reverseWinForCourt(courtNumber);
+        }
+
+        const rotated = rotateCourtTeams(court);
+        engine().updateCourtTeamStats(rotated, court);
+        return rotated;
+      }),
+    );
+  };
+
   const handleToggleForceBench = (playerId: string) => {
     setForceBenchPlayerIds(prev => {
       const next = new Set(prev);
@@ -256,6 +292,7 @@ function App(): React.ReactElement {
               onWinnerChange={handleWinnerChange}
               onScoreChange={handleScoreChange}
               hasHistoricalWinners={engine().getWinCounts().size > 0}
+              onRotateTeams={handleRotateTeams}
               hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
               onViewBenchCounts={handleViewBenchCounts}
               manualCourtSelection={manualCourtSelection}

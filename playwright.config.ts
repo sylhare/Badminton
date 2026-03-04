@@ -26,7 +26,7 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: process.env.CI ? 'off' : 'retain-on-failure',
   },
 
   /* Configure projects for major browsers */
@@ -36,7 +36,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-    ...(process.env.CI ? [
+    ...(process.env.ALL_BROWSERS === 'true' ? [
       {
         name: 'firefox',
         use: { ...devices['Desktop Firefox'] },

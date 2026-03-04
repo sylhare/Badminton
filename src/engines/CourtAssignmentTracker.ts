@@ -236,6 +236,54 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /**
+   * Records teammate and opponent pairing stats for a court.
+   * If previousCourt is provided, its stats are reversed first (used on rotation).
+   */
+  updateCourtTeamStats(court: Court, previousCourt?: Court): void {
+    if (previousCourt?.teams) {
+      const { team1, team2 } = previousCourt.teams;
+      const reverseTeamPairs = (team: Player[]) => {
+        for (let i = 0; i < team.length; i++) {
+          for (let j = i + 1; j < team.length; j++) {
+            const key = pairKey(team[i].id, team[j].id);
+            const count = CourtAssignmentTracker.teammateCountMap.get(key) ?? 0;
+            if (count > 0) CourtAssignmentTracker.teammateCountMap.set(key, count - 1);
+          }
+        }
+      };
+      reverseTeamPairs(team1);
+      reverseTeamPairs(team2);
+      team1.forEach(a => {
+        team2.forEach(b => {
+          const key = pairKey(a.id, b.id);
+          const count = CourtAssignmentTracker.opponentCountMap.get(key) ?? 0;
+          if (count > 0) CourtAssignmentTracker.opponentCountMap.set(key, count - 1);
+        });
+      });
+    }
+
+    if (court.teams) {
+      const { team1, team2 } = court.teams;
+      const addTeamPairs = (team: Player[]) => {
+        for (let i = 0; i < team.length; i++) {
+          for (let j = i + 1; j < team.length; j++) {
+            this.recordTeammatePair(team[i].id, team[j].id);
+          }
+        }
+      };
+      addTeamPairs(team1);
+      addTeamPairs(team2);
+      team1.forEach(a => {
+        team2.forEach(b => {
+          this.recordOpponentPair(a.id, b.id);
+        });
+      });
+    }
+
+    this.notifyStateChange();
+  }
+
+  /**
    * Reverses a previously recorded win for a specific court.
    */
   reverseWinForCourt(courtNumber: number): void {

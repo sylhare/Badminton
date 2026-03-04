@@ -70,6 +70,7 @@ export interface ICourtAssignmentTracker {
   getBenchCounts(): Map<string, number>;
   updateWinner(courtNumber: number, winner: 1 | 2 | undefined, currentAssignments: Court[]): Court[];
   reverseWinForCourt(courtNumber: number): void;
+  updateCourtTeamStats(court: Court, previousCourt?: Court): void;
   getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
   getStats(): TrackerStats;
 }

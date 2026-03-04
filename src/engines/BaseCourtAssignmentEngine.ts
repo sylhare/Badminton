@@ -142,21 +142,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
         court.players.forEach(p => this.recordSingles(p.id));
       }
 
-      const addTeamPairs = (team: Player[]) => {
-        for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            this.recordTeammatePair(team[i].id, team[j].id);
-          }
-        }
-      };
-      addTeamPairs(court.teams.team1);
-      addTeamPairs(court.teams.team2);
-
-      court.teams.team1.forEach(a => {
-        court.teams!.team2.forEach(b => {
-          this.recordOpponentPair(a.id, b.id);
-        });
-      });
+      this.updateCourtTeamStats(court);
     });
   }
 

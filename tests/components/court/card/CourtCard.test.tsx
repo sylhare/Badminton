@@ -249,5 +249,46 @@ describe('CourtCard', () => {
       expect(screen.getByTestId('court-7')).toBeInTheDocument();
     });
   });
+
+  describe('Rotate teams button', () => {
+    const doublesCourt: Court = {
+      courtNumber: 1,
+      players: [TEST_PLAYERS[0], TEST_PLAYERS[1], TEST_PLAYERS[2], TEST_PLAYERS[3]],
+      teams: {
+        team1: [TEST_PLAYERS[0], TEST_PLAYERS[1]],
+        team2: [TEST_PLAYERS[2], TEST_PLAYERS[3]],
+      },
+    };
+
+    it('renders rotate button when onRotateTeams is provided', () => {
+      render(<CourtCard court={doublesCourt} onRotateTeams={vi.fn()} />);
+      expect(screen.getByTestId('rotate-teams-button')).toBeInTheDocument();
+    });
+
+    it('does not render rotate button when onRotateTeams is not provided', () => {
+      render(<CourtCard court={doublesCourt} />);
+      expect(screen.queryByTestId('rotate-teams-button')).not.toBeInTheDocument();
+    });
+
+    it('calls onRotateTeams with court number when rotate button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockRotate = vi.fn();
+      render(<CourtCard court={doublesCourt} onRotateTeams={mockRotate} />);
+
+      await user.click(screen.getByTestId('rotate-teams-button'));
+
+      expect(mockRotate).toHaveBeenCalledWith(1);
+    });
+
+    it('renders rotate button for singles match', () => {
+      const singlesCourt: Court = {
+        courtNumber: 2,
+        players: [TEST_PLAYERS[0], TEST_PLAYERS[1]],
+        teams: { team1: [TEST_PLAYERS[0]], team2: [TEST_PLAYERS[1]] },
+      };
+      render(<CourtCard court={singlesCourt} onRotateTeams={vi.fn()} />);
+      expect(screen.getByTestId('rotate-teams-button')).toBeInTheDocument();
+    });
+  });
 });
 

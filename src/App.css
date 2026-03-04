@@ -1081,6 +1081,7 @@ h1 {
 }
 
 .court-header {
+    position: relative;
     text-align: center;
     margin-bottom: 15px;
     color: #2d3748;
@@ -1102,6 +1103,26 @@ h1 {
     font-size: 0.9rem;
     opacity: 0.8;
     animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+.rotate-teams-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #a0aec0;
+    padding: 2px 4px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.rotate-teams-button:hover {
+    color: var(--color-primary);
+    background: #ebf8ff;
 }
 
 .teams {

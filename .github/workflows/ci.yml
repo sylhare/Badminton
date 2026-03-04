@@ -35,11 +35,3 @@ jobs:
 
     - name: Run tests
       run: npm run test
-
-    - name: Upload build artifacts
-      if: matrix.node-version == '22.x'
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-files
-        path: dist/
-        retention-days: 7 
