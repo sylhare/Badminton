@@ -8,7 +8,7 @@ interface ScoreInputModalProps {
   winnerTeam: 1 | 2;
   team1Players: Player[];
   team2Players: Player[];
-  onConfirm: (score?: { team1: number; team2: number }) => void;
+  onConfirm: (score: { team1: number; team2: number }) => void;
   onCancel: () => void;
 }
 

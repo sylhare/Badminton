@@ -44,7 +44,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   };
 
   const handleRotateTeams = onRotateTeams ? () => onRotateTeams(court.courtNumber) : undefined;
-  const handleModalConfirm = (score?: { team1: number; team2: number }) => {
+  const handleModalConfirm = (score: { team1: number; team2: number }) => {
     if (pendingWinner === null || !onWinnerChange) return;
     onWinnerChange(court.courtNumber, pendingWinner);
     onScoreChange?.(court.courtNumber, score);

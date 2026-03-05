@@ -75,8 +75,11 @@ export class LevelTracker {
 
       const { team1, team2 } = court.teams;
 
-      const team1Avg = this.getTeamAvgLevel(team1);
-      const team2Avg = this.getTeamAvgLevel(team2);
+      const freshTeam1 = team1.map(p => updatedPlayers.get(p.id) ?? p);
+      const freshTeam2 = team2.map(p => updatedPlayers.get(p.id) ?? p);
+
+      const team1Avg = this.getTeamAvgLevel(freshTeam1);
+      const team2Avg = this.getTeamAvgLevel(freshTeam2);
 
       const team1Expected = 1 / (1 + Math.pow(10, (team2Avg - team1Avg) / LevelTrackerConfig.ELO_DIVISOR));
       const team2Expected = 1 - team1Expected;
@@ -96,8 +99,8 @@ export class LevelTracker {
         }
       };
 
-      applyLevelDelta(team1, team1Actual, team1Expected);
-      applyLevelDelta(team2, team2Actual, team2Expected);
+      applyLevelDelta(freshTeam1, team1Actual, team1Expected);
+      applyLevelDelta(freshTeam2, team2Actual, team2Expected);
 
       if (court.score) {
         const updateAvgScore = (teamPlayers: Player[], teamScore: number, isWinner: boolean) => {
