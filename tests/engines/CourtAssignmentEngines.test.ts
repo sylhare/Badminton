@@ -843,7 +843,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       selector.engine().recordWins([court]);
       expect(selector.engine().getWinCounts().get('P0')).toBe(1);
 
-      selector.engine().reverseWinForCourt(1);
+      selector.engine().updateWinner(1, undefined, [court]);
       expect(selector.engine().getWinCounts().get('P0')).toBe(0);
 
       const state = selector.engine().prepareStateForSaving(type);

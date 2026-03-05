@@ -188,19 +188,18 @@ function App(): React.ReactElement {
   };
 
   const handleRotateTeams = (courtNumber: number) => {
-    setAssignments(prevAssignments =>
-      prevAssignments.map(court => {
-        if (court.courtNumber !== courtNumber || !court.teams) return court;
+    setAssignments(prevAssignments => {
+      const court = prevAssignments.find(c => c.courtNumber === courtNumber);
+      if (!court?.teams) return prevAssignments;
 
-        if (court.winner !== undefined) {
-          engine().reverseWinForCourt(courtNumber);
-        }
-
-        const rotated = rotateCourtTeams(court);
+      const cleared = engine().updateWinner(courtNumber, undefined, prevAssignments);
+      return cleared.map(c => {
+        if (c.courtNumber !== courtNumber) return c;
+        const rotated = rotateCourtTeams(c);
         engine().updateCourtTeamStats(rotated, court);
         return rotated;
-      }),
-    );
+      });
+    });
   };
 
   const handleToggleForceBench = (playerId: string) => {

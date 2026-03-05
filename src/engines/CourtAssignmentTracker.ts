@@ -286,7 +286,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /**
    * Reverses a previously recorded win for a specific court.
    */
-  reverseWinForCourt(courtNumber: number): void {
+  private reverseWinForCourt(courtNumber: number): void {
     const previousRecord = CourtAssignmentTracker.recordedWinsMap.get(courtNumber);
     if (previousRecord) {
       this.reversePreviousWinRecord(previousRecord);
