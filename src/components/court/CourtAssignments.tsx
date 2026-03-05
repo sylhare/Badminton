@@ -157,11 +157,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
       {hasAssignments && (
         <>
-          {isRecentAssignment && (
-            <div className="last-generated" data-testid="last-generated">
-              Last generated {formatTimeAgo(lastGeneratedAt!)}
-            </div>
-          )}
           <div className="courts-grid">
             {assignments.map((court) => {
               const isManualCourt = (court as any).wasManuallyAssigned || (hasManualCourtSelection && court.courtNumber === 1);
@@ -216,6 +211,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             >
               🎲 Regenerate Assignments
             </button>
+            {isRecentAssignment && (
+              <div className="last-generated" data-testid="last-generated">
+                Last generated {formatTimeAgo(lastGeneratedAt!)}
+              </div>
+            )}
           </div>
         </>
       )}
