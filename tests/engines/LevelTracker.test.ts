@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { LevelTracker } from '../../src/engines/LevelTracker';
+import { LevelTrackerConfig } from '../../src/engines/levelTrackerConfig';
 import type { Court, Player } from '../../src/types';
 
 function makePlayer(id: string, level?: number): Player {
@@ -21,34 +22,34 @@ describe('LevelTracker', () => {
   beforeEach(() => { tracker = new LevelTracker(); });
 
   describe('getKFactor', () => {
-    it('returns 3 when no score is provided', () => {
-      expect(tracker.getKFactor()).toBe(3);
+    it('returns K_DEFAULT when no score is provided', () => {
+      expect(tracker.getKFactor()).toBe(LevelTrackerConfig.K_DEFAULT);
     });
 
-    it('returns 3 for a deuce win (winner score ≠ 21)', () => {
-      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(3);
+    it('returns K_DEFAULT for a deuce win (winner score ≠ 21)', () => {
+      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(LevelTrackerConfig.K_DEFAULT);
     });
 
-    it('returns 4 for a close win (loser 18–20)', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 19 }, 1)).toBe(4);
+    it('returns K_SCALE[0].k for a close win (loser 18–20)', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 19 }, 1)).toBe(LevelTrackerConfig.K_SCALE[0].k);
     });
 
-    it('returns 8 for loser score 15–17', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 16 }, 1)).toBe(8);
+    it('returns K_SCALE[1].k for loser score 15–17', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 16 }, 1)).toBe(LevelTrackerConfig.K_SCALE[1].k);
     });
 
-    it('returns 15 for a dominant win (loser < 6)', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 3 }, 1)).toBe(15);
+    it('returns K_MAX for a dominant win (loser < 6)', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 3 }, 1)).toBe(LevelTrackerConfig.K_MAX);
     });
 
     it('scales K by balance factor for an unbalanced team', () => {
       const team = [makePlayer('a', 0), makePlayer('b', 100)];
-      expect(tracker.getKFactor(undefined, undefined, team)).toBe(1.5);
+      expect(tracker.getKFactor(undefined, undefined, team)).toBe(LevelTrackerConfig.K_DEFAULT * LevelTrackerConfig.BALANCE_FACTOR_FLOOR);
     });
 
     it('does not reduce K for a singles (1-player) team', () => {
       const team = [makePlayer('a', 80)];
-      expect(tracker.getKFactor(undefined, undefined, team)).toBe(3);
+      expect(tracker.getKFactor(undefined, undefined, team)).toBe(LevelTrackerConfig.K_DEFAULT);
     });
   });
 

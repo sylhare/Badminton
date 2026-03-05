@@ -1,48 +1,37 @@
 import type { Court, Player } from '../types';
+import { LevelTrackerConfig } from './levelTrackerConfig';
 
 export class LevelTracker {
   /**
    * Determine the K-factor (maximum rating change per game) based on the score.
-   * A higher K means a more dominant result causes a larger level adjustment.
    *
-   * K-factor scale (winner score must be exactly 21):
-   * - Deuce / winner ≠ 21 → K = 3   (closest possible win)
-   * - Loser 18–20         → K = 4
-   * - Loser 15–17         → K = 8
-   * - Loser 11–14         → K = 10
-   * - Loser 6–10          → K = 12
-   * - Loser < 6           → K = 15  (most dominant win)
+   * Returns {@link LevelTrackerConfig.K_DEFAULT} when no score is available or the
+   * winner score is not exactly 21 (deuce). Otherwise the raw K is looked up from
+   * {@link LevelTrackerConfig.K_SCALE} (matched by score difference) or falls back
+   * to {@link LevelTrackerConfig.K_MAX} for the most dominant wins.
    *
-   * Returns K = 3 when no score is available (same as deuce).
-   *
-   * When teamPlayers is provided, the raw K is further scaled by a balance factor
-   * [0.5, 1.0] based on within-team level spread — the more unbalanced the team,
-   * the less informative the result is about individual ability.
-   *
-   * Balance factor:
-   * - Balanced team / singles → 1.0  (no reduction)
-   * - [0, 100] team           → 0.5  (K halved)
+   * When teamPlayers is provided, the raw K is scaled by a balance factor
+   * [{@link LevelTrackerConfig.BALANCE_FACTOR_FLOOR}, 1.0] based on within-team
+   * level spread — the more unbalanced the team, the less informative the result.
    */
   getKFactor(
     score?: { team1: number; team2: number },
     winner?: 1 | 2,
     teamPlayers?: Player[],
   ): number {
-    if (!score || !winner) return 3 * this.teamBalanceFactor(teamPlayers);
+    if (!score || !winner) return LevelTrackerConfig.K_DEFAULT * this.teamBalanceFactor(teamPlayers);
 
     const winnerScore = winner === 1 ? score.team1 : score.team2;
-    const loserScore = winner === 1 ? score.team2 : score.team1;
+    const loserScore  = winner === 1 ? score.team2 : score.team1;
 
-    let rawK: number;
+    let rawK = LevelTrackerConfig.K_MAX;
     if (winnerScore !== 21) {
-      rawK = 3;
+      rawK = LevelTrackerConfig.K_DEFAULT;
     } else {
       const diff = 21 - loserScore;
-      if (diff <= 3) rawK = 4;
-      else if (diff <= 6) rawK = 8;
-      else if (diff <= 10) rawK = 10;
-      else if (diff <= 15) rawK = 12;
-      else rawK = 15;
+      for (const band of LevelTrackerConfig.K_SCALE) {
+        if (diff <= band.maxDiff) { rawK = band.k; break; }
+      }
     }
 
     return rawK * this.teamBalanceFactor(teamPlayers);
@@ -52,7 +41,7 @@ export class LevelTracker {
     if (!players || players.length <= 1) return 1;
     const avg = players.reduce((s, p) => s + (p.level ?? 50), 0) / players.length;
     const variance = players.reduce((s, p) => s + Math.pow((p.level ?? 50) - avg, 2), 0) / players.length;
-    return 1 - 0.5 * Math.min(1, Math.sqrt(variance) / 50);
+    return 1 - LevelTrackerConfig.BALANCE_FACTOR_FLOOR * Math.min(1, Math.sqrt(variance) / LevelTrackerConfig.BALANCE_FACTOR_NORMALIZER);
   }
 
   /**
@@ -68,11 +57,9 @@ export class LevelTracker {
    * Apply Elo-style level updates to all players based on court results.
    * Only courts with both a winner and teams assigned are processed.
    *
-   * Uses the Elo formula with a divisor of 400 to compute expected win probabilities.
-   * A larger divisor produces a flatter probability curve — a 50-point level gap gives
-   * only ~56% expected win (vs ~91% with divisor 50), so mismatched teams cause smaller
-   * swings and upsets are less extreme. Max swing is guaranteed < 10 points per game
-   * (max K = 15 × max |actual − expected| ≈ 0.64 = 9.6).
+   * Uses the Elo formula with a divisor of {@link LevelTrackerConfig.ELO_DIVISOR} to
+   * compute expected win probabilities. A larger divisor produces a flatter probability
+   * curve, so mismatched teams cause smaller swings and upsets are less extreme.
    *
    * Average score tracking is updated when a score is recorded.
    *
@@ -90,7 +77,7 @@ export class LevelTracker {
       const team1Avg = this.getTeamAvgLevel(team1);
       const team2Avg = this.getTeamAvgLevel(team2);
 
-      const team1Expected = 1 / (1 + Math.pow(10, (team2Avg - team1Avg) / 400));
+      const team1Expected = 1 / (1 + Math.pow(10, (team2Avg - team1Avg) / LevelTrackerConfig.ELO_DIVISOR));
       const team2Expected = 1 - team1Expected;
 
       const team1Actual = court.winner === 1 ? 1 : 0;
