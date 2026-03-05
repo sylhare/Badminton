@@ -942,4 +942,35 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(winCountsAfterLoad.size).toBe(0);
     });
   });
+
+  describe('Level history cap', () => {
+    it('recordLevelSnapshot never exceeds 10 entries per player', () => {
+      engine.resetHistory();
+      const players = mockPlayers(2);
+
+      for (let i = 0; i < 15; i++) {
+        engine.recordLevelSnapshot(players.map(p => ({ ...p, level: 50 + i })));
+      }
+
+      const state = engine.prepareStateForSaving(type);
+      const history = state.levelHistory ?? {};
+      for (const entries of Object.values(history)) {
+        expect(entries.length).toBeLessThanOrEqual(10);
+      }
+    });
+
+    it('extractPlayerStats returns correct stats without modifying maps', () => {
+      engine.resetHistory();
+      const players = mockPlayers(4);
+      const court = createMockCourt(1, players, 1);
+      engine.recordWins([court]);
+
+      const stats = engine.extractPlayerStats(players[0].id);
+      expect(stats.wins).toBe(1);
+      expect(stats.losses).toBe(0);
+
+      // Verify the map is still intact after extraction
+      expect(engine.getWinCounts().get(players[0].id)).toBe(1);
+    });
+  });
 });

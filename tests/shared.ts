@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
 import { engineSA } from '../src/engines/SimulatedAnnealingEngine';
+import { storageManager } from '../src/utils/StorageManager';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {
@@ -13,6 +14,10 @@ export const COMMON_PLAYERS = {
 
 /** Common setup/teardown used across multiple test files */
 export const clearTestState = async (): Promise<void> => {
+  // Drain the write queue before clearing so no stale save fires after the clear.
+  await storageManager.clearAll();
+  // Extra flush to ensure any macrotask-scheduled stream callbacks complete too.
+  await new Promise(resolve => setTimeout(resolve, 50));
   localStorage.clear();
   await act(async () => {
     engineSA.resetHistory();
@@ -29,13 +34,13 @@ export const waitForAppLoad = async (): Promise<void> => {
 };
 
 /**
- * Flush one full macrotask boundary so that all pending microtask chains
- * (e.g. async StorageManager saves) complete before the caller continues.
- * One setTimeout(0) is enough: the JS event loop drains the entire microtask
- * queue – including deeply-nested chains – before running a macrotask.
+ * Wait for all pending StorageManager writes to complete, then flush one
+ * macrotask boundary to let any queued stream callbacks settle.
  */
-export const flushPendingSaves = (): Promise<void> =>
-  new Promise(resolve => setTimeout(resolve, 0));
+export const flushPendingSaves = async (): Promise<void> => {
+  await storageManager.waitForQueue();
+  await new Promise(resolve => setTimeout(resolve, 0));
+};
 
 /** Helper to add players via the input field */
 export const addPlayers = async (

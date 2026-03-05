@@ -9,7 +9,7 @@ import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { storageManager } from './utils/StorageManager';
 import { levelTracker } from './engines/LevelTracker';
-import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
+import type { ArchivedPlayer, Court, ManualCourtSelection, Player, WinnerSelection } from './types';
 
 export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
@@ -41,6 +41,7 @@ function App(): React.ReactElement {
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState<boolean>(false);
+  const [archivedPlayers, setArchivedPlayers] = useState<ArchivedPlayer[]>([]);
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const managePlayersRef = useRef<HTMLDivElement>(null);
@@ -55,6 +56,7 @@ function App(): React.ReactElement {
       if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
       if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
       if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
+      if (loadedState.archivedPlayers?.length) setArchivedPlayers(loadedState.archivedPlayers);
       const smart = loadedState.isSmartEngineEnabled ?? false;
       if (smart) setIsSmartEngineEnabled(true);
       const engineType = smart ? 'sl' : 'sa';
@@ -76,6 +78,7 @@ function App(): React.ReactElement {
       assignments,
       lastGeneratedAt,
       isSmartEngineEnabled,
+      archivedPlayers: archivedPlayers.length > 0 ? archivedPlayers : undefined,
     });
     engine().saveState(getEngineType());
   }, [players, numberOfCourts, assignments, lastGeneratedAt, isSmartEngineEnabled, isInitialLoad]);
@@ -96,8 +99,27 @@ function App(): React.ReactElement {
   };
 
   const handleRemovePlayer = (playerId: string) => {
+    const player = players.find(p => p.id === playerId);
+    if (player) {
+      const stats = engine().extractPlayerStats(playerId);
+      if (stats.wins > 0 || stats.losses > 0 || stats.benches > 0 || stats.singles > 0) {
+        const archived: ArchivedPlayer = {
+          id: playerId,
+          name: player.name,
+          wins: stats.wins,
+          losses: stats.losses,
+          benches: stats.benches,
+          singles: stats.singles,
+          finalLevel: player.level,
+        };
+        setArchivedPlayers(prev => {
+          const filtered = prev.filter(a => a.id !== playerId);
+          return [...filtered, archived];
+        });
+      }
+    }
     engine().removePlayerHistory(playerId);
-    setPlayers(prev => prev.filter(player => player.id !== playerId));
+    setPlayers(prev => prev.filter(p => p.id !== playerId));
   };
 
   const recordCurrentWins = () => {

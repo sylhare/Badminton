@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { storageManager } from '../../src/utils/StorageManager';
-import type { Court, CourtEngineState, Player } from '../../src/types';
+import type { ArchivedPlayer, Court, CourtEngineState, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
 const OLD_APP_KEY = 'badminton-app-state';
@@ -114,6 +114,22 @@ describe('StorageManager', () => {
 
       await expect(storageManager.saveApp(mockAppState)).resolves.not.toThrow();
     });
+
+    it('should persist and restore archivedPlayers', async () => {
+      const archived: ArchivedPlayer[] = [
+        { id: 'old-player-1', name: 'OldAlice', wins: 5, losses: 3, benches: 1, singles: 2, finalLevel: 65 },
+      ];
+      await storageManager.saveApp({ ...mockAppState, archivedPlayers: archived });
+
+      const loaded = await storageManager.loadApp();
+      expect(loaded.archivedPlayers).toEqual(archived);
+    });
+
+    it('should return undefined archivedPlayers when none are saved', async () => {
+      await storageManager.saveApp(mockAppState);
+      const loaded = await storageManager.loadApp();
+      expect(loaded.archivedPlayers).toBeUndefined();
+    });
   });
 
   describe('saveEngine and loadEngine', () => {
@@ -126,18 +142,35 @@ describe('StorageManager', () => {
       lossCountMap: { 'player-1': 2, 'player-2': 4 },
     };
 
-    it('should save engine state in compact format under single key', async () => {
+    it('should save engine state in v3 compact format under single key', async () => {
       await storageManager.saveEngine(mockEngineState);
 
       const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
-      const parsed = await readDecompressed() as { engine: { v: number; ps: Record<string, number[]>; pc: Record<string, number[]> } };
-      expect(parsed.engine.v).toBe(2);
-      expect(parsed.engine.ps['player-1']).toEqual([2, 0, 5, 2]);
-      expect(parsed.engine.ps['player-2']).toEqual([1, 0, 3, 4]);
-      expect(parsed.engine.pc['player-1|player-2']).toEqual([3, 0]);
-      expect(parsed.engine.pc['player-1|player-3']).toEqual([0, 2]);
+      const parsed = await readDecompressed() as {
+        engine: {
+          v: number;
+          pi: string[];
+          ps: Array<number[]>;
+          pc: Record<string, number[]>;
+        }
+      };
+      expect(parsed.engine.v).toBe(3);
+
+      // pi contains all player IDs
+      expect(parsed.engine.pi).toContain('player-1');
+      expect(parsed.engine.pi).toContain('player-2');
+
+      // ps stats are indexed by pi
+      const idx1 = parsed.engine.pi.indexOf('player-1');
+      const idx2 = parsed.engine.pi.indexOf('player-2');
+      expect(parsed.engine.ps[idx1]).toEqual([2, 0, 5, 2]);
+      expect(parsed.engine.ps[idx2]).toEqual([1, 0, 3, 4]);
+
+      // pc uses integer index keys "i:j"
+      const pairKeyP1P2 = idx1 < idx2 ? `${idx1}:${idx2}` : `${idx2}:${idx1}`;
+      expect(parsed.engine.pc[pairKeyP1P2]).toEqual([3, 0]);
     });
 
     it('should load engine state', async () => {
@@ -310,9 +343,9 @@ describe('StorageManager', () => {
         levelHistory,
       });
 
-      const parsed = await readDecompressed() as { engine: { lh: Record<string, number[]> } };
-
-      expect(parsed.engine.lh).toEqual({});
+      // In v3 compact format lh is number[][]; when cleared it becomes []
+      const parsed = await readDecompressed() as { engine: { lh: number[][] } };
+      expect(parsed.engine.lh).toEqual([]);
 
       const raw = localStorage.getItem(STORAGE_KEY)!;
       expect(raw.length).toBeLessThanOrEqual(150_000);
@@ -341,6 +374,85 @@ describe('StorageManager', () => {
 
       const allKeys = Object.keys(parsed.engine.pc);
       expect(allKeys.length).toBeLessThanOrEqual(200);
+    });
+  });
+
+  describe('compact format (v3)', () => {
+    it('should round-trip engine state losslessly', async () => {
+      const state = {
+        benchCountMap: { 'p1': 3, 'p2': 1 },
+        singleCountMap: { 'p1': 2 },
+        teammateCountMap: { 'p1|p2': 5 },
+        opponentCountMap: { 'p1|p3': 4 },
+        winCountMap: { 'p1': 7, 'p3': 2 },
+        lossCountMap: { 'p2': 3 },
+      };
+      await storageManager.saveEngine(state);
+      const loaded = await storageManager.loadEngine();
+
+      expect(loaded.benchCountMap).toEqual({ 'p1': 3, 'p2': 1 });
+      expect(loaded.singleCountMap).toEqual({ 'p1': 2 });
+      expect(loaded.teammateCountMap).toEqual({ 'p1|p2': 5 });
+      expect(loaded.opponentCountMap).toEqual({ 'p1|p3': 4 });
+      expect(loaded.winCountMap).toEqual({ 'p1': 7, 'p3': 2 });
+      expect(loaded.lossCountMap).toEqual({ 'p2': 3 });
+    });
+
+    it('should preserve level history in round-trip', async () => {
+      const state = {
+        benchCountMap: { 'p1': 1 },
+        singleCountMap: {},
+        teammateCountMap: {},
+        opponentCountMap: {},
+        winCountMap: { 'p1': 2 },
+        lossCountMap: {},
+        levelHistory: { 'p1': [50, 55, 60] },
+      };
+      await storageManager.saveEngine(state);
+      const loaded = await storageManager.loadEngine();
+      expect(loaded.levelHistory).toEqual({ 'p1': [50, 55, 60] });
+    });
+
+    it('should include all pair participants in pi even if absent from stat maps', async () => {
+      // player-3 appears only in opponent pairs, not in bench/win/loss maps
+      const state = {
+        benchCountMap: { 'p1': 1 },
+        singleCountMap: {},
+        teammateCountMap: {},
+        opponentCountMap: { 'p1|p3': 2 },
+        winCountMap: {},
+        lossCountMap: {},
+      };
+      await storageManager.saveEngine(state);
+
+      const parsed = await readDecompressed() as { engine: { v: number; pi: string[] } };
+      expect(parsed.engine.v).toBe(3);
+      expect(parsed.engine.pi).toContain('p1');
+      expect(parsed.engine.pi).toContain('p3');
+
+      const loaded = await storageManager.loadEngine();
+      expect(loaded.opponentCountMap).toEqual({ 'p1|p3': 2 });
+    });
+
+    it('should use integer index pair keys instead of UUID pair keys', async () => {
+      const uuid1 = '550e8400-e29b-41d4-a716-446655440001';
+      const uuid2 = '550e8400-e29b-41d4-a716-446655440002';
+      await storageManager.saveEngine({
+        benchCountMap: {},
+        singleCountMap: {},
+        teammateCountMap: { [`${uuid1}|${uuid2}`]: 3 },
+        opponentCountMap: {},
+        winCountMap: {},
+        lossCountMap: {},
+      });
+
+      const parsed = await readDecompressed() as { engine: { pi: string[]; pc: Record<string, unknown> } };
+      const i1 = parsed.engine.pi.indexOf(uuid1);
+      const i2 = parsed.engine.pi.indexOf(uuid2);
+      const expectedKey = i1 < i2 ? `${i1}:${i2}` : `${i2}:${i1}`;
+      expect(parsed.engine.pc[expectedKey]).toBeDefined();
+      // No UUID pair key should appear
+      expect(Object.keys(parsed.engine.pc).every(k => !k.includes('|'))).toBe(true);
     });
   });
 

@@ -38,6 +38,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Level history per player - tracks level after each round snapshot */
   protected static levelHistoryMap: Map<string, number[]> = new Map();
 
+  private static readonly MAX_LEVEL_HISTORY = 10;
+
   /** Timestamps for pruning stale pairings - tracks last update time */
   protected static lastUpdatedMap: Map<string, number> = new Map();
 
@@ -93,6 +95,16 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.levelHistoryMap.clear();
     CourtAssignmentTracker.globalCounter = 0;
     this.notifyStateChange();
+  }
+
+  /** Returns a snapshot of stats for a single player without modifying any maps. */
+  extractPlayerStats(playerId: string): { wins: number; losses: number; benches: number; singles: number } {
+    return {
+      wins: CourtAssignmentTracker.winCountMap.get(playerId) ?? 0,
+      losses: CourtAssignmentTracker.lossCountMap.get(playerId) ?? 0,
+      benches: CourtAssignmentTracker.benchCountMap.get(playerId) ?? 0,
+      singles: CourtAssignmentTracker.singleCountMap.get(playerId) ?? 0,
+    };
   }
 
   /** Removes all historical tracking data for a specific player. */
@@ -231,6 +243,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     for (const p of players) {
       const history = CourtAssignmentTracker.levelHistoryMap.get(p.id) ?? [];
       history.push(p.level ?? 50);
+      if (history.length > CourtAssignmentTracker.MAX_LEVEL_HISTORY) history.shift();
       CourtAssignmentTracker.levelHistoryMap.set(p.id, history);
     }
   }
