@@ -54,7 +54,7 @@ describe('StatsPage Component', () => {
 
   beforeEach(() => {
     mockPrepareStateForSaving.mockReturnValue(mockEngineState);
-    mockLoadApp.mockReturnValue({ players: mockPlayers });
+    mockLoadApp.mockResolvedValue({ players: mockPlayers });
   });
 
   afterEach(() => {

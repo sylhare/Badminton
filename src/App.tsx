@@ -137,6 +137,7 @@ function App(): React.ReactElement {
     setLastGeneratedAt(undefined);
     setIsManagePlayersCollapsed(false);
     setManualCourtSelection(null);
+    setArchivedPlayers([]);
     engine().resetHistory();
     storageManager.clearAll();
   };

@@ -1,25 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { storageManager } from '../../src/utils/StorageManager';
+import { readAllChunks, storageManager } from '../../src/utils/StorageManager';
 import type { ArchivedPlayer, Court, CourtEngineState, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
 const OLD_APP_KEY = 'badminton-app-state';
 const OLD_ENGINE_KEY = 'badminton-court-engine-state';
-
-async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  const total = chunks.reduce((n, c) => n + c.length, 0);
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
-  return result;
-}
 
 async function readDecompressed(): Promise<unknown> {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -280,6 +266,18 @@ describe('StorageManager', () => {
 
       expect(loadedEngine.benchCountMap).toEqual({ 'p1': 2 });
       expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
+    });
+
+    it('should persist migrated data to new key so a second load does not lose it', async () => {
+      const oldApp = { players: [{ id: 'p1', name: 'Alice', isPresent: true }], numberOfCourts: 4, assignments: [] };
+      localStorage.setItem(OLD_APP_KEY, JSON.stringify(oldApp));
+
+      await storageManager.loadApp();
+      await storageManager.waitForQueue();
+
+      expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+      const reloaded = await storageManager.loadApp();
+      expect(reloaded.players).toEqual(oldApp.players);
     });
 
     it('should handle corrupted old key values gracefully and still remove them', async () => {

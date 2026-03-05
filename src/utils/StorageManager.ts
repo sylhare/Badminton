@@ -28,7 +28,7 @@ interface CompactEngineState {
   lh?: number[][];
 }
 
-async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
+export async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
   for (;;) {
     const { done, value } = await reader.read();
@@ -301,6 +301,7 @@ class StorageManager {
         }
         localStorage.removeItem(OLD_KEYS.APP_STATE);
         localStorage.removeItem(OLD_KEYS.COURT_ENGINE_STATE);
+        await this.write(merged);
         return merged;
       }
       return {};
@@ -344,6 +345,7 @@ class StorageManager {
       for (const k of allKeys.slice(0, 200)) prunedPc[k] = pc[k];
       return { ...data, engine: { ...engine, pc: prunedPc } as unknown as CourtEngineState };
     }
+    console.warn('StorageManager: pruneToFit could not reduce payload below MAX_SIZE');
     return noLh;
   }
 }

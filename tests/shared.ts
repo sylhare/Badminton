@@ -52,15 +52,9 @@ export const addPlayers = async (
 
   await flushPendingSaves();
 
-  await waitFor(() => {
-    const raw = localStorage.getItem('badminton-state');
-    if (!raw) throw new Error('No storage data');
-
-    const binary = atob(raw);
-    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-    const json = new TextDecoder().decode(bytes);
-    const state = JSON.parse(json) as { app?: { players?: unknown[] } };
-    if (!state?.app?.players?.length) throw new Error('Players not yet saved');
+  await waitFor(async () => {
+    const state = await storageManager.loadApp();
+    if (!state?.players?.length) throw new Error('Players not yet saved');
   });
 };
 
