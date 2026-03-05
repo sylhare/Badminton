@@ -49,19 +49,11 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   };
 
   const handleConfirm = () => {
-    const n1 = parseInt(score1, 10);
-    const n2 = parseInt(score2, 10);
-    if (!isNaN(n1) && !isNaN(n2)) {
-      onConfirm({ team1: n1, team2: n2 });
-    } else {
-      onConfirm(undefined);
-    }
-    setScore1('');
-    setScore2('');
-  };
-
-  const handleSkip = () => {
-    onConfirm(undefined);
+    const parsed1 = parseInt(score1, 10);
+    const parsed2 = parseInt(score2, 10);
+    const team1Score = isNaN(parsed1) ? (winnerTeam === 2 ? 18 : 21) : parsed1;
+    const team2Score = isNaN(parsed2) ? (winnerTeam === 1 ? 18 : 21) : parsed2;
+    onConfirm({ team1: team1Score, team2: team2Score });
     setScore1('');
     setScore2('');
   };
@@ -74,10 +66,9 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
 
   const n1 = parseInt(score1, 10);
   const n2 = parseInt(score2, 10);
-  const isConfirmDisabled = !isNaN(n1) && !isNaN(n2) && (
-    (winnerTeam === 1 && n1 < n2) ||
-    (winnerTeam === 2 && n2 < n1)
-  );
+  const eff1 = isNaN(n1) ? (winnerTeam === 2 ? 18 : 21) : n1;
+  const eff2 = isNaN(n2) ? (winnerTeam === 1 ? 18 : 21) : n2;
+  const isConfirmDisabled = (winnerTeam === 1 && eff1 < eff2) || (winnerTeam === 2 && eff2 < eff1);
 
   const teamNames = (players: Player[]) => players.map(p => p.name).join(' & ');
 
@@ -104,7 +95,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
               min="0"
               value={score1}
               onChange={(e) => handleScore1Change(e.target.value)}
-              placeholder="T1"
+              placeholder={winnerTeam === 2 ? '18' : '21'}
               aria-label="Team 1 score"
               data-testid="score-input-team1"
             />
@@ -114,7 +105,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
               min="0"
               value={score2}
               onChange={(e) => handleScore2Change(e.target.value)}
-              placeholder="T2"
+              placeholder={winnerTeam === 1 ? '18' : '21'}
               aria-label="Team 2 score"
               data-testid="score-input-team2"
             />
@@ -122,13 +113,6 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
         </div>
 
         <div className="modal-footer">
-          <button
-            className="button button-secondary"
-            onClick={handleSkip}
-            data-testid="score-modal-skip"
-          >
-            Skip
-          </button>
           <button
             className="button button-primary"
             onClick={handleConfirm}
