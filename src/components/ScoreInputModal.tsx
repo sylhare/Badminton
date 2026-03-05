@@ -51,8 +51,10 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   const handleConfirm = () => {
     const parsed1 = parseInt(score1, 10);
     const parsed2 = parseInt(score2, 10);
-    const team1Score = isNaN(parsed1) ? (winnerTeam === 2 ? 18 : 21) : parsed1;
-    const team2Score = isNaN(parsed2) ? (winnerTeam === 1 ? 18 : 21) : parsed2;
+    const default1 = winnerTeam === 2 ? 18 : 21;
+    const default2 = winnerTeam === 1 ? 18 : 21;
+    const team1Score = isNaN(parsed1) ? default1 : parsed1;
+    const team2Score = isNaN(parsed2) ? default2 : parsed2;
     onConfirm({ team1: team1Score, team2: team2Score });
     setScore1('');
     setScore2('');
@@ -66,8 +68,10 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
 
   const n1 = parseInt(score1, 10);
   const n2 = parseInt(score2, 10);
-  const eff1 = isNaN(n1) ? (winnerTeam === 2 ? 18 : 21) : n1;
-  const eff2 = isNaN(n2) ? (winnerTeam === 1 ? 18 : 21) : n2;
+  const effDefault1 = winnerTeam === 2 ? 18 : 21;
+  const effDefault2 = winnerTeam === 1 ? 18 : 21;
+  const eff1 = isNaN(n1) ? effDefault1 : n1;
+  const eff2 = isNaN(n2) ? effDefault2 : n2;
   const isConfirmDisabled = (winnerTeam === 1 && eff1 < eff2) || (winnerTeam === 2 && eff2 < eff1);
 
   const teamNames = (players: Player[]) => players.map(p => p.name).join(' & ');

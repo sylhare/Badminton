@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../src/App';
 import { engine } from '../src/engines/engineSelector';
 
-import { addPlayers, clearTestState, clickTeam, clickTeamAndSkip, generateAndWaitForAssignments } from './shared';
+import { addPlayers, clearTestState, clickTeam, clickTeamAndConfirm, generateAndWaitForAssignments } from './shared';
 
 describe('Team rotation', () => {
   const user = userEvent.setup();
@@ -199,7 +199,7 @@ describe('Team rotation', () => {
 
       expect(screen.getByTestId('rotate-teams-button')).toBeInTheDocument();
 
-      await clickTeamAndSkip(user, screen.getAllByText('Team 1')[0]);
+      await clickTeamAndConfirm(user, screen.getAllByText('Team 1')[0]);
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
       const winsBefore = Array.from(engine().getWinCounts().values()).reduce((sum, w) => sum + w, 0);
@@ -231,7 +231,7 @@ describe('Team rotation', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      await clickTeamAndSkip(user, screen.getAllByText('Team 1')[0]);
+      await clickTeamAndConfirm(user, screen.getAllByText('Team 1')[0]);
 
       const winCounts = engine().getWinCounts();
       const winners = Array.from(winCounts.entries()).filter(([, count]) => count > 0);

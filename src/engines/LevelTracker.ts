@@ -1,4 +1,5 @@
 import type { Court, Player } from '../types';
+
 import { LevelTrackerConfig } from './levelTrackerConfig';
 
 export class LevelTracker {
