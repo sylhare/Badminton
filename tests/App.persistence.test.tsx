@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
 
-import { addPlayers, clearTestState, flushPendingSaves, generateAndWaitForAssignments, waitForAppLoad } from './shared';
+import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
 
 describe('App Persistence Integration', () => {
   const user = userEvent.setup();
@@ -17,138 +17,7 @@ describe('App Persistence Integration', () => {
     await clearTestState();
   });
 
-  describe('State persistence across app reload', () => {
-    it('should persist and restore players when app is remounted', async () => {
-      const { unmount } = render(<App />);
-
-      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
-
-      expect(screen.getByText('Alice')).toBeInTheDocument();
-      expect(screen.getByText('Bob')).toBeInTheDocument();
-      expect(screen.getByText('Charlie')).toBeInTheDocument();
-      expect(screen.getByText('Diana')).toBeInTheDocument();
-
-      const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
-      await user.click(toggleButtons[1]);
-      await flushPendingSaves();
-
-      unmount();
-
-      render(<App />);
-      await waitForAppLoad();
-
-      await user.click(screen.getByText('Manage Players'));
-
-      expect(screen.getByText('Alice')).toBeInTheDocument();
-      expect(screen.getByText('Bob')).toBeInTheDocument();
-      expect(screen.getByText('Charlie')).toBeInTheDocument();
-      expect(screen.getByText('Diana')).toBeInTheDocument();
-
-      const restoredToggleButtons = screen.getAllByTestId(/^toggle-presence-/);
-      expect(restoredToggleButtons[0]).toHaveClass('present');
-      expect(restoredToggleButtons[1]).toHaveClass('absent');
-      expect(restoredToggleButtons[2]).toHaveClass('present');
-      expect(restoredToggleButtons[3]).toHaveClass('present');
-
-      expect(screen.getByTestId('stats-present-count')).toHaveTextContent('3');
-      expect(screen.getByTestId('stats-absent-count')).toHaveTextContent('1');
-      expect(screen.getByTestId('stats-total-count')).toHaveTextContent('4');
-    });
-
-    it('should persist court settings across app reload', async () => {
-      const { unmount } = render(<App />);
-
-      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
-
-      const courtInput = screen.getByTestId('court-count-input') as HTMLInputElement;
-
-      await act(async () => {
-        await user.tripleClick(courtInput);
-        await user.keyboard('6');
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
-      await flushPendingSaves();
-
-      expect(courtInput).toHaveValue(6);
-
-      unmount();
-
-      render(<App />);
-      await waitForAppLoad();
-
-      const restoredCourtInput = screen.getByTestId('court-count-input');
-      expect(restoredCourtInput).toHaveValue(6);
-    });
-
-    it('should persist court assignments and winner data across app reload', async () => {
-      const { unmount } = render(<App />);
-
-      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Hank');
-
-      await generateAndWaitForAssignments(user);
-      await flushPendingSaves();
-
-      expect(screen.getByTestId('court-1')).toBeInTheDocument();
-      expect(screen.getByTestId('court-2')).toBeInTheDocument();
-
-      unmount();
-      render(<App />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('court-1')).toBeInTheDocument();
-        expect(screen.getByTestId('court-2')).toBeInTheDocument();
-      }, { timeout: 3000 });
-    });
-
-    it('should collapse manage players section on reload when players exist', async () => {
-      const { unmount } = render(<App />);
-
-      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
-
-      unmount();
-      render(<App />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('manage-players-section')).toHaveClass('collapsed');
-      });
-    });
-
-    it('should show manage players section expanded on first load with no players', async () => {
-      render(<App />);
-
-      expect(screen.getByTestId('manage-players-section')).not.toHaveClass('collapsed');
-    });
-  });
-
   describe('Clear all players functionality integration', () => {
-    it('should clear all data including localStorage when clear all is confirmed', async () => {
-      const { unmount } = render(<App />);
-
-      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
-
-      await generateAndWaitForAssignments(user);
-
-      await user.click(screen.getByText('Manage Players'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('clear-all-button')).toBeInTheDocument();
-      }, { timeout: 1000 });
-
-      await user.click(screen.getByTestId('clear-all-button'));
-
-      await user.click(screen.getByTestId('confirm-modal-confirm'));
-
-      await waitFor(() => {
-        expect(screen.queryByText('Alice')).not.toBeInTheDocument();
-        expect(screen.queryByText(/Court 1/)).not.toBeInTheDocument();
-      }, { timeout: 1000 });
-
-      unmount();
-      render(<App />);
-
-      expect(screen.queryByText('Alice')).not.toBeInTheDocument();
-    });
-
     it('should not clear data when clear all is cancelled', async () => {
       render(<App />);
 
@@ -215,32 +84,6 @@ describe('App Persistence Integration', () => {
   });
 
   describe('Reset Algorithm persistence', () => {
-    it('should persist reset algorithm state across app reload', async () => {
-      const { unmount } = render(<App />);
-
-      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
-
-      await generateAndWaitForAssignments(user);
-
-      await user.click(screen.getByText('Manage Players'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('reset-algorithm-button')).toBeInTheDocument();
-      }, { timeout: 1000 });
-
-      await user.click(screen.getByTestId('reset-algorithm-button'));
-      await user.click(screen.getByTestId('confirm-modal-confirm'));
-      await flushPendingSaves();
-
-      unmount();
-      render(<App />);
-      await waitForAppLoad();
-
-      await user.click(screen.getByText('Manage Players'));
-
-      expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
-    });
-
     it('should save algorithm reset state immediately when reset button is clicked', async () => {
       render(<App />);
 

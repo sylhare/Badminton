@@ -969,7 +969,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(stats.wins).toBe(1);
       expect(stats.losses).toBe(0);
 
-      // Verify the map is still intact after extraction
       expect(engine.getWinCounts().get(players[0].id)).toBe(1);
     });
   });

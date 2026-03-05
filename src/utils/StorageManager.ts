@@ -191,8 +191,7 @@ class StorageManager {
     return this.writeQueue;
   }
 
-  private toCompact(state: CourtEngineState): CompactEngineStateV3 {
-    // Collect all player IDs: from stat maps and from pair participants
+  private toCompact(state: CourtEngineState): CompactEngineState {
     const allPlayerIds = new Set([
       ...Object.keys(state.benchCountMap),
       ...Object.keys(state.singleCountMap),
@@ -266,7 +265,6 @@ class StorageManager {
       const id1 = pi[i];
       const id2 = pi[j];
       if (!id1 || !id2) continue;
-      // Reconstruct UUID pair key in same format as pairKey() (lexicographic smaller first)
       const pKey = id1 < id2 ? `${id1}|${id2}` : `${id2}|${id1}`;
       if (t) teammateCountMap[pKey] = t;
       if (o) opponentCountMap[pKey] = o;
@@ -331,17 +329,14 @@ class StorageManager {
     const engine = data.engine as unknown as CompactEngineState;
     if (!engine) return data;
 
-    // Stage 1: trim level history to last 10 entries per player
     if (engine.lh && engine.lh.some(h => h.length > 10)) {
       const pruned = { ...data, engine: { ...engine, lh: engine.lh.map(h => h.slice(-10)) } as unknown as CourtEngineState };
       if (JSON.stringify(pruned).length <= StorageManager.MAX_SIZE) return pruned;
     }
 
-    // Stage 2: clear level history entirely
     const noLh = { ...data, engine: { ...engine, lh: [] } as unknown as CourtEngineState };
     if (JSON.stringify(noLh).length <= StorageManager.MAX_SIZE) return noLh;
 
-    // Stage 3: prune pair map to 200 keys
     const pc = engine.pc ?? {};
     const allKeys = Object.keys(pc);
     if (allKeys.length > 200) {

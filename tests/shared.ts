@@ -14,15 +14,13 @@ export const COMMON_PLAYERS = {
 
 /** Common setup/teardown used across multiple test files */
 export const clearTestState = async (): Promise<void> => {
-  // Drain the write queue before clearing so no stale save fires after the clear.
-  await storageManager.clearAll();
-  // Extra flush to ensure any macrotask-scheduled stream callbacks complete too.
-  await new Promise(resolve => setTimeout(resolve, 50));
-  localStorage.clear();
+  await storageManager.waitForQueue();
   await act(async () => {
     engineSA.resetHistory();
     await new Promise(resolve => setTimeout(resolve, 0));
   });
+  await storageManager.waitForQueue();
+  localStorage.clear();
 };
 
 /** Waits for the App to finish its async initial load */
@@ -33,13 +31,11 @@ export const waitForAppLoad = async (): Promise<void> => {
   );
 };
 
-/**
- * Wait for all pending StorageManager writes to complete, then flush one
- * macrotask boundary to let any queued stream callbacks settle.
- */
+/** Wait for all pending StorageManager writes to complete. */
 export const flushPendingSaves = async (): Promise<void> => {
   await storageManager.waitForQueue();
   await new Promise(resolve => setTimeout(resolve, 0));
+  await storageManager.waitForQueue();
 };
 
 /** Helper to add players via the input field */

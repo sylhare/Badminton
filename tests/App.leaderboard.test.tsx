@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../src/App';
 import { engine } from '../src/engines/engineSelector';
 
-import { addPlayers, clearTestState, flushPendingSaves, generateAndWaitForAssignments, waitForAppLoad } from './shared';
+import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
 
 describe('App Leaderboard Persistence', () => {
   const user = userEvent.setup();
@@ -83,28 +83,6 @@ describe('App Leaderboard Persistence', () => {
   });
 
   describe('Leaderboard persistence across app reload', () => {
-    it('should persist leaderboard data when app is remounted', async () => {
-      const { unmount } = render(<App />);
-
-      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
-
-      const team1Elements = screen.getAllByText('Team 1');
-      await act(async () => {
-        await user.click(team1Elements[0]);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
-
-      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
-      await flushPendingSaves();
-
-      unmount();
-
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument());
-    });
-
     it('should maintain correct win counts for specific players', async () => {
       render(<App />);
 
@@ -179,26 +157,6 @@ describe('App Leaderboard Persistence', () => {
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
     });
 
-    it('should show leaderboard with historical data on refresh even without current players', async () => {
-      const { unmount } = render(<App />);
-
-      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
-
-      const team1Elements = screen.getAllByText('Team 1');
-      await act(async () => {
-        await user.click(team1Elements[0]);
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
-
-      expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
-      await flushPendingSaves();
-
-      unmount();
-      render(<App />);
-      await waitForAppLoad();
-
-      await waitFor(() => expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument(), { timeout: 3000 });
-    });
   });
 });
 

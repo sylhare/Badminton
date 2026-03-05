@@ -158,17 +158,14 @@ describe('StorageManager', () => {
       };
       expect(parsed.engine.v).toBe(3);
 
-      // pi contains all player IDs
       expect(parsed.engine.pi).toContain('player-1');
       expect(parsed.engine.pi).toContain('player-2');
 
-      // ps stats are indexed by pi
       const idx1 = parsed.engine.pi.indexOf('player-1');
       const idx2 = parsed.engine.pi.indexOf('player-2');
       expect(parsed.engine.ps[idx1]).toEqual([2, 0, 5, 2]);
       expect(parsed.engine.ps[idx2]).toEqual([1, 0, 3, 4]);
 
-      // pc uses integer index keys "i:j"
       const pairKeyP1P2 = idx1 < idx2 ? `${idx1}:${idx2}` : `${idx2}:${idx1}`;
       expect(parsed.engine.pc[pairKeyP1P2]).toEqual([3, 0]);
     });
@@ -343,7 +340,6 @@ describe('StorageManager', () => {
         levelHistory,
       });
 
-      // In v3 compact format lh is number[][]; when cleared it becomes []
       const parsed = await readDecompressed() as { engine: { lh: number[][] } };
       expect(parsed.engine.lh).toEqual([]);
 
@@ -414,7 +410,6 @@ describe('StorageManager', () => {
     });
 
     it('should include all pair participants in pi even if absent from stat maps', async () => {
-      // player-3 appears only in opponent pairs, not in bench/win/loss maps
       const state = {
         benchCountMap: { 'p1': 1 },
         singleCountMap: {},
@@ -451,7 +446,6 @@ describe('StorageManager', () => {
       const i2 = parsed.engine.pi.indexOf(uuid2);
       const expectedKey = i1 < i2 ? `${i1}:${i2}` : `${i2}:${i1}`;
       expect(parsed.engine.pc[expectedKey]).toBeDefined();
-      // No UUID pair key should appear
       expect(Object.keys(parsed.engine.pc).every(k => !k.includes('|'))).toBe(true);
     });
   });
