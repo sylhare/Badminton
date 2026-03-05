@@ -21,34 +21,64 @@ describe('LevelTracker', () => {
   beforeEach(() => { tracker = new LevelTracker(); });
 
   describe('getKFactor', () => {
-    it('returns 6 when no score is provided', () => {
-      expect(tracker.getKFactor()).toBe(6);
+    it('returns 3 when no score is provided', () => {
+      expect(tracker.getKFactor()).toBe(3);
     });
 
-    it('returns 6 for a deuce win (winner score ≠ 21)', () => {
-      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(6);
+    it('returns 3 for a deuce win (winner score ≠ 21)', () => {
+      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(3);
     });
 
-    it('returns 8 for a close win (loser 18–20)', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 19 }, 1)).toBe(8);
+    it('returns 4 for a close win (loser 18–20)', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 19 }, 1)).toBe(4);
     });
 
-    it('returns 12 for loser score 15–17', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 16 }, 1)).toBe(12);
+    it('returns 8 for loser score 15–17', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 16 }, 1)).toBe(8);
     });
 
-    it('returns 24 for a dominant win (loser < 6)', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 3 }, 1)).toBe(24);
+    it('returns 15 for a dominant win (loser < 6)', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 3 }, 1)).toBe(15);
     });
 
     it('scales K by balance factor for an unbalanced team', () => {
       const team = [makePlayer('a', 0), makePlayer('b', 100)];
-      expect(tracker.getKFactor(undefined, undefined, team)).toBe(3);
+      expect(tracker.getKFactor(undefined, undefined, team)).toBe(1.5);
     });
 
     it('does not reduce K for a singles (1-player) team', () => {
       const team = [makePlayer('a', 80)];
-      expect(tracker.getKFactor(undefined, undefined, team)).toBe(6);
+      expect(tracker.getKFactor(undefined, undefined, team)).toBe(3);
+    });
+  });
+
+  describe('max level swing', () => {
+    it('equal teams, dominant win (21-0): |delta| < 10', () => {
+      const p1 = makePlayer('p1', 50);
+      const p2 = makePlayer('p2', 50);
+      const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 0 });
+      const [updated] = tracker.updatePlayersLevels([court], [p1, p2]);
+      const delta = Math.abs((updated.level ?? 50) - 50);
+      expect(delta).toBeLessThan(10);
+    });
+
+    it('extreme mismatch upset (team1=[100] vs team2=[0], team2 wins 21-0): |delta| < 10', () => {
+      const p1 = makePlayer('p1', 100);
+      const p2 = makePlayer('p2', 0);
+      const court = makeCourt([p1], [p2], 2, { team1: 0, team2: 21 });
+      const result = tracker.updatePlayersLevels([court], [p1, p2]);
+      const p1Updated = result.find(p => p.id === 'p1')!;
+      const delta = Math.abs((p1Updated.level ?? 100) - 100);
+      expect(delta).toBeLessThan(10);
+    });
+
+    it('no score, equal teams: |delta| ≤ 2', () => {
+      const p1 = makePlayer('p1', 50);
+      const p2 = makePlayer('p2', 50);
+      const court = makeCourt([p1], [p2], 1);
+      const [updated] = tracker.updatePlayersLevels([court], [p1, p2]);
+      const delta = Math.abs((updated.level ?? 50) - 50);
+      expect(delta).toBeLessThanOrEqual(2);
     });
   });
 

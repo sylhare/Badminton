@@ -6,14 +6,14 @@ export class LevelTracker {
    * A higher K means a more dominant result causes a larger level adjustment.
    *
    * K-factor scale (winner score must be exactly 21):
-   * - Deuce / winner ≠ 21 → K = 6  (closest possible win)
-   * - Loser 18–20         → K = 8
-   * - Loser 15–17         → K = 12
-   * - Loser 11–14         → K = 16
-   * - Loser 6–10          → K = 20
-   * - Loser < 6           → K = 24  (most dominant win)
+   * - Deuce / winner ≠ 21 → K = 3   (closest possible win)
+   * - Loser 18–20         → K = 4
+   * - Loser 15–17         → K = 8
+   * - Loser 11–14         → K = 10
+   * - Loser 6–10          → K = 12
+   * - Loser < 6           → K = 15  (most dominant win)
    *
-   * Returns K = 6 when no score is available (same as deuce).
+   * Returns K = 3 when no score is available (same as deuce).
    *
    * When teamPlayers is provided, the raw K is further scaled by a balance factor
    * [0.5, 1.0] based on within-team level spread — the more unbalanced the team,
@@ -28,21 +28,21 @@ export class LevelTracker {
     winner?: 1 | 2,
     teamPlayers?: Player[],
   ): number {
-    if (!score || !winner) return 6 * this.teamBalanceFactor(teamPlayers);
+    if (!score || !winner) return 3 * this.teamBalanceFactor(teamPlayers);
 
     const winnerScore = winner === 1 ? score.team1 : score.team2;
     const loserScore = winner === 1 ? score.team2 : score.team1;
 
     let rawK: number;
     if (winnerScore !== 21) {
-      rawK = 6;
+      rawK = 3;
     } else {
       const diff = 21 - loserScore;
-      if (diff <= 3) rawK = 8;
-      else if (diff <= 6) rawK = 12;
-      else if (diff <= 10) rawK = 16;
-      else if (diff <= 15) rawK = 20;
-      else rawK = 24;
+      if (diff <= 3) rawK = 4;
+      else if (diff <= 6) rawK = 8;
+      else if (diff <= 10) rawK = 10;
+      else if (diff <= 15) rawK = 12;
+      else rawK = 15;
     }
 
     return rawK * this.teamBalanceFactor(teamPlayers);
@@ -67,7 +67,13 @@ export class LevelTracker {
   /**
    * Apply Elo-style level updates to all players based on court results.
    * Only courts with both a winner and teams assigned are processed.
-   * Uses the Elo formula with a scale factor of 50 to compute expected win probabilities.
+   *
+   * Uses the Elo formula with a divisor of 400 to compute expected win probabilities.
+   * A larger divisor produces a flatter probability curve — a 50-point level gap gives
+   * only ~56% expected win (vs ~91% with divisor 50), so mismatched teams cause smaller
+   * swings and upsets are less extreme. Max swing is guaranteed < 10 points per game
+   * (max K = 15 × max |actual − expected| ≈ 0.64 = 9.6).
+   *
    * Average score tracking is updated when a score is recorded.
    *
    * Each team's K-factor is adjusted by a per-team balance factor [0.5, 1.0] based on
@@ -84,7 +90,7 @@ export class LevelTracker {
       const team1Avg = this.getTeamAvgLevel(team1);
       const team2Avg = this.getTeamAvgLevel(team2);
 
-      const team1Expected = 1 / (1 + Math.pow(10, (team2Avg - team1Avg) / 50));
+      const team1Expected = 1 / (1 + Math.pow(10, (team2Avg - team1Avg) / 400));
       const team2Expected = 1 - team1Expected;
 
       const team1Actual = court.winner === 1 ? 1 : 0;
