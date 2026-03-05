@@ -76,8 +76,7 @@ async function decompress(data: string): Promise<string> {
  *     "numberOfCourts": 4,
  *     "assignments":    [...],
  *     "lastGeneratedAt": 1710000000000,
- *     "isSmartEngineEnabled": false,
- *     "archivedPlayers": [{ "id": "uuid", "name": "Bob", "wins": 5, "losses": 3, "benches": 1, "singles": 2, "finalLevel": 65 }]
+ *     "isSmartEngineEnabled": false
  *   },
  *   "engine": {
  *     "v":  3,
@@ -143,7 +142,6 @@ class StorageManager {
         assignments: Array.isArray(app.assignments) ? app.assignments : [],
         lastGeneratedAt: typeof app.lastGeneratedAt === 'number' ? app.lastGeneratedAt : undefined,
         isSmartEngineEnabled: typeof app.isSmartEngineEnabled === 'boolean' ? app.isSmartEngineEnabled : undefined,
-        archivedPlayers: Array.isArray(app.archivedPlayers) ? app.archivedPlayers : undefined,
       };
     } catch (error) {
       console.warn('Failed to load app state from localStorage:', error);

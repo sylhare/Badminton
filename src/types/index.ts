@@ -28,23 +28,12 @@ export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
 export type EngineType = 'sa' | 'sl';
 
-export interface ArchivedPlayer {
-  id: string;
-  name: string;
-  wins: number;
-  losses: number;
-  benches: number;
-  singles: number;
-  finalLevel?: number;
-}
-
 export interface AppState {
   players: Player[];
   numberOfCourts: number;
   assignments: Court[];
   lastGeneratedAt?: number;
   isSmartEngineEnabled?: boolean;
-  archivedPlayers?: ArchivedPlayer[];
 }
 
 export interface StorageData {

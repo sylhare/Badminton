@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { readAllChunks, storageManager } from '../../src/utils/StorageManager';
-import type { ArchivedPlayer, Court, CourtEngineState, Player } from '../../src/types';
+import type { Court, CourtEngineState, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
 const OLD_APP_KEY = 'badminton-app-state';
@@ -101,21 +101,6 @@ describe('StorageManager', () => {
       await expect(storageManager.saveApp(mockAppState)).resolves.not.toThrow();
     });
 
-    it('should persist and restore archivedPlayers', async () => {
-      const archived: ArchivedPlayer[] = [
-        { id: 'old-player-1', name: 'OldAlice', wins: 5, losses: 3, benches: 1, singles: 2, finalLevel: 65 },
-      ];
-      await storageManager.saveApp({ ...mockAppState, archivedPlayers: archived });
-
-      const loaded = await storageManager.loadApp();
-      expect(loaded.archivedPlayers).toEqual(archived);
-    });
-
-    it('should return undefined archivedPlayers when none are saved', async () => {
-      await storageManager.saveApp(mockAppState);
-      const loaded = await storageManager.loadApp();
-      expect(loaded.archivedPlayers).toBeUndefined();
-    });
   });
 
   describe('saveEngine and loadEngine', () => {
