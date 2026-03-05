@@ -80,3 +80,28 @@ Prefer unit tests for logic. Only reach for E2E when the value comes from testin
 src/engines/SimulatedAnnealingEngine.ts
 tests/engines/SimulatedAnnealingEngine.test.ts
 ```
+
+## Pull Request Guidelines
+
+### Commit messages
+
+Use the imperative mood — write the message as a command:
+
+```
+# ❌
+Added rotation button
+Fixing bench fairness bug
+
+# ✅
+Add rotation button
+Fix bench fairness bug
+```
+
+### Prefer rebase over merge commits
+
+Keep the history linear. Rebase your branch on `main` before marking a PR ready for review instead of merging `main` into your branch.
+
+```bash
+git fetch origin
+git rebase origin/main
+```
