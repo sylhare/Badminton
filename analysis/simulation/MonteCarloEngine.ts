@@ -1,6 +1,6 @@
-import type { Court, ICourtAssignmentEngine, Player } from '../types';
+import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 
-import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
+import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
 
 /**
  * Monte Carlo Greedy Search Implementation

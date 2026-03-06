@@ -1,9 +1,9 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { engineMC as CourtAssignmentEngine } from '../../src/engines/MonteCarloEngine.ts';
+import { engineMC as CourtAssignmentEngine } from './MonteCarloEngine.ts';
 import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
-import { engineCG as ConflictGraphEngine } from '../../src/engines/ConflictGraphEngine.ts';
+import { engineCG as ConflictGraphEngine } from './ConflictGraphEngine.ts';
 import { engineSL as SmartEngine } from '../../src/engines/SmartEngine.ts';
 
 import { RandomBaselineEngine } from './RandomBaselineEngine.ts';

@@ -6,16 +6,15 @@
  * drop-in replacements for each other.
  *
  * Available Engines:
- * - 'sa' (default): Simulated Annealing - 5000 iterative improvements, escapes local minima
- * - 'mc': Monte Carlo Greedy Search - 300 random samples, picks best
- * - 'cg': Conflict Graph - Deterministic greedy construction with conflict modeling
+ * - 'sa' (default): Simulated Annealing - iterative improvements, escapes local minima
+ * - 'sl': Smart Matching - Simulated Annealing with gender/level-aware cost functions
  *
  * Usage:
  * ```typescript
  * import { setEngine, getEngine, generateCourtAssignments } from './engineSelector';
  *
- * // Switch to Monte Carlo engine
- * setEngine('mc');
+ * // Switch to Smart engine
+ * setEngine('sl');
  *
  * // Use the unified API
  * const assignments = generateCourtAssignments(players, courts);
@@ -25,9 +24,7 @@
 import type { EngineType, ICourtAssignmentEngine } from '../types';
 
 import { engineSL } from './SmartEngine';
-import { engineMC } from './MonteCarloEngine';
 import { engineSA } from './SimulatedAnnealingEngine';
-import { engineCG } from './ConflictGraphEngine';
 
 export type { EngineType };
 
@@ -39,10 +36,6 @@ let currentEngineType: EngineType = 'sa';
  */
 const getEngineInstance = (type: EngineType): ICourtAssignmentEngine => {
   switch (type) {
-    case 'cg':
-      return engineCG;
-    case 'mc':
-      return engineMC;
     case 'sl':
       return engineSL;
     case 'sa':
