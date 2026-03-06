@@ -36,7 +36,21 @@ const PLAYER_COUNTS: number[] = config.playerCounts ?? [20];
 const MAX_COURTS = config.numCourts;
 const MAX_PLAYERS = Math.max(...PLAYER_COUNTS);
 
-const PLAYER_LEVELS = generatePlayerLevels(MAX_PLAYERS);
+const PLAYER_LEVELS = config.playerProfiles
+  ? new Map(Object.entries(config.playerProfiles).map(([id, p]) => [id, p.level]))
+  : generatePlayerLevels(MAX_PLAYERS);
+
+const ENGINE_PARAMS: Record<string, Record<string, unknown>> = config.engines ?? {
+  random: { iterationsPerRound: 1 },
+  mc: { samplesPerRound: 300 },
+  sa: { iterations: 500, initialTemperature: 2000, coolingRate: 0.9995 },
+  cg: { iterationsPerRound: 1 },
+  sl: { iterations: 500, initialTemperature: 2000, coolingRate: 0.9985 },
+};
+
+CourtAssignmentEngine.configure(ENGINE_PARAMS.mc ?? {});
+CourtAssignmentEngineSA.configure(ENGINE_PARAMS.sa ?? {});
+SmartEngine.configure(ENGINE_PARAMS.sl ?? {});
 
 const ALL_ENGINES = [
   { id: 'random', name: 'Random Baseline', engine: RandomBaselineEngine, dir: 'random_baseline' },
@@ -267,11 +281,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
     playerCounts: PLAYER_COUNTS,
     maxCourts: MAX_COURTS,
     totalSimulations: summaries.length,
-    playerProfiles: Object.fromEntries(
-      Array.from(PLAYER_LEVELS.entries())
-        .filter(([id]) => parseInt(id.slice(1)) <= MAX_PLAYERS)
-        .map(([id, level]) => [id, { level }]),
-    ),
+    algorithmParams: ENGINE_PARAMS[engineConfig.id] ?? {},
     aggregateStats: {
       repeatRate: totalRepeatRate,
       avgRepeatsPerRun: avgRepeats,

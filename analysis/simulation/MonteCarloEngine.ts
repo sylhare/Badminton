@@ -10,7 +10,11 @@ import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignment
  */
 export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICourtAssignmentEngine {
   private costCache: Map<string, number> = new Map();
-  private readonly MAX_ATTEMPTS = 300;
+  MAX_ATTEMPTS = 300;
+
+  configure(params: Record<string, unknown>): void {
+    if (typeof params.samplesPerRound === 'number') this.MAX_ATTEMPTS = params.samplesPerRound;
+  }
 
   getName(): string {
     return 'Monte Carlo';

@@ -11,102 +11,37 @@
   ],
   "maxCourts": 4,
   "totalSimulations": 300,
-  "playerProfiles": {
-    "P1": {
-      "level": 1
-    },
-    "P2": {
-      "level": 1
-    },
-    "P3": {
-      "level": 1
-    },
-    "P4": {
-      "level": 1
-    },
-    "P5": {
-      "level": 1
-    },
-    "P6": {
-      "level": 1
-    },
-    "P7": {
-      "level": 2
-    },
-    "P8": {
-      "level": 2
-    },
-    "P9": {
-      "level": 2
-    },
-    "P10": {
-      "level": 2
-    },
-    "P11": {
-      "level": 2
-    },
-    "P12": {
-      "level": 2
-    },
-    "P13": {
-      "level": 2
-    },
-    "P14": {
-      "level": 3
-    },
-    "P15": {
-      "level": 3
-    },
-    "P16": {
-      "level": 3
-    },
-    "P17": {
-      "level": 4
-    },
-    "P18": {
-      "level": 5
-    },
-    "P19": {
-      "level": 5
-    },
-    "P20": {
-      "level": 5
-    },
-    "P21": {
-      "level": 1
-    },
-    "P22": {
-      "level": 1
-    }
+  "algorithmParams": {
+    "samplesPerRound": 300
   },
   "aggregateStats": {
     "repeatRate": 100,
-    "avgRepeatsPerRun": 13.95,
+    "avgRepeatsPerRun": 14.093333333333334,
     "zeroRepeatRate": 0
   },
   "levelBasedBalance": {
     "totalMatches": 19200,
-    "strongerTeamWinRate": 63.61458333333333,
-    "avgStrengthDifferential": 1.9890104166666667,
-    "perfectlyBalancedMatches": 3072,
-    "perfectlyBalancedRate": 16
+    "strongerTeamWinRate": 93.21875,
+    "avgStrengthDifferential": 44.204166666666666,
+    "perfectlyBalancedMatches": 2600,
+    "perfectlyBalancedRate": 13.541666666666666
   },
   "engineTrackedBalance": {
     "totalMatches": 19200,
-    "engineBalancedWinRate": 50.041666666666664,
-    "avgEngineWinDifferential": 0.18848958333333332,
-    "perfectlyBalancedMatches": 15582,
-    "perfectlyBalancedRate": 81.15625
+    "engineBalancedWinRate": 52.1875,
+    "avgEngineWinDifferential": 0.18239583333333334,
+    "perfectlyBalancedMatches": 15698,
+    "perfectlyBalancedRate": 81.76041666666667
   },
   "benchFairness": {
     "avgBenchRange": 1,
-    "avgMeanGap": 3.5468110602651852,
+    "avgMeanGap": 3.546516411779416,
     "doubleBenchRate": 6.5636363636363635,
     "totalSessions": 300,
     "totalGapEvents": 11000
   },
   "timing": {
-    "totalMs": 8379
+    "totalMs": 9607
   },
-  "timestamp": "2026-02-18T19:15:48.215Z"
+  "timestamp": "2026-03-06T21:06:11.872Z"
 }
