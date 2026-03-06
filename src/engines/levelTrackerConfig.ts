@@ -14,10 +14,10 @@ export class LevelTrackerConfig {
    * Evaluated in order; first match wins.
    */
   static readonly K_SCALE = [
-    { maxDiff: 3,  k: 4  },   // loser 18–20
-    { maxDiff: 6,  k: 8  },   // loser 15–17
-    { maxDiff: 10, k: 10 },   // loser 11–14
-    { maxDiff: 15, k: 12 },   // loser 6–10
+    { maxDiff: 3,  k: 4  },
+    { maxDiff: 6,  k: 8  },
+    { maxDiff: 10, k: 10 },
+    { maxDiff: 15, k: 12 },
   ] as const;
 
   /** Minimum balance factor (applied when team spread is maximal [0, 100]). */

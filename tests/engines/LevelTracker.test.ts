@@ -118,20 +118,17 @@ describe('LevelTracker', () => {
       const p2 = makePlayer('p2', 50);
       const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 10 });
 
-      // Simulate manual level edit: p1's level in players array differs from court snapshot
       const p1Edited = { ...p1, level: 90 };
       const result = tracker.updatePlayersLevels([court], [p1Edited, p2]);
 
       const p1Result = result.find(p => p.id === 'p1')!;
       const p2Result = result.find(p => p.id === 'p2')!;
 
-      // With p1 at 90 vs p2 at 50, p1 is heavily favoured — win delta should be small
-      // With stale level (50 vs 50), delta would be larger (equal teams)
       const p1Delta = (p1Result.level ?? 90) - 90;
       const p2Delta = (p2Result.level ?? 50) - 50;
-      expect(p1Delta).toBeGreaterThan(0);   // winner gains
-      expect(p1Delta).toBeLessThan(6);      // but less than equal-team case (6.0 when both at 50)
-      expect(p2Delta).toBeLessThan(0);      // loser loses
+      expect(p1Delta).toBeGreaterThan(0);
+      expect(p1Delta).toBeLessThan(6);
+      expect(p2Delta).toBeLessThan(0);
     });
 
     it('accumulates average score correctly across multiple games', () => {

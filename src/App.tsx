@@ -169,7 +169,7 @@ function App(): React.ReactElement {
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
     setAssignments(prevAssignments =>
-      engine().updateWinner(courtNumber, winner, prevAssignments),
+      engine().updateWinner({ courtNumber, winner, currentAssignments: prevAssignments }),
     );
   };
 
@@ -192,13 +192,7 @@ function App(): React.ReactElement {
       const court = prevAssignments.find(c => c.courtNumber === courtNumber);
       if (!court?.teams) return prevAssignments;
 
-      const cleared = engine().updateWinner(courtNumber, undefined, prevAssignments);
-      return cleared.map(c => {
-        if (c.courtNumber !== courtNumber) return c;
-        const rotated = rotateCourtTeams(c);
-        engine().updateCourtTeamStats(rotated, court);
-        return rotated;
-      });
+      return engine().updateWinner({ courtNumber, winner: undefined, currentAssignments: prevAssignments, rotatedCourt: rotateCourtTeams(court) });
     });
   };
 
