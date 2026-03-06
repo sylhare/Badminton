@@ -31,13 +31,13 @@ def get_engine_win_diff(cfg: dict[str, Any]) -> float:
 
 
 def get_balance_pct(cfg: dict[str, Any]) -> float:
-    """Convert win differential to balance percentage.
-    
+    """Convert win differential to win parity percentage.
+
     Args:
         cfg: Algorithm config dict
-        
+
     Returns:
-        Balance percentage: 0 diff = 100%, 2.0 diff = 0%
+        Win Parity percentage: 0 diff = 100%, 2.0 diff = 0%
     """
     diff = get_engine_win_diff(cfg)
     max_diff = 2.0
