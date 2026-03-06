@@ -121,15 +121,22 @@ class StorageManager {
     return this.writeQueue;
   }
 
-  async saveApp(state: Partial<AppState>): Promise<void> {
+  private save(transform: (current: Partial<StorageData>) => Partial<StorageData>, label: string): Promise<void> {
     return this.enqueue(async () => {
       try {
         const current = await this.read();
-        await this.write({ ...current, app: { ...(current.app ?? {}), ...state } as AppState });
+        await this.write(transform(current));
       } catch (error) {
-        console.warn('Failed to save app state to localStorage:', error);
+        console.warn(`Failed to save ${label} to localStorage:`, error);
       }
     });
+  }
+
+  async saveApp(state: Partial<AppState>): Promise<void> {
+    return this.save(
+      current => ({ ...current, app: { ...(current.app ?? {}), ...state } as AppState }),
+      'app state',
+    );
   }
 
   async loadApp(): Promise<Partial<AppState>> {
@@ -156,14 +163,11 @@ class StorageManager {
   }
 
   async saveEngine(state: CourtEngineState): Promise<void> {
-    return this.enqueue(async () => {
-      try {
-        const current = await this.read();
-        await this.write({ ...current, engine: this.toCompact(state) as unknown as CourtEngineState });
-      } catch (error) {
-        console.warn('Failed to save engine state to localStorage:', error);
-      }
-    });
+    const compact = this.toCompact(state);
+    return this.save(
+      current => ({ ...current, engine: compact as unknown as CourtEngineState }),
+      'engine state',
+    );
   }
 
   async loadEngine(): Promise<Partial<CourtEngineState>> {
@@ -201,7 +205,9 @@ class StorageManager {
       ...Object.keys(state.winCountMap),
       ...Object.keys(state.lossCountMap),
     ]);
-    for (const key of [...Object.keys(state.teammateCountMap), ...Object.keys(state.opponentCountMap)]) {
+
+    const pairKeys = [...new Set([...Object.keys(state.teammateCountMap), ...Object.keys(state.opponentCountMap)])];
+    for (const key of pairKeys) {
       const sep = key.indexOf('|');
       if (sep !== -1) { allPlayerIds.add(key.slice(0, sep)); allPlayerIds.add(key.slice(sep + 1)); }
     }
@@ -216,12 +222,8 @@ class StorageManager {
       state.lossCountMap[id]  ?? 0,
     ]);
 
-    const allPairKeys = new Set([
-      ...Object.keys(state.teammateCountMap),
-      ...Object.keys(state.opponentCountMap),
-    ]);
     const pc: Record<string, [number, number]> = {};
-    for (const key of allPairKeys) {
+    for (const key of pairKeys) {
       const sep = key.indexOf('|');
       if (sep === -1) continue;
       const i = idToIndex.get(key.slice(0, sep))!;
@@ -333,21 +335,22 @@ class StorageManager {
     const engine = data.engine as unknown as CompactEngineState;
     if (!engine) return data;
 
-    if (engine.lh && engine.lh.some(h => h.length > 10)) {
-      const pruned = { ...data, engine: { ...engine, lh: engine.lh.map(h => h.slice(-10)) } as unknown as CourtEngineState };
-      if (JSON.stringify(pruned).length <= StorageManager.MAX_SIZE) return pruned;
+    const rebuild = (e: CompactEngineState): StorageData => ({ ...data, engine: e as unknown as CourtEngineState });
+    const fits = (d: StorageData) => JSON.stringify(d).length <= StorageManager.MAX_SIZE;
+
+    if (engine.lh?.some(h => h.length > 10)) {
+      const pruned = rebuild({ ...engine, lh: engine.lh!.map(h => h.slice(-10)) });
+      if (fits(pruned)) return pruned;
     }
 
-    const noLh = { ...data, engine: { ...engine, lh: [] } as unknown as CourtEngineState };
-    if (JSON.stringify(noLh).length <= StorageManager.MAX_SIZE) return noLh;
+    const noLh = rebuild({ ...engine, lh: [] });
+    if (fits(noLh)) return noLh;
 
-    const pc = engine.pc ?? {};
-    const allKeys = Object.keys(pc);
+    const allKeys = Object.keys(engine.pc ?? {});
     if (allKeys.length > 200) {
-      const prunedPc: Record<string, [number, number]> = {};
-      for (const k of allKeys.slice(0, 200)) prunedPc[k] = pc[k];
-      return { ...data, engine: { ...engine, pc: prunedPc } as unknown as CourtEngineState };
+      return rebuild({ ...engine, pc: Object.fromEntries(allKeys.slice(0, 200).map(k => [k, engine.pc[k]])) });
     }
+
     console.warn('StorageManager: pruneToFit could not reduce payload below MAX_SIZE');
     return noLh;
   }
