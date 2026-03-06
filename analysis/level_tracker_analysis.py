@@ -29,21 +29,6 @@ def _(mo):
         Scores per court are **optional** — if no score is entered, a close victory is assumed
         (smallest rating change).
 
-        Level and average-score updates occur **only when new assignments are generated** (the
-        "Regenerate Assignments" button is clicked). The update sequence is:
-
-        1. Record win history for the engine (`recordCurrentWins`)
-        2. Collect all courts that have a winner → apply level deltas via `updatePlayersLevels`
-        3. Save updated players to state (and localStorage via the existing save effect)
-        4. Generate new assignments using the freshly updated player levels
-
-        | Section | What it shows |
-        |---|---|
-        | **1 · K-Factor** | How score margin maps to rating magnitude |
-        | **2 · Balance Factor** | How within-team level spread scales down effective K |
-        | **3 · Elo Delta** | Per-team rating changes across matchup combinations |
-        | **4 · Average Score** | Per-player running score average tracking |
-        | **5 · Convergence** | How player levels stabilise over repeated games |
         """
     )
     return
@@ -59,26 +44,26 @@ def _(math, random):
         """Raw K-factor from score margin only (no balance adjustment).
 
         K-factor scale (winner score must be exactly 21):
-          deuce / winner ≠ 21  → 6
-          loser 18–20 (diff ≤ 3) → 8
-          loser 15–17 (diff 4–6) → 12
-          loser 11–14 (diff 7–10) → 16
-          loser  6–10 (diff 11–15) → 20
-          loser   < 6 (diff > 15) → 24
-        Returns 6 when no score is available (same as deuce).
+          deuce / winner ≠ 21  → 3
+          loser 18–20 (diff ≤ 3) → 4
+          loser 15–17 (diff 4–6) → 8
+          loser 11–14 (diff 7–10) → 10
+          loser  6–10 (diff 11–15) → 12
+          loser   < 6 (diff > 15) → 15
+        Returns 3 when no score is available (same as deuce).
         """
         if score is None or winner is None:
-            return 6
+            return 3
         w = score["team1"] if winner == 1 else score["team2"]
         lo = score["team2"] if winner == 1 else score["team1"]
         if w != 21:
-            return 6
+            return 3
         diff = 21 - lo
-        if diff <= 3:  return 8
-        if diff <= 6:  return 12
-        if diff <= 10: return 16
-        if diff <= 15: return 20
-        return 24
+        if diff <= 3:  return 4
+        if diff <= 6:  return 8
+        if diff <= 10: return 10
+        if diff <= 15: return 12
+        return 15
 
     def balance_factor(levels):
         """Balance factor in [0.5, 1.0].
@@ -108,11 +93,11 @@ def _(math, random):
         return sum(lv if lv is not None else 50 for lv in levels) / len(levels)
 
     def win_prob(avg_a, avg_b):
-        """Elo expected win probability for team A vs B (scale = 50).
+        """Elo expected win probability for team A vs B (divisor = 400).
 
-        A 50-point gap → ~91% expected win probability for the stronger team.
+        A 50-point gap → ~56% expected win probability for the stronger team.
         """
-        return 1.0 / (1.0 + 10.0 ** ((avg_b - avg_a) / 50.0))
+        return 1.0 / (1.0 + 10.0 ** ((avg_b - avg_a) / 400.0))
 
     def play_game(t1, t2, score=None, stochastic=False, rng=None):
         """Simulate one game between t1 and t2 (lists of player levels).
@@ -142,6 +127,100 @@ def _(math, random):
 
 
 # =============================================================================
+# 0.5 · ELO Divisor Impact
+# =============================================================================
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+        ---
+        ## 0.5 · ELO Divisor
+
+        The **divisor** $D$ is a single number that controls how sensitive the win-probability
+        formula is to differences in player levels. A small $D$ makes the curve very steep —
+        even a modest level gap produces a near-certain outcome. A large $D$ flattens the curve,
+        giving underdogs a much fairer chance.
+
+        $$E_A = \frac{1}{1 + 10^{(\bar{L}_B - \bar{L}_A)\,/\,D}}$$
+
+        where $\bar{L}_A$ and $\bar{L}_B$ are the average levels of teams A and B respectively.
+
+        | Divisor $D$ | 50-point gap → $E_A$ | Effect |
+        |-------------|----------------------|--------|
+        | 50          | ~91 %                | Very steep — small gaps dominate |
+        | 100         | ~76 %                | Steep |
+        | 200         | ~64 %                | Moderate |
+        | **400**     | **~57 %**            | **Gentle — chosen value (chess standard)** |
+
+        With $D = 50$, a 100-point gap (the maximum possible) gives $E_A \approx 99\,\%$ — the
+        result is nearly certain before the game even starts. With $D = 400$, the same gap gives
+        only $E_A \approx 64\,\%$, so upsets remain plausible and the system stays responsive to
+        unexpected results.
+
+        A larger $D$ also caps the maximum rating swing: since $|\text{actual} - E|$ is at most
+        $\approx 0.64$ with $D = 400$, even the largest $K = 15$ can move a rating by at most
+        $15 \times 0.64 = 9.6$ points — **guaranteed below 10 per game**.
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(go, make_subplots, math, mo):
+    _divisors = [50, 100, 200, 400]
+    _div_colors = ["#E45756", "#F58518", "#54A24B", "#4C78A8"]
+    _diffs = list(range(-100, 101))
+
+    _fig_div = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=(
+            "Expected win probability vs level difference",
+            "Max level delta (K=15) vs level difference",
+        ),
+    )
+
+    for _D, _col in zip(_divisors, _div_colors):
+        _probs = [1.0 / (1.0 + 10.0 ** (d / _D)) for d in _diffs]
+        _deltas = [15 * abs(p - (0 if p > 0.5 else 1)) for p in _probs]
+        _fig_div.add_trace(
+            go.Scatter(
+                x=_diffs, y=_probs,
+                mode="lines", name=f"D={_D}",
+                line=dict(color=_col, width=2),
+            ),
+            row=1, col=1,
+        )
+        _fig_div.add_trace(
+            go.Scatter(
+                x=_diffs, y=_deltas,
+                mode="lines", name=f"D={_D}",
+                line=dict(color=_col, width=2),
+                showlegend=False,
+            ),
+            row=1, col=2,
+        )
+
+    _fig_div.add_hline(y=0.5, line_dash="dot", line_color="#aaa", row=1, col=1)
+    _fig_div.add_hline(y=10, line_dash="dash", line_color="#B71C1C",
+                       annotation_text="10-pt ceiling", annotation_position="top right",
+                       row=1, col=2)
+
+    _fig_div.update_layout(
+        height=400,
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(x=0.02, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
+        xaxis=dict(title="Level difference (avgA − avgB)", gridcolor="#eee"),
+        yaxis=dict(range=[0, 1], title="Expected win probability", gridcolor="#eee"),
+        xaxis2=dict(title="Level difference (avgA − avgB)", gridcolor="#eee"),
+        yaxis2=dict(range=[0, 15], title="Max Δ level (K=15)", gridcolor="#eee"),
+        margin=dict(t=50, b=50),
+    )
+    mo.ui.plotly(_fig_div)
+    return
+
+
+# =============================================================================
 # 1 · K-Factor by Score Margin
 # =============================================================================
 
@@ -160,13 +239,13 @@ def _(mo):
 
         | Condition | K |
         |---|---|
-        | No score entered | 8 |
-        | Winner score > 21 (deuce) | 6 |
-        | Winner score = 21, loser 18–20 (diff ≤ 3) | 8 |
-        | Winner score = 21, loser 15–17 (diff 4–6) | 12 |
-        | Winner score = 21, loser 11–14 (diff 7–10) | 16 |
-        | Winner score = 21, loser 6–10 (diff 11–15) | 20 |
-        | Winner score = 21, loser < 6 (diff > 15) | 24 |
+        | No score entered | 3 |
+        | Winner score > 21 (deuce) | 3 |
+        | Winner score = 21, loser 18–20 (diff ≤ 3) | 4 |
+        | Winner score = 21, loser 15–17 (diff 4–6) | 8 |
+        | Winner score = 21, loser 11–14 (diff 7–10) | 10 |
+        | Winner score = 21, loser 6–10 (diff 11–15) | 12 |
+        | Winner score = 21, loser < 6 (diff > 15) | 15 |
         """
     )
     return
@@ -175,42 +254,64 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(get_k_raw, go, make_subplots, mo):
     _K_COLOR = {
-        6:  "#90CAF9",  # light blue  – deuce, closest win
-        8:  "#A5D6A7",  # light green – close win
-        12: "#FFF176",  # yellow
-        16: "#FFCC80",  # orange
-        20: "#EF9A9A",  # light red
-        24: "#B71C1C",  # dark red    – dominant win
+        3:  "#90CAF9",  # light blue  – deuce, closest win
+        4:  "#A5D6A7",  # light green – close win
+        8:  "#FFF176",  # yellow
+        10: "#FFCC80",  # orange
+        12: "#EF9A9A",  # light red
+        15: "#B71C1C",  # dark red    – dominant win
     }
 
-    # Left: one bar per scenario (loser score 0-20, deuce, no score)
+    # Left: level change for a level-50 player vs an equal opponent (E = 0.5)
+    # Win Δ = K × (1 − 0.5) = K/2  |  Lose Δ = K × (0 − 0.5) = −K/2
     _loser_scores = list(range(0, 21))
     _ks_main = [get_k_raw({"team1": 21, "team2": ls}, 1) for ls in _loser_scores]
     _k_deuce = get_k_raw({"team1": 22, "team2": 20}, 1)
     _k_none  = get_k_raw()
     _all_x   = [str(ls) for ls in _loser_scores] + ["deuce", "—"]
     _all_k   = _ks_main + [_k_deuce, _k_none]
+    _win_d   = [round(k * 0.5, 1) for k in _all_k]
+    _lose_d  = [round(-k * 0.5, 1) for k in _all_k]
     _colors  = [_K_COLOR[k] for k in _all_k]
 
-    # Right: grouped summary by score band
+    # Right: K-factor summary by score band
     _band_x  = ["< 6", "6–10", "11–14", "15–17", "18–20", "deuce", "no score"]
-    _band_k  = [24, 20, 16, 12, 8, 6, 6]
+    _band_k  = [15, 12, 10, 8, 4, 3, 3]
     _band_c  = [_K_COLOR[k] for k in _band_k]
 
     _fig = make_subplots(
         rows=1, cols=2,
-        subplot_titles=("K-factor per loser score (winner = 21)", "K-factor by score band"),
+        subplot_titles=(
+            "Level change from 50 vs equal opponent",
+            "K-factor by score band",
+        ),
         column_widths=[0.65, 0.35],
     )
+
+    # Win bars (positive, above zero)
     _fig.add_trace(
         go.Bar(
-            x=_all_x, y=_all_k,
+            x=_all_x, y=_win_d,
+            name="win",
             marker_color=_colors,
-            text=[str(k) for k in _all_k], textposition="outside",
+            text=[f"+{d}" for d in _win_d], textposition="outside",
+        ),
+        row=1, col=1,
+    )
+    # Lose bars (negative, below zero) — same color, lighter
+    _fig.add_trace(
+        go.Bar(
+            x=_all_x, y=_lose_d,
+            name="lose",
+            marker_color=_colors,
+            opacity=0.4,
+            text=[str(d) for d in _lose_d], textposition="outside",
             showlegend=False,
         ),
         row=1, col=1,
     )
+    _fig.add_hline(y=0, line_color="#999", line_width=1, row=1, col=1)
+
     _fig.add_trace(
         go.Bar(
             x=_band_x, y=_band_k,
@@ -221,12 +322,14 @@ def _(get_k_raw, go, make_subplots, mo):
         row=1, col=2,
     )
     _fig.update_layout(
-        height=380,
+        height=420,
+        barmode="overlay",
         plot_bgcolor="white", paper_bgcolor="white",
-        yaxis=dict(range=[0, 28], title="K-factor", gridcolor="#eee"),
-        yaxis2=dict(range=[0, 28], gridcolor="#eee"),
-        xaxis_title="Loser score",
-        xaxis2_title="Loser score range",
+        legend=dict(x=0.02, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
+        yaxis=dict(range=[-10, 10], title="Level change (Δ)", gridcolor="#eee", zeroline=False),
+        yaxis2=dict(range=[0, 18], gridcolor="#eee"),
+        xaxis=dict(title="Loser score", gridcolor="#eee"),
+        xaxis2=dict(title="Loser score range", gridcolor="#eee"),
         margin=dict(t=50, b=50),
     )
     mo.ui.plotly(_fig)
@@ -237,10 +340,14 @@ def _(get_k_raw, go, make_subplots, mo):
 def _(mo):
     mo.md(
         """
-        A **deuce win** (e.g. 22–20) scores the lowest K = 6 — even lower than a tight 21–18 —
-        because it is the closest possible victory in badminton.
-        A **dominant win** (21–0) scores K = 24, triggering the largest rating swing.
-        When **no score** is recorded, K defaults to 6 (same as deuce).
+        Against an equally-rated opponent ($E = 0.5$), winning and losing always produce equal
+        and opposite swings — you gain or lose exactly $K/2$ points. The left chart shows both
+        sides of that trade-off for every possible score.
+
+        A **deuce win** (e.g. 22–20) gives the smallest swing ($\pm 1.5$ pts) because it is the
+        closest possible victory in badminton — barely better than a coin flip. A **dominant
+        21–0** gives the largest swing ($\pm 7.5$ pts). When **no score** is recorded, the change
+        defaults to $\pm 1.5$ pts (same as deuce).
         """
     )
     return
@@ -260,35 +367,43 @@ def _(mo):
 def _(mo):
     mo.md(
         r"""
-        When a team is level-unbalanced (e.g. [0, 100]), the match result is driven largely
-        by partner variance rather than individual skill. Applying the full K-factor would
-        over-punish strong players dragged down by a weak partner, and over-reward weak players
-        carried by a strong one. To address this, the effective K-factor is scaled down based
-        on the team's level spread:
+        Imagine a level-100 expert forced to partner with a level-0 beginner. If they lose,
+        it says very little about the expert's individual skill — the outcome was mostly decided
+        by the partner mismatch, not by how well the expert played. Penalising the expert the
+        full amount would be unfair and would distort their rating.
 
-        ```
-        stdDev(team)    = sqrt(mean of squared distances from team avg)
-                          For 2 players [a, b]: stdDev = |a − b| / 2
+        To handle this, the effective K is scaled down by a **balance factor**
+        $\beta \in [0.5, 1.0]$ whenever a team's two players have very different levels. The
+        more mismatched the teammates, the less the match result tells us about individual
+        ability — so the smaller the rating change for everyone on that team.
 
-        imbalanceFactor = clamp(stdDev / 50, 0, 1)
-                          0 = perfectly balanced, 1 = maximally unbalanced [0, 100]
+        **Step 1 — team standard deviation** (how spread out the team's levels are):
 
-        balanceFactor   = 1 − 0.5 × imbalanceFactor
-                          Range: 1.0 (balanced) → 0.5 (max imbalance)
+        $$\sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(L_i - \bar{L})^2}
+          \qquad \text{for 2 players:}\quad \sigma = \tfrac{|L_1 - L_2|}{2}$$
 
-        effectiveK      = K × balanceFactor
-        ```
+        **Step 2 — imbalance factor** (normalised to $[0, 1]$, where 0 = perfectly balanced):
 
-        | Team        | stdDev | imbalanceFactor | balanceFactor | effectiveK (K=8) |
-        |-------------|--------|-----------------|---------------|------------------|
-        | [50, 50]    | 0      | 0.0             | 1.00          | 8.0              |
-        | [50, 60]    | 5      | 0.1             | 0.95          | 7.6              |
-        | [40, 80]    | 20     | 0.4             | 0.80          | 6.4              |
-        | [0, 100]    | 50     | 1.0             | 0.50          | 4.0              |
-        | singles [80]| 0      | 0.0             | 1.00          | 8.0              |
+        $$\text{imbalance} = \min\!\left(\frac{\sigma}{50},\; 1\right)$$
 
-        Singles (1-player team) are unaffected (balanceFactor = 1.0). Each team gets its own
-        balance-adjusted K independently.
+        **Step 3 — balance factor** (how much of the raw K to keep):
+
+        $$\beta = 1 - 0.5 \times \text{imbalance} \qquad \in [0.5,\; 1.0]$$
+
+        **Step 4 — effective K** (the K actually applied to each player's rating):
+
+        $$K_{\text{eff}} = K_{\text{raw}} \times \beta$$
+
+        | Team          | $\sigma$ | imbalance | $\beta$ | $K_{\text{eff}}$ (raw $K = 8$) |
+        |---------------|----------|-----------|---------|--------------------------------|
+        | [50, 50]      | 0        | 0.00      | 1.00    | 8.0                            |
+        | [50, 60]      | 5        | 0.10      | 0.95    | 7.6                            |
+        | [40, 80]      | 20       | 0.40      | 0.80    | 6.4                            |
+        | [0, 100]      | 50       | 1.00      | 0.50    | 4.0                            |
+        | singles [80]  | 0        | 0.00      | 1.00    | 8.0                            |
+
+        Singles (1-player teams) are always unaffected ($\beta = 1.0$). Each team gets its own
+        balance-adjusted K independently — a lopsided team 1 does not affect team 2's K.
         """
     )
     return
@@ -300,7 +415,7 @@ def _(balance_factor, go, make_subplots, mo):
     _spreads = list(range(0, 101))
     _bfs     = [balance_factor([50 - s / 2, 50 + s / 2]) for s in _spreads]
 
-    _RAW_KS  = [8, 12, 16, 20, 24]
+    _RAW_KS  = [4, 8, 10, 12, 15]
     _EFF_COLORS = ["#A5D6A7", "#FFF176", "#FFCC80", "#EF9A9A", "#B71C1C"]
 
     _KEY_POINTS = [
@@ -360,7 +475,7 @@ def _(balance_factor, go, make_subplots, mo):
         xaxis=dict(title="Team level spread |L₁ − L₂|", gridcolor="#eee"),
         yaxis=dict(range=[0.45, 1.05], title="Balance factor", gridcolor="#eee"),
         xaxis2=dict(title="Team level spread |L₁ − L₂|", gridcolor="#eee"),
-        yaxis2=dict(range=[0, 28], title="Effective K", gridcolor="#eee"),
+        yaxis2=dict(range=[0, 18], title="Effective K", gridcolor="#eee"),
         margin=dict(t=50),
     )
     mo.ui.plotly(_fig)
@@ -371,12 +486,17 @@ def _(balance_factor, go, make_subplots, mo):
 def _(mo):
     mo.md(
         """
-        A balanced team [50, 50] has spread = 0 → **balance factor = 1.0** (no reduction).
-        An extreme team [0, 100] has spread = 100 → **balance factor = 0.5** (K is halved).
+        **Left chart — balance factor curve.** The x-axis is the absolute level difference
+        between the two teammates ($|L_1 - L_2|$). At spread = 0 both players are identical
+        ($\beta = 1.0$, no reduction). At spread = 100 — one player at 0, the other at 100 —
+        the factor bottoms out at $\beta = 0.5$, halving every rating change for that team.
+        Anything in between scales smoothly.
 
-        The right chart shows how all K tiers are equally scaled down — the reduction is
-        proportional, so a dominant-win K = 24 drops to 12, and a close-win K = 8 drops to 4,
-        for a maximally unbalanced team.
+        **Right chart — effective K per raw K.** Each coloured line is one K tier. The
+        reduction is proportional across all tiers: a dominant-win $K = 15$ drops to 7.5 for a
+        maximally unbalanced team, and a close-win $K = 4$ drops to 2. Both players on the
+        unbalanced team are affected equally — the strong player is not penalised more than
+        the weak one.
         """
     )
     return
@@ -395,8 +515,8 @@ The **Elo system** assigns each player a numeric level (0–100). After every ga
 gains points and the loser loses the same amount. The size of the swing — the **Elo delta** —
 is governed by two factors studied in the previous sections:
 
-- **K-factor** (§ 1): larger for close games, smaller for dominant wins (K = 6 when no score
-  is recorded, same as deuce).
+- **K-factor** (§ 1): larger for more dominant wins, smaller for close games (K = 3 when no
+  score is recorded, same as deuce).
 - **Balance factor** (§ 2): scales K down when a team's two players have very different levels,
   reducing rating volatility for uneven pairings.
 
@@ -412,59 +532,70 @@ def _(mo):
         r"""
         ### Expected Win Probability
 
-        Uses the standard Elo formula adapted for teams, with a scale factor of 50
-        (instead of the chess standard of 400):
+        Before each game, the system estimates how likely each team is to win based on their
+        average player levels. Equal teams each get 50 %. The formula uses a divisor of 400
+        (see § 0.5), which keeps the curve gentle — only a very large level gap pushes the
+        probability close to certain:
 
-        ```
-        teamAvg       = average level of team members  (undefined level → 50)
-        expected(A)   = 1 / (1 + 10^((avgB − avgA) / 50))
-        expected(B)   = 1 − expected(A)
-        ```
+        $$\bar{L}_\text{team} = \frac{1}{n}\sum_{i=1}^{n} L_i
+          \qquad \text{(unknown level} \to 50\text{)}$$
 
-        A scale factor of 50 makes the curve steeper than chess Elo — a 50-point level gap
-        already translates to ~91% expected win probability for the stronger side.
+        $$E_A = \frac{1}{1 + 10^{(\bar{L}_B - \bar{L}_A)\,/\,400}}, \qquad E_B = 1 - E_A$$
+
+        A 50-point level gap gives only $E_A \approx 56\,\%$ — barely more than a coin flip.
 
         ### Level Delta
 
-        ```
-        actual   = 1  (won)  or  0  (lost)
-        Δ        = K × (actual − expected)
-        newLevel = clamp(currentLevel + Δ, 0, 100)   // rounded to 1 decimal
-        ```
+        After the game, every player on the winning team gains points and every player on the
+        losing team loses the same number. The size of the swing grows with how surprising the
+        result was: a massive upset earns far more than a comfortable expected win.
+
+        $$\text{actual} = \begin{cases} 1 & \text{(team won)} \\ 0 & \text{(team lost)} \end{cases}
+          \qquad \Delta = K_{\text{eff}} \times (\text{actual} - E)$$
+
+        $$L_{\text{new}} = \operatorname{clamp}(L + \Delta,\; 0,\; 100) \quad \text{rounded to 1 d.p.}$$
 
         **Worked example — dominant win (21-5)**
 
-        | | Team A (avg level 70) | Team B (avg level 30) |
+        Team A (avg level 70) beats Team B (avg level 30) convincingly. The score diff is 16,
+        so $K = 15$ (most dominant bracket). Team A was already the favourite at $E_A = 0.557$,
+        so their gain is modest despite the large K:
+
+        | | Team A (avg 70) | Team B (avg 30) |
         |---|---|---|
-        | K-factor (diff=16) | 20 | 20 |
-        | Expected | 0.91 | 0.09 |
-        | Actual | 1 (won) | 0 (lost) |
-        | Δ | +20 × (1 − 0.91) = **+1.8** | +20 × (0 − 0.09) = **−1.8** |
+        | $K$ (diff = 16) | 15 | 15 |
+        | $E$ | 0.557 | 0.443 |
+        | actual | 1 (won) | 0 (lost) |
+        | $\Delta$ | $+15 \times (1 - 0.557) = \mathbf{+6.6}$ | $+15 \times (0 - 0.443) = \mathbf{-6.6}$ |
 
         **Worked example — upset (21-19, weak beats strong)**
 
-        | | Team A (avg level 30) | Team B (avg level 70) |
-        |---|---|---|
-        | K-factor (diff=2) | 8 | 8 |
-        | Expected | 0.09 | 0.91 |
-        | Actual | 1 (won) | 0 (lost) |
-        | Δ | +8 × (1 − 0.09) = **+7.3** | +8 × (0 − 0.91) = **−7.3** |
+        Team A (avg 30) shocks Team B (avg 70) in a tight game. The score diff is only 2,
+        so $K = 4$ (close-win bracket). The swing is small: the low K limits the reward, and
+        the gentle divisor means the "surprise" factor is moderate rather than extreme:
 
-        An upset causes a much larger level swing — the strong team that lost drops
-        significantly, while the weak team that won gains significantly.
+        | | Team A (avg 30) | Team B (avg 70) |
+        |---|---|---|
+        | $K$ (diff = 2) | 4 | 4 |
+        | $E$ | 0.443 | 0.557 |
+        | actual | 1 (won) | 0 (lost) |
+        | $\Delta$ | $+4 \times (1 - 0.443) = \mathbf{+2.2}$ | $+4 \times (0 - 0.557) = \mathbf{-2.2}$ |
 
         **Worked example — expected win (21-15, strong beats weak)**
 
+        A level-80 player beats a level-60 opponent with a comfortable margin. The score diff
+        is 6, so $K = 8$. Because the win was expected ($E_{80} = 0.529$), the reward is modest.
+        The table also shows what would happen if the stronger player unexpectedly lost:
+
         | | Level-80 player | Level-60 opponent |
         |---|---|---|
-        | K-factor (loser got 15, diff=6) | 12 | 12 |
-        | Team avg | 80 | 60 |
-        | Expected | 0.715 | 0.285 |
-        | **Win** (actual=1) | **+3.4** → 83.4 | **−3.4** → 56.6 |
-        | **Lose** (actual=0) | **−8.6** → 71.4 | **+8.6** → 68.6 |
+        | $K$ (diff = 6) | 8 | 8 |
+        | $E$ | 0.529 | 0.471 |
+        | **Win** (actual = 1) | $\mathbf{+3.8}$ → 83.8 | $\mathbf{-3.8}$ → 56.2 |
+        | **Lose** (actual = 0) | $\mathbf{-4.2}$ → 75.8 | $\mathbf{+4.2}$ → 64.2 |
 
-        Note the asymmetry: an unexpected loss drops the stronger player far more than a win
-        raises them.
+        An unexpected loss drops the stronger player slightly more than a win raises them —
+        a direct consequence of $E > 0.5$ making $|0 - E| > |1 - E|$.
         """
     )
     return
@@ -472,15 +603,17 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(avg_level, balance_factor, go, k_factor, make_subplots, mo, win_prob):
-    # --- Heatmap: Δ(team1 wins) as function of both team averages (balanced, no score) ---
+    # --- Heatmap: expected win probability for team 1 ---
+    # Shows the raw input to the Elo formula across all level combinations.
+    # With D=400, the curve is deliberately flat: the full 0–100 range only moves
+    # probability from ~0.36 to ~0.64 — barely more than a coin flip at either extreme.
     _avgs = list(range(0, 101, 5))
-    _delta_grid = []
+    _prob_grid = []
     for _a1 in _avgs:
         _row = []
         for _a2 in _avgs:
-            _exp1 = win_prob(_a1, _a2)
-            _row.append(round(6.0 * (1.0 - _exp1), 2))  # K=6, balanced → bf=1
-        _delta_grid.append(_row)
+            _row.append(round(win_prob(_a1, _a2), 3))
+        _prob_grid.append(_row)
 
     # --- Line chart: team1=[50-s, 50+s] vs team2=[50,50], no score ---
     # Shows how spread reduces win/loss delta even when avg levels are equal
@@ -509,28 +642,28 @@ def _(avg_level, balance_factor, go, k_factor, make_subplots, mo, win_prob):
         _a1, _a2 = avg_level(_t1s), avg_level(_t2s)
         _ep = win_prob(_a1, _a2)
         _kw  = k_factor(None, None, _t1s)     # with balance factor
-        _kwo = 6.0                              # without (raw K=6, balanced)
+        _kwo = 3.0                              # without (raw K=3, balanced)
         _sc_win_with.append(round(_kw * (1.0 - _ep), 2))
         _sc_win_without.append(round(_kwo * (1.0 - _ep), 2))
 
     _fig = make_subplots(
         rows=2, cols=2,
         subplot_titles=(
-            "Δ(team1 wins) — balanced teams, no score",
+            "Expected win probability for team 1 (D=400)",
             "Δ vs spread — team1=[50±s] vs team2=[50,50]",
-            "Win Δ with vs without balance factor (K=6, team1 wins)",
+            "Win Δ with vs without balance factor (K=3, team1 wins)",
             "Balance factor for each scenario",
         ),
         vertical_spacing=0.18,
     )
 
-    # Top-left: heatmap
+    # Top-left: win probability heatmap
     _fig.add_trace(
         go.Heatmap(
-            x=_avgs, y=_avgs, z=_delta_grid,
+            x=_avgs, y=_avgs, z=_prob_grid,
             colorscale="RdYlGn",
-            colorbar=dict(title="Δ level", x=0.46, len=0.45, y=0.78),
-            zmin=-8, zmax=8,
+            colorbar=dict(title="P(team 1 wins)", x=0.46, len=0.45, y=0.78, tickformat=".0%"),
+            zmin=0.3, zmax=0.7,
         ),
         row=1, col=1,
     )
@@ -591,11 +724,11 @@ def _(avg_level, balance_factor, go, k_factor, make_subplots, mo, win_prob):
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(x=0.56, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
         xaxis=dict(title="Team 2 avg level", gridcolor="#eee"),
-        yaxis=dict(title="Team 1 avg level", gridcolor="#eee"),
+        yaxis=dict(title="Team 1 avg level", gridcolor="#eee", autorange="reversed"),
         xaxis2=dict(title="Spread s (team1 = [50−s, 50+s])", gridcolor="#eee"),
         yaxis2=dict(title="Δ level per player", gridcolor="#eee"),
         xaxis3=dict(tickangle=-15),
-        yaxis3=dict(range=[0, 5], title="Win Δ", gridcolor="#eee"),
+        yaxis3=dict(range=[0, 4], title="Win Δ", gridcolor="#eee"),
         xaxis4=dict(tickangle=-15),
         yaxis4=dict(range=[0, 1.1], title="Balance factor", gridcolor="#eee"),
         margin=dict(t=50, b=80),
@@ -608,12 +741,14 @@ def _(avg_level, balance_factor, go, k_factor, make_subplots, mo, win_prob):
 def _(mo):
     mo.md(
         """
-**Figure 1 — Elo delta heatmap (balanced teams, no score).**
-Each cell shows how many level points team 1's players gain when they win (K = 6, no score —
-same as deuce). On the diagonal — equal-strength opponents — the delta is ~4.
-An upset (bottom-right: weak team beats strong) yields the maximum gain (~8). A comfortable
-expected win (top-left: strong team beats weak) yields near-zero gain because the outcome
-was already anticipated.
+**Figure 1 — Expected win probability heatmap (D = 400).**
+Each cell is the probability that team 1 wins, computed from the Elo formula before any game
+is played. The diagonal (equal-strength teams) is always 50 % — shown in yellow. Moving
+up-left (team 1 much stronger) pushes probability toward green (~64 %); moving down-right
+(team 1 much weaker) pushes it toward red (~36 %). The key insight: **with D = 400 the full
+range is only 36 %–64 %** — the heatmap looks muted by design. A divisor of 50 would
+stretch the same grid from near 1 % to near 99 %, making it almost entirely red or green.
+This probability is the direct input to every delta calculation in the section below.
 
 **Figure 2 — Spread impact on delta.**
 Team 1 always averages 50 but its internal spread grows from 0 (both players at 50) to ±50
@@ -622,7 +757,7 @@ win reward and the loss penalty. A maximally uneven team [0, 100] ends up with r
 the delta of a perfectly balanced team.
 
 **Figure 3 — Win delta: with vs without balance factor.**
-Five representative matchups compare the raw delta (K = 6, no balance factor, light blue)
+Five representative matchups compare the raw delta (K = 3, no balance factor, light blue)
 against the adjusted delta (with balance factor, dark blue). Balanced teams ([50, 50] vs
 [50, 50]) are unaffected (balance factor = 1). The more uneven team 1 is, the larger the
 reduction — a [0, 100] pairing is cut by ~50 % regardless of the opponent.
@@ -650,31 +785,35 @@ def _(mo):
 def _(mo):
     mo.md(
         r"""
-        When a score is entered for a game, each player's running average score is updated:
+        When a score is entered for a game, each player's running average score is updated.
+        This tracks how many points a player's team tends to score per game — a proxy for
+        offensive contribution that is entirely separate from the Elo level rating.
 
-        ```
-        cappedScore     = min(playerTeamScore, 21)
-        newScoredGames  = scoredGames + 1
-        newAverageScore = (averageScore × scoredGames + cappedScore) / newScoredGames
-        ```
+        The score is first capped to remove the effect of deuce extensions (a 22-point winner
+        game still counts as 21):
 
-        The score is capped at 21 to exclude deuce extensions from inflating averages. This
-        stat is stored on the `Player` object (`averageScore`, `scoredGames`) and persisted
+        $$s_{\text{capped}} = \min(s_{\text{team}},\; 21)$$
+
+        Then the per-player running average is updated with a standard cumulative mean:
+
+        $$n_{\text{new}} = n + 1, \qquad
+          \bar{s}_{\text{new}} = \frac{\bar{s} \cdot n + s_{\text{capped}}}{n_{\text{new}}}$$
+
+        Both `averageScore` and `scoredGames` are stored on the `Player` object and persisted
         to localStorage.
 
-        This metric reflects how many points a player tends to score per game — a proxy for
-        their offensive contribution. It is separate from the level rating, which tracks win/loss
-        outcomes relative to expected performance.
+        **Level-rating example — [0, 100] vs [50, 60], no score ($K_{\text{raw}} = 3$, $E \approx 0.5$):**
 
-        **Before/after example — [0, 100] vs [50, 60], K=8, evenly matched (expected ≈ 0.5 each):**
+        The unbalanced team [0, 100] has $\beta = 0.5$, so $K_{\text{eff}} = 1.5$.
+        The balanced team [50, 60] has $\beta = 0.95$, so $K_{\text{eff}} = 2.85$.
 
-        |           | Team 1 ([0, 100], effectiveK=4.0) | Team 2 ([50, 60], effectiveK=7.6) |
-        |-----------|-----------------------------------|-----------------------------------|
-        | Lose/Win  | −2.0 pts each                     | +3.8 pts each                     |
-        | Win/Lose  | +2.0 pts each                     | −3.8 pts each                     |
+        |           | Team 1 ([0, 100], $K_{\text{eff}} = 1.5$) | Team 2 ([50, 60], $K_{\text{eff}} = 2.85$) |
+        |-----------|-------------------------------------------|---------------------------------------------|
+        | Lose / Win  | $-0.75$ pts each                        | $+1.4$ pts each                             |
+        | Win / Lose  | $+0.75$ pts each                        | $-1.4$ pts each                             |
 
-        Before: ±4.0 pts for everyone. The level-100 player's loss penalty drops from −4.0 to
-        −2.0, reflecting the high uncertainty introduced by the unbalanced partnership.
+        The unbalanced team is penalised half as much as the balanced team — the outcome is
+        less informative about individual skill when partners are so mismatched.
         """
     )
     return
@@ -739,27 +878,27 @@ def _(go, mo, play_game, random):
 
     _LEGEND = dict(x=0.98, y=0.98, xanchor="right", yanchor="top",
                    bgcolor="rgba(255,255,255,0.85)", bordercolor="#ccc", borderwidth=1)
-    _BASE = dict(height=340, plot_bgcolor="white", paper_bgcolor="white",
+    _BASE = dict(height=360, plot_bgcolor="white", paper_bgcolor="white",
                  margin=dict(t=40, b=45, l=50, r=10))
     _YAXIS = dict(title="Level", range=[0, 100], gridcolor="#eee")
 
     # --- Fig 1: Singles — deterministic ---
     _f1 = go.Figure()
-    _f1.update_layout(**_BASE, legend=_LEGEND, title="Singles — deterministic (stronger always wins)",
+    _f1.update_layout(**_BASE, legend=_LEGEND, title="Singles — deterministic",
                       xaxis=dict(title="Game", gridcolor="#eee"), yaxis=_YAXIS)
     for _lbl, _hist, _col in [("A (start=80)", _s_det_a, "#E45756"), ("B (start=20)", _s_det_b, "#4C78A8")]:
         _f1.add_trace(go.Scatter(x=_games, y=_hist, mode="lines", name=_lbl, line=dict(color=_col, width=2.5)))
 
     # --- Fig 2: Singles — stochastic ---
     _f2 = go.Figure()
-    _f2.update_layout(**_BASE, legend=_LEGEND, title="Singles — stochastic (winner drawn from win probability)",
+    _f2.update_layout(**_BASE, legend=_LEGEND, title="Singles — stochastic",
                       xaxis=dict(title="Game", gridcolor="#eee"), yaxis=_YAXIS)
     for _lbl, _hist, _col in [("A (start=80)", _s_sto_a, "#E45756"), ("B (start=20)", _s_sto_b, "#4C78A8")]:
         _f2.add_trace(go.Scatter(x=_games, y=_hist, mode="lines", name=_lbl, line=dict(color=_col, width=2.5)))
 
     # --- Fig 3: Doubles — 4 players ---
     _f3 = go.Figure()
-    _f3.update_layout(**_BASE, legend=_LEGEND, title="Doubles — 4 players [10, 40, 60, 90] — stochastic",
+    _f3.update_layout(**_BASE, legend=_LEGEND, title=f"Doubles — {len(_init_4)} players {_init_4}",
                       xaxis=dict(title="Round", gridcolor="#eee"), yaxis=_YAXIS)
     for _i, (_col, _init) in enumerate(zip(_P4_COLS, _init_4)):
         _f3.add_trace(go.Scatter(
@@ -769,7 +908,7 @@ def _(go, mo, play_game, random):
 
     # --- Fig 4: Doubles — 6 players ---
     _f4 = go.Figure()
-    _f4.update_layout(**_BASE, legend=_LEGEND, title="Doubles — 6 players [10, 20, 50, 50, 80, 90] — stochastic",
+    _f4.update_layout(**_BASE, legend=_LEGEND, title=f"Doubles — {len(_init_6)} players {_init_6}",
                       xaxis=dict(title="Round", gridcolor="#eee"), yaxis=_YAXIS)
     for _i, (_col, _init) in enumerate(zip(_P6_COLS, _init_6)):
         _f4.add_trace(go.Scatter(
@@ -778,33 +917,28 @@ def _(go, mo, play_game, random):
         ))
 
     mo.vstack([
-        mo.ui.plotly(_f1),
+        mo.hstack([mo.ui.plotly(_f1), mo.ui.plotly(_f2)]),
         mo.md("""
-**Deterministic convergence.** The stronger player (A, red) always wins — expected wins
-yield only a small gain (K × surprise factor ≈ 0), so A climbs slowly while B drops
-steadily toward 0. There is no equilibrium: levels diverge toward the caps (100 / 0).
-Compare with the stochastic chart where occasional upsets pull both levels toward 50.
+**Singles — deterministic vs stochastic.** Both simulations pit A (start = 80, red) against
+B (start = 20, blue) over 80 games. **Left (deterministic):** the stronger player always wins —
+expected wins yield only a tiny gain (K × surprise ≈ 0), so A drifts slowly toward 100 while
+B drains toward 0 with no equilibrium. **Right (stochastic):** the winner is drawn from the Elo
+win probability, so B occasionally upsets. Those upsets carry a large rating swing (high K ×
+high surprise factor) that pulls both levels back toward the centre. Levels still diverge on
+average but stabilise with noise around a softer equilibrium — and A's curve is visibly
+choppier than in the deterministic case.
         """),
-        mo.ui.plotly(_f2),
-        mo.md("""
-**Stochastic convergence.** The winner is drawn from the Elo win probability each game,
-so the weaker player occasionally upsets. Upsets cause large rating swings (high K ×
-large surprise factor), which pulls both levels toward the centre faster — but with
-noise around the equilibrium. Notice A's level oscillates more than in the deterministic case.
-        """),
-        mo.ui.plotly(_f3),
-        mo.md("""
-**Four-player doubles.** Players are randomly re-paired into two teams each round.
-Strong players paired with a much weaker partner receive a reduced K (balance factor),
-dampening their rating swing when the team is uneven. Levels gradually spread apart
-to reflect each player's individual skill rather than lucky or unlucky pairings.
-        """),
-        mo.ui.plotly(_f4),
-        mo.md("""
-**Six-player doubles.** A more realistic session size with two mid-range players at 50.
-The wider initial spread (10 → 90) converges more slowly. The two mid-range players
-(P3/P4, green/yellow) stay relatively stable since they win and lose roughly as often as
-expected regardless of who they are paired with — they are already near their equilibrium.
+        mo.hstack([mo.ui.plotly(_f3), mo.ui.plotly(_f4)]),
+        mo.md(f"""
+**Doubles — {len(_init_4)}-player vs {len(_init_6)}-player sessions (stochastic).** Players are
+randomly re-paired into 2 v 2 teams each round. **Left ({_init_4}):** with four players spanning
+the full range, the balance factor kicks in whenever a strong player is paired with a weak one —
+reducing K for that team and dampening the swing. Levels gradually separate to reflect individual
+skill rather than lucky pairings. **Right ({_init_6}):** a more realistic session size with two
+mid-range players already near level 50. The two middle players (P3/P4) remain relatively stable
+throughout: they win and lose roughly as often as expected regardless of their partner, so their
+Elo is already close to equilibrium. The extremes (P1 at 10 and P6 at 90) converge more slowly
+because the wider initial spread means each uneven pairing gets a heavier balance-factor penalty.
         """),
     ])
     return

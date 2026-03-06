@@ -115,15 +115,6 @@ test.describe('Smart Engine', () => {
       await expect(page.locator('.crown')).toHaveCount(0);
     });
 
-    test('skipping sets winner without score', async ({ page }) => {
-      await page.locator('.team-clickable').first().click();
-      await expect(page.getByTestId('score-input-modal')).toBeVisible();
-      await page.getByTestId('score-modal-skip').click();
-
-      await expect(page.getByTestId('score-input-modal')).not.toBeVisible();
-      await expect(page.locator('.crown')).toHaveCount(1);
-    });
-
     test('entering score and confirming saves score; avg pts shows after regenerate', async ({ page }) => {
       await page.locator('.team-clickable').first().click();
 
@@ -158,7 +149,7 @@ test.describe('Smart Engine', () => {
 
       await page.locator('.team-clickable').first().click();
       await expect(page.getByTestId('score-input-modal')).toBeVisible();
-      await page.getByTestId('score-modal-skip').click();
+      await page.getByTestId('score-modal-confirm').click();
 
       await expect(page.getByTestId('leaderboard-level-header')).toBeVisible();
       await expect(page.getByTestId('leaderboard-avg-pts-header')).toBeVisible();

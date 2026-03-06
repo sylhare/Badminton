@@ -838,7 +838,7 @@ h1 {
 .court-assignments-container {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 10px;
 }
 
 .court-settings-inline {
@@ -963,19 +963,19 @@ h1 {
 }
 
 .last-generated {
+    position: absolute;
+    bottom: 0;
+    right: 0;
     font-size: 0.75rem;
     color: #a0aec0;
-    text-align: right;
     font-style: italic;
-    margin-bottom: -8px;
 }
 
 .regenerate-section {
+    position: relative;
     display: flex;
     justify-content: center;
-    padding-top: 20px;
-    margin-top: 10px;
-    border-top: 1px solid #e2e8f0;
+    padding-top: 5px;
 }
 
 .no-assignments-hint .generate-button {

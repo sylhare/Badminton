@@ -535,7 +535,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(4);
       const assignments: Court[] = [createMockCourt(1, players)];
 
-      const updated = engine.updateWinner(1, 1, assignments);
+      const updated = engine.updateWinner({ courtNumber: 1, winner: 1, currentAssignments: assignments });
 
       expect(updated[0].winner).toBe(1);
 
@@ -548,13 +548,13 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(4);
       let assignments: Court[] = [createMockCourt(1, players)];
 
-      assignments = engine.updateWinner(1, 1, assignments);
+      assignments = engine.updateWinner({ courtNumber: 1, winner: 1, currentAssignments: assignments });
 
       let winCounts = engine.getWinCounts();
       expect(winCounts.get('P0')).toBe(1);
       expect(winCounts.get('P2')).toBe(undefined);
 
-      engine.updateWinner(1, 2, assignments);
+      engine.updateWinner({ courtNumber: 1, winner: 2, currentAssignments: assignments });
 
       winCounts = engine.getWinCounts();
       expect(winCounts.get('P0')).toBe(0);
@@ -565,8 +565,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(4);
       let assignments: Court[] = [createMockCourt(1, players)];
 
-      assignments = engine.updateWinner(1, 1, assignments);
-      assignments = engine.updateWinner(1, undefined, assignments);
+      assignments = engine.updateWinner({ courtNumber: 1, winner: 1, currentAssignments: assignments });
+      assignments = engine.updateWinner({ courtNumber: 1, winner: undefined, currentAssignments: assignments });
 
       expect(assignments[0].winner).toBe(undefined);
     });
@@ -575,7 +575,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(4);
       const assignments: Court[] = [createMockCourt(1, players)];
 
-      const updated = engine.updateWinner(99, 1, assignments);
+      const updated = engine.updateWinner({ courtNumber: 99, winner: 1, currentAssignments: assignments });
 
       expect(updated).toEqual(assignments);
     });
@@ -843,7 +843,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       selector.engine().recordWins([court]);
       expect(selector.engine().getWinCounts().get('P0')).toBe(1);
 
-      selector.engine().reverseWinForCourt(1);
+      selector.engine().updateWinner({ courtNumber: 1, winner: undefined, currentAssignments: [court] });
       expect(selector.engine().getWinCounts().get('P0')).toBe(0);
 
       const state = selector.engine().prepareStateForSaving(type);

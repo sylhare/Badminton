@@ -48,13 +48,54 @@ describe('ScoreInputModal', () => {
       expect(input2().value).toBe('21');
     });
 
+    it('shows 18 as placeholder for loser when team 1 wins', () => {
+      const { input2 } = renderModal(1);
+      expect(input2().placeholder).toBe('18');
+    });
+
+    it('shows 18 as placeholder for loser when team 2 wins', () => {
+      const { input1 } = renderModal(2);
+      expect(input1().placeholder).toBe('18');
+    });
+
     it('confirm is enabled when only winner score is filled', () => {
       const { confirmBtn } = renderModal(1);
       expect(confirmBtn()).not.toBeDisabled();
     });
+
+  });
+
+  describe('confirm uses 18 as default loser score', () => {
+    it('calls onConfirm with {team1: 21, team2: 18} when team 1 wins and loser is empty', async () => {
+      const { confirmBtn, onConfirm } = renderModal(1);
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith({ team1: 21, team2: 18 });
+    });
+
+    it('calls onConfirm with {team1: 18, team2: 21} when team 2 wins and loser is empty', async () => {
+      const { confirmBtn, onConfirm } = renderModal(2);
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith({ team1: 18, team2: 21 });
+    });
+
+    it('calls onConfirm with entered scores when both are filled', async () => {
+      const { input1, input2, confirmBtn, onConfirm } = renderModal(1);
+      await user.clear(input1());
+      await user.type(input1(), '21');
+      await user.type(input2(), '15');
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith({ team1: 21, team2: 15 });
+    });
   });
 
   describe('confirm disabled when winner has fewer points', () => {
+    it('disables confirm when team 1 wins and winner score is below default loser score (18)', async () => {
+      const { input1, confirmBtn } = renderModal(1);
+      await user.clear(input1());
+      await user.type(input1(), '15');
+      expect(confirmBtn()).toBeDisabled();
+    });
+
     it('disables confirm when team 1 wins but score1 < score2', async () => {
       const { input1, input2, confirmBtn } = renderModal(1);
       await user.clear(input1());

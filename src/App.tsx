@@ -169,7 +169,7 @@ function App(): React.ReactElement {
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
     setAssignments(prevAssignments =>
-      engine().updateWinner(courtNumber, winner, prevAssignments),
+      engine().updateWinner({ courtNumber, winner, currentAssignments: prevAssignments }),
     );
   };
 
@@ -188,19 +188,12 @@ function App(): React.ReactElement {
   };
 
   const handleRotateTeams = (courtNumber: number) => {
-    setAssignments(prevAssignments =>
-      prevAssignments.map(court => {
-        if (court.courtNumber !== courtNumber || !court.teams) return court;
+    setAssignments(prevAssignments => {
+      const court = prevAssignments.find(c => c.courtNumber === courtNumber);
+      if (!court?.teams) return prevAssignments;
 
-        if (court.winner !== undefined) {
-          engine().reverseWinForCourt(courtNumber);
-        }
-
-        const rotated = rotateCourtTeams(court);
-        engine().updateCourtTeamStats(rotated, court);
-        return rotated;
-      }),
-    );
+      return engine().updateWinner({ courtNumber, winner: undefined, currentAssignments: prevAssignments, rotatedCourt: rotateCourtTeams(court) });
+    });
   };
 
   const handleToggleForceBench = (playerId: string) => {

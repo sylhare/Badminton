@@ -48,8 +48,8 @@ export const clickTeam = async (
   });
 };
 
-/** Click a team element and dismiss the score input modal via the skip button */
-export const clickTeamAndSkip = async (
+/** Click a team element and confirm the score input modal */
+export const clickTeamAndConfirm = async (
   user: ReturnType<typeof userEvent.setup>,
   teamElement: HTMLElement,
 ): Promise<void> => {
@@ -58,7 +58,7 @@ export const clickTeamAndSkip = async (
     await new Promise(resolve => setTimeout(resolve, 50));
   });
   await act(async () => {
-    await user.click(screen.getByTestId('score-modal-skip'));
+    await user.click(screen.getByTestId('score-modal-confirm'));
     await new Promise(resolve => setTimeout(resolve, 50));
   });
 };

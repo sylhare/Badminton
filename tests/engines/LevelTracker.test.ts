@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { LevelTracker } from '../../src/engines/LevelTracker';
+import { LevelTrackerConfig } from '../../src/engines/levelTrackerConfig';
 import type { Court, Player } from '../../src/types';
 
 function makePlayer(id: string, level?: number): Player {
@@ -21,34 +22,64 @@ describe('LevelTracker', () => {
   beforeEach(() => { tracker = new LevelTracker(); });
 
   describe('getKFactor', () => {
-    it('returns 6 when no score is provided', () => {
-      expect(tracker.getKFactor()).toBe(6);
+    it('returns K_DEFAULT when no score is provided', () => {
+      expect(tracker.getKFactor()).toBe(LevelTrackerConfig.K_DEFAULT);
     });
 
-    it('returns 6 for a deuce win (winner score ≠ 21)', () => {
-      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(6);
+    it('returns K_DEFAULT for a deuce win (winner score ≠ 21)', () => {
+      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(LevelTrackerConfig.K_DEFAULT);
     });
 
-    it('returns 8 for a close win (loser 18–20)', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 19 }, 1)).toBe(8);
+    it('returns K_SCALE[0].k for a close win (loser 18–20)', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 19 }, 1)).toBe(LevelTrackerConfig.K_SCALE[0].k);
     });
 
-    it('returns 12 for loser score 15–17', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 16 }, 1)).toBe(12);
+    it('returns K_SCALE[1].k for loser score 15–17', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 16 }, 1)).toBe(LevelTrackerConfig.K_SCALE[1].k);
     });
 
-    it('returns 24 for a dominant win (loser < 6)', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 3 }, 1)).toBe(24);
+    it('returns K_MAX for a dominant win (loser < 6)', () => {
+      expect(tracker.getKFactor({ team1: 21, team2: 3 }, 1)).toBe(LevelTrackerConfig.K_MAX);
     });
 
     it('scales K by balance factor for an unbalanced team', () => {
       const team = [makePlayer('a', 0), makePlayer('b', 100)];
-      expect(tracker.getKFactor(undefined, undefined, team)).toBe(3);
+      expect(tracker.getKFactor(undefined, undefined, team)).toBe(LevelTrackerConfig.K_DEFAULT * LevelTrackerConfig.BALANCE_FACTOR_FLOOR);
     });
 
     it('does not reduce K for a singles (1-player) team', () => {
       const team = [makePlayer('a', 80)];
-      expect(tracker.getKFactor(undefined, undefined, team)).toBe(6);
+      expect(tracker.getKFactor(undefined, undefined, team)).toBe(LevelTrackerConfig.K_DEFAULT);
+    });
+  });
+
+  describe('max level swing', () => {
+    it('equal teams, dominant win (21-0): |delta| < 10', () => {
+      const p1 = makePlayer('p1', 50);
+      const p2 = makePlayer('p2', 50);
+      const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 0 });
+      const [updated] = tracker.updatePlayersLevels([court], [p1, p2]);
+      const delta = Math.abs((updated.level ?? 50) - 50);
+      expect(delta).toBeLessThan(10);
+    });
+
+    it('extreme mismatch upset (team1=[100] vs team2=[0], team2 wins 21-0): |delta| < 10', () => {
+      const p1 = makePlayer('p1', 100);
+      const p2 = makePlayer('p2', 0);
+      const court = makeCourt([p1], [p2], 2, { team1: 0, team2: 21 });
+      const result = tracker.updatePlayersLevels([court], [p1, p2]);
+      const p1Updated = result.find(p => p.id === 'p1')!;
+      const delta = Math.abs((p1Updated.level ?? 100) - 100);
+      expect(delta).toBeLessThan(10);
+    });
+
+    it('no score, equal teams: |delta| ≤ 2', () => {
+      const p1 = makePlayer('p1', 50);
+      const p2 = makePlayer('p2', 50);
+      const court = makeCourt([p1], [p2], 1);
+      const [updated] = tracker.updatePlayersLevels([court], [p1, p2]);
+      const delta = Math.abs((updated.level ?? 50) - 50);
+      expect(delta).toBeLessThanOrEqual(2);
     });
   });
 
@@ -80,6 +111,24 @@ describe('LevelTracker', () => {
       const result = tracker.updatePlayersLevels([court], [p1, p2]);
       const p2Updated = result.find(p => p.id === 'p2')!;
       expect(p2Updated.averageScore).toBe(15);
+    });
+
+    it('uses fresh player level, not court-snapshot level, for Elo calculation', () => {
+      const p1 = makePlayer('p1', 50);
+      const p2 = makePlayer('p2', 50);
+      const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 10 });
+
+      const p1Edited = { ...p1, level: 90 };
+      const result = tracker.updatePlayersLevels([court], [p1Edited, p2]);
+
+      const p1Result = result.find(p => p.id === 'p1')!;
+      const p2Result = result.find(p => p.id === 'p2')!;
+
+      const p1Delta = (p1Result.level ?? 90) - 90;
+      const p2Delta = (p2Result.level ?? 50) - 50;
+      expect(p1Delta).toBeGreaterThan(0);
+      expect(p1Delta).toBeLessThan(6);
+      expect(p2Delta).toBeLessThan(0);
     });
 
     it('accumulates average score correctly across multiple games', () => {

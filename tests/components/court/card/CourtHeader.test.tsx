@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { CourtHeader } from '../../../../src/components/court/card';
+import CourtHeader from '../../../../src/components/court/card/CourtHeader';
 
 describe('CourtHeader', () => {
   it('renders court number correctly', () => {

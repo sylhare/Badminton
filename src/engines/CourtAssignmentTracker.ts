@@ -1,4 +1,4 @@
-import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats } from '../types';
+import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats, UpdateWinnerParams } from '../types';
 import { loadCourtEngineState, saveCourtEngineState } from '../utils/storageUtils';
 import { pairKey } from '../utils/playerUtils';
 
@@ -286,23 +286,19 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /**
    * Reverses a previously recorded win for a specific court.
    */
-  reverseWinForCourt(courtNumber: number): void {
+  private reverseWinForCourt(courtNumber: number): void {
     const previousRecord = CourtAssignmentTracker.recordedWinsMap.get(courtNumber);
     if (previousRecord) {
       this.reversePreviousWinRecord(previousRecord);
       CourtAssignmentTracker.recordedWinsMap.delete(courtNumber);
-      this.notifyStateChange();
     }
   }
 
   /**
    * Updates the winner of a match and records the result.
+   * If rotatedCourt is provided, applies the rotation and updates team pairing stats.
    */
-  updateWinner(
-    courtNumber: number,
-    winner: 1 | 2 | undefined,
-    currentAssignments: Court[],
-  ): Court[] {
+  updateWinner({ courtNumber, winner, currentAssignments, rotatedCourt }: UpdateWinnerParams): Court[] {
     const court = currentAssignments.find(c => c.courtNumber === courtNumber);
     if (!court) return currentAssignments;
 
@@ -311,11 +307,15 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
 
     const updatedAssignments = currentAssignments.map(c =>
-      c.courtNumber === courtNumber ? { ...c, winner } : c,
+      c.courtNumber === courtNumber ? (rotatedCourt ?? { ...c, winner }) : c,
     );
 
     if (winner && court.teams) {
       this.recordWins([{ ...court, winner }]);
+    }
+
+    if (rotatedCourt) {
+      this.updateCourtTeamStats(rotatedCourt, court);
     }
 
     this.notifyStateChange();
