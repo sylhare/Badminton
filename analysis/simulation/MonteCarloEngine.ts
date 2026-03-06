@@ -1,5 +1,4 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
-
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
 
 /**

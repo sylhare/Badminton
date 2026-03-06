@@ -1,6 +1,5 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { pairKey } from '../../src/utils/playerUtils';
-
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
 
 /**
