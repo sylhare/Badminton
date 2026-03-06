@@ -127,7 +127,7 @@ def _(math, random):
 
 
 # =============================================================================
-# 0.5 · ELO Divisor Impact
+# Elo Rating System — Background
 # =============================================================================
 
 @app.cell(hide_code=True)
@@ -135,7 +135,49 @@ def _(mo):
     mo.md(
         r"""
         ---
-        ## 0.5 · ELO Divisor
+        ## Elo Rating System
+
+        The **Elo system** was invented by Arpad Elo, a Hungarian-American physics professor and
+        chess master, and adopted by FIDE (the World Chess Federation) in 1970. The core idea is
+        simple: after every game, the winner takes points from the loser — but the number of points
+        transferred depends on how *surprising* the result was. Beating a much stronger opponent
+        earns you a large gain; beating a weaker one barely moves the needle.
+
+        The formula asks two questions before each game:
+        1. **How likely is each side to win?** — derived from the difference in ratings via a
+           logistic curve (the Elo win-probability formula).
+        2. **How surprising was the actual result?** — the difference between what happened and
+           what was expected, scaled by a sensitivity parameter K.
+
+        This implementation extends the classical model with two additions suited to badminton:
+
+        - **Score-margin K-factor** (§ 2) — K grows with the winning margin, rewarding dominant
+          performances more than narrow ones.
+        - **Balance factor** (§ 3) — K is reduced when two doubles partners have very different
+          levels, dampening the signal when the team composition itself is uneven.
+
+        The player level scale runs from **0 to 100** (instead of the chess range of ~100–3000).
+        The divisor is kept at **400** — the standard chess value — which, over a 100-point scale,
+        keeps the win-probability curve deliberately flat: even the largest possible level gap only
+        shifts the expected win probability to about 64 %, ensuring upsets remain possible.
+
+        Sections 1–4 examine each component of the formula in isolation before section 5 shows
+        how average scores are tracked and section 6 runs end-to-end convergence simulations.
+        """
+    )
+    return
+
+
+# =============================================================================
+# 1 · ELO Divisor Impact
+# =============================================================================
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+        ---
+        ## 1 · ELO Divisor
 
         The **divisor** $D$ is a single number that controls how sensitive the win-probability
         formula is to differences in player levels. A small $D$ makes the curve very steep —
@@ -221,12 +263,12 @@ def _(go, make_subplots, math, mo):
 
 
 # =============================================================================
-# 1 · K-Factor by Score Margin
+# 2 · K-Factor by Score Margin
 # =============================================================================
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md("---\n## 1 · K-Factor by Score Margin")
+    mo.md("---\n## 2 · K-Factor by Score Margin")
     return
 
 
@@ -252,66 +294,64 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(get_k_raw, go, make_subplots, mo):
+def _(get_k_raw, go, make_subplots, mo, win_prob):
     _K_COLOR = {
-        3:  "#90CAF9",  # light blue  – deuce, closest win
+        3:  "#90CAF9",  # light blue  – deuce / no score
         4:  "#A5D6A7",  # light green – close win
         8:  "#FFF176",  # yellow
         10: "#FFCC80",  # orange
         12: "#EF9A9A",  # light red
         15: "#B71C1C",  # dark red    – dominant win
     }
+    _K_LABEL = {
+        3:  "K=3 (deuce/no score)",
+        4:  "K=4 (18–20)",
+        8:  "K=8 (15–17)",
+        10: "K=10 (11–14)",
+        12: "K=12 (6–10)",
+        15: "K=15 (0–5, dominant)",
+    }
 
-    # Left: level change for a level-50 player vs an equal opponent (E = 0.5)
-    # Win Δ = K × (1 − 0.5) = K/2  |  Lose Δ = K × (0 − 0.5) = −K/2
-    _loser_scores = list(range(0, 21))
-    _ks_main = [get_k_raw({"team1": 21, "team2": ls}, 1) for ls in _loser_scores]
-    _k_deuce = get_k_raw({"team1": 22, "team2": 20}, 1)
-    _k_none  = get_k_raw()
-    _all_x   = [str(ls) for ls in _loser_scores] + ["deuce", "—"]
-    _all_k   = _ks_main + [_k_deuce, _k_none]
-    _win_d   = [round(k * 0.5, 1) for k in _all_k]
-    _lose_d  = [round(-k * 0.5, 1) for k in _all_k]
-    _colors  = [_K_COLOR[k] for k in _all_k]
+    # Left: win Δ vs opponent average level (player fixed at 50).
+    # Shows that equal opponents (x=50) give K/2, beating a stronger opponent gives MORE,
+    # beating a weaker one gives LESS — the surprise factor drives the delta.
+    _opp_levels = list(range(0, 101))
+    _k_lines = [3, 4, 8, 10, 12, 15]
 
     # Right: K-factor summary by score band
-    _band_x  = ["< 6", "6–10", "11–14", "15–17", "18–20", "deuce", "no score"]
-    _band_k  = [15, 12, 10, 8, 4, 3, 3]
-    _band_c  = [_K_COLOR[k] for k in _band_k]
+    _band_x = ["< 6", "6–10", "11–14", "15–17", "18–20", "deuce", "no score"]
+    _band_k = [15, 12, 10, 8, 4, 3, 3]
+    _band_c = [_K_COLOR[k] for k in _band_k]
 
     _fig = make_subplots(
         rows=1, cols=2,
         subplot_titles=(
-            "Level change from 50 vs equal opponent",
+            "Win Δ vs opponent level (player fixed at 50)",
             "K-factor by score band",
         ),
         column_widths=[0.65, 0.35],
     )
 
-    # Win bars (positive, above zero)
-    _fig.add_trace(
-        go.Bar(
-            x=_all_x, y=_win_d,
-            name="win",
-            marker_color=_colors,
-            text=[f"+{d}" for d in _win_d], textposition="outside",
-        ),
-        row=1, col=1,
-    )
-    # Lose bars (negative, below zero) — same color, lighter
-    _fig.add_trace(
-        go.Bar(
-            x=_all_x, y=_lose_d,
-            name="lose",
-            marker_color=_colors,
-            opacity=0.4,
-            text=[str(d) for d in _lose_d], textposition="outside",
-            showlegend=False,
-        ),
-        row=1, col=1,
-    )
-    _fig.add_hline(y=0, line_color="#999", line_width=1, row=1, col=1)
+    # Left: one line per K value
+    for _k in _k_lines:
+        _deltas = [round(_k * (1 - win_prob(50, opp)), 3) for opp in _opp_levels]
+        _fig.add_trace(
+            go.Scatter(
+                x=_opp_levels, y=_deltas,
+                mode="lines", name=_K_LABEL[_k],
+                line=dict(color=_K_COLOR[_k], width=2.5),
+            ),
+            row=1, col=1,
+        )
 
+    # Reference line at opponent level = 50 (equal opponent, Δ = K/2)
+    _fig.add_vline(
+        x=50, line_dash="dash", line_color="#666", line_width=1.5,
+        annotation_text="equal opponent", annotation_position="top left",
+        row=1, col=1,
+    )
+
+    # Right: K by score band
     _fig.add_trace(
         go.Bar(
             x=_band_x, y=_band_k,
@@ -321,14 +361,14 @@ def _(get_k_raw, go, make_subplots, mo):
         ),
         row=1, col=2,
     )
+
     _fig.update_layout(
         height=420,
-        barmode="overlay",
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(x=0.02, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
-        yaxis=dict(range=[-10, 10], title="Level change (Δ)", gridcolor="#eee", zeroline=False),
+        yaxis=dict(range=[0, 10], title="Win Δ (level points gained)", gridcolor="#eee"),
         yaxis2=dict(range=[0, 18], gridcolor="#eee"),
-        xaxis=dict(title="Loser score", gridcolor="#eee"),
+        xaxis=dict(title="Opponent average level", gridcolor="#eee", range=[0, 100]),
         xaxis2=dict(title="Loser score range", gridcolor="#eee"),
         margin=dict(t=50, b=50),
     )
@@ -339,27 +379,33 @@ def _(get_k_raw, go, make_subplots, mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(
-        """
-        Against an equally-rated opponent ($E = 0.5$), winning and losing always produce equal
-        and opposite swings — you gain or lose exactly $K/2$ points. The left chart shows both
-        sides of that trade-off for every possible score.
+        r"""
+        The left chart shows win Δ for a player at level 50, as a function of the opponent's
+        level. Three things stand out:
 
-        A **deuce win** (e.g. 22–20) gives the smallest swing ($\pm 1.5$ pts) because it is the
-        closest possible victory in badminton — barely better than a coin flip. A **dominant
-        21–0** gives the largest swing ($\pm 7.5$ pts). When **no score** is recorded, the change
-        defaults to $\pm 1.5$ pts (same as deuce).
+        - **Beating a stronger opponent earns more** — the win was more surprising, so the Elo
+          update is larger. At the right edge (opponent level 100) every K line reaches its
+          maximum.
+        - **At the equal-opponent reference line (x = 50)** every K gives exactly $K/2$ — the
+          mid-point of its possible range, not a special maximum.
+        - **Beating a weaker opponent earns less** — left of the reference line each curve drops,
+          because the win was expected and carries little information.
+
+        The right chart shows which K bracket each score band maps to.
+        A **deuce win** (22–20) uses $K = 3$ (smallest swing); a **dominant 21–0** uses $K = 15$
+        (largest swing). No score recorded also defaults to $K = 3$.
         """
     )
     return
 
 
 # =============================================================================
-# 2 · Balance Factor
+# 3 · Balance Factor
 # =============================================================================
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md("---\n## 2 · Balance Factor")
+    mo.md("---\n## 3 · Balance Factor")
     return
 
 
@@ -503,21 +549,21 @@ def _(mo):
 
 
 # =============================================================================
-# 3 · Elo Delta Simulations
+# 4 · Elo Delta Simulations
 # =============================================================================
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""---
-## 3 · Elo Delta Simulations
+## 4 · Elo Delta Simulations
 
 The **Elo system** assigns each player a numeric level (0–100). After every game the winner
 gains points and the loser loses the same amount. The size of the swing — the **Elo delta** —
 is governed by two factors studied in the previous sections:
 
-- **K-factor** (§ 1): larger for more dominant wins, smaller for close games (K = 3 when no
+- **K-factor** (§ 2): larger for more dominant wins, smaller for close games (K = 3 when no
   score is recorded, same as deuce).
-- **Balance factor** (§ 2): scales K down when a team's two players have very different levels,
+- **Balance factor** (§ 3): scales K down when a team's two players have very different levels,
   reducing rating volatility for uneven pairings.
 
 This section visualises the resulting Elo delta across the full range of team averages, within-team
@@ -534,7 +580,7 @@ def _(mo):
 
         Before each game, the system estimates how likely each team is to win based on their
         average player levels. Equal teams each get 50 %. The formula uses a divisor of 400
-        (see § 0.5), which keeps the curve gentle — only a very large level gap pushes the
+        (see § 1), which keeps the curve gentle — only a very large level gap pushes the
         probability close to certain:
 
         $$\bar{L}_\text{team} = \frac{1}{n}\sum_{i=1}^{n} L_i
@@ -772,12 +818,12 @@ halved, regardless of the result or the opponent's composition.
 
 
 # =============================================================================
-# 4 · Average Score Tracking
+# 5 · Average Score Tracking
 # =============================================================================
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md("---\n## 4 · Average Score Tracking")
+    mo.md("---\n## 5 · Average Score Tracking")
     return
 
 
@@ -820,12 +866,12 @@ def _(mo):
 
 
 # =============================================================================
-# 5 · Level Convergence
+# 6 · Level Convergence
 # =============================================================================
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md("---\n## 5 · Level Convergence")
+    mo.md("---\n## 6 · Level Convergence")
     return
 
 
@@ -864,82 +910,113 @@ def _(go, mo, play_game, random):
         return _hist_a, _hist_b
 
     _N = 80
+    _N_det = 25  # deterministic converges in ~15-20 games; cap early to avoid flat plateau
 
-    _s_det_a, _s_det_b = _simulate_singles(80, 20, _N, stochastic=False)
-    _s_sto_a, _s_sto_b = _simulate_singles(80, 20, _N, seed=7, stochastic=True)
+    _s_det_a, _s_det_b = _simulate_singles(70, 30, _N_det, stochastic=False)
+    _s_sto_a, _s_sto_b = _simulate_singles(50, 50, _N, seed=7, stochastic=True)
     _init_4 = [10, 40, 60, 90]
     _hist_4  = _simulate_doubles(_init_4, _N, seed=42, stochastic=True)
     _init_6  = [10, 20, 50, 50, 80, 90]
     _hist_6  = _simulate_doubles(_init_6, _N, seed=13, stochastic=True)
 
-    _games   = list(range(_N + 1))
+    _games_det = list(range(_N_det + 1))
+    _games     = list(range(_N + 1))
     _P4_COLS = ["#4C78A8", "#54A24B", "#F58518", "#E45756"]
     _P6_COLS = ["#4C78A8", "#72B7B2", "#54A24B", "#EECA3B", "#F58518", "#E45756"]
 
-    _LEGEND = dict(x=0.98, y=0.98, xanchor="right", yanchor="top",
-                   bgcolor="rgba(255,255,255,0.85)", bordercolor="#ccc", borderwidth=1)
-    _BASE = dict(height=360, plot_bgcolor="white", paper_bgcolor="white",
-                 margin=dict(t=40, b=45, l=50, r=10))
+    _SHARED_LAYOUT = dict(
+        height=380, plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(t=50, b=45, l=50, r=20),
+        legend=dict(bgcolor="rgba(255,255,255,0.85)", bordercolor="#ccc", borderwidth=1),
+    )
     _YAXIS = dict(title="Level", range=[0, 100], gridcolor="#eee")
 
-    # --- Fig 1: Singles — deterministic ---
-    _f1 = go.Figure()
-    _f1.update_layout(**_BASE, legend=_LEGEND, title="Singles — deterministic",
-                      xaxis=dict(title="Game", gridcolor="#eee"), yaxis=_YAXIS)
-    for _lbl, _hist, _col in [("A (start=80)", _s_det_a, "#E45756"), ("B (start=20)", _s_det_b, "#4C78A8")]:
-        _f1.add_trace(go.Scatter(x=_games, y=_hist, mode="lines", name=_lbl, line=dict(color=_col, width=2.5)))
+    # --- Singles: deterministic (col 1) vs stochastic (col 2) ---
+    _fig_singles = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=("Singles — deterministic", "Singles — stochastic"),
+        column_widths=[0.5, 0.5],
+    )
+    for _lbl, _hist, _col in [("A (start=70)", _s_det_a, "#E45756"), ("B (start=30)", _s_det_b, "#4C78A8")]:
+        _fig_singles.add_trace(
+            go.Scatter(x=_games_det, y=_hist, mode="lines", name=_lbl,
+                       line=dict(color=_col, width=2.5), legendgroup=_lbl),
+            row=1, col=1,
+        )
+    for _lbl, _hist, _col in [("A (start=50)", _s_sto_a, "#E45756"), ("B (start=50)", _s_sto_b, "#4C78A8")]:
+        _fig_singles.add_trace(
+            go.Scatter(x=_games, y=_hist, mode="lines", name=_lbl,
+                       line=dict(color=_col, width=2.5), legendgroup=_lbl, showlegend=False),
+            row=1, col=2,
+        )
+    _fig_singles.update_layout(
+        **_SHARED_LAYOUT,
+        yaxis=_YAXIS, yaxis2=_YAXIS,
+        xaxis=dict(title="Game", gridcolor="#eee"),
+        xaxis2=dict(title="Game", gridcolor="#eee"),
+    )
 
-    # --- Fig 2: Singles — stochastic ---
-    _f2 = go.Figure()
-    _f2.update_layout(**_BASE, legend=_LEGEND, title="Singles — stochastic",
-                      xaxis=dict(title="Game", gridcolor="#eee"), yaxis=_YAXIS)
-    for _lbl, _hist, _col in [("A (start=80)", _s_sto_a, "#E45756"), ("B (start=20)", _s_sto_b, "#4C78A8")]:
-        _f2.add_trace(go.Scatter(x=_games, y=_hist, mode="lines", name=_lbl, line=dict(color=_col, width=2.5)))
-
-    # --- Fig 3: Doubles — 4 players ---
-    _f3 = go.Figure()
-    _f3.update_layout(**_BASE, legend=_LEGEND, title=f"Doubles — {len(_init_4)} players {_init_4}",
-                      xaxis=dict(title="Round", gridcolor="#eee"), yaxis=_YAXIS)
+    # --- Doubles: 4 players (col 1) vs 6 players (col 2) ---
+    _fig_doubles = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=(
+            f"Doubles — {len(_init_4)} players {_init_4}",
+            f"Doubles — {len(_init_6)} players {_init_6}",
+        ),
+        column_widths=[0.5, 0.5],
+    )
     for _i, (_col, _init) in enumerate(zip(_P4_COLS, _init_4)):
-        _f3.add_trace(go.Scatter(
-            x=_games, y=[h[_i] for h in _hist_4],
-            mode="lines", name=f"P{_i+1} (start={_init})", line=dict(color=_col, width=2),
-        ))
-
-    # --- Fig 4: Doubles — 6 players ---
-    _f4 = go.Figure()
-    _f4.update_layout(**_BASE, legend=_LEGEND, title=f"Doubles — {len(_init_6)} players {_init_6}",
-                      xaxis=dict(title="Round", gridcolor="#eee"), yaxis=_YAXIS)
+        _fig_doubles.add_trace(
+            go.Scatter(x=_games, y=[h[_i] for h in _hist_4], mode="lines",
+                       name=f"P{_i+1} (start={_init})", line=dict(color=_col, width=2),
+                       legendgroup="4p", legendgrouptitle_text="4 players"),
+            row=1, col=1,
+        )
     for _i, (_col, _init) in enumerate(zip(_P6_COLS, _init_6)):
-        _f4.add_trace(go.Scatter(
-            x=_games, y=[h[_i] for h in _hist_6],
-            mode="lines", name=f"P{_i+1} (start={_init})", line=dict(color=_col, width=2),
-        ))
+        _fig_doubles.add_trace(
+            go.Scatter(x=_games, y=[h[_i] for h in _hist_6], mode="lines",
+                       name=f"P{_i+1} (start={_init})", line=dict(color=_col, width=2),
+                       legendgroup="6p", legendgrouptitle_text="6 players"),
+            row=1, col=2,
+        )
+    _fig_doubles.update_layout(
+        **_SHARED_LAYOUT,
+        yaxis=_YAXIS, yaxis2=_YAXIS,
+        xaxis=dict(title="Round", gridcolor="#eee"),
+        xaxis2=dict(title="Round", gridcolor="#eee"),
+    )
 
     mo.vstack([
-        mo.hstack([mo.ui.plotly(_f1), mo.ui.plotly(_f2)]),
-        mo.md("""
-**Singles — deterministic vs stochastic.** Both simulations pit A (start = 80, red) against
-B (start = 20, blue) over 80 games. **Left (deterministic):** the stronger player always wins —
-expected wins yield only a tiny gain (K × surprise ≈ 0), so A drifts slowly toward 100 while
-B drains toward 0 with no equilibrium. **Right (stochastic):** the winner is drawn from the Elo
-win probability, so B occasionally upsets. Those upsets carry a large rating swing (high K ×
-high surprise factor) that pulls both levels back toward the centre. Levels still diverge on
-average but stabilise with noise around a softer equilibrium — and A's curve is visibly
-choppier than in the deterministic case.
-        """),
-        mo.hstack([mo.ui.plotly(_f3), mo.ui.plotly(_f4)]),
-        mo.md(f"""
-**Doubles — {len(_init_4)}-player vs {len(_init_6)}-player sessions (stochastic).** Players are
-randomly re-paired into 2 v 2 teams each round. **Left ({_init_4}):** with four players spanning
-the full range, the balance factor kicks in whenever a strong player is paired with a weak one —
-reducing K for that team and dampening the swing. Levels gradually separate to reflect individual
-skill rather than lucky pairings. **Right ({_init_6}):** a more realistic session size with two
-mid-range players already near level 50. The two middle players (P3/P4) remain relatively stable
-throughout: they win and lose roughly as often as expected regardless of their partner, so their
-Elo is already close to equilibrium. The extremes (P1 at 10 and P6 at 90) converge more slowly
-because the wider initial spread means each uneven pairing gets a heavier balance-factor penalty.
-        """),
+        mo.ui.plotly(_fig_singles),
+        mo.hstack([
+            mo.md("""
+**Deterministic (A=70, B=30):** the stronger player always wins every game. With a divisor
+of 400 over a 0–100 scale, the win probability only ranges ~36–64%, so the Elo update stays
+around 1.2 pts/game throughout — levels diverge steadily to 100/0 with no equilibrium or
+self-correction. The chart is capped at 25 games to show the full divergence before the
+plateau.
+            """),
+            mo.md("""
+**Stochastic (A=50, B=50):** the winner is drawn from the Elo win probability, introducing noise
+even between equal players. Random winning streaks push one player ahead until larger K swings
+pull them back. The result is a noisy but mean-reverting oscillation around level 50.
+            """),
+        ]),
+        mo.ui.plotly(_fig_doubles),
+        mo.hstack([
+            mo.md(f"""
+**{len(_init_4)} players {_init_4}:** with four players spanning the full range, the balance
+factor kicks in whenever a strong player is paired with a weak one — reducing K for that team
+and dampening the swing. Levels gradually separate to reflect individual skill rather than lucky
+pairings.
+            """),
+            mo.md(f"""
+**{len(_init_6)} players {_init_6}:** a more realistic session size with two mid-range players
+already near level 50. The middle players (P3/P4) remain stable — their Elo is already near
+equilibrium. The extremes (P1 at 10 and P6 at 90) converge more slowly because the wider
+initial spread triggers a heavier balance-factor penalty on uneven pairings.
+            """),
+        ]),
     ])
     return
 
