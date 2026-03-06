@@ -36,11 +36,6 @@ export interface AppState {
   isSmartEngineEnabled?: boolean;
 }
 
-export interface StorageData {
-  app: AppState;
-  engine: CourtEngineState;
-}
-
 export interface CourtEngineState {
   engineType?: EngineType;
   benchCountMap: Record<string, number>;
@@ -71,7 +66,6 @@ export interface UpdateWinnerParams {
 export interface ICourtAssignmentTracker {
   onStateChange(listener: () => void): () => void;
   resetHistory(): void;
-  extractPlayerStats(playerId: string): { wins: number; losses: number; benches: number; singles: number };
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;

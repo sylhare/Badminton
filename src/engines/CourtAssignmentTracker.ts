@@ -1,5 +1,5 @@
 import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats, UpdateWinnerParams } from '../types';
-import { storageManager } from '../utils/storageUtils';
+import { storageManager } from '../utils/StorageManager';
 import { pairKey } from '../utils/playerUtils';
 
 /**
@@ -95,16 +95,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.levelHistoryMap.clear();
     CourtAssignmentTracker.globalCounter = 0;
     this.notifyStateChange();
-  }
-
-  /** Returns a snapshot of stats for a single player without modifying any maps. */
-  extractPlayerStats(playerId: string): { wins: number; losses: number; benches: number; singles: number } {
-    return {
-      wins: CourtAssignmentTracker.winCountMap.get(playerId) ?? 0,
-      losses: CourtAssignmentTracker.lossCountMap.get(playerId) ?? 0,
-      benches: CourtAssignmentTracker.benchCountMap.get(playerId) ?? 0,
-      singles: CourtAssignmentTracker.singleCountMap.get(playerId) ?? 0,
-    };
   }
 
   /** Removes all historical tracking data for a specific player. */

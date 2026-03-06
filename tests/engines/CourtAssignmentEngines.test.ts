@@ -959,17 +959,5 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       }
     });
 
-    it('extractPlayerStats returns correct stats without modifying maps', () => {
-      engine.resetHistory();
-      const players = mockPlayers(4);
-      const court = createMockCourt(1, players, 1);
-      engine.recordWins([court]);
-
-      const stats = engine.extractPlayerStats(players[0].id);
-      expect(stats.wins).toBe(1);
-      expect(stats.losses).toBe(0);
-
-      expect(engine.getWinCounts().get(players[0].id)).toBe(1);
-    });
   });
 });

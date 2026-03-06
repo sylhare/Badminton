@@ -1,4 +1,9 @@
-import type { AppState, CourtEngineState, EngineType, StorageData } from '../types';
+import type { AppState, CourtEngineState, EngineType } from '../types';
+
+interface StorageData {
+  app: AppState;
+  engine: CourtEngineState;
+}
 
 const OLD_KEYS = {
   APP_STATE: 'badminton-app-state',
