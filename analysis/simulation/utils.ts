@@ -22,10 +22,11 @@ export const loadConfig = (configPath: string): SimulationConfig => {
   return raw;
 };
 
-/** Generates player skill levels with roughly normal distribution (1=30%, 2=35%, 3=15%, 4=5%, 5=15%). */
+/** Generates player skill levels with roughly normal distribution (1=30%, 2=35%, 3=15%, 4=5%, 5=15%).
+ * Levels are interleaved so adjacent player IDs have different levels, preventing false adjacency bias. */
 export const generatePlayerLevels = (count: number): Map<string, number> => {
   const levels = new Map<string, number>();
-  const distribution = [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 5, 5, 5];
+  const distribution = [1, 2, 3, 5, 1, 2, 3, 5, 1, 2, 3, 5, 1, 2, 4, 2, 1, 2, 1, 2];
 
   for (let i = 0; i < count; i++) {
     const playerId = `P${i + 1}`;
@@ -52,8 +53,8 @@ const GENDER_PATTERN: Array<'M' | 'F'> = ['M', 'M', 'F', 'M', 'F'];
 /**
  * Creates the player list for a simulation.
  * When `playerLevels` is provided, each player also gets a `level` (0-100 scale,
- * mapped from the 1-5 skill distribution) and a `sex` (60% M / 40% F repeating
- * pattern), so gender/level-aware engines (GL) can apply their cost functions.
+ * mapped from the 1-5 skill distribution) and a `gender` (60% M / 40% F repeating
+ * pattern), so gender/level-aware engines (SL) can apply their cost functions.
  */
 export const toPlayerList = (count: number, playerLevels?: Map<string, number>): Player[] =>
   Array.from({ length: count }, (_, i) => {
@@ -65,7 +66,7 @@ export const toPlayerList = (count: number, playerLevels?: Map<string, number>):
       isPresent: true,
       ...(playerLevels && {
         level: Math.min(100, Math.max(0, Math.round((skillLevel ?? 3) * 20 + (Math.random() - 0.5) * 10))),
-        sex: GENDER_PATTERN[i % GENDER_PATTERN.length],
+        gender: GENDER_PATTERN[i % GENDER_PATTERN.length],
       }),
     };
   });
