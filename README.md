@@ -7,11 +7,11 @@ A React TypeScript application that helps organize badminton players into court 
 - **📸 Image Upload & OCR**: Take a picture of a player list and automatically extract names using Tesseract.js
 - **✍️ Manual Player Entry**: Add players manually - one at a time or multiple at once
 - **👥 Player Management**: Toggle player presence, remove players
-- **🎲 Random Team Generation**: Automatically create "fair" team assignments
-- **🏆 Smart Court Assignment**: 
+- **🏆 Optimised Court Assignment**: Automatically assigns players to courts using a cost-based engine that maximises fairness over time
   - Doubles (4 players) preferred
   - Singles (2 players) for odd numbers
   - Automatic bench assignment for extra players
+- **🔄 Team Rotation**: Rotate team compositions on a court without reshuffling everyone
 - **📱 Responsive Design**: Works on desktop and mobile devices
 
 ## How It Works
@@ -23,7 +23,7 @@ A React TypeScript application that helps organize badminton players into court 
    - **Manual Entry**: Add players one by one or paste multiple names (comma or line separated)
 2. **Manage Players**: Check/uncheck players who are present, remove players as needed
 3. **Set Courts**: Configure the number of available courts
-4. **Generate Assignments**: Click to randomly assign players to courts
+4. **Generate Assignments**: Click to assign players to courts
 
 ### 🧮 Algorithm Rules & Fairness
 
@@ -46,7 +46,7 @@ These rules are layered on top of the basic constraints:
 * **Singles fallback** – courts of 2 players are allowed when numbers are odd.
 * **Bench** – any surplus players are rotated to the bench.
 
-Because the system's optimiser is [stochastic](https://en.wikipedia.org/wiki/Stochastic), there is always an element of randomness, but over time the history-based penalties push the system towards an even distribution of partners, opponents, singles matches, and results.
+Over time, the history-based penalties push the system towards an even distribution of partners, opponents, singles matches, and results.
 
 ### Usage Tips
 
@@ -70,28 +70,17 @@ Because the system's optimiser is [stochastic](https://en.wikipedia.org/wiki/Sto
 
 #### Court Generation
 - Set the number of available courts
-- Click "Generate Random Assignments" to create new team combinations
-- Click "Generate New Assignments" to shuffle players again
+- Click "Generate Assignments" to assign players to courts
+- Click "Generate New Assignments" to reassign with updated history
 
-## Development setup
+## Algorithm Analysis
 
-### Installation
+The `analysis/` folder contains simulation scripts and notebooks that benchmark the court assignment algorithms against each other. See [`analysis/README.md`](analysis/README.md) for setup and usage.
 
-1. Install dependencies:
-```bash
-npm install
-```
+## Contributing
 
-2. Start the development server:
-```bash
-npm run dev
-```
+See [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for development setup and available scripts.
 
-3. Open your browser and navigate to `http://localhost:5174`
+## License
 
-### Contributing
-
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
-- `npm run test` - Run unit tests
-- `npm run test:e2e` - Run e2e tests
+[AGPL-3.0](LICENSE) © sylhare
