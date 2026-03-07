@@ -1,15 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { engineMC } from '../../src/engines/MonteCarloEngine';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
-import { engineCG } from '../../src/engines/ConflictGraphEngine';
 import * as selector from '../../src/engines/engineSelector';
 import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../../src/types';
 
 const engines: Array<{ name: string; engine: ICourtAssignmentEngine; type: selector.EngineType }> = [
-  { name: 'Monte Carlo (MC)', engine: engineMC, type: 'mc' },
   { name: 'Simulated Annealing (SA)', engine: engineSA, type: 'sa' },
-  { name: 'Conflict Graph (CG)', engine: engineCG, type: 'cg' },
 ];
 
 function mockPlayers(count: number): Player[] {
@@ -939,7 +935,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const winCountsBeforeSave = engine.getWinCounts();
       expect(winCountsBeforeSave.size).toBeGreaterThan(0);
 
-      const differentType = type === 'sa' ? 'mc' : 'sa';
+      const differentType = type === 'sa' ? 'sl' : 'sa';
       engine.loadState(differentType);
 
       const winCountsAfterLoad = engine.getWinCounts();

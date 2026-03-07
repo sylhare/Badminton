@@ -3,9 +3,9 @@
 from typing import Any
 
 # Standard algorithm display order and colors
-ALGO_NAMES = ["Monte Carlo", "Simulated Annealing", "Conflict Graph", "Random Baseline"]
-ALGO_NAMES_SHORT = ["MC", "SA", "CG", "Random"]
-ALGO_COLORS = ["#4C78A8", "#54A24B", "#F58518", "#E45756"]
+ALGO_NAMES = ["Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching", "Random Baseline"]
+ALGO_NAMES_SHORT = ["MC", "SA", "CG", "SL", "Random"]
+ALGO_COLORS = ["#4C78A8", "#54A24B", "#F58518", "#9467BD", "#E45756"]
 
 
 def get_time_per_round(cfg: dict[str, Any]) -> float:
@@ -31,13 +31,13 @@ def get_engine_win_diff(cfg: dict[str, Any]) -> float:
 
 
 def get_balance_pct(cfg: dict[str, Any]) -> float:
-    """Convert win differential to balance percentage.
-    
+    """Convert win differential to win parity percentage.
+
     Args:
         cfg: Algorithm config dict
-        
+
     Returns:
-        Balance percentage: 0 diff = 100%, 2.0 diff = 0%
+        Win Parity percentage: 0 diff = 100%, 2.0 diff = 0%
     """
     diff = get_engine_win_diff(cfg)
     max_diff = 2.0
@@ -105,23 +105,25 @@ def get_bias_score(bias_ratio: float) -> float:
     """
     if bias_ratio <= 0:
         return 100
-    return max(0, 100 - (bias_ratio - 1) * 100)
+    return max(0, min(100, 100 - (bias_ratio - 1) * 100))
 
 
 def build_configs_by_label(
     mc_config: dict,
     sa_config: dict,
     cg_config: dict,
+    sl_config: dict,
     random_config: dict,
 ) -> dict[str, dict]:
     """Build a mapping of algorithm label to config.
-    
+
     Args:
         mc_config: Monte Carlo config
         sa_config: Simulated Annealing config
         cg_config: Conflict Graph config
+        sl_config: Smart Matching config
         random_config: Random Baseline config
-        
+
     Returns:
         Dict mapping algorithm name to config
     """
@@ -129,5 +131,6 @@ def build_configs_by_label(
         "Monte Carlo": mc_config,
         "Simulated Annealing": sa_config,
         "Conflict Graph": cg_config,
+        "Smart Matching": sl_config,
         "Random Baseline": random_config,
     }

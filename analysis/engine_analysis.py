@@ -45,28 +45,36 @@ def _():
 @app.cell
 def _(Path, json, pl):
     data_dir = Path(__file__).parent / "data"
-    
+
     mc_dir = data_dir / "mc_algo"
     mc_summary = pl.read_csv(mc_dir / "summary.csv")
     mc_pair_events = pl.read_csv(mc_dir / "pair_events.csv")
     mc_config = json.loads((mc_dir / "config.json").read_text())
-    
+
     sa_dir = data_dir / "sa_algo"
     sa_summary = pl.read_csv(sa_dir / "summary.csv")
     sa_pair_events = pl.read_csv(sa_dir / "pair_events.csv")
     sa_config = json.loads((sa_dir / "config.json").read_text())
-    
+
     cg_dir = data_dir / "cg_algo"
     cg_summary = pl.read_csv(cg_dir / "summary.csv")
     cg_pair_events = pl.read_csv(cg_dir / "pair_events.csv")
     cg_config = json.loads((cg_dir / "config.json").read_text())
-    
+
+    sl_dir = data_dir / "sl_algo"
+    sl_summary = pl.read_csv(sl_dir / "summary.csv")
+    sl_pair_events = pl.read_csv(sl_dir / "pair_events.csv")
+    sl_config = json.loads((sl_dir / "config.json").read_text())
+
+    shared_config = json.loads((data_dir / "config.json").read_text())
     config = mc_config
     return (
         cg_config, cg_dir, cg_pair_events, cg_summary,
         config, data_dir,
         mc_config, mc_dir, mc_pair_events, mc_summary,
         sa_config, sa_dir, sa_pair_events, sa_summary,
+        shared_config,
+        sl_config, sl_dir, sl_pair_events, sl_summary,
     )
 
 @app.cell(hide_code=True)
@@ -76,10 +84,11 @@ def _(config, mo, random_config):
     # Badminton Engine Analysis
 
 
-    **Comparing Four Algorithms:**
+    **Comparing Five Algorithms:**
     - **Monte Carlo (MC)**: Random sampling with greedy cost evaluation (300 candidates per round)
-    - **Simulated Annealing (SA)**: Iterative improvement with temperature schedule (1500 optimization steps per round)
+    - **Simulated Annealing (SA)**: Iterative improvement with temperature schedule
     - **Conflict Graph (CG)**: Greedy construction avoiding known teammate conflicts
+    - **Smart Matching (SL)**: Simulated Annealing extended with gender/level-aware cost functions
     - **Random Baseline**: No optimization (pure random pairing)
 
     **Configuration**
@@ -127,14 +136,83 @@ def _(data_dir, json, pl):
     return baseline_pair_events, baseline_summary, pair_key, random_config
 
 @app.cell
-def _(baseline_summary, cg_summary, compute_summary_metrics, mc_summary, pl, sa_summary):
+def _(baseline_summary, cg_summary, compute_summary_metrics, mc_summary, pl, sa_summary, sl_summary):
     mc_metrics = compute_summary_metrics(mc_summary, "Monte Carlo")
     sa_metrics = compute_summary_metrics(sa_summary, "Simulated Annealing")
     cg_metrics = compute_summary_metrics(cg_summary, "Conflict Graph")
+    sl_metrics = compute_summary_metrics(sl_summary, "Smart Matching")
     baseline_metrics = compute_summary_metrics(baseline_summary, "Random Baseline")
-    
-    all_metrics = pl.DataFrame([mc_metrics, sa_metrics, cg_metrics, baseline_metrics])
-    return all_metrics, baseline_metrics, cg_metrics, mc_metrics, sa_metrics
+
+    all_metrics = pl.DataFrame([mc_metrics, sa_metrics, cg_metrics, sl_metrics, baseline_metrics])
+    return all_metrics, baseline_metrics, cg_metrics, mc_metrics, sa_metrics, sl_metrics
+
+@app.cell
+def _(
+    ALGO_NAMES,
+    adjacency_bias_data,
+    all_metrics,
+    build_configs_by_label,
+    cg_config,
+    cg_diversity,
+    get_balance_pct,
+    get_bench_fairness,
+    get_bias_score,
+    get_singles_fairness,
+    get_time_per_round,
+    mc_config,
+    mc_diversity,
+    np,
+    random_config,
+    random_diversity,
+    sa_config,
+    sa_diversity,
+    shared_config,
+    sl_config,
+    sl_diversity,
+):
+    """Single source of truth for all per-algorithm metric scores."""
+    _configs_by_label = build_configs_by_label(mc_config, sa_config, cg_config, sl_config, random_config)
+    _bias_by_label = {d["algorithm"]: d for d in adjacency_bias_data}
+    _div_by_label = {
+        "Monte Carlo": mc_diversity,
+        "Simulated Annealing": sa_diversity,
+        "Conflict Graph": cg_diversity,
+        "Smart Matching": sl_diversity,
+        "Random Baseline": random_diversity,
+    }
+    _base = {m["label"]: m for m in all_metrics.to_dicts()}
+
+    _rounds = shared_config.get("rounds", 10)
+    _player_counts = shared_config.get("playerCounts", [10])
+    # Theoretical max: at most 1 new partner per round, capped by number of other players
+    _theoretical_max = np.mean([min(_rounds, p - 1) for p in _player_counts])
+
+    algo_metrics = []
+    for _name in ALGO_NAMES:
+        _cfg = _configs_by_label[_name]
+        _m = _base.get(_name, {})
+        _bias_ratio = _bias_by_label.get(_name, {}).get("bias_ratio", 1.0)
+        _bias_score = get_bias_score(_bias_ratio)
+        _div = _div_by_label[_name]
+        # Raw diversity: fraction of theoretical max unique partners achieved
+        _raw_diversity = min(100, _div["avg"] / _theoretical_max * 100) if _theoretical_max > 0 else 0
+        # Weight by adjacent bias: penalise algorithms that concentrate pairings unfairly
+        _diversity_score = _raw_diversity * (_bias_score / 100)
+
+        algo_metrics.append({
+            "label": _name,
+            "avg_repeat_pairs": _m.get("avg_repeat_pairs", 0),
+            "zero_repeat_pct": _m.get("zero_repeat_pct", 0),
+            "time_per_round": get_time_per_round(_cfg),
+            "balance_pct": _cfg.get("engineTrackedBalance", {}).get("perfectlyBalancedRate", 0),
+            "bench_fairness": get_bench_fairness(_cfg),
+            "adjacent_bias": _bias_ratio,
+            "bias_score": _bias_score,
+            "singles_fairness": get_singles_fairness(_cfg),
+            "diversity_score": _diversity_score,
+        })
+
+    return (algo_metrics,)
 
 @app.cell(hide_code=True)
 def _(mo):
@@ -146,60 +224,31 @@ def _(mo):
     return
 
 @app.cell
-def _(
-    adjacency_bias_data,
-    all_metrics,
-    build_configs_by_label,
-    cg_config,
-    get_balance_pct,
-    get_bench_fairness,
-    get_bias_score,
-    get_singles_fairness,
-    get_time_per_round,
-    mc_config,
-    mo,
-    pl,
-    random_config,
-    sa_config,
-):
-    _metrics = all_metrics.to_dicts()
-    _sorted_by_zero = sorted(_metrics, key=lambda x: x["zero_repeat_pct"], reverse=True)
-    
-    _configs_by_label = build_configs_by_label(mc_config, sa_config, cg_config, random_config)
-    _bias_by_label = {d["algorithm"]: d for d in adjacency_bias_data}
-    
-    for _m in _sorted_by_zero:
-        _cfg = _configs_by_label[_m["label"]]
-        _m["time_per_round"] = get_time_per_round(_cfg)
-        _m["balance_pct"] = get_balance_pct(_cfg)
-        _m["bench_fairness"] = get_bench_fairness(_cfg)
-        _m["adjacent_bias"] = _bias_by_label.get(_m["label"], {}).get("bias_ratio", 1.0)
-        _m["singles_fairness"] = get_singles_fairness(_cfg)
-    
-    _has_singles_data = any(m['singles_fairness'] is not None for m in _sorted_by_zero)
-    
+def _(algo_metrics, mo, pl):
+    _sorted = sorted(algo_metrics, key=lambda m: m["zero_repeat_pct"], reverse=True)
+    _has_singles = any(m["singles_fairness"] is not None for m in _sorted)
+
     _table_data = {
-        "Rank": ["1st", "2nd", "3rd", "4th"],
-        "Algorithm": [m["label"] for m in _sorted_by_zero],
-        "Zero-Repeat": [f"{m['zero_repeat_pct']:.1%}" for m in _sorted_by_zero],
-        "Repeats/Run": [round(m["avg_repeat_pairs"], 2) for m in _sorted_by_zero],
-        "Time/Round (ms)": [round(m["time_per_round"], 2) for m in _sorted_by_zero],
-        "Balance": [f"{m['balance_pct']:.0f}%" for m in _sorted_by_zero],
-        "Bench Fairness": [f"{m['bench_fairness']:.0f}%" for m in _sorted_by_zero],
+        "Rank": ["1st", "2nd", "3rd", "4th", "5th"],
+        "Algorithm": [m["label"] for m in _sorted],
+        "Zero-Repeat": [f"{m['zero_repeat_pct']:.1%}" for m in _sorted],
+        "Repeats/Run": [round(m["avg_repeat_pairs"], 2) for m in _sorted],
+        "Time/Round (ms)": [round(m["time_per_round"], 2) for m in _sorted],
+        "Win Parity": [f"{m['balance_pct']:.0f}%" for m in _sorted],
+        "Bench Fairness": [f"{m['bench_fairness']:.0f}%" for m in _sorted],
     }
-    if _has_singles_data:
+    if _has_singles:
         _table_data["Singles Fair"] = [
-            f"{m['singles_fairness']:.0f}%" if m['singles_fairness'] is not None else "-"
-            for m in _sorted_by_zero
+            f"{m['singles_fairness']:.0f}%" if m["singles_fairness"] is not None else "-"
+            for m in _sorted
         ]
-    
+
     _rankings_df = pl.DataFrame(_table_data)
-    
-    _footer = "*Zero-Repeat: % of runs with no repeated pairs. Balance: Average team fairness based on cumulative wins (100% = evenly matched, 0% = consistently lopsided). Bench Fairness: Compound of no back-to-back benches + fair distribution."
-    if _has_singles_data:
+    _footer = "*Zero-Repeat: % of runs with no repeated pairs. Win Parity: % of games where both teams had exactly equal cumulative wins at match time. Bench Fairness: Compound of no back-to-back benches + fair distribution."
+    if _has_singles:
         _footer += " Singles Fair: Compound of no back-to-back singles + no repeat opponents."
     _footer += "*"
-    
+
     mo.vstack([
         mo.ui.table(_rankings_df),
         mo.md(_footer),
@@ -207,69 +256,39 @@ def _(
     return
 
 @app.cell
-def _(
-    ALGO_COLORS,
-    ALGO_NAMES,
-    adjacency_bias_data,
-    all_metrics,
-    build_configs_by_label,
-    cg_config,
-    fig_to_image,
-    get_balance_pct,
-    get_bench_fairness,
-    get_bias_score,
-    get_singles_fairness,
-    get_time_per_round,
-    mc_config,
-    mo,
-    np,
-    plt,
-    random_config,
-    sa_config,
-):
-    _metrics = all_metrics.to_dicts()
-    _configs = [mc_config, sa_config, cg_config, random_config]
-    _bias_by_label = {d["algorithm"]: d for d in adjacency_bias_data}
-    
-    # Compute repeat scores
-    _avg_repeats = [next(m["avg_repeat_pairs"] for m in _metrics if m["label"] == name) for name in ALGO_NAMES]
+def _(ALGO_COLORS, algo_metrics, fig_to_image, mo, np, plt):
+    # Relative metrics: normalised across algorithms
+    _avg_repeats = [m["avg_repeat_pairs"] for m in algo_metrics]
     _max_repeats = max(_avg_repeats) if max(_avg_repeats) > 0 else 1
     _repeat_score = [100 * (1 - r / _max_repeats) for r in _avg_repeats]
-    
-    # Compute speed scores
-    _times = [get_time_per_round(cfg) for cfg in _configs]
+
+    _times = [m["time_per_round"] for m in algo_metrics]
     _max_time = max(_times)
     _speed = [100 * (1 - t / _max_time) if _max_time > 0 else 100 for t in _times]
-    _speed[3] = 100  # Random is instant
-    
-    # Compute other metrics
-    _bench_fair = [get_bench_fairness(cfg) for cfg in _configs]
-    _balance = [get_balance_pct(cfg) for cfg in _configs]
-    _adjacent_bias = [get_bias_score(_bias_by_label.get(name, {}).get("bias_ratio", 1.0)) for name in ALGO_NAMES]
-    _singles_fair = [get_singles_fairness(cfg) for cfg in _configs]
-    _has_singles_data = any(s is not None for s in _singles_fair)
-    
-    # Build radar chart
-    if _has_singles_data:
-        _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Balance", "Singles\nFairness", "No Adjacent\nBias"]
+    _random_idx = next(i for i, m in enumerate(algo_metrics) if m["label"] == "Random Baseline")
+    _speed[_random_idx] = 100  # Random is instant
+
+    _has_singles = any(m["singles_fairness"] is not None for m in algo_metrics)
+    if _has_singles:
+        _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Win\nParity", "Singles\nFairness", "Diversity"]
     else:
-        _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Balance", "No Adjacent\nBias"]
+        _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Win\nParity", "Diversity"]
     _n_cats = len(_categories)
     _angles = [n / float(_n_cats) * 2 * np.pi for n in range(_n_cats)]
     _angles += _angles[:1]
-    
+
     _fig, _ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(projection='polar'))
-    
-    for _i, (_name, _color) in enumerate(zip(ALGO_NAMES, ALGO_COLORS)):
-        if _has_singles_data:
-            _values = [_repeat_score[_i], _speed[_i], _bench_fair[_i], _balance[_i], _singles_fair[_i] or 0, _adjacent_bias[_i]]
+
+    for _i, (_m, _color) in enumerate(zip(algo_metrics, ALGO_COLORS)):
+        if _has_singles:
+            _values = [_repeat_score[_i], _speed[_i], _m["bench_fairness"], _m["balance_pct"], _m["singles_fairness"] or 0, _m["diversity_score"]]
         else:
-            _values = [_repeat_score[_i], _speed[_i], _bench_fair[_i], _balance[_i], _adjacent_bias[_i]]
+            _values = [_repeat_score[_i], _speed[_i], _m["bench_fairness"], _m["balance_pct"], _m["diversity_score"]]
         _values += _values[:1]
-        
-        _ax.plot(_angles, _values, '-', linewidth=1.5, label=_name, color=_color)
+
+        _ax.plot(_angles, _values, '-', linewidth=1.5, label=_m["label"], color=_color)
         _ax.fill(_angles, _values, alpha=0.15, color=_color)
-    
+
     _ax.set_xticks(_angles[:-1])
     _ax.set_xticklabels(_categories, fontsize=8)
     _ax.set_ylim(0, 105)
@@ -278,7 +297,7 @@ def _(
     _ax.spines['polar'].set_visible(False)
     _ax.set_title("Algorithm Comparison", fontsize=10, fontweight="bold", y=1.05)
     _ax.legend(loc='upper left', bbox_to_anchor=(-0.3, 1.15), fontsize=7, frameon=False)
-    
+
     _fig.tight_layout()
     mo.vstack([
         mo.hstack([mo.image(fig_to_image(_fig))], justify="center"),
@@ -365,15 +384,10 @@ def _(mo):
 def _(all_metrics, mo):
     _metrics = all_metrics.to_dicts()
     _by_label = {m["label"]: m for m in _metrics}
-    
-    _mc = _by_label["Monte Carlo"]
-    _sa = _by_label["Simulated Annealing"]
-    _cg = _by_label["Conflict Graph"]
-    _bl = _by_label["Random Baseline"]
-    
-    _winner = "Simulated Annealing" if _sa["p_any_repeat"] <= _cg["p_any_repeat"] and _sa["p_any_repeat"] <= _mc["p_any_repeat"] else \
-              "Conflict Graph" if _cg["p_any_repeat"] <= _mc["p_any_repeat"] else "Monte Carlo"
-    
+
+    _optimized = [_by_label[n] for n in ["Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]]
+    _winner = min(_optimized, key=lambda m: m["p_any_repeat"])["label"]
+
     mo.md(f"""
     **Best performer**: {_winner} with {_by_label[_winner]['zero_repeat_pct']:.1%} perfect runs.
     """)
@@ -392,12 +406,13 @@ def _(mo):
     return
 
 @app.cell
-def _(ALGO_COLORS, ALGO_NAMES, baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, sa_summary):
-    _fig, _axes = plt.subplots(2, 2, figsize=(12, 10))
+def _(ALGO_COLORS, ALGO_NAMES, baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, sa_summary, sl_summary):
+    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
     _axes = _axes.flatten()
-    
+    _axes[-1].set_visible(False)
+
     _datasets = list(zip(
-        [mc_summary, sa_summary, cg_summary, baseline_summary],
+        [mc_summary, sa_summary, cg_summary, sl_summary, baseline_summary],
         ALGO_NAMES,
         ALGO_COLORS,
     ))
@@ -458,40 +473,44 @@ def _(
     np,
     plt,
     sa_pair_events,
+    sl_pair_events,
 ):
     from matplotlib.gridspec import GridSpec
     from matplotlib.colors import PowerNorm
-    
+
     _player_counts = config.get("playerCounts", [20])
     _num_players = max(_player_counts)
     _players = [f"P{i + 1}" for i in range(_num_players)]
-    
+
     _mc_matrix = build_repeat_matrix(mc_pair_events, _num_players)
     _sa_matrix = build_repeat_matrix(sa_pair_events, _num_players)
     _cg_matrix = build_repeat_matrix(cg_pair_events, _num_players)
+    _sl_matrix = build_repeat_matrix(sl_pair_events, _num_players)
     _baseline_matrix = build_repeat_matrix(baseline_pair_events, _num_players)
-    
-    _global_vmax = max(_mc_matrix.max(), _sa_matrix.max(), _cg_matrix.max(), _baseline_matrix.max())
+
+    _global_vmax = max(_mc_matrix.max(), _sa_matrix.max(), _cg_matrix.max(), _sl_matrix.max(), _baseline_matrix.max())
     if _global_vmax == 0:
         _global_vmax = 1
-    
+
     _norm = PowerNorm(gamma=0.4, vmin=0, vmax=_global_vmax)
-    
-    _fig = plt.figure(figsize=(15, 12))
-    _gs = GridSpec(2, 3, figure=_fig, width_ratios=[1, 1, 0.05], wspace=0.3, hspace=0.3)
-    
+
+    _fig = plt.figure(figsize=(15, 18))
+    _gs = GridSpec(3, 3, figure=_fig, width_ratios=[1, 1, 0.05], wspace=0.3, hspace=0.3)
+
     _axes = [
         _fig.add_subplot(_gs[0, 0]),
         _fig.add_subplot(_gs[0, 1]),
         _fig.add_subplot(_gs[1, 0]),
         _fig.add_subplot(_gs[1, 1]),
+        _fig.add_subplot(_gs[2, 0]),
     ]
     _cbar_ax = _fig.add_subplot(_gs[:, 2])
-    
+
     _datasets = [
         (_mc_matrix, "Monte Carlo"),
         (_sa_matrix, "Simulated Annealing"),
         (_cg_matrix, "Conflict Graph"),
+        (_sl_matrix, "Smart Matching"),
         (_baseline_matrix, "Random Baseline"),
     ]
     
@@ -568,13 +587,15 @@ def _(
     np,
     plt,
     sa_pair_events,
+    sl_pair_events,
 ):
     _mc_bias = analyze_adjacency_bias(mc_pair_events, "Monte Carlo")
     _sa_bias = analyze_adjacency_bias(sa_pair_events, "Simulated Annealing")
     _cg_bias = analyze_adjacency_bias(cg_pair_events, "Conflict Graph")
+    _sl_bias = analyze_adjacency_bias(sl_pair_events, "Smart Matching")
     _bl_bias = analyze_adjacency_bias(baseline_pair_events, "Random Baseline")
-    
-    adjacency_bias_data = [_mc_bias, _sa_bias, _cg_bias, _bl_bias]
+
+    adjacency_bias_data = [_mc_bias, _sa_bias, _cg_bias, _sl_bias, _bl_bias]
     
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
     
@@ -642,24 +663,26 @@ def _(compute_teammate_diversity, data_dir, pl):
     mc_match_events_div = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
     sa_match_events_div = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
     cg_match_events_div = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
-    
+    sl_match_events_div = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
+
     random_diversity = compute_teammate_diversity(random_match_events_div)
     mc_diversity = compute_teammate_diversity(mc_match_events_div)
     sa_diversity = compute_teammate_diversity(sa_match_events_div)
     cg_diversity = compute_teammate_diversity(cg_match_events_div)
+    sl_diversity = compute_teammate_diversity(sl_match_events_div)
     return (
-        random_match_events_div, mc_match_events_div, sa_match_events_div, cg_match_events_div,
-        random_diversity, mc_diversity, sa_diversity, cg_diversity,
+        random_match_events_div, mc_match_events_div, sa_match_events_div, cg_match_events_div, sl_match_events_div,
+        random_diversity, mc_diversity, sa_diversity, cg_diversity, sl_diversity,
     )
 
 @app.cell
-def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random_diversity, sa_diversity):
-    _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph"]
-    _colors = [ALGO_COLORS[3], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2]]
-    _diversities = [random_diversity, mc_diversity, sa_diversity, cg_diversity]
-    
+def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random_diversity, sa_diversity, sl_diversity):
+    _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
+    _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
+    _diversities = [random_diversity, mc_diversity, sa_diversity, cg_diversity, sl_diversity]
+
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    
+
     _avgs = [d["avg"] for d in _diversities]
     _x = np.arange(len(_algo_names))
     _bars = _ax1.bar(_x, _avgs, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
@@ -668,14 +691,11 @@ def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random
     _ax1.set_ylabel("Avg Unique Teammates per Player", fontsize=11)
     _ax1.set_title("Partner Variety per Session\n(Higher = More Diverse)", fontsize=12, fontweight="bold")
     _ax1.set_ylim(0, max(_avgs) * 1.2)
-    
+
     for _bar in _bars:
         _h = _bar.get_height()
-        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.1, f"{_h:.2f}", 
+        _ax1.text(_bar.get_x() + _bar.get_width()/2, _h + 0.1, f"{_h:.2f}",
                   ha="center", va="bottom", fontsize=11, fontweight="bold")
-    
-    _ax1.axhline(y=10, color='green', linestyle='--', alpha=0.7, linewidth=2, label="Max (10 rounds)")
-    _ax1.legend(loc="upper right")
     
     _data = [d["all_player_counts"] for d in _diversities]
     _bp = _ax2.boxplot(_data, labels=_algo_names, patch_artist=True)
@@ -719,17 +739,17 @@ def _(mo):
     
     Beyond avoiding teammate repetitions, does the algorithm setup fair matches, does everyone get equal playing time?
 
-    ### Evenly Matched Games
+    ### Win Parity Matches
 
-    The algorithm should setup matches where the teams are evenly matched, it does so by looking at the cumulative wins of the players.
+    The algorithm should setup matches where the teams have win parity, it does so by looking at the cumulative wins of the players.
     """)
     return
 
 @app.cell
-def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_config, sa_config):
-    _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph"]
-    _configs = [random_config, mc_config, sa_config, cg_config]
-    _colors = [ALGO_COLORS[3], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2]]
+def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_config, sa_config, sl_config):
+    _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
+    _configs = [random_config, mc_config, sa_config, cg_config, sl_config]
+    _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
     
     _balanced_rates = [cfg.get("engineTrackedBalance", {}).get("perfectlyBalancedRate", 0) for cfg in _configs]
     
@@ -739,8 +759,8 @@ def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_confi
     _bars = _ax1.bar(_x, _balanced_rates, color=_colors, alpha=0.85, edgecolor='black', linewidth=1.5)
     _ax1.set_xticks(_x)
     _ax1.set_xticklabels(_algo_names, fontsize=11)
-    _ax1.set_ylabel("Evenly Matched Games (%)", fontsize=12)
-    _ax1.set_title("Percentage of Evenly Matched Games", fontsize=13, fontweight="bold")
+    _ax1.set_ylabel("Win Parity Match Rate (%)", fontsize=12)
+    _ax1.set_title("Win Parity Match Rate", fontsize=13, fontweight="bold")
     _ax1.set_ylim(0, 100)
     _ax1.grid(True, alpha=0.3, axis='y')
     
@@ -751,7 +771,7 @@ def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_confi
     _ax2.set_xlim(0, 10)
     _ax2.set_ylim(0, 10)
     _ax2.axis('off')
-    _ax2.set_title("What is 'Evenly Matched'?", fontsize=11, fontweight="bold")
+    _ax2.set_title("What is 'Win Parity'?", fontsize=11, fontweight="bold")
     
     _ax2.add_patch(plt.Rectangle((0.5, 6.5), 4, 2.5, facecolor='#d4edda', edgecolor='#28a745', linewidth=2))
     _ax2.text(2.5, 8.3, "EVEN", ha='center', va='center', fontsize=10, fontweight='bold', color='#155724')
@@ -774,31 +794,35 @@ def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_confi
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 7: Percentage of games where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between evenly matched (equal wins) and uneven (lopsided) team compositions.</i></center>"),
+        mo.md("<center><i>Figure 7: Percentage of win parity matches where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between win parity (equal wins) and uneven (lopsided) team compositions.</i></center>"),
+        mo.md("> **Note — Smart Matching goes beyond wins:** Unlike other algorithms that rely solely on cumulative wins to balance teams, Smart Matching also factors in player **skill level** and **gender** when forming match-ups. This allows it to create more intense, competitive games from the start of a session — before wins have accumulated — by pairing players of similar ability across teams regardless of their current win count."),
     ])
     return
 
 @app.cell
-def _(compute_balance_metrics, data_dir, mc_config, np, pl, random_config, sa_config, cg_config):
+def _(compute_balance_metrics, data_dir, mc_config, np, pl, random_config, sa_config, cg_config, sl_config, shared_config):
     random_match_events = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
     mc_match_events = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
     sa_match_events = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
     cg_match_events = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
-    
+    sl_match_events = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
+
     random_player_stats = pl.read_csv(data_dir / "random_baseline" / "player_stats.csv")
     mc_player_stats = pl.read_csv(data_dir / "mc_algo" / "player_stats.csv")
     sa_player_stats = pl.read_csv(data_dir / "sa_algo" / "player_stats.csv")
     cg_player_stats = pl.read_csv(data_dir / "cg_algo" / "player_stats.csv")
-    
-    player_profiles = mc_config.get("playerProfiles", {})
-    
+    sl_player_stats = pl.read_csv(data_dir / "sl_algo" / "player_stats.csv")
+
+    player_profiles = shared_config.get("playerProfiles", {})
+
     balance_results = {
         "Random Baseline": compute_balance_metrics(random_match_events, random_player_stats, random_config, "Random Baseline", player_profiles),
         "Monte Carlo": compute_balance_metrics(mc_match_events, mc_player_stats, mc_config, "Monte Carlo", player_profiles),
         "Simulated Annealing": compute_balance_metrics(sa_match_events, sa_player_stats, sa_config, "Simulated Annealing", player_profiles),
         "Conflict Graph": compute_balance_metrics(cg_match_events, cg_player_stats, cg_config, "Conflict Graph", player_profiles),
+        "Smart Matching": compute_balance_metrics(sl_match_events, sl_player_stats, sl_config, "Smart Matching", player_profiles),
     }
-    
+
     balance_summary = pl.DataFrame([
         {
             "algorithm": name,
@@ -823,6 +847,8 @@ def _(compute_balance_metrics, data_dir, mc_config, np, pl, random_config, sa_co
         random_player_stats,
         sa_match_events,
         sa_player_stats,
+        sl_match_events,
+        sl_player_stats,
     )
 
 @app.cell
@@ -849,30 +875,33 @@ def _(aggregate_bench_stats, aggregate_by_player_count, data_dir, pl):
     mc_bench_stats = pl.read_csv(data_dir / "mc_algo" / "bench_stats.csv", infer_schema_length=10000)
     sa_bench_stats = pl.read_csv(data_dir / "sa_algo" / "bench_stats.csv", infer_schema_length=10000)
     cg_bench_stats = pl.read_csv(data_dir / "cg_algo" / "bench_stats.csv", infer_schema_length=10000)
-    
+    sl_bench_stats = pl.read_csv(data_dir / "sl_algo" / "bench_stats.csv", infer_schema_length=10000)
+
     bench_gap_stats = {
         "Random": aggregate_bench_stats(random_bench_stats),
         "MC": aggregate_bench_stats(mc_bench_stats),
         "SA": aggregate_bench_stats(sa_bench_stats),
         "CG": aggregate_bench_stats(cg_bench_stats),
+        "SL": aggregate_bench_stats(sl_bench_stats),
     }
-    
+
     bench_by_players = {
         "Random": aggregate_by_player_count(random_bench_stats),
         "MC": aggregate_by_player_count(mc_bench_stats),
         "SA": aggregate_by_player_count(sa_bench_stats),
         "CG": aggregate_by_player_count(cg_bench_stats),
+        "SL": aggregate_by_player_count(sl_bench_stats),
     }
     return (
         bench_gap_stats, bench_by_players,
-        random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats,
+        random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats, sl_bench_stats,
     )
 
 @app.cell
-def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats):
-    _algo_names = ["Random", "MC", "SA", "CG"]
-    _colors = [ALGO_COLORS[3], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2]]
-    _bench_dfs = [random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats]
+def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats, sl_bench_stats):
+    _algo_names = ["Random", "MC", "SA", "CG", "SL"]
+    _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
+    _bench_dfs = [random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats, sl_bench_stats]
     
     _all_player_counts = set()
     for _algo in _algo_names:
@@ -897,8 +926,8 @@ def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stat
     _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(15, 5))
     
     _x1 = np.arange(len(_player_counts))
-    _width1 = 0.15
-    _offsets1 = [-1.5, -0.5, 0.5, 1.5]
+    _width1 = 0.12
+    _offsets1 = [-2, -1, 0, 1, 2]
     
     for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
         _gaps = []
@@ -932,8 +961,8 @@ def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stat
             _range_counts[_algo] = dict(zip(_unique, _counts / len(_ranges) * 100))
     
     _all_ranges = sorted(set(r for d in _range_counts.values() for r in d.keys()))
-    _width2 = 0.2
-    _offsets2 = [-1.5, -0.5, 0.5, 1.5]
+    _width2 = 0.15
+    _offsets2 = [-2, -1, 0, 1, 2]
     _x2 = np.arange(len(_all_ranges))
     
     for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
@@ -972,12 +1001,17 @@ def _(mo):
     return
 
 @app.cell(hide_code=True)
-def _(config, math, mo):
+def _(config, math, mc_config, mo, sa_config, sl_config):
     _player_counts = config.get("playerCounts", [20])
     _n = max(_player_counts)
     _c = 4
     _r = config.get("rounds", 10)
     _playing_per_round = _c * 4
+    _mc_samples = mc_config.get("algorithmParams", {}).get("samplesPerRound", 300)
+    _sa_iterations = sa_config.get("algorithmParams", {}).get("iterations", 5000)
+    _sa_initial_temp = sa_config.get("algorithmParams", {}).get("initialTemperature", 2000)
+    _sa_cooling_rate = sa_config.get("algorithmParams", {}).get("coolingRate", 0.9995)
+    _sl_iterations = sl_config.get("algorithmParams", {}).get("iterations", 5000)
     _pairs_per_round = _c * 2
     _total_possible_pairs = _n * (_n - 1) // 2
     
@@ -1007,11 +1041,11 @@ $$\\text{{Zero-Repeat \\%}} = \\frac{{\\text{{runs with repeatPairDifferentOppon
 
 A run has zero repeats when no teammate pair appears more than once across the {_r} rounds.
 
-#### Balance Percentage
+#### Win Parity Percentage
 
 Derived from the average engine-tracked win differential:
 
-$$\\text{{Balance \\%}} = \\max\\left(0,\\; 100 \\times \\left(1 - \\frac{{\\text{{avgWinDifferential}}}}{{2.0}}\\right)\\right)$$
+$$\\text{{Win Parity \\%}} = \\max\\left(0,\\; 100 \\times \\left(1 - \\frac{{\\text{{avgWinDifferential}}}}{{2.0}}\\right)\\right)$$
 
 Where win differential measures the difference in cumulative wins between teams. A differential of 0 yields 100% balance; a differential of 2.0 or higher yields 0%.
 
@@ -1098,7 +1132,7 @@ How many distinct ways can one round be configured?
 
 **Implication for search:**
 - Random sampling hits any specific configuration with probability ~{1/_configs_per_round:.2e}
-- Monte Carlo's 300 samples covers {300/_configs_per_round * 100:.2e}% of the space
+- Monte Carlo's {_mc_samples} samples covers {_mc_samples/_configs_per_round * 100:.2e}% of the space
 - Intelligent search (SA, CG) is necessary to find good configurations reliably
         """),
         
@@ -1143,12 +1177,13 @@ For example, with 20 players and 16 court spots:
         "Algorithm Comparison: Optimization Strategies": mo.md(f"""
 ### How Each Algorithm Searches
 
-| Property | Random | Monte Carlo | Simulated Annealing | Conflict Graph |
-|----------|--------|-------------|---------------------|----------------|
-| Memory of past rounds | No | Yes (cost function) | Yes (cost function) | Yes (conflict weights) |
-| Search method | Single random | Sample 300, pick best | Iterative refinement | Greedy construction |
-| Can escape local minima | N/A | Limited | Yes (via temperature) | No |
-| Iterations per round | 1 | 300 | 1500 | 1 |
+| Property | Random | Monte Carlo | Simulated Annealing | Conflict Graph | Smart Matching |
+|----------|--------|-------------|---------------------|----------------|----------------|
+| Memory of past rounds | No | Yes (cost function) | Yes (cost function) | Yes (conflict weights) | Yes (cost function) |
+| Search method | Single random | Sample {_mc_samples}, pick best | Iterative refinement | Greedy construction | Iterative refinement |
+| Can escape local minima | N/A | Limited | Yes (via temperature) | No | Yes (via temperature) |
+| Gender/level aware | No | No | No | No | Yes |
+| Iterations per round | 1 | {_mc_samples} | {_sa_iterations} | 1 | {_sl_iterations} |
 
 **Monte Carlo:**
 Generates $k$ random candidates and selects the one with lowest cost. Probability of finding a perfect solution:
@@ -1162,7 +1197,7 @@ Uses Metropolis acceptance criterion. For a cost change $\\Delta C$ at temperatu
 - Accept if $\\Delta C < 0$ (improvement)
 - Accept with probability $e^{{-\\Delta C / T}}$ if $\\Delta C \\geq 0$
 
-Temperature decreases as $T(t) = T_0 \\cdot \\alpha^t$ where $\\alpha = 0.995$.
+Temperature decreases as $T(t) = T_0 \\cdot \\alpha^t$ where $T_0 = {_sa_initial_temp}$ and $\\alpha = {_sa_cooling_rate}$.
 
 **Conflict Graph:**
 Greedily selects pairs with lowest conflict score:
@@ -1172,8 +1207,8 @@ $$\\text{{score}}(i, j) = w_1 \\cdot \\text{{history}}(i,j) + w_2 \\cdot \\text{
 Fast ($O(n^2 \\log n)$) but may miss optimal solutions due to early greedy commitments.
         """),
         
-        "Team Balance: Evenly Matched Calculation": mo.md(f"""
-### Evenly Matched Games
+        "Win Parity: Evenly Matched Calculation": mo.md(f"""
+### Win Parity Matches
 
 A game is considered **evenly matched** when both teams have equal cumulative wins at the time of the match.
 

@@ -88,4 +88,6 @@ export type SimulationConfig = {
   rounds: number;
   playerCounts: number[];
   numCourts: number;
+  engines?: Record<string, Record<string, unknown>>;
+  playerProfiles?: Record<string, { level: number }>;
 };

@@ -1,7 +1,6 @@
-import type { Court, ICourtAssignmentEngine, Player } from '../types';
-import { pairKey } from '../utils/playerUtils';
-
-import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
+import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
+import { pairKey } from '../../src/utils/playerUtils';
+import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
 
 /**
  * Conflict Graph Implementation
