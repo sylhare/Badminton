@@ -5,6 +5,11 @@
     transition: background 0.5s ease;
 }
 
+.app:not([data-loaded="true"]) .container,
+.app:not([data-loaded="true"]) .app-footer {
+    visibility: hidden;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;

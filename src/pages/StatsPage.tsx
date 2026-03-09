@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { engine, getEngineType, setEngine } from '../engines/engineSelector';
-import { loadAppState } from '../utils/storageUtils';
+import { storageManager } from '../utils/StorageManager';
 import TeammateGraph from '../components/TeammateGraph';
 import SinglesGraph from '../components/SinglesGraph';
 import BenchGraph from '../components/BenchGraph';
@@ -66,19 +66,20 @@ interface DiagnosticStats {
 function StatsPage(): React.ReactElement {
   const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [isSmartEngine] = useState(() => loadAppState().isSmartEngineEnabled ?? false);
+  const [isSmartEngine, setIsSmartEngine] = useState(false);
 
   useEffect(() => {
-    const appState = loadAppState();
-    const engineType = appState.isSmartEngineEnabled ? 'sl' : 'sa';
-    setEngine(engineType);
-    engine().loadState(engineType);
-    setEngineState(engine().prepareStateForSaving(engineType));
-
-    if (appState.players) {
-      setPlayers(appState.players);
-    }
-
+    const load = async () => {
+      const appState = await storageManager.loadApp();
+      const smart = appState.isSmartEngineEnabled ?? false;
+      setIsSmartEngine(smart);
+      const engineType = smart ? 'sl' : 'sa';
+      setEngine(engineType);
+      await engine().loadState(engineType);
+      setEngineState(engine().prepareStateForSaving(engineType));
+      if (appState.players) setPlayers(appState.players);
+    };
+    load();
     return engine().onStateChange(() => {
       setEngineState(engine().prepareStateForSaving(getEngineType()));
     });

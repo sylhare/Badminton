@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 import StatsPage from '../../src/pages/StatsPage';
-import * as storageUtils from '../../src/utils/storageUtils';
 
-const { mockLoadState, mockPrepareStateForSaving, mockOnStateChange } = vi.hoisted(() => ({
+const { mockLoadState, mockPrepareStateForSaving, mockOnStateChange, mockLoadApp } = vi.hoisted(() => ({
   mockLoadState: vi.fn(),
   mockPrepareStateForSaving: vi.fn(),
   mockOnStateChange: vi.fn(() => vi.fn()),
+  mockLoadApp: vi.fn(),
 }));
 
 vi.mock('../../src/engines/engineSelector', () => ({
@@ -23,11 +23,14 @@ vi.mock('../../src/engines/engineSelector', () => ({
   setEngine: vi.fn(),
 }));
 
-vi.mock('../../src/utils/storageUtils', () => ({
-  loadAppState: vi.fn(),
-  loadCourtEngineState: vi.fn(),
-  saveCourtEngineState: vi.fn(),
-  saveAppState: vi.fn(),
+vi.mock('../../src/utils/StorageManager', () => ({
+  storageManager: {
+    loadApp: mockLoadApp,
+    loadEngine: vi.fn(),
+    saveApp: vi.fn(),
+    saveEngine: vi.fn(),
+    clearAll: vi.fn(),
+  },
 }));
 
 describe('StatsPage Component', () => {
@@ -51,7 +54,7 @@ describe('StatsPage Component', () => {
 
   beforeEach(() => {
     mockPrepareStateForSaving.mockReturnValue(mockEngineState);
-    vi.mocked(storageUtils.loadAppState).mockReturnValue({ players: mockPlayers });
+    mockLoadApp.mockResolvedValue({ players: mockPlayers });
   });
 
   afterEach(() => {
@@ -110,17 +113,21 @@ describe('StatsPage Component', () => {
     });
   });
 
-  it('loads engine state on mount', () => {
+  it('loads engine state on mount', async () => {
     render(<StatsPage />);
 
-    expect(mockLoadState).toHaveBeenCalled();
-    expect(mockPrepareStateForSaving).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockLoadState).toHaveBeenCalled();
+      expect(mockPrepareStateForSaving).toHaveBeenCalled();
+    });
   });
 
-  it('loads app state to get player names', () => {
+  it('loads app state to get player names', async () => {
     render(<StatsPage />);
 
-    expect(storageUtils.loadAppState).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockLoadApp).toHaveBeenCalled();
+    });
   });
 
   it('subscribes to engine state changes', () => {

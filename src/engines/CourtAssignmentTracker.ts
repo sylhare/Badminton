@@ -1,5 +1,5 @@
 import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats, UpdateWinnerParams } from '../types';
-import { loadCourtEngineState, saveCourtEngineState } from '../utils/storageUtils';
+import { storageManager, MAX_LEVEL_HISTORY_ENTRIES } from '../utils/StorageManager';
 import { pairKey } from '../utils/playerUtils';
 
 /**
@@ -37,6 +37,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Level history per player - tracks level after each round snapshot */
   protected static levelHistoryMap: Map<string, number[]> = new Map();
+
+  private static readonly MAX_LEVEL_HISTORY = MAX_LEVEL_HISTORY_ENTRIES;
 
   /** Timestamps for pruning stale pairings - tracks last update time */
   protected static lastUpdatedMap: Map<string, number> = new Map();
@@ -127,13 +129,13 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /** Saves the current state to persistent storage. */
-  saveState(engineType: EngineType): void {
-    saveCourtEngineState(this.prepareStateForSaving(engineType));
+  async saveState(engineType: EngineType): Promise<void> {
+    await storageManager.saveEngine(this.prepareStateForSaving(engineType));
   }
 
   /** Loads tracking data from persistent storage. */
-  loadState(currentEngineType: EngineType): void {
-    const state = loadCourtEngineState();
+  async loadState(currentEngineType: EngineType): Promise<void> {
+    const state = await storageManager.loadEngine();
 
     if (state.engineType && state.engineType !== currentEngineType) {
       console.warn(
@@ -231,6 +233,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     for (const p of players) {
       const history = CourtAssignmentTracker.levelHistoryMap.get(p.id) ?? [];
       history.push(p.level ?? 50);
+      if (history.length > CourtAssignmentTracker.MAX_LEVEL_HISTORY) history.shift();
       CourtAssignmentTracker.levelHistoryMap.set(p.id, history);
     }
   }

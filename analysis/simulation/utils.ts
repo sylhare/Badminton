@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import type { Player, Court } from '../../src/types';
+import type { Player, Court, ICourtAssignmentEngine } from '../../src/types';
 import { pairKey } from '../../src/utils/playerUtils';
 
 import type {
@@ -96,7 +96,7 @@ export const extractRoundPairs = (
   roundIndex: number,
   courts: Court[],
   simulationId: number,
-  Engine: any,
+  Engine: ICourtAssignmentEngine,
   playerLevels: Map<string, number>,
 ): RoundResult => {
   const pairToOpponent = new Map<string, string>();
@@ -183,7 +183,10 @@ export const extractRoundPairs = (
   return { roundIndex, pairToOpponent, matchEvents, matchPairEvents };
 };
 
-export const evaluateRepeats = (rounds: RoundResult[], simulationId: number) => {
+export const evaluateRepeats = (
+  rounds: RoundResult[],
+  simulationId: number,
+): { repeatPairCount: number; repeatPairDifferentOpponentsCount: number; repeatPairSameOpponentsCount: number; events: PairEvent[] } => {
   let repeatPairCount = 0;
   let repeatPairDifferentOpponentsCount = 0;
   let repeatPairSameOpponentsCount = 0;

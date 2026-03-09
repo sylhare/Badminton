@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
 import { engineSA } from '../src/engines/SimulatedAnnealingEngine';
+import { storageManager } from '../src/utils/StorageManager';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {
@@ -13,11 +14,20 @@ export const COMMON_PLAYERS = {
 
 /** Common setup/teardown used across multiple test files */
 export const clearTestState = async (): Promise<void> => {
-  localStorage.clear();
+  await storageManager.waitForQueue();
   await act(async () => {
     engineSA.resetHistory();
     await new Promise(resolve => setTimeout(resolve, 0));
   });
+  await storageManager.waitForQueue();
+  localStorage.clear();
+};
+
+/** Wait for all pending StorageManager writes to complete. */
+export const flushPendingSaves = async (): Promise<void> => {
+  await storageManager.waitForQueue();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await storageManager.waitForQueue();
 };
 
 /** Helper to add players via the input field */
@@ -30,6 +40,13 @@ export const addPlayers = async (
     await user.type(input, playerNames);
     await user.click(screen.getByTestId('add-player-button'));
     await new Promise(resolve => setTimeout(resolve, 50));
+  });
+
+  await flushPendingSaves();
+
+  await waitFor(async () => {
+    const state = await storageManager.loadApp();
+    if (!state?.players?.length) throw new Error('Players not yet saved');
   });
 };
 
@@ -72,4 +89,6 @@ export const generateAndWaitForAssignments = async (
     },
     { timeout: 3000 },
   );
+
+  await waitFor(() => expect(localStorage.getItem('badminton-state')).toBeTruthy());
 };

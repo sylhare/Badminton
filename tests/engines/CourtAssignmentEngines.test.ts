@@ -276,7 +276,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
   });
 
   describe('State Persistence', () => {
-    it('should save and load engine state correctly', () => {
+    it('should save and load engine state correctly', async () => {
       const players = mockPlayers(8);
 
       const assignments1 = engine.generate(players, 2);
@@ -293,13 +293,13 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const winCountsBeforeSave = engine.getWinCounts();
       expect(winCountsBeforeSave.size).toBeGreaterThan(0);
 
-      engine.saveState(type);
+      await engine.saveState(type);
       engine.resetHistory();
 
       const emptyWinCounts = engine.getWinCounts();
       expect(emptyWinCounts.size).toBe(0);
 
-      engine.loadState(type);
+      await engine.loadState(type);
 
       const winCountsAfterLoad = engine.getWinCounts();
       expect(winCountsAfterLoad.size).toBe(winCountsBeforeSave.size);
@@ -309,25 +309,25 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       }
     });
 
-    it('should handle loading when no saved state exists', () => {
+    it('should handle loading when no saved state exists', async () => {
       localStorage.clear();
 
-      expect(() => engine.loadState(type)).not.toThrow();
+      await expect(engine.loadState(type)).resolves.not.toThrow();
 
       const winCounts = engine.getWinCounts();
       expect(winCounts.size).toBe(0);
     });
 
-    it('should handle corrupted localStorage data gracefully', () => {
+    it('should handle corrupted localStorage data gracefully', async () => {
       localStorage.setItem('badminton-court-engine-state', 'invalid-json');
 
-      expect(() => engine.loadState(type)).not.toThrow();
+      await expect(engine.loadState(type)).resolves.not.toThrow();
 
       const winCounts = engine.getWinCounts();
       expect(winCounts.size).toBe(0);
     });
 
-    it('should handle localStorage save errors gracefully', () => {
+    it('should handle localStorage save errors gracefully', async () => {
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');
       });
@@ -335,7 +335,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(4);
       engine.generate(players, 1);
 
-      expect(() => engine.saveState(type)).not.toThrow();
+      await expect(engine.saveState(type)).resolves.not.toThrow();
     });
 
     it('should return state object with all required properties', () => {
@@ -828,7 +828,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
   });
 
   describe('engineSelector Delegators', () => {
-    it('exercises engine() accessor', () => {
+    it('exercises engine() accessor', async () => {
 
       const players = mockPlayers(4);
 
@@ -845,8 +845,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const state = selector.engine().prepareStateForSaving(type);
       expect(state).toHaveProperty('winCountMap');
 
-      selector.engine().saveState(type);
-      selector.engine().loadState(type);
+      await selector.engine().saveState(type);
+      await selector.engine().loadState(type);
 
       expect(selector.engine().getName()).toBe(name.split(' (')[0]);
       expect(selector.engine().getDescription()).toBeDefined();
@@ -906,7 +906,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(Object.keys(stateBefore.lossCountMap).length).toBeGreaterThan(0);
     });
 
-    it('persists and restores engineType correctly', () => {
+    it('persists and restores engineType correctly', async () => {
       engine.resetHistory();
       const players = mockPlayers(8);
 
@@ -915,31 +915,49 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         engine.recordWins([court]);
       }
 
-      engine.saveState(type);
+      await engine.saveState(type);
       engine.resetHistory();
 
-      engine.loadState(type);
+      await engine.loadState(type);
       const stateAfterLoad = engine.prepareStateForSaving(type);
 
       expect(stateAfterLoad.engineType).toBe(type);
     });
 
-    it('resets history when loading state with different engine type', () => {
+    it('resets history when loading state with different engine type', async () => {
       engine.resetHistory();
       const players = mockPlayers(8);
 
       const court = createMockCourt(1, players.slice(0, 4), 1);
       engine.recordWins([court]);
-      engine.saveState(type);
+      await engine.saveState(type);
 
       const winCountsBeforeSave = engine.getWinCounts();
       expect(winCountsBeforeSave.size).toBeGreaterThan(0);
 
       const differentType = type === 'sa' ? 'sl' : 'sa';
-      engine.loadState(differentType);
+      await engine.loadState(differentType);
 
       const winCountsAfterLoad = engine.getWinCounts();
       expect(winCountsAfterLoad.size).toBe(0);
     });
+  });
+
+  describe('Level history cap', () => {
+    it('recordLevelSnapshot never exceeds 10 entries per player', () => {
+      engine.resetHistory();
+      const players = mockPlayers(2);
+
+      for (let i = 0; i < 15; i++) {
+        engine.recordLevelSnapshot(players.map(p => ({ ...p, level: 50 + i })));
+      }
+
+      const state = engine.prepareStateForSaving(type);
+      const history = state.levelHistory ?? {};
+      for (const entries of Object.values(history)) {
+        expect(entries.length).toBeLessThanOrEqual(10);
+      }
+    });
+
   });
 });
