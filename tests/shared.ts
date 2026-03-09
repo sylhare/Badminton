@@ -23,14 +23,6 @@ export const clearTestState = async (): Promise<void> => {
   localStorage.clear();
 };
 
-/** Waits for the App to finish its async initial load */
-export const waitForAppLoad = async (): Promise<void> => {
-  await waitFor(
-    () => expect(document.querySelector('[data-loaded="true"]')).toBeTruthy(),
-    { timeout: 5000 },
-  );
-};
-
 /** Wait for all pending StorageManager writes to complete. */
 export const flushPendingSaves = async (): Promise<void> => {
   await storageManager.waitForQueue();

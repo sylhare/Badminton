@@ -43,6 +43,7 @@ function App(): React.ReactElement {
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState<boolean>(false);
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const hasLoadedRef = useRef(false);
   const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,6 +62,7 @@ function App(): React.ReactElement {
       setEngine(engineType);
       await engine().loadState(engineType);
       setEngineStateVersion(prev => prev + 1);
+      hasLoadedRef.current = true;
       setIsInitialLoad(false);
     };
     load();
@@ -68,7 +70,7 @@ function App(): React.ReactElement {
   }, []);
 
   useEffect(() => {
-    if (isInitialLoad) return;
+    if (!hasLoadedRef.current) return;
 
     storageManager.saveApp({
       players,
@@ -78,7 +80,7 @@ function App(): React.ReactElement {
       isSmartEngineEnabled,
     });
     engine().saveState(getEngineType());
-  }, [players, numberOfCourts, assignments, lastGeneratedAt, isSmartEngineEnabled, isInitialLoad]);
+  }, [players, numberOfCourts, assignments, lastGeneratedAt, isSmartEngineEnabled]);
 
   const handlePlayersAdded = (newNames: string[]) => {
     const newPlayers = createPlayersFromNames(newNames, 'manual');

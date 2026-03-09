@@ -109,6 +109,9 @@ async function decompress(data: string): Promise<string> {
  * All writes are serialised through an internal promise queue so that
  * concurrent `saveApp` / `saveEngine` calls never race on read→modify→write.
  */
+/** Maximum number of level-history snapshots stored per player. */
+export const MAX_LEVEL_HISTORY_ENTRIES = 10;
+
 class StorageManager {
   private static readonly KEY = 'badminton-state';
   private static readonly MAX_SIZE = 150_000;
@@ -117,25 +120,22 @@ class StorageManager {
   private writeQueue: Promise<void> = Promise.resolve();
 
   private enqueue(task: () => Promise<void>): Promise<void> {
-    this.writeQueue = this.writeQueue.then(task, task);
+    this.writeQueue = this.writeQueue.then(
+      () => task().catch(error => console.warn('StorageManager: write failed:', error)),
+    );
     return this.writeQueue;
   }
 
-  private save(transform: (current: Partial<StorageData>) => Partial<StorageData>, label: string): Promise<void> {
+  private save(transform: (current: Partial<StorageData>) => Partial<StorageData>): Promise<void> {
     return this.enqueue(async () => {
-      try {
-        const current = await this.read();
-        await this.write(transform(current));
-      } catch (error) {
-        console.warn(`Failed to save ${label} to localStorage:`, error);
-      }
+      const current = await this.read();
+      await this.write(transform(current));
     });
   }
 
   async saveApp(state: Partial<AppState>): Promise<void> {
     return this.save(
       current => ({ ...current, app: { ...(current.app ?? {}), ...state } as AppState }),
-      'app state',
     );
   }
 
@@ -166,7 +166,6 @@ class StorageManager {
     const compact = this.toCompact(state);
     return this.save(
       current => ({ ...current, engine: compact as unknown as CourtEngineState }),
-      'engine state',
     );
   }
 
@@ -185,11 +184,7 @@ class StorageManager {
 
   clearAll(): Promise<void> {
     return this.enqueue(async () => {
-      try {
-        localStorage.removeItem(StorageManager.KEY);
-      } catch (error) {
-        console.warn('Failed to clear stored state:', error);
-      }
+      localStorage.removeItem(StorageManager.KEY);
     });
   }
 
@@ -338,8 +333,8 @@ class StorageManager {
     const rebuild = (e: CompactEngineState): StorageData => ({ ...data, engine: e as unknown as CourtEngineState });
     const fits = (d: StorageData) => JSON.stringify(d).length <= StorageManager.MAX_SIZE;
 
-    if (engine.lh?.some(h => h.length > 10)) {
-      const pruned = rebuild({ ...engine, lh: engine.lh!.map(h => h.slice(-10)) });
+    if (engine.lh?.some(h => h.length > MAX_LEVEL_HISTORY_ENTRIES)) {
+      const pruned = rebuild({ ...engine, lh: engine.lh!.map(h => h.slice(-MAX_LEVEL_HISTORY_ENTRIES)) });
       if (fits(pruned)) return pruned;
     }
 

@@ -1,5 +1,5 @@
 import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats, UpdateWinnerParams } from '../types';
-import { storageManager } from '../utils/StorageManager';
+import { storageManager, MAX_LEVEL_HISTORY_ENTRIES } from '../utils/StorageManager';
 import { pairKey } from '../utils/playerUtils';
 
 /**
@@ -38,7 +38,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Level history per player - tracks level after each round snapshot */
   protected static levelHistoryMap: Map<string, number[]> = new Map();
 
-  private static readonly MAX_LEVEL_HISTORY = 10;
+  private static readonly MAX_LEVEL_HISTORY = MAX_LEVEL_HISTORY_ENTRIES;
 
   /** Timestamps for pruning stale pairings - tracks last update time */
   protected static lastUpdatedMap: Map<string, number> = new Map();
