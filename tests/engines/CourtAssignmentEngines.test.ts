@@ -936,7 +936,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(winCountsBeforeSave.size).toBeGreaterThan(0);
 
       const differentType = type === 'sa' ? 'sl' : 'sa';
-      engine.loadState(differentType);
+      await engine.loadState(differentType);
 
       const winCountsAfterLoad = engine.getWinCounts();
       expect(winCountsAfterLoad.size).toBe(0);
