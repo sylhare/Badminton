@@ -50,7 +50,22 @@ def _():
         {"maxDiff": 10, "k": 2.0},
         {"maxDiff": 15, "k": 2.4},
     ]
-    return ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE
+    # Divisors explored in visualisations (ordered low → high)
+    DIVISORS = [50, 100, 200, 400, 1000, 2000, 4000]
+    DIV_COLORS = {
+        50:   "#B71C1C",
+        100:  "#E45756",
+        200:  "#F58518",
+        400:  "#EECA3B",
+        1000: "#54A24B",
+        2000: "#72B7B2",
+        4000: "#4C78A8",
+    }
+    # K-tier colours (ordered by K value, low → high)
+    _k_palette = ["#90CAF9", "#A5D6A7", "#FFF176", "#FFCC80", "#EF9A9A", "#B71C1C"]
+    _all_k = sorted({b["k"] for b in K_SCALE} | {K_MAX, K_DEFAULT})
+    K_COLORS = {k: _k_palette[i % len(_k_palette)] for i, k in enumerate(_all_k)}
+    return DIV_COLORS, DIVISORS, ELO_DIVISOR, K_COLORS, K_DEFAULT, K_MAX, K_SCALE
 
 
 # =============================================================================
@@ -184,9 +199,37 @@ def _(mo):
 # =============================================================================
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(DIVISORS, ELO_DIVISOR, K_MAX, mo):
+    def _ep(D, gap=50):
+        return 1.0 / (1.0 + 10.0 ** (gap / D))
+
+    _effects = {
+        50:   "Very steep — chess-like",
+        100:  "Steep",
+        200:  "Moderate-steep",
+        400:  "Moderate (chess standard)",
+        1000: "Gentle",
+        2000: "Very gentle",
+        4000: "Nearly flat",
+    }
+
+    _rows = []
+    for _D in DIVISORS:
+        _prob = _ep(_D)
+        _bold = _D == ELO_DIVISOR
+        _pct = f"~{_prob*100:.0f} %"
+        _eff = _effects.get(_D, "")
+        if _bold:
+            _rows.append(f"| **{_D}** | **{_pct}** | **{_eff}** |")
+        else:
+            _rows.append(f"| {_D} | {_pct} | {_eff} |")
+
+    _ep_100_chess = _ep(400, gap=100)
+    _ep_100_cfg   = _ep(ELO_DIVISOR, gap=100)
+    _max_swing    = round(K_MAX * (1 - _ep(ELO_DIVISOR)), 2)
+
     mo.md(
-        r"""
+        f"""
         ---
         ## 1 · ELO Divisor
 
@@ -197,52 +240,49 @@ def _(mo):
         even a modest level gap produces a near-certain outcome. A large $D$ flattens the curve,
         giving underdogs a much fairer chance.
 
-        $$E_A = \frac{1}{1 + 10^{(\bar{L}_B - \bar{L}_A)\,/\,D}}$$
+        $$E_A = \\frac{{1}}{{1 + 10^{{(\\bar{{L}}_B - \\bar{{L}}_A)\\,/\\,D}}}}$$
 
-        where $\bar{L}_A$ and $\bar{L}_B$ are the average levels of teams A and B respectively.
+        where $\\bar{{L}}_A$ and $\\bar{{L}}_B$ are the average levels of teams A and B respectively.
 
         | Divisor $D$ | 50-point gap → $E_A$ | Effect |
         |-------------|----------------------|--------|
-        | 400         | ~57 %                | Moderate (chess standard) |
-        | 1000        | ~53 %                | Gentle |
-        | 2000        | ~51 %                | Very gentle |
-        | **4000**    | **~51 %**            | **Nearly flat** |
+        """ + "\n        ".join(_rows) + f"""
 
-        With $D = 400$ (the chess standard), a 100-point gap gives $E_A \approx 64\,\%$.
-        With $D = 4000$, the same gap gives only $E_A \approx 51\,\%$ — levels barely influence
+        With $D = 400$ (the chess standard), a 100-point gap gives $E_A \\approx {_ep_100_chess*100:.0f}\\,\\%$.
+        With $D = {ELO_DIVISOR}$, the same gap gives only $E_A \\approx {_ep_100_cfg*100:.0f}\\,\\%$ — levels barely influence
         the expected win probability. Upsets are almost always possible and the rating changes
         are driven almost entirely by the K-factor and score margin.
 
-        A larger $D$ also caps the maximum rating swing: since $|\text{actual} - E|$ is at most
-        $\approx 0.51$ with $D = 4000$, even the largest $K = 1.5$ can move a rating by at most
-        $1.5 \times 0.51 = 0.77$ points — **guaranteed below 1 per game**.
+        A larger $D$ also caps the maximum rating swing: since $|\\text{{actual}} - E|$ is at most
+        $\\approx {1 - _ep(ELO_DIVISOR):.2f}$ with $D = {ELO_DIVISOR}$, even the largest $K = {K_MAX}$ can move a rating by at most
+        ${K_MAX} \\times {1 - _ep(ELO_DIVISOR):.2f} = {_max_swing}$ points — **guaranteed below 1 per game**.
         """
     )
     return
 
 
 @app.cell(hide_code=True)
-def _(ELO_DIVISOR, K_DEFAULT, K_MAX, go, make_subplots, math, mo):
-    _divisors = [50, 100, 200, 400]
-    _div_colors = ["#E45756", "#F58518", "#54A24B", "#4C78A8"]
+def _(DIV_COLORS, DIVISORS, ELO_DIVISOR, K_DEFAULT, K_MAX, go, make_subplots, mo):
     _diffs = list(range(-100, 101))
 
     _fig_div = make_subplots(
         rows=1, cols=2,
         subplot_titles=(
             "Expected win probability vs level difference",
-            "Max level delta (K=1.5) vs level difference",
+            f"Max level delta (K={K_MAX}) vs level difference",
         ),
     )
 
-    for _D, _col in zip(_divisors, _div_colors):
+    for _D in DIVISORS:
+        _col = DIV_COLORS[_D]
+        _width = 2.5 if _D == ELO_DIVISOR else 1.5
         _probs = [1.0 / (1.0 + 10.0 ** (d / _D)) for d in _diffs]
         _deltas = [K_MAX * abs(p - (0 if p > 0.5 else 1)) for p in _probs]
         _fig_div.add_trace(
             go.Scatter(
                 x=_diffs, y=_probs,
                 mode="lines", name=f"D={_D}",
-                line=dict(color=_col, width=2),
+                line=dict(color=_col, width=_width),
             ),
             row=1, col=1,
         )
@@ -250,7 +290,7 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, go, make_subplots, math, mo):
             go.Scatter(
                 x=_diffs, y=_deltas,
                 mode="lines", name=f"D={_D}",
-                line=dict(color=_col, width=2),
+                line=dict(color=_col, width=_width),
                 showlegend=False,
             ),
             row=1, col=2,
@@ -265,7 +305,7 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, go, make_subplots, math, mo):
         xaxis=dict(title="Level difference (avgA − avgB)", gridcolor="#eee"),
         yaxis=dict(range=[0, 1], title="Expected win probability", gridcolor="#eee"),
         xaxis2=dict(title="Level difference (avgA − avgB)", gridcolor="#eee"),
-        yaxis2=dict(range=[K_DEFAULT, K_MAX], title="Max Δ level (K=1.5)", gridcolor="#eee"),
+        yaxis2=dict(range=[K_DEFAULT, K_MAX], title=f"Max Δ level (K={K_MAX})", gridcolor="#eee"),
         margin=dict(t=50, b=50),
     )
     mo.ui.plotly(_fig_div)
@@ -277,176 +317,140 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, go, make_subplots, math, mo):
 # =============================================================================
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(DIVISORS, K_DEFAULT, K_MAX, mo):
     mo.md(
-        r"""
+        f"""
         ---
         ## 1b · Divisor × K-Factor — Combined Impact
 
         The two parameters that most influence rating change are the **divisor $D$** and the
         **K-factor**. This section shows how they interact across the full historical range:
-        divisors from 50 (very steep, chess-like) to 4000 (nearly flat), and
-        all K tiers from the most dominant win ($K = 1.5$) down to deuce/no-score ($K = 0.3$).
+        divisors from {DIVISORS[0]} (very steep, chess-like) to {DIVISORS[-1]} (nearly flat), and
+        all K tiers from the most dominant win ($K = {K_MAX}$) down to deuce/no-score ($K = {K_DEFAULT}$).
 
         For a fixed level difference, the maximum rating delta is:
 
-        $$\Delta_{\max} = K \times |1 - E_A| = K \times \frac{10^{\Delta L / D}}{1 + 10^{\Delta L / D}}$$
+        $$\\Delta_{{\\max}} = K \\times |1 - E_A| = K \\times \\frac{{10^{{\\Delta L / D}}}}{{1 + 10^{{\\Delta L / D}}}}$$
 
-        where $\Delta L$ is the level gap between the stronger and weaker team.
+        where $\\Delta L$ is the level gap between the stronger and weaker team.
         """
     )
     return
 
 
 @app.cell(hide_code=True)
-def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, go, make_subplots, mo):
-    _ALL_DIVISORS = [50, 100, 200, 400, 1000, 2000, 4000]
-    _ALL_K        = sorted({b["k"] for b in K_SCALE} | {K_MAX, K_DEFAULT})
-    _K_PALETTE    = ["#90CAF9", "#A5D6A7", "#FFF176", "#FFCC80", "#EF9A9A", "#B71C1C"]
-    _K_COLORS_NEW = {k: _K_PALETTE[i % len(_K_PALETTE)] for i, k in enumerate(_ALL_K)}
-    _DIV_COLORS_ALL = {
-        50:   "#B71C1C",
-        100:  "#E45756",
-        200:  "#F58518",
-        400:  "#EECA3B",
-        1000: "#54A24B",
-        2000: "#72B7B2",
-        4000: "#4C78A8",
-    }
+def _(DIV_COLORS, DIVISORS, ELO_DIVISOR, K_COLORS, K_MAX, go, make_subplots, mo):
+    _ALL_K     = sorted(K_COLORS)
     _diffs_ext = list(range(0, 101))
+    _LAYOUT    = dict(
+        height=380, plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(t=50, b=45, l=50, r=160),
+        legend=dict(x=1.01, y=1.0, bgcolor="rgba(255,255,255,0.9)", bordercolor="#ccc", borderwidth=1),
+    )
 
-    _fig = make_subplots(
-        rows=2, cols=2,
+    # --- Top row: divisor impact (left) + K-factor impact (right) ---
+    _fig_top = make_subplots(
+        rows=1, cols=2,
         subplot_titles=(
             f"Max Δ vs level gap — K={K_MAX}, all divisors (bold = D={ELO_DIVISOR})",
-            f"Max Δ vs level gap — D={ELO_DIVISOR} (config), all K tiers",
-            "Max Δ heatmap at level gap = 50 (D × K)",
-            f"Win probability vs level gap — all divisors (bold = D={ELO_DIVISOR})",
+            f"Max Δ vs level gap — D={ELO_DIVISOR}, all K tiers",
         ),
-        vertical_spacing=0.18,
-        horizontal_spacing=0.12,
     )
-
-    # Top-left: one line per divisor, K fixed at K_MAX; config divisor is bold
-    for _D in _ALL_DIVISORS:
+    for _D in DIVISORS:
         _is_cfg = _D == ELO_DIVISOR
-        _deltas_D = [
-            round(K_MAX * (10 ** (d / _D) / (1 + 10 ** (d / _D))), 4)
-            for d in _diffs_ext
-        ]
-        _fig.add_trace(
-            go.Scatter(
-                x=_diffs_ext, y=_deltas_D,
-                mode="lines",
-                name=f"D={_D}",
-                line=dict(color=_DIV_COLORS_ALL[_D], width=3 if _is_cfg else 1.5),
-                legendgroup="div",
-                legendgrouptitle_text="Divisor" if _D == _ALL_DIVISORS[0] else None,
-            ),
-            row=1, col=1,
-        )
-
-    # Top-right: one line per K, D fixed at ELO_DIVISOR
+        _fig_top.add_trace(go.Scatter(
+            x=_diffs_ext,
+            y=[round(K_MAX * (10 ** (d / _D) / (1 + 10 ** (d / _D))), 4) for d in _diffs_ext],
+            mode="lines", name=f"D={_D}",
+            line=dict(color=DIV_COLORS[_D], width=3 if _is_cfg else 1.5),
+            legendgroup="div",
+            legendgrouptitle_text="Divisor" if _D == DIVISORS[0] else None,
+        ), row=1, col=1)
     for _k in _ALL_K:
-        _deltas_k = [
-            round(_k * (10 ** (d / ELO_DIVISOR) / (1 + 10 ** (d / ELO_DIVISOR))), 4)
-            for d in _diffs_ext
-        ]
-        _fig.add_trace(
-            go.Scatter(
-                x=_diffs_ext, y=_deltas_k,
-                mode="lines",
-                name=f"K={_k}",
-                line=dict(color=_K_COLORS_NEW[_k], width=2),
-                legendgroup="kfac",
-                legendgrouptitle_text="K-factor" if _k == _ALL_K[0] else None,
-            ),
-            row=1, col=2,
-        )
-
-    # Bottom-left: heatmap D × K at level gap = 50
-    _hm_z = []
-    for _k in _ALL_K:
-        _row_z = []
-        for _D in _ALL_DIVISORS:
-            _ep = 1.0 / (1.0 + 10.0 ** (50.0 / _D))
-            _row_z.append(round(_k * (1.0 - _ep), 4))
-        _hm_z.append(_row_z)
-
-    _fig.add_trace(
-        go.Heatmap(
-            x=[str(d) for d in _ALL_DIVISORS],
-            y=[str(k) for k in _ALL_K],
-            z=_hm_z,
-            colorscale="Blues",
-            colorbar=dict(title="Max Δ", x=0.46, len=0.45, y=0.22),
-            text=[[f"{v:.3f}" for v in row] for row in _hm_z],
-            texttemplate="%{text}",
-            textfont=dict(size=10),
-        ),
-        row=2, col=1,
-    )
-
-    # Bottom-right: win probability for each divisor; config divisor is bold
-    for _D in _ALL_DIVISORS:
-        _is_cfg = _D == ELO_DIVISOR
-        _probs_D = [round(1.0 / (1.0 + 10.0 ** (d / _D)), 4) for d in _diffs_ext]
-        _fig.add_trace(
-            go.Scatter(
-                x=_diffs_ext, y=_probs_D,
-                mode="lines",
-                name=f"D={_D}",
-                line=dict(color=_DIV_COLORS_ALL[_D], width=3 if _is_cfg else 1.5),
-                showlegend=False,
-            ),
-            row=2, col=2,
-        )
-    _fig.add_hline(y=0.5, line_dash="dot", line_color="#aaa", row=2, col=2)
-
-    _fig.update_layout(
-        height=780,
-        plot_bgcolor="white", paper_bgcolor="white",
-        legend=dict(
-            x=1.01, y=1.0,
-            bgcolor="rgba(255,255,255,0.9)", bordercolor="#ccc", borderwidth=1,
-            tracegroupgap=10,
-        ),
+        _fig_top.add_trace(go.Scatter(
+            x=_diffs_ext,
+            y=[round(_k * (10 ** (d / ELO_DIVISOR) / (1 + 10 ** (d / ELO_DIVISOR))), 4) for d in _diffs_ext],
+            mode="lines", name=f"K={_k}",
+            line=dict(color=K_COLORS[_k], width=2),
+            legendgroup="kfac",
+            legendgrouptitle_text="K-factor" if _k == _ALL_K[0] else None,
+        ), row=1, col=2)
+    _fig_top.update_layout(
+        **_LAYOUT,
         xaxis=dict(title="Level gap (stronger − weaker)", gridcolor="#eee"),
         yaxis=dict(title=f"Max Δ level (K={K_MAX})", gridcolor="#eee"),
         xaxis2=dict(title="Level gap (stronger − weaker)", gridcolor="#eee"),
         yaxis2=dict(title=f"Max Δ level (D={ELO_DIVISOR})", gridcolor="#eee"),
-        xaxis3=dict(title="Divisor D"),
-        yaxis3=dict(title="K-factor"),
-        xaxis4=dict(title="Level gap (stronger − weaker)", gridcolor="#eee"),
-        yaxis4=dict(title="P(weaker team wins)", gridcolor="#eee"),
-        margin=dict(t=50, b=60, r=160),
     )
-    return mo.ui.plotly(_fig)
 
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(
-        """
-**Top-left — divisor impact on max delta (K = 1.5).** At $D = 50$ even a 10-point gap
-produces a large swing, and a 100-point gap pushes the delta close to $K = 1.5$. At $D = 4000$
-(bold line) the curve is almost flat — the maximum delta stays near $K/2 = 0.75$
-regardless of the level gap.
-
-**Top-right — K-factor impact at D = 4000.** With a fixed divisor of 4000, each K tier produces
-a nearly horizontal band — confirming that at this divisor the K-factor alone determines the size
-of the rating change, with the level gap contributing less than 1 %.
-
-**Bottom-left — combined heatmap at level gap = 50.** Each cell is the winner's rating gain when
-the stronger team leads by 50 points. Moving right (larger $D$) rapidly flattens the effect.
-Moving up (larger $K$) scales it linearly. The cell at
-$D = 4000$, $K = 1.5$ sits in the bottom-right region of the heatmap.
-
-**Bottom-right — win probability for each divisor.** The weaker team's win probability as a
-function of level gap. At $D = 50$ a 50-point gap gives the weaker team only ~9 % chance.
-At $D = 4000$ (bold) the same gap gives ~49 % — nearly a coin flip.
-        """
+    # --- Bottom row: heatmap (left) + win probability (right) ---
+    _fig_bot = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=(
+            "Max Δ heatmap at level gap = 50 (D × K)",
+            f"Win probability vs level gap — all divisors (bold = D={ELO_DIVISOR})",
+        ),
     )
+    _hm_z = []
+    for _k in _ALL_K:
+        _hm_z.append([round(_k * (1.0 - 1.0 / (1.0 + 10.0 ** (50.0 / _D))), 4) for _D in DIVISORS])
+    _fig_bot.add_trace(go.Heatmap(
+        x=[str(d) for d in DIVISORS], y=[str(k) for k in _ALL_K], z=_hm_z,
+        colorscale="Blues",
+        colorbar=dict(title="Max Δ", x=0.46, len=0.9),
+        text=[[f"{v:.3f}" for v in row] for row in _hm_z],
+        texttemplate="%{text}", textfont=dict(size=10),
+    ), row=1, col=1)
+    for _D in DIVISORS:
+        _is_cfg = _D == ELO_DIVISOR
+        _fig_bot.add_trace(go.Scatter(
+            x=_diffs_ext,
+            y=[round(1.0 / (1.0 + 10.0 ** (d / _D)), 4) for d in _diffs_ext],
+            mode="lines", name=f"D={_D}",
+            line=dict(color=DIV_COLORS[_D], width=3 if _is_cfg else 1.5),
+            showlegend=False,
+        ), row=1, col=2)
+    _fig_bot.add_hline(y=0.5, line_dash="dot", line_color="#aaa", row=1, col=2)
+    _fig_bot.update_layout(
+        **_LAYOUT,
+        xaxis=dict(title="Divisor D", gridcolor="#eee"),
+        yaxis=dict(title="K-factor", gridcolor="#eee"),
+        xaxis2=dict(title="Level gap (stronger − weaker)", gridcolor="#eee"),
+        yaxis2=dict(title="P(weaker team wins)", gridcolor="#eee"),
+    )
+
+    mo.vstack([
+        mo.ui.plotly(_fig_top),
+        mo.hstack([
+            mo.md(f"""
+**Left — divisor impact on max delta (K = {K_MAX}).**
+At D={DIVISORS[0]} even a 10-point gap produces a large swing, and a 100-point gap pushes
+the delta close to K = {K_MAX}. At D={ELO_DIVISOR} (bold line) the curve is almost flat —
+the maximum delta stays near K/2 = {K_MAX / 2} regardless of the level gap.
+            """),
+            mo.md(f"""
+**Right — K-factor impact at D = {ELO_DIVISOR}.**
+With a fixed divisor of {ELO_DIVISOR}, each K tier produces a nearly horizontal band —
+confirming that at this divisor the K-factor alone determines the size of the rating change,
+with the level gap contributing less than 1 %.
+            """),
+        ], widths="equal"),
+        mo.ui.plotly(_fig_bot),
+        mo.hstack([
+            mo.md(f"""
+**Left — combined heatmap at level gap = 50.**
+Each cell is the winner's rating gain when the stronger team leads by 50 points. Moving right
+(larger D) rapidly flattens the effect. Moving up (larger K) scales it linearly.
+The cell at D={ELO_DIVISOR}, K={K_MAX} sits in the bottom-right region of the heatmap.
+            """),
+            mo.md(f"""
+**Right — win probability for each divisor.**
+The weaker team's win probability as a function of level gap. At D={DIVISORS[0]} a 50-point
+gap gives the weaker team only ~9 % chance. At D={ELO_DIVISOR} (bold) the same gap gives
+~49 % — nearly a coin flip.
+            """),
+        ], widths="equal"),
+    ])
     return
 
 
@@ -475,11 +479,9 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(K_DEFAULT, K_MAX, K_SCALE, go, mo):
+def _(K_COLORS, K_DEFAULT, K_MAX, K_SCALE, go, mo):
     _START_LEVEL = 50.0
     _K_TIERS = [b["k"] for b in K_SCALE] + [K_MAX]
-    _TIER_LABELS = [f"K={k}" for k in _K_TIERS]
-    _TIER_COLORS = ["#A5D6A7", "#66BB6A", "#FFA726", "#EF5350", "#B71C1C"]
 
     def _simulate_kt(start, k_anomalous, max_games=20):
         """Anomalous loss then recover via K_DEFAULT wins against equal-level opponents."""
@@ -494,12 +496,12 @@ def _(K_DEFAULT, K_MAX, K_SCALE, go, mo):
         return levels
 
     _fig_rec_k = go.Figure()
-    for _k, _label, _col in zip(_K_TIERS, _TIER_LABELS, _TIER_COLORS):
+    for _k in _K_TIERS:
         _lvls = _simulate_kt(_START_LEVEL, _k)
         _fig_rec_k.add_trace(go.Scatter(
             x=list(range(len(_lvls))), y=_lvls,
-            mode="lines+markers", name=_label,
-            line=dict(color=_col, width=2),
+            mode="lines+markers", name=f"K={_k}",
+            line=dict(color=K_COLORS[_k], width=2),
         ))
 
     _fig_rec_k.add_hline(y=_START_LEVEL, line_dash="dot", line_color="#aaa")
@@ -517,22 +519,14 @@ def _(K_DEFAULT, K_MAX, K_SCALE, go, mo):
 
 
 @app.cell(hide_code=True)
-def _(K_DEFAULT, K_MAX, K_SCALE, mo):
-    import math as _math
-    _tiers = [b["k"] for b in K_SCALE] + [K_MAX]
-    _rows_kt = []
-    for _k in _tiers:
-        _dip = round(_k * 0.5, 3)
-        _per = round(K_DEFAULT * 0.5, 3)
-        _n = _math.ceil(_dip / _per)
-        _rows_kt.append(f"| K = {_k} | {_dip} | {_n} |")
-
-    mo.md(
-        f"""
-        | Anomalous game K | Level shift | Recovery games (K_default wins/losses) |
-        |------------------|-------------|----------------------------------------|
-        """ + "\n        ".join(_rows_kt)
-    )
+def _(K_DEFAULT, K_MAX, mo):
+    mo.md(f"""
+The larger the margin of the anomalous loss, the higher the K-factor applied to that game —
+and therefore the bigger the initial level drop. Since recovery relies on a series of
+normal-K wins, a dominant-loss result (K = {K_MAX}) takes roughly twice as many games to
+undo as a close-loss result (K = {K_DEFAULT}). In short: **the harder the fall, the longer
+the climb back**.
+""")
     return
 
 
@@ -547,43 +541,44 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(K_DEFAULT, K_MAX, K_SCALE, mo):
+    _prev_max = 0
+    _scale_rows = []
+    for _band in K_SCALE:
+        _lo = _prev_max + 1
+        _hi = _band["maxDiff"]
+        _loser_lo = 21 - _hi
+        _loser_hi = 21 - _lo
+        _scale_rows.append(
+            f"| Winner score = 21, loser {_loser_lo}–{_loser_hi} (diff {_lo}–{_hi}) | {_band['k']} |"
+        )
+        _prev_max = _hi
+    _dominant_loser = 21 - (_prev_max + 1)
+
     mo.md(
-        r"""
+        f"""
         The K-factor controls how much a single game result affects a player's level.
         It is derived from the score margin (winner score must be exactly 21):
 
         | Condition | K |
         |---|---|
-        | No score entered | 0.3 |
-        | Winner score > 21 (deuce) | 0.3 |
-        | Winner score = 21, loser 18–20 (diff ≤ 3) | 0.4 |
-        | Winner score = 21, loser 15–17 (diff 4–6) | 0.8 |
-        | Winner score = 21, loser 11–14 (diff 7–10) | 1.0 |
-        | Winner score = 21, loser 6–10 (diff 11–15) | 1.2 |
-        | Winner score = 21, loser < 6 (diff > 15) | 1.5 |
+        | No score entered | {K_DEFAULT} |
+        | Winner score > 21 (deuce) | {K_DEFAULT} |
+        """ + "\n        ".join(_scale_rows) + f"""
+        | Winner score = 21, loser < {_dominant_loser} (diff > {_prev_max}) | {K_MAX} |
         """
     )
     return
 
 
 @app.cell(hide_code=True)
-def _(K_DEFAULT, K_MAX, K_SCALE, get_k_raw, go, make_subplots, mo, win_prob):
-    _K_PALETTE = ["#90CAF9", "#A5D6A7", "#FFF176", "#FFCC80", "#EF9A9A", "#B71C1C"]
-    _all_k = sorted({K_DEFAULT, K_MAX, *(b["k"] for b in K_SCALE)})
-    _K_COLOR = {k: _K_PALETTE[i] for i, k in enumerate(_all_k)}
-    _K_LABEL = {k: f"K={k}" for k in _all_k}
-
-    # Left: win Δ vs opponent average level (player fixed at 50).
-    # Shows that equal opponents (x=50) give K/2, beating a stronger opponent gives MORE,
-    # beating a weaker one gives LESS — the surprise factor drives the delta.
+def _(K_COLORS, K_DEFAULT, K_MAX, K_SCALE, get_k_raw, go, make_subplots, mo, win_prob):
     _opp_levels = list(range(0, 101))
-    _k_lines = _all_k
 
     # Right: K-factor summary by score band
     _band_x = ["< 6", "6–10", "11–14", "15–17", "18–20", "deuce", "no score"]
     _band_k = [K_MAX] + [b["k"] for b in reversed(K_SCALE)] + [K_DEFAULT, K_DEFAULT]
-    _band_c = [_K_COLOR[k] for k in _band_k]
+    _band_c = [K_COLORS[k] for k in _band_k]
 
     _fig = make_subplots(
         rows=1, cols=2,
@@ -595,13 +590,13 @@ def _(K_DEFAULT, K_MAX, K_SCALE, get_k_raw, go, make_subplots, mo, win_prob):
     )
 
     # Left: one line per K value
-    for _k in _k_lines:
+    for _k in sorted(K_COLORS):
         _deltas = [round(_k * (1 - win_prob(50, opp)), 3) for opp in _opp_levels]
         _fig.add_trace(
             go.Scatter(
                 x=_opp_levels, y=_deltas,
-                mode="lines", name=_K_LABEL[_k],
-                line=dict(color=_K_COLOR[_k], width=2.5),
+                mode="lines", name=f"K={_k}",
+                line=dict(color=K_COLORS[_k], width=2.5),
             ),
             row=1, col=1,
         )
@@ -639,9 +634,9 @@ def _(K_DEFAULT, K_MAX, K_SCALE, get_k_raw, go, make_subplots, mo, win_prob):
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(K_DEFAULT, K_MAX, mo):
     mo.md(
-        r"""
+        f"""
         The left chart shows win Δ for a player at level 50, as a function of the opponent's
         level. Three things stand out:
 
@@ -654,8 +649,8 @@ def _(mo):
           because the win was expected and carries little information.
 
         The right chart shows which K bracket each score band maps to.
-        A **deuce win** (22–20) uses $K = 0.3$ (smallest swing); a **dominant 21–0** uses $K = 1.5$
-        (largest swing). No score recorded also defaults to $K = 0.3$.
+        A **deuce win** (22–20) uses $K = {K_DEFAULT}$ (smallest swing); a **dominant 21–0** uses $K = {K_MAX}$
+        (largest swing). No score recorded also defaults to $K = {K_DEFAULT}$.
         """
     )
     return
@@ -690,34 +685,46 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(K_SCALE, balance_factor, mo):
+    import math as _math
+    _k_ex = K_SCALE[0]["k"]  # example K tier for the table
+    _teams = [
+        ("[50, 50]",     [50, 50]),
+        ("[50, 60]",     [50, 60]),
+        ("[40, 80]",     [40, 80]),
+        ("[0, 100]",     [0, 100]),
+        ("singles [80]", [80]),
+    ]
+    _rows = []
+    for _label, _t in _teams:
+        _bf = balance_factor(_t)
+        _sigma = round((_math.sqrt(sum((x - sum(_t) / len(_t)) ** 2 for x in _t) / len(_t))), 0)
+        _keff = round(_k_ex * _bf, 2)
+        _rows.append(f"| {_label:<14} | {int(_sigma):<8} | {_bf:.2f}    | {_keff:.2f}                             |")
+    _table = "\n".join(_rows)
     mo.md(
-        r"""
-        **Step 1 — team standard deviation** (how spread out the team's levels are):
+f"""
+**Step 1 — team standard deviation** (how spread out the team's levels are):
 
-        $$\sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(L_i - \bar{L})^2}
-          \qquad \text{for 2 players:}\quad \sigma = \tfrac{|L_1 - L_2|}{2}$$
+$$\\sigma = \\sqrt{{\\frac{{1}}{{n}}\\sum_{{i=1}}^{{n}}(L_i - \\bar{{L}})^2}}
+  \\qquad \\text{{for 2 players:}}\\quad \\sigma = \\tfrac{{|L_1 - L_2|}}{{2}}$$
 
-        **Step 2 — balance factor** (how much of the raw K to keep; clamps at 0.5 for a fully
-        mismatched team):
+**Step 2 — balance factor** (how much of the raw K to keep; clamps at 0.5 for a fully
+mismatched team):
 
-        $$\beta = 1 - 0.5 \times \min\!\left(\frac{\sigma}{50},\; 1\right) \qquad \in [0.5,\; 1.0]$$
+$$\\beta = 1 - 0.5 \\times \\min\\!\\left(\\frac{{\\sigma}}{{50}},\\; 1\\right) \\qquad \\in [0.5,\\; 1.0]$$
 
-        **Step 3 — effective K** (the K actually applied to each player's rating):
+**Step 3 — effective K** (the K actually applied to each player's rating):
 
-        $$K_{\text{eff}} = K_{\text{raw}} \times \beta$$
+$$K_{{\\text{{eff}}}} = K_{{\\text{{raw}}}} \\times \\beta$$
 
-        | Team          | $\sigma$ | $\beta$ | $K_{\text{eff}}$ (raw $K = 0.8$) |
-        |---------------|----------|---------|----------------------------------|
-        | [50, 50]      | 0        | 1.00    | 0.80                             |
-        | [50, 60]      | 5        | 0.95    | 0.76                             |
-        | [40, 80]      | 20       | 0.80    | 0.64                             |
-        | [0, 100]      | 50       | 0.50    | 0.40                             |
-        | singles [80]  | 0        | 1.00    | 0.80                             |
+| Team          | $\\sigma$ | $\\beta$ | $K_{{\\text{{eff}}}}$ (raw $K = {_k_ex}$) |
+|---------------|----------|---------|----------------------------------|
+{_table}
 
-        Singles (1-player teams) are always unaffected ($\beta = 1.0$). Each team gets its own
-        balance-adjusted K independently — a lopsided team 1 does not affect team 2's K.
-        """
+Singles (1-player teams) are always unaffected ($\\beta = 1.0$). Each team gets its own
+balance-adjusted K independently — a lopsided team 1 does not affect team 2's K.
+"""
     )
     return
 
@@ -791,27 +798,25 @@ def _(K_MAX, K_SCALE, balance_factor, go, make_subplots, mo):
         yaxis2=dict(title="Effective K", gridcolor="#eee"),
         margin=dict(t=50),
     )
-    mo.ui.plotly(_fig)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(
-        """
-        **Left chart — balance factor curve.** The x-axis is the absolute level difference
-        between the two teammates ($|L_1 - L_2|$). At spread = 0 both players are identical
-        ($\beta = 1.0$, no reduction). At spread = 100 — one player at 0, the other at 100 —
-        the factor bottoms out at $\beta = 0.5$, halving every rating change for that team.
-        Anything in between scales smoothly.
-
-        **Right chart — effective K per raw K.** Each coloured line is one K tier. The
-        reduction is proportional across all tiers: a dominant-win $K = 1.5$ drops to 0.75 for a
-        maximally unbalanced team, and a close-win $K = 0.4$ drops to 0.2. Both players on the
-        unbalanced team are affected equally — the strong player is not penalised more than
-        the weak one.
-        """
-    )
+    mo.vstack([
+        mo.ui.plotly(_fig),
+        mo.hstack([
+            mo.md(f"""
+**Left chart — balance factor curve.**
+The x-axis is the absolute level difference between the two teammates ($|L_1 - L_2|$).
+At spread = 0 both players are identical ($\\beta = 1.0$, no reduction). At spread = 100 —
+one player at 0, the other at 100 — the factor bottoms out at $\\beta = 0.5$, halving every
+rating change for that team. Anything in between scales smoothly.
+            """),
+            mo.md(f"""
+**Right chart — effective K per raw K.**
+Each coloured line is one K tier. The reduction is proportional across all tiers: a
+dominant-win $K = {K_MAX}$ drops to {K_MAX * 0.5} for a maximally unbalanced team, and a
+close-win $K = {K_SCALE[0]["k"]}$ drops to {K_SCALE[0]["k"] * 0.5}. Both players on the
+unbalanced team are affected equally — the strong player is not penalised more than the weak one.
+            """),
+        ], widths="equal"),
+    ])
     return
 
 
@@ -899,16 +904,16 @@ def _(ELO_DIVISOR, K_DEFAULT, avg_level, balance_factor, go, mo, win_prob):
 # =============================================================================
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""---
+def _(K_DEFAULT, K_MAX, mo):
+    mo.md(f"""---
 ## 4 · Elo Delta Simulations
 
 The **Elo system** assigns each player a numeric level (0–100). After every game the winner
 gains points and the loser loses the same amount. The size of the swing — the **Elo delta** —
 is governed by two factors studied in the previous sections:
 
-- **K-factor** (§ 2): larger for more dominant wins, smaller for close games (K = 3 when no
-  score is recorded, same as deuce).
+- **K-factor** (§ 2): larger for more dominant wins, smaller for close games (K = {K_DEFAULT} when no
+  score is recorded, same as deuce; K = {K_MAX} for the most dominant wins).
 - **Balance factor** (§ 3): scales K down when a team's two players have very different levels,
   reducing rating volatility for uneven pairings.
 
@@ -919,22 +924,54 @@ spread, and balance-factor scenarios — **before** any real game sequence is ru
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, mo, win_prob):
+    def _k_for_diff(diff):
+        for _b in K_SCALE:
+            if diff <= _b["maxDiff"]:
+                return _b["k"]
+        return K_MAX
+
+    # Example 1: dominant win (21-5, diff=16)
+    _k1 = _k_for_diff(16)
+    _e1a = round(win_prob(70, 30), 3)
+    _e1b = round(1 - _e1a, 3)
+    _d1a = round(_k1 * (1 - _e1a), 2)
+    _d1b = round(_k1 * (0 - _e1b), 2)
+
+    # Example 2: upset (21-19, diff=2)
+    _k2 = _k_for_diff(2)
+    _e2a = round(win_prob(30, 70), 3)
+    _e2b = round(1 - _e2a, 3)
+    _d2a = round(_k2 * (1 - _e2a), 2)
+    _d2b = round(_k2 * (0 - _e2b), 2)
+
+    # Example 3: expected win (21-15, diff=6)
+    _k3 = _k_for_diff(6)
+    _e3a = round(win_prob(80, 60), 3)
+    _e3b = round(1 - _e3a, 3)
+    _d3w_a = round(_k3 * (1 - _e3a), 2)
+    _d3l_a = round(_k3 * (0 - _e3a), 2)
+    _d3w_b = round(_k3 * (1 - _e3b), 2)
+    _d3l_b = round(_k3 * (0 - _e3b), 2)
+
+    # 50-pt gap example
+    _e_gap = round(win_prob(75, 25) * 100, 1)
+
     mo.md(
-        r"""
+        f"""
         ### Expected Win Probability
 
         Before each game, the system estimates how likely each team is to win based on their
-        average player levels. Equal teams each get 50 %. The formula uses a divisor of 4000
-        (see § 1), which makes the curve nearly flat — even a very large level gap barely
+        average player levels. Equal teams each get 50 %. The formula uses a divisor of {ELO_DIVISOR}
+        (see § 1), which makes the curve flat — even a very large level gap barely
         moves the probability away from 50 %:
 
-        $$\bar{L}_\text{team} = \frac{1}{n}\sum_{i=1}^{n} L_i
-          \qquad \text{(unknown level} \to 50\text{)}$$
+        $$\\bar{{L}}_\\text{{team}} = \\frac{{1}}{{n}}\\sum_{{i=1}}^{{n}} L_i
+          \\qquad \\text{{(unknown level}} \\to 50\\text{{)}}$$
 
-        $$E_A = \frac{1}{1 + 10^{(\bar{L}_B - \bar{L}_A)\,/\,D}}, \qquad E_B = 1 - E_A$$
+        $$E_A = \\frac{{1}}{{1 + 10^{{(\\bar{{L}}_B - \\bar{{L}}_A)\\,/\\,D}}}}, \\qquad E_B = 1 - E_A$$
 
-        A 50-point level gap gives only $E_A \approx 51\,\%$ — nearly indistinguishable from a coin flip.
+        A 50-point level gap (level 75 vs level 25) gives $E_A \\approx {_e_gap}\\,\\%$ — close to a coin flip.
 
         ### Level Delta
 
@@ -942,224 +979,193 @@ def _(mo):
         losing team loses the same number. The size of the swing grows with how surprising the
         result was: a massive upset earns far more than a comfortable expected win.
 
-        $$\text{actual} = \begin{cases} 1 & \text{(team won)} \\ 0 & \text{(team lost)} \end{cases}
-          \qquad \Delta = K_{\text{eff}} \times (\text{actual} - E)$$
+        $$\\text{{actual}} = \\begin{{cases}} 1 & \\text{{(team won)}} \\\\ 0 & \\text{{(team lost)}} \\end{{cases}}
+          \\qquad \\Delta = K_{{\\text{{eff}}}} \\times (\\text{{actual}} - E)$$
 
-        $$L_{\text{new}} = \operatorname{clamp}(L + \Delta,\; 0,\; 100) \quad \text{rounded to 1 d.p.}$$
+        $$L_{{\\text{{new}}}} = \\operatorname{{clamp}}(L + \\Delta,\\; 0,\\; 100) \\quad \\text{{rounded to 1 d.p.}}$$
 
         **Worked example — dominant win (21-5)**
 
         Team A (avg level 70) beats Team B (avg level 30) convincingly. The score diff is 16,
-        so $K = 1.5$ (most dominant bracket). With $D = 4000$ the win probability is nearly 50/50,
-        so the gain is proportional almost entirely to K:
+        so $K = {_k1}$ (most dominant bracket). With $D = {ELO_DIVISOR}$:
 
         | | Team A (avg 70) | Team B (avg 30) |
         |---|---|---|
-        | $K$ (diff = 16) | 1.5 | 1.5 |
-        | $E$ | 0.506 | 0.494 |
+        | $K$ (diff = 16) | {_k1} | {_k1} |
+        | $E$ | {_e1a} | {_e1b} |
         | actual | 1 (won) | 0 (lost) |
-        | $\Delta$ | $+1.5 \times (1 - 0.506) = \mathbf{+0.7}$ | $+1.5 \times (0 - 0.494) = \mathbf{-0.7}$ |
+        | $\\Delta$ | $+{_k1} \\times (1 - {_e1a}) = \\mathbf{{+{_d1a}}}$ | $+{_k1} \\times (0 - {_e1b}) = \\mathbf{{{_d1b}}}$ |
 
         **Worked example — upset (21-19, weak beats strong)**
 
         Team A (avg 30) shocks Team B (avg 70) in a tight game. The score diff is only 2,
-        so $K = 0.4$ (close-win bracket). The swing is very small — the low K dominates
-        because with $D = 4000$ the "surprise" factor is nearly zero:
+        so $K = {_k2}$ (close-win bracket).
 
         | | Team A (avg 30) | Team B (avg 70) |
         |---|---|---|
-        | $K$ (diff = 2) | 0.4 | 0.4 |
-        | $E$ | 0.494 | 0.506 |
+        | $K$ (diff = 2) | {_k2} | {_k2} |
+        | $E$ | {_e2a} | {_e2b} |
         | actual | 1 (won) | 0 (lost) |
-        | $\Delta$ | $+0.4 \times (1 - 0.494) = \mathbf{+0.2}$ | $+0.4 \times (0 - 0.506) = \mathbf{-0.2}$ |
+        | $\\Delta$ | $+{_k2} \\times (1 - {_e2a}) = \\mathbf{{+{_d2a}}}$ | $+{_k2} \\times (0 - {_e2b}) = \\mathbf{{{_d2b}}}$ |
 
         **Worked example — expected win (21-15, strong beats weak)**
 
         A level-80 player beats a level-60 opponent with a comfortable margin. The score diff
-        is 6, so $K = 0.8$. With $D = 4000$ the expected win probability is barely above 50 %
-        ($E_{80} = 0.503$), so a win and a loss move the rating by almost the same amount:
+        is 6, so $K = {_k3}$. With $D = {ELO_DIVISOR}$:
 
         | | Level-80 player | Level-60 opponent |
         |---|---|---|
-        | $K$ (diff = 6) | 0.8 | 0.8 |
-        | $E$ | 0.503 | 0.497 |
-        | **Win** (actual = 1) | $\mathbf{+0.4}$ → 80.4 | $\mathbf{-0.4}$ → 59.6 |
-        | **Lose** (actual = 0) | $\mathbf{-0.4}$ → 79.6 | $\mathbf{+0.4}$ → 60.4 |
-
-        With $D = 4000$, win and loss deltas are nearly symmetric — the expected probability is
-        so close to 0.5 that $|1 - E| \approx |0 - E| \approx 0.5$.
+        | $K$ (diff = 6) | {_k3} | {_k3} |
+        | $E$ | {_e3a} | {_e3b} |
+        | **Win** (actual = 1) | $\\mathbf{{+{_d3w_a}}}$ → {round(80 + _d3w_a, 1)} | $\\mathbf{{{_d3l_b}}}$ → {round(60 + _d3l_b, 1)} |
+        | **Lose** (actual = 0) | $\\mathbf{{{_d3l_a}}}$ → {round(80 + _d3l_a, 1)} | $\\mathbf{{+{_d3w_b}}}$ → {round(60 + _d3w_b, 1)} |
         """
     )
     return
 
 
 @app.cell(hide_code=True)
-def _(avg_level, balance_factor, go, k_factor, make_subplots, mo, win_prob):
-    # --- Heatmap: expected win probability for team 1 ---
-    # Shows the raw input to the Elo formula across all level combinations.
-    # With D=400, the curve is deliberately flat: the full 0–100 range only moves
-    # probability from ~0.36 to ~0.64 — barely more than a coin flip at either extreme.
+def _(ELO_DIVISOR, K_MAX, avg_level, balance_factor, go, k_factor, make_subplots, mo, win_prob):
+    _LAYOUT4 = dict(
+        height=380, plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(t=50, b=45, l=50, r=20),
+    )
+    _LEGEND = dict(bgcolor="rgba(255,255,255,0.85)", bordercolor="#ccc", borderwidth=1)
+
+    # --- Fig 1: win probability heatmap + Fig 2: spread impact ---
     _avgs = list(range(0, 101, 5))
     _prob_grid = []
     for _a1 in _avgs:
-        _row = []
-        for _a2 in _avgs:
-            _row.append(round(win_prob(_a1, _a2), 3))
-        _prob_grid.append(_row)
+        _prob_grid.append([round(win_prob(_a1, _a2), 3) for _a2 in _avgs])
 
-    # --- Line chart: team1=[50-s, 50+s] vs team2=[50,50], no score ---
-    # Shows how spread reduces win/loss delta even when avg levels are equal
     _spreads_line = list(range(0, 51))
     _win_d, _loss_d = [], []
     for _s in _spreads_line:
         _t1 = [50.0 - _s, 50.0 + _s]
-        _t2 = [50.0, 50.0]
-        _e1 = win_prob(avg_level(_t1), avg_level(_t2))
+        _e1 = win_prob(avg_level(_t1), avg_level([50.0, 50.0]))
         _k1 = k_factor(None, None, _t1)
         _win_d.append(round(_k1 * (1.0 - _e1), 3))
         _loss_d.append(round(_k1 * (0.0 - _e1), 3))
 
-    # --- Bar: before/after balance factor — 5 key scenarios ---
-    _scenarios = [
-        ("[50,50] vs [50,50]",   [50, 50],   [50, 50]),
-        ("[40,80] vs [50,50]",   [40, 80],   [50, 50]),
-        ("[0,100] vs [50,50]",   [0, 100],   [50, 50]),
-        ("[0,100] vs [0,100]",   [0, 100],   [0, 100]),
-        ("[0,100] vs [40,60]",   [0, 100],   [40, 60]),
-    ]
-    _sc_labels = [s[0] for s in _scenarios]
-    _sc_win_with = []
-    _sc_win_without = []
-    for _, _t1s, _t2s in _scenarios:
-        _a1, _a2 = avg_level(_t1s), avg_level(_t2s)
-        _ep = win_prob(_a1, _a2)
-        _kw  = k_factor(None, None, _t1s)     # with balance factor
-        _kwo = 3.0                              # without (raw K=3, balanced)
-        _sc_win_with.append(round(_kw * (1.0 - _ep), 2))
-        _sc_win_without.append(round(_kwo * (1.0 - _ep), 2))
-
-    _fig = make_subplots(
-        rows=2, cols=2,
+    _fig_top = make_subplots(
+        rows=1, cols=2,
         subplot_titles=(
-            "Expected win probability for team 1 (D=4000)",
+            f"Expected win probability for team 1 (D={ELO_DIVISOR})",
             "Δ vs spread — team1=[50±s] vs team2=[50,50]",
-            "Win Δ with vs without balance factor (K=3, team1 wins)",
-            "Balance factor for each scenario",
         ),
-        vertical_spacing=0.18,
     )
-
-    # Top-left: win probability heatmap
-    _fig.add_trace(
-        go.Heatmap(
-            x=_avgs, y=_avgs, z=_prob_grid,
-            colorscale="RdYlGn",
-            colorbar=dict(title="P(team 1 wins)", x=0.46, len=0.45, y=0.78, tickformat=".0%"),
-            zmin=0.3, zmax=0.7,
-        ),
-        row=1, col=1,
-    )
-
-    # Top-right: spread impact line chart
-    _fig.add_trace(
-        go.Scatter(
-            x=_spreads_line, y=_win_d,
-            mode="lines", name="win Δ",
-            line=dict(color="#2ca02c", width=2.5),
-        ),
-        row=1, col=2,
-    )
-    _fig.add_trace(
-        go.Scatter(
-            x=_spreads_line, y=_loss_d,
-            mode="lines", name="loss Δ",
-            line=dict(color="#d62728", width=2.5),
-        ),
-        row=1, col=2,
-    )
-    _fig.add_hline(y=0, line_dash="dot", line_color="#aaa", row=1, col=2)
-
-    # Bottom-left: grouped bar — before vs after balance factor
-    _fig.add_trace(
-        go.Bar(
-            x=_sc_labels, y=_sc_win_without,
-            name="without bf", marker_color="#aec7e8",
-            text=[str(v) for v in _sc_win_without], textposition="outside",
-        ),
-        row=2, col=1,
-    )
-    _fig.add_trace(
-        go.Bar(
-            x=_sc_labels, y=_sc_win_with,
-            name="with bf", marker_color="#1f77b4",
-            text=[str(v) for v in _sc_win_with], textposition="outside",
-        ),
-        row=2, col=1,
-    )
-
-    # Bottom-right: balance factors for each scenario
-    _sc_bfs = [balance_factor(_t1s) for _, _t1s, _ in _scenarios]
-    _fig.add_trace(
-        go.Bar(
-            x=_sc_labels, y=_sc_bfs,
-            marker_color=["#4C78A8" if bf == 1.0 else "#E45756" for bf in _sc_bfs],
-            text=[f"{bf:.2f}" for bf in _sc_bfs], textposition="outside",
-            showlegend=False,
-        ),
-        row=2, col=2,
-    )
-    _fig.add_hline(y=1.0, line_dash="dot", line_color="#aaa", row=2, col=2)
-
-    _fig.update_layout(
-        height=750,
-        barmode="group",
-        plot_bgcolor="white", paper_bgcolor="white",
-        legend=dict(x=0.56, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
+    _fig_top.add_trace(go.Heatmap(
+        x=_avgs, y=_avgs, z=_prob_grid,
+        colorscale="RdYlGn",
+        colorbar=dict(title="P(team 1 wins)", x=0.46, len=0.9, tickformat=".0%"),
+        zmin=0.3, zmax=0.7,
+    ), row=1, col=1)
+    _fig_top.add_trace(go.Scatter(
+        x=_spreads_line, y=_win_d, mode="lines", name="win Δ",
+        line=dict(color="#2ca02c", width=2.5),
+    ), row=1, col=2)
+    _fig_top.add_trace(go.Scatter(
+        x=_spreads_line, y=_loss_d, mode="lines", name="loss Δ",
+        line=dict(color="#d62728", width=2.5),
+    ), row=1, col=2)
+    _fig_top.add_hline(y=0, line_dash="dot", line_color="#aaa", row=1, col=2)
+    _fig_top.update_layout(
+        **_LAYOUT4,
+        legend=_LEGEND,
         xaxis=dict(title="Team 2 avg level", gridcolor="#eee"),
         yaxis=dict(title="Team 1 avg level", gridcolor="#eee", autorange="reversed"),
         xaxis2=dict(title="Spread s (team1 = [50−s, 50+s])", gridcolor="#eee"),
         yaxis2=dict(title="Δ level per player", gridcolor="#eee"),
-        xaxis3=dict(tickangle=-15),
-        yaxis3=dict(range=[0, 4], title="Win Δ", gridcolor="#eee"),
-        xaxis4=dict(tickangle=-15),
-        yaxis4=dict(range=[0, 1.1], title="Balance factor", gridcolor="#eee"),
-        margin=dict(t=50, b=80),
     )
-    mo.ui.plotly(_fig)
-    return
 
+    # --- Fig 3: win delta with/without BF + Fig 4: balance factor per scenario ---
+    _scenarios = [
+        ("[50,50] vs [50,50]", [50, 50], [50, 50]),
+        ("[40,80] vs [50,50]", [40, 80], [50, 50]),
+        ("[0,100] vs [50,50]", [0, 100], [50, 50]),
+        ("[0,100] vs [0,100]", [0, 100], [0, 100]),
+        ("[0,100] vs [40,60]", [0, 100], [40, 60]),
+    ]
+    _sc_labels = [s[0] for s in _scenarios]
+    _sc_win_with, _sc_win_without, _sc_bfs = [], [], []
+    for _, _t1s, _t2s in _scenarios:
+        _ep = win_prob(avg_level(_t1s), avg_level(_t2s))
+        _sc_win_with.append(round(k_factor(None, None, _t1s) * (1.0 - _ep), 2))
+        _sc_win_without.append(round(K_MAX * (1.0 - _ep), 2))
+        _sc_bfs.append(balance_factor(_t1s))
 
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(
-        """
-**Figure 1 — Expected win probability heatmap (D = 4000).**
+    _fig_bot = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=(
+            f"Win Δ with vs without balance factor (K={K_MAX}, team1 wins)",
+            "Balance factor for each scenario",
+        ),
+    )
+    _fig_bot.add_trace(go.Bar(
+        x=_sc_labels, y=_sc_win_without, name="without bf", marker_color="#aec7e8",
+        text=[str(v) for v in _sc_win_without], textposition="outside",
+    ), row=1, col=1)
+    _fig_bot.add_trace(go.Bar(
+        x=_sc_labels, y=_sc_win_with, name="with bf", marker_color="#1f77b4",
+        text=[str(v) for v in _sc_win_with], textposition="outside",
+    ), row=1, col=1)
+    _fig_bot.add_trace(go.Bar(
+        x=_sc_labels, y=_sc_bfs,
+        marker_color=["#4C78A8" if bf == 1.0 else "#E45756" for bf in _sc_bfs],
+        text=[f"{bf:.2f}" for bf in _sc_bfs], textposition="outside",
+        showlegend=False,
+    ), row=1, col=2)
+    _fig_bot.add_hline(y=1.0, line_dash="dot", line_color="#aaa", row=1, col=2)
+    _fig_bot.update_layout(
+        **_LAYOUT4,
+        barmode="group",
+        legend=dict(x=0.02, y=0.98, **_LEGEND),
+        xaxis=dict(tickangle=-15),
+        yaxis=dict(range=[0, 4], title="Win Δ", gridcolor="#eee"),
+        xaxis2=dict(tickangle=-15),
+        yaxis2=dict(range=[0, 1.1], title="Balance factor", gridcolor="#eee"),
+    )
+
+    _lo = round(win_prob(0, 100) * 100, 0)
+    _hi = round(win_prob(100, 0) * 100, 0)
+
+    mo.vstack([
+        mo.ui.plotly(_fig_top),
+        mo.hstack([
+            mo.md(f"""
+**Figure 1 — Expected win probability heatmap (D = {ELO_DIVISOR}).**
 Each cell is the probability that team 1 wins, computed from the Elo formula before any game
 is played. The diagonal (equal-strength teams) is always 50 % — shown in yellow. Moving
-up-left (team 1 much stronger) pushes probability toward green (~51 %); moving down-right
-(team 1 much weaker) pushes it toward red (~49 %). The key insight: **with D = 4000 the full
-range is only ~49 %–51 %** — the heatmap is nearly uniform by design. Rating changes are
-therefore driven almost entirely by the K-factor and score margin, not by level differences.
+up-left (team 1 much stronger) pushes probability toward green (~{_hi:.0f} %); moving down-right
+(team 1 much weaker) pushes it toward red (~{_lo:.0f} %). Rating changes are therefore driven
+primarily by the K-factor and score margin, not only by level differences.
 This probability is the direct input to every delta calculation in the section below.
-
+            """),
+            mo.md("""
 **Figure 2 — Spread impact on delta.**
 Team 1 always averages 50 but its internal spread grows from 0 (both players at 50) to ±50
 (one at 0, one at 100). As spread increases, the balance factor lowers K, shrinking both the
 win reward and the loss penalty. A maximally uneven team [0, 100] ends up with roughly half
 the delta of a perfectly balanced team.
-
+            """),
+        ], widths="equal"),
+        mo.ui.plotly(_fig_bot),
+        mo.hstack([
+            mo.md(f"""
 **Figure 3 — Win delta: with vs without balance factor.**
-Five representative matchups compare the raw delta (K = 3, no balance factor, light blue)
+Five representative matchups compare the raw delta (K = {K_MAX}, no balance factor, light blue)
 against the adjusted delta (with balance factor, dark blue). Balanced teams ([50, 50] vs
 [50, 50]) are unaffected (balance factor = 1). The more uneven team 1 is, the larger the
 reduction — a [0, 100] pairing is cut by ~50 % regardless of the opponent.
-
+            """),
+            mo.md("""
 **Figure 4 — Balance factor by scenario.**
 The balance factor value for each matchup. Balanced teams score 1.0 (no reduction). A
 [40, 80] pairing scores ~0.87. A [0, 100] pairing hits the 0.5 floor — rating changes are
 halved, regardless of the result or the opponent's composition.
-        """
-    )
+            """),
+        ], widths="equal"),
+    ])
     return
 
 
@@ -1346,7 +1352,7 @@ plateau at 0/100.
 noise even between equal players. Random winning streaks push one player ahead until the
 rating update pulls them back. The result is a noisy, mean-reverting oscillation around 50.
             """),
-        ]),
+        ], widths="equal"),
         mo.ui.plotly(_fig_doubles),
         mo.hstack([
             mo.md(f"""
@@ -1361,7 +1367,7 @@ already near level 50. The middle players (P3/P4) remain stable — their Elo is
 equilibrium. The extremes (P1 at 10 and P6 at 90) converge more slowly because the wider
 initial spread triggers a heavier balance-factor penalty on uneven pairings.
             """),
-        ]),
+        ], widths="equal"),
     ])
     return
 
