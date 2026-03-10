@@ -451,6 +451,92 @@ At $D = 4000$ (bold) the same gap gives ~49 % — nearly a coin flip.
 
 
 # =============================================================================
+# 1c · K-Factor Recovery Time
+# =============================================================================
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+        ---
+        ## 1c · K-Factor Recovery Time
+
+        A single high-K game — a dominant score that triggers $K_\text{max}$ — moves a rating
+        further than a normal unscored game. If future games use $K_\text{default}$ (no score
+        entered), how many does it take to return to the original level?
+
+        The chart below uses equal-level opponents throughout (win probability = 0.5),
+        so the only variable is the K-factor applied to each game. Each coloured line
+        represents a different K tier for the anomalous loss; recovery always uses
+        $K_\text{default}$.
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(K_DEFAULT, K_MAX, K_SCALE, go, mo):
+    _START_LEVEL = 50.0
+    _K_TIERS = [b["k"] for b in K_SCALE] + [K_MAX]
+    _TIER_LABELS = [f"K={k}" for k in _K_TIERS]
+    _TIER_COLORS = ["#A5D6A7", "#66BB6A", "#FFA726", "#EF5350", "#B71C1C"]
+
+    def _simulate_kt(start, k_anomalous, max_games=20):
+        """Anomalous loss then recover via K_DEFAULT wins against equal-level opponents."""
+        levels = [start]
+        cur = round(start - k_anomalous * 0.5, 4)  # lose: actual=0, prob=0.5
+        levels.append(cur)
+        for _ in range(max_games):
+            if cur >= start:
+                break
+            cur = round(cur + K_DEFAULT * 0.5, 4)
+            levels.append(cur)
+        return levels
+
+    _fig_rec_k = go.Figure()
+    for _k, _label, _col in zip(_K_TIERS, _TIER_LABELS, _TIER_COLORS):
+        _lvls = _simulate_kt(_START_LEVEL, _k)
+        _fig_rec_k.add_trace(go.Scatter(
+            x=list(range(len(_lvls))), y=_lvls,
+            mode="lines+markers", name=_label,
+            line=dict(color=_col, width=2),
+        ))
+
+    _fig_rec_k.add_hline(y=_START_LEVEL, line_dash="dot", line_color="#aaa")
+    _fig_rec_k.update_layout(
+        height=400,
+        title="Bad loss recovery — K_DEFAULT wins needed to return to starting level",
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(x=0.75, y=0.04, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
+        xaxis=dict(title="Game index (0 = start, 1 = anomalous loss, 2+ = recovery wins)", gridcolor="#eee", dtick=1),
+        yaxis=dict(title="Player level", gridcolor="#eee"),
+        margin=dict(t=50),
+    )
+    mo.ui.plotly(_fig_rec_k)
+    return
+
+
+@app.cell(hide_code=True)
+def _(K_DEFAULT, K_MAX, K_SCALE, mo):
+    import math as _math
+    _tiers = [b["k"] for b in K_SCALE] + [K_MAX]
+    _rows_kt = []
+    for _k in _tiers:
+        _dip = round(_k * 0.5, 3)
+        _per = round(K_DEFAULT * 0.5, 3)
+        _n = _math.ceil(_dip / _per)
+        _rows_kt.append(f"| K = {_k} | {_dip} | {_n} |")
+
+    mo.md(
+        f"""
+        | Anomalous game K | Level shift | Recovery games (K_default wins/losses) |
+        |------------------|-------------|----------------------------------------|
+        """ + "\n        ".join(_rows_kt)
+    )
+    return
+
+
+# =============================================================================
 # 2 · K-Factor by Score Margin
 # =============================================================================
 
@@ -598,9 +684,6 @@ def _(mo):
         $\beta \in [0.5, 1.0]$ whenever a team's two players have very different levels. The
         more mismatched the teammates, the less the match result tells us about individual
         ability — so the smaller the rating change for everyone on that team.
-
-        Two approaches address this — a uniform balance factor, and per-player individual Elo
-        probabilities.
         """
     )
     return
@@ -610,8 +693,6 @@ def _(mo):
 def _(mo):
     mo.md(
         r"""
-        ### Method 1 — Balance Factor
-
         **Step 1 — team standard deviation** (how spread out the team's levels are):
 
         $$\sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(L_i - \bar{L})^2}
@@ -738,7 +819,7 @@ def _(mo):
 def _(mo):
     mo.md(
         r"""
-        Method 1 reduces K uniformly for **both** players on an unbalanced team.
+        The balance factor reduces K uniformly for **both** players on an unbalanced team.
         Its effect is identical regardless of which player is strong or weak — the team is
         treated as a single entity. The charts below show the win and loss deltas for five
         representative team matchups, both with and without the balance factor applied, using
@@ -811,308 +892,6 @@ def _(ELO_DIVISOR, K_DEFAULT, avg_level, balance_factor, go, mo, win_prob):
     )
     return mo.ui.plotly(_fig_bf)
 
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(
-        r"""
-        ### Method 2 — Individual Win Probability
-
-        An alternative: instead of reducing K uniformly for the whole team, compute each
-        player's **individual expected win probability** by averaging their 1v1 Elo probability
-        against every opponent:
-
-        $$E_i = \frac{1}{|T_2|} \sum_{j \in T_2} \frac{1}{1 + 10^{(L_j - L_i)\,/\,D}}$$
-
-        Then apply $\Delta_i = K \times (\text{actual} - E_i)$ **individually** per player.
-        This naturally accounts for team spread without a separate dampening factor — a strong
-        player on a weak team has a high $E_i$ (their win is expected), while their weaker
-        partner has a low $E_i$ (their win is surprising).
-
-        ### Comparison — Method 1 vs Method 2
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(ELO_DIVISOR, K_DEFAULT, avg_level, go, math, mo, win_prob):
-    def _individual_e(player_level, opponents):
-        """Average 1v1 Elo probability for one player against all opponents."""
-        if not opponents:
-            return 0.5
-        return sum(win_prob(player_level, opp) for opp in opponents) / len(opponents)
-
-    def _play_game_individual(t1, t2, k_raw):
-        """Apply per-player Elo deltas using individual win probabilities (no balance factor)."""
-        avg1, avg2 = avg_level(t1), avg_level(t2)
-        winner = 1 if avg1 >= avg2 else 2
-        act1, act2 = (1.0, 0.0) if winner == 1 else (0.0, 1.0)
-        d1 = [round(k_raw * (act1 - _individual_e(l, t2)), 3) for l in t1]
-        d2 = [round(k_raw * (act2 - _individual_e(l, t1)), 3) for l in t2]
-        return d1, d2, winner
-
-    def _bf_delta(player_levels, opp_levels, actual):
-        """Method 1: team avg Elo × balance factor."""
-        _a1, _a2 = avg_level(player_levels), avg_level(opp_levels)
-        _ep  = win_prob(_a1, _a2)
-        _avg = sum(player_levels) / len(player_levels) if player_levels else 50
-        _var = sum((l - _avg) ** 2 for l in player_levels) / len(player_levels) if len(player_levels) > 1 else 0
-        _bf  = 1.0 - 0.5 * min(1.0, math.sqrt(_var) / 50.0)
-        return round(K_DEFAULT * _bf * (actual - _ep), 3)
-
-    _scenarios_cmp = [
-        ("[50,50] vs [50,50]", [50, 50], [50, 50]),
-        ("[40,80] vs [50,50]", [40, 80], [50, 50]),
-        ("[0,100] vs [50,50]", [0, 100], [50, 50]),
-        ("[0,100] vs [0,100]", [0, 100], [0, 100]),
-        ("[20,80] vs [40,60]", [20, 80], [40, 60]),
-    ]
-
-    _delta_no_bf_all = []
-    _delta_bf_all    = []
-    _delta_ind_all   = []
-    _x_labels_all    = []
-
-    def _no_bf_delta(player_levels, opp_levels, actual):
-        """No adjustment: plain team-avg Elo, full K."""
-        _ep = win_prob(avg_level(player_levels), avg_level(opp_levels))
-        return round(K_DEFAULT * (actual - _ep), 3)
-
-    for _lbl, _t1s, _t2s in _scenarios_cmp:
-        _d_ind1, _d_ind2, _ = _play_game_individual(_t1s, _t2s, K_DEFAULT)
-        if len(set(_d_ind1)) > 1:  # skip if all same (no individual differentiation)
-            for _i, (_lv, _di) in enumerate(zip(_t1s, _d_ind1)):
-                _x_labels_all.append(f"{_lbl}<br>T1·P{_i+1}={_lv}")
-                _delta_no_bf_all.append(_no_bf_delta(_t1s, _t2s, 1.0))
-                _delta_bf_all.append(_bf_delta(_t1s, _t2s, 1.0))
-                _delta_ind_all.append(_di)
-        if len(set(_d_ind2)) > 1:  # skip if all same (no individual differentiation)
-            for _i, (_lv, _di) in enumerate(zip(_t2s, _d_ind2)):
-                _x_labels_all.append(f"{_lbl}<br>T2·P{_i+1}={_lv}")
-                _delta_no_bf_all.append(_no_bf_delta(_t2s, _t1s, 0.0))
-                _delta_bf_all.append(_bf_delta(_t2s, _t1s, 0.0))
-                _delta_ind_all.append(_di)
-
-    _fig_cmp = go.Figure()
-    _fig_cmp.add_trace(go.Bar(
-        name="no adjustment", x=_x_labels_all, y=_delta_no_bf_all,
-        marker_color="#d9d9d9",
-        text=[str(v) for v in _delta_no_bf_all], textposition="outside",
-    ))
-    _fig_cmp.add_trace(go.Bar(
-        name="Method 1 — balance factor", x=_x_labels_all, y=_delta_bf_all,
-        marker_color="#aec7e8",
-        text=[str(v) for v in _delta_bf_all], textposition="outside",
-    ))
-    _fig_cmp.add_trace(go.Bar(
-        name="Method 2 — individual Elo", x=_x_labels_all, y=_delta_ind_all,
-        marker_color="#1f77b4",
-        text=[str(v) for v in _delta_ind_all], textposition="outside",
-    ))
-    _fig_cmp.update_layout(
-        barmode="group", height=450,
-        title=f"Win Δ per player — no adjustment vs balance factor vs individual Elo (K={K_DEFAULT}, D={ELO_DIVISOR}, team 1 wins)",
-        plot_bgcolor="white", paper_bgcolor="white",
-        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
-        xaxis=dict(title="Matchup · Player", gridcolor="#eee", tickangle=-30),
-        yaxis=dict(title="Win Δ per player", gridcolor="#eee"),
-        margin=dict(t=50, b=100),
-    )
-    return mo.ui.plotly(_fig_cmp)
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(
-        """
-        Each group shows two players from team 1 (P1 and P2). **Grey** = no adjustment
-        (plain team-avg Elo). **Light blue** = Method 1 balance factor (same reduced delta for
-        both teammates). **Dark blue** = Method 2 individual Elo (each player gets a delta
-        matching their own expected performance).
-
-        Notable differences:
-
-        - **[40,80] vs [50,50]:** the weaker player (40) beats a team averaging 50 — a bigger
-          surprise than for the stronger player (80), who was slightly favoured. Individual Elo
-          rewards the weaker player more.
-        - **[0,100] vs [50,50]:** the level-0 player's win is a massive upset ($E \\approx 0.36$),
-          earning a large positive delta. The level-100 player's win was expected ($E \\approx 0.64$),
-          earning a smaller delta. The balance factor collapses both to the same dampened value.
-        - **[50,50] vs [50,50]:** both approaches give identical results — equal teams, no spread.
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(
-        r"""
-        ### Score Evolution & Recovery
-
-        The charts below show how a player's level evolves after an anomalous result — a
-        mismatched game that produces a surprising outcome — comparing all three approaches
-        (no adjustment, Method 1, Method 2).
-        """
-    )
-    return
-
-
-@app.cell(hide_code=True)
-def _(K_DEFAULT, K_MAX, avg_level, balance_factor, go, mo, win_prob):
-    # Score evolution: level-80 player on [80, 0] team loses 0-21 to [50, 50] (dominant bad loss, K_MAX).
-    # Then recovers via consecutive wins on perfectly balanced equal-level teams [cur, cur] vs [cur, cur].
-    #
-    # Key insight: for balanced equal-level recovery teams, BF=1 and individual_e=0.5, so all methods
-    # give the same +K_DEFAULT*0.5 per win. The ONLY difference between methods is the initial dip
-    # size — which is what this chart makes visible.
-
-    def _ind_e(player_level, opponents):
-        if not opponents:
-            return 0.5
-        return sum(win_prob(player_level, opp) for opp in opponents) / len(opponents)
-
-    def _simulate_recovery(start_level, partner_level, opp, k_anomalous, max_games=30):
-        """
-        Game 0 = start.
-        Game 1 = dominant bad loss on [start_level, partner_level] vs opp (uses k_anomalous).
-        Games 2+ = consecutive wins on [cur, cur] vs [cur, cur] (uses K_DEFAULT) until recovered.
-        Returns dict method -> level list.
-        """
-        trajectories = {}
-        for method in ("no_bf", "m1_bf", "m2_ind"):
-            cur = float(start_level)
-            levels = [cur]
-
-            # Anomalous game (loss)
-            t1 = [cur, float(partner_level)]
-            ep = win_prob(avg_level(t1), avg_level(opp))
-            if method == "no_bf":
-                delta = k_anomalous * (0.0 - ep)
-            elif method == "m1_bf":
-                delta = k_anomalous * balance_factor(t1) * (0.0 - ep)
-            else:
-                delta = k_anomalous * (0.0 - _ind_e(cur, opp))
-            cur = round(cur + delta, 4)
-            levels.append(cur)
-
-            # Recovery wins on balanced equal-level teams
-            for _ in range(max_games):
-                if cur >= start_level:
-                    break
-                # All methods reduce to K_DEFAULT * 0.5 for [cur,cur] vs [cur,cur]
-                cur = round(cur + K_DEFAULT * 0.5, 4)
-                levels.append(cur)
-
-            trajectories[method] = levels
-        return trajectories
-
-    _START = 80.0
-    _traj = _simulate_recovery(
-        start_level=_START, partner_level=0.0,
-        opp=[50.0, 50.0], k_anomalous=K_MAX,
-    )
-
-    # Pad to same length
-    _max_len = max(len(v) for v in _traj.values())
-    for _m in _traj:
-        while len(_traj[_m]) < _max_len:
-            _traj[_m].append(_traj[_m][-1])
-
-    _xs_evo = list(range(_max_len))
-    _labels_evo = {"no_bf": "No adjustment", "m1_bf": "Method 1 — Balance Factor", "m2_ind": "Method 2 — Individual Elo"}
-    _colors_evo = {"no_bf": "#d62728", "m1_bf": "#1f77b4", "m2_ind": "#2ca02c"}
-
-    _fig_evo = go.Figure()
-    for _m, _label in _labels_evo.items():
-        _fig_evo.add_trace(go.Scatter(
-            x=_xs_evo, y=_traj[_m], mode="lines+markers",
-            name=_label, line=dict(color=_colors_evo[_m], width=2),
-        ))
-    _fig_evo.add_annotation(
-        x=1, y=min(v[1] for v in _traj.values()) - 0.15,
-        text="<b>Bad loss (0–21)</b>", showarrow=True, arrowhead=2,
-        ax=50, ay=-25, font=dict(size=10),
-    )
-    _fig_evo.add_shape(type="line", x0=0, x1=_max_len - 1, y0=_START, y1=_START,
-                       line=dict(color="gray", dash="dot", width=1))
-    _fig_evo.update_layout(
-        height=420,
-        title=f"Level-{int(_START)} player on [{int(_START)}, 0] team loses 0–21 to [50, 50] — recovery via consecutive wins",
-        plot_bgcolor="white", paper_bgcolor="white",
-        legend=dict(x=0.55, y=0.08, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
-        xaxis=dict(title="Game index (0 = start, 1 = bad loss, 2+ = recovery wins)", gridcolor="#eee"),
-        yaxis=dict(title="Player level", gridcolor="#eee"),
-        margin=dict(t=60),
-    )
-    mo.ui.plotly(_fig_evo)
-    return
-
-
-@app.cell(hide_code=True)
-def _(K_DEFAULT, K_MAX, avg_level, balance_factor, go, math, mo, win_prob):
-    # Recovery simulation: for each starting level, simulate the anomalous game then count
-    # how many consecutive normal wins (or losses) are needed to return to starting level.
-    #
-    # Anomalous game uses K_MAX (dominant score, worst-case impact).
-    # Recovery games use K_DEFAULT on balanced equal-level teams [cur,cur] vs [cur,cur],
-    # where all methods give the same +/- K_DEFAULT*0.5 per game.
-    # So recovery count = ceil(|anomalous_delta| / (K_DEFAULT * 0.5)).
-
-    def _ind_e_rec(player_level, opponents):
-        if not opponents:
-            return 0.5
-        return sum(win_prob(player_level, opp) for opp in opponents) / len(opponents)
-
-    _player_levels_sim = [0, 20, 40, 50, 80, 100]
-    _methods_sim = ["No adjustment", "Method 1 — BF", "Method 2 — Ind Elo"]
-    _colors_sim = ["#d62728", "#1f77b4", "#2ca02c"]
-    _recovery_sim = {m: [] for m in _methods_sim}
-
-    for _pl in _player_levels_sim:
-        # >=50: strong player on [pl, 0] team loses (bad loss)
-        # <50:  weak player on [pl, 100] team wins (lucky win)
-        _partner = 0 if _pl >= 50 else 100
-        _actual = 0.0 if _pl >= 50 else 1.0
-        _t1 = [float(_pl), float(_partner)]
-        _t2 = [50.0, 50.0]
-        _ep_team = win_prob(avg_level(_t1), avg_level(_t2))
-
-        _deltas = {
-            "No adjustment":     K_MAX * (_actual - _ep_team),
-            "Method 1 — BF":    K_MAX * balance_factor(_t1) * (_actual - _ep_team),
-            "Method 2 — Ind Elo": K_MAX * (_actual - _ind_e_rec(float(_pl), _t2)),
-        }
-
-        # Recovery rate is identical for all methods on balanced equal-level teams
-        _per_game = K_DEFAULT * 0.5  # K_DEFAULT * |1 - 0.5| or |0 - 0.5|
-
-        for _method in _methods_sim:
-            _n = math.ceil(abs(_deltas[_method]) / _per_game)
-            _recovery_sim[_method].append(_n)
-
-    _x_labels_sim = [str(l) for l in _player_levels_sim]
-    _fig_rec = go.Figure()
-    for _method, _color in zip(_methods_sim, _colors_sim):
-        _fig_rec.add_trace(go.Bar(
-            name=_method, x=_x_labels_sim, y=_recovery_sim[_method],
-            marker_color=_color,
-            text=[str(v) for v in _recovery_sim[_method]], textposition="outside",
-        ))
-
-    _fig_rec.update_layout(
-        barmode="group", height=450,
-        title="Consecutive normal wins to recover from a dominant anomalous game (K_MAX, 0–21 score)<br>"
-              "<sup>≥50: bad loss on [pl, 0] vs [50, 50] · <50: lucky win on [pl, 100] vs [50, 50]</sup>",
-        plot_bgcolor="white", paper_bgcolor="white",
-        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
-        xaxis=dict(title="Player level", gridcolor="#eee"),
-        yaxis=dict(title="Recovery wins needed", gridcolor="#eee"),
-        margin=dict(t=80, b=60),
-    )
-    mo.ui.plotly(_fig_rec)
-    return
 
 
 # =============================================================================
