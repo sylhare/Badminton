@@ -42,13 +42,13 @@ def _(mo):
 @app.cell
 def _():
     ELO_DIVISOR = 400   # LevelTrackerConfig.ELO_DIVISOR
-    K_DEFAULT   = 0.3   # LevelTrackerConfig.K_DEFAULT  (deuce / no score)
-    K_MAX       = 1.5   # LevelTrackerConfig.K_MAX       (dominant win, diff > 15)
+    K_DEFAULT   = 0.6   # LevelTrackerConfig.K_DEFAULT  (deuce / no score)
+    K_MAX       = 3.0   # LevelTrackerConfig.K_MAX       (dominant win, diff > 15)
     K_SCALE     = [     # LevelTrackerConfig.K_SCALE
-        {"maxDiff":  3, "k": 0.4},
-        {"maxDiff":  6, "k": 0.8},
-        {"maxDiff": 10, "k": 1.0},
-        {"maxDiff": 15, "k": 1.2},
+        {"maxDiff":  3, "k": 0.8},
+        {"maxDiff":  6, "k": 1.6},
+        {"maxDiff": 10, "k": 2.0},
+        {"maxDiff": 15, "k": 2.4},
     ]
     return ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE
 
@@ -220,7 +220,7 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(ELO_DIVISOR, K_MAX, go, make_subplots, math, mo):
+def _(ELO_DIVISOR, K_DEFAULT, K_MAX, go, make_subplots, math, mo):
     _divisors = [50, 100, 200, 400]
     _div_colors = ["#E45756", "#F58518", "#54A24B", "#4C78A8"]
     _diffs = list(range(-100, 101))
@@ -255,9 +255,6 @@ def _(ELO_DIVISOR, K_MAX, go, make_subplots, math, mo):
         )
 
     _fig_div.add_hline(y=0.5, line_dash="dot", line_color="#aaa", row=1, col=1)
-    _fig_div.add_hline(y=1, line_dash="dash", line_color="#B71C1C",
-                       annotation_text="1-pt ceiling", annotation_position="top right",
-                       row=1, col=2)
 
     _fig_div.update_layout(
         height=400,
@@ -266,7 +263,7 @@ def _(ELO_DIVISOR, K_MAX, go, make_subplots, math, mo):
         xaxis=dict(title="Level difference (avgA − avgB)", gridcolor="#eee"),
         yaxis=dict(range=[0, 1], title="Expected win probability", gridcolor="#eee"),
         xaxis2=dict(title="Level difference (avgA − avgB)", gridcolor="#eee"),
-        yaxis2=dict(range=[0, 2], title="Max Δ level (K=1.5)", gridcolor="#eee"),
+        yaxis2=dict(range=[K_DEFAULT, K_MAX], title="Max Δ level (K=1.5)", gridcolor="#eee"),
         margin=dict(t=50, b=50),
     )
     mo.ui.plotly(_fig_div)
@@ -300,17 +297,11 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, go, make_subplots, math, mo):
+def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, go, make_subplots, mo):
     _ALL_DIVISORS = [50, 100, 200, 400, 1000, 2000, 4000]
     _ALL_K        = sorted({b["k"] for b in K_SCALE} | {K_MAX, K_DEFAULT})
-    _K_COLORS_NEW = {
-        0.3: "#90CAF9",
-        0.4: "#A5D6A7",
-        0.8: "#FFF176",
-        1.0: "#FFCC80",
-        1.2: "#EF9A9A",
-        1.5: "#B71C1C",
-    }
+    _K_PALETTE    = ["#90CAF9", "#A5D6A7", "#FFF176", "#FFCC80", "#EF9A9A", "#B71C1C"]
+    _K_COLORS_NEW = {k: _K_PALETTE[i % len(_K_PALETTE)] for i, k in enumerate(_ALL_K)}
     _DIV_COLORS_ALL = {
         50:   "#B71C1C",
         100:  "#E45756",
@@ -322,28 +313,23 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, go, make_subplots, math, mo):
     }
     _diffs_ext = list(range(0, 101))
 
-    # --- Left: max delta (K=1.5) for each divisor, vs level gap ---
-    # Shows how divisor alone shapes the rating change ceiling.
-    # --- Right: max delta for each K tier at D=4000, vs level gap ---
-    # Shows how K alone scales the rating change at the chosen divisor.
-    # --- Bottom: heatmap — max delta(D, K) at a fixed level gap of 50 ---
-
     _fig = make_subplots(
         rows=2, cols=2,
         subplot_titles=(
-            f"Max Δ vs level gap — K={K_MAX}, divisors 50→4000",
+            f"Max Δ vs level gap — K={K_MAX}, all divisors (bold = D={ELO_DIVISOR})",
             f"Max Δ vs level gap — D={ELO_DIVISOR} (config), all K tiers",
             "Max Δ heatmap at level gap = 50 (D × K)",
-            "Win probability vs level gap — all divisors",
+            f"Win probability vs level gap — all divisors (bold = D={ELO_DIVISOR})",
         ),
         vertical_spacing=0.18,
         horizontal_spacing=0.12,
     )
 
-    # Top-left: one line per divisor, K fixed at 1.5
+    # Top-left: one line per divisor, K fixed at K_MAX; config divisor is bold
     for _D in _ALL_DIVISORS:
+        _is_cfg = _D == ELO_DIVISOR
         _deltas_D = [
-            round(1.5 * (10 ** (d / _D) / (1 + 10 ** (d / _D))), 4)
+            round(K_MAX * (10 ** (d / _D) / (1 + 10 ** (d / _D))), 4)
             for d in _diffs_ext
         ]
         _fig.add_trace(
@@ -351,7 +337,7 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, go, make_subplots, math, mo):
                 x=_diffs_ext, y=_deltas_D,
                 mode="lines",
                 name=f"D={_D}",
-                line=dict(color=_DIV_COLORS_ALL[_D], width=1.5),
+                line=dict(color=_DIV_COLORS_ALL[_D], width=3 if _is_cfg else 1.5),
                 legendgroup="div",
                 legendgrouptitle_text="Divisor" if _D == _ALL_DIVISORS[0] else None,
             ),
@@ -381,8 +367,8 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, go, make_subplots, math, mo):
     for _k in _ALL_K:
         _row_z = []
         for _D in _ALL_DIVISORS:
-            _ep = 1.0 / (1.0 + 10.0 ** (50.0 / _D))   # E for the weaker team (gap=50)
-            _row_z.append(round(_k * (1.0 - _ep), 4))   # delta for the winner (stronger)
+            _ep = 1.0 / (1.0 + 10.0 ** (50.0 / _D))
+            _row_z.append(round(_k * (1.0 - _ep), 4))
         _hm_z.append(_row_z)
 
     _fig.add_trace(
@@ -398,40 +384,22 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, go, make_subplots, math, mo):
         ),
         row=2, col=1,
     )
-    # Mark config divisor column on heatmap
-    if ELO_DIVISOR in _ALL_DIVISORS:
-        _fig.add_vline(
-            x=str(ELO_DIVISOR), line_dash="dash",
-            line_color=_DIV_COLORS_ALL[ELO_DIVISOR], line_width=2,
-            row=2, col=1,
-            annotation_text=f"D={ELO_DIVISOR}", annotation_position="top",
-            annotation_font_color=_DIV_COLORS_ALL[ELO_DIVISOR],
-        )
 
-    # Bottom-right: win probability for each divisor
+    # Bottom-right: win probability for each divisor; config divisor is bold
     for _D in _ALL_DIVISORS:
+        _is_cfg = _D == ELO_DIVISOR
         _probs_D = [round(1.0 / (1.0 + 10.0 ** (d / _D)), 4) for d in _diffs_ext]
         _fig.add_trace(
             go.Scatter(
                 x=_diffs_ext, y=_probs_D,
                 mode="lines",
                 name=f"D={_D}",
-                line=dict(color=_DIV_COLORS_ALL[_D], width=1.5),
+                line=dict(color=_DIV_COLORS_ALL[_D], width=3 if _is_cfg else 1.5),
                 showlegend=False,
             ),
             row=2, col=2,
         )
     _fig.add_hline(y=0.5, line_dash="dot", line_color="#aaa", row=2, col=2)
-
-    # Mark config divisor on top-left and bottom-right panels
-    if ELO_DIVISOR in _ALL_DIVISORS:
-        for _row, _col in [(1, 1), (2, 2)]:
-            _fig.add_vline(
-                x=0, line_dash="dash", line_color=_DIV_COLORS_ALL[ELO_DIVISOR],
-                line_width=2, row=_row, col=_col,
-                annotation_text=f"D={ELO_DIVISOR}", annotation_position="top right",
-                annotation_font_color=_DIV_COLORS_ALL[ELO_DIVISOR],
-            )
 
     _fig.update_layout(
         height=780,
@@ -448,11 +416,10 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, go, make_subplots, math, mo):
         xaxis3=dict(title="Divisor D"),
         yaxis3=dict(title="K-factor"),
         xaxis4=dict(title="Level gap (stronger − weaker)", gridcolor="#eee"),
-        yaxis4=dict(title="P(weaker team wins)", range=[0.3, 0.5], gridcolor="#eee"),
+        yaxis4=dict(title="P(weaker team wins)", gridcolor="#eee"),
         margin=dict(t=50, b=60, r=160),
     )
-    mo.ui.plotly(_fig)
-    return
+    return mo.ui.plotly(_fig)
 
 
 @app.cell(hide_code=True)
@@ -573,8 +540,8 @@ def _(K_DEFAULT, K_MAX, K_SCALE, get_k_raw, go, make_subplots, mo, win_prob):
         height=420,
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(x=0.02, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
-        yaxis=dict(range=[0, 1.0], title="Win Δ (level points gained)", gridcolor="#eee"),
-        yaxis2=dict(range=[0, 2], gridcolor="#eee"),
+        yaxis=dict(title="Win Δ (level points gained)", gridcolor="#eee"),
+        yaxis2=dict(gridcolor="#eee"),
         xaxis=dict(title="Opponent average level", gridcolor="#eee", range=[0, 100]),
         xaxis2=dict(title="Loser score range", gridcolor="#eee"),
         margin=dict(t=50, b=50),
@@ -630,33 +597,56 @@ def _(mo):
         more mismatched the teammates, the less the match result tells us about individual
         ability — so the smaller the rating change for everyone on that team.
 
+        Two approaches address this — a uniform balance factor, and per-player individual Elo
+        probabilities.
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+        ### Method 1 — Balance Factor (current)
+
         **Step 1 — team standard deviation** (how spread out the team's levels are):
 
         $$\sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(L_i - \bar{L})^2}
           \qquad \text{for 2 players:}\quad \sigma = \tfrac{|L_1 - L_2|}{2}$$
 
-        **Step 2 — imbalance factor** (normalised to $[0, 1]$, where 0 = perfectly balanced):
+        **Step 2 — balance factor** (how much of the raw K to keep; clamps at 0.5 for a fully
+        mismatched team):
 
-        $$\text{imbalance} = \min\!\left(\frac{\sigma}{50},\; 1\right)$$
+        $$\beta = 1 - 0.5 \times \min\!\left(\frac{\sigma}{50},\; 1\right) \qquad \in [0.5,\; 1.0]$$
 
-        **Step 3 — balance factor** (how much of the raw K to keep):
-
-        $$\beta = 1 - 0.5 \times \text{imbalance} \qquad \in [0.5,\; 1.0]$$
-
-        **Step 4 — effective K** (the K actually applied to each player's rating):
+        **Step 3 — effective K** (the K actually applied to each player's rating):
 
         $$K_{\text{eff}} = K_{\text{raw}} \times \beta$$
 
-        | Team          | $\sigma$ | imbalance | $\beta$ | $K_{\text{eff}}$ (raw $K = 0.8$) |
-        |---------------|----------|-----------|---------|----------------------------------|
-        | [50, 50]      | 0        | 0.00      | 1.00    | 0.80                             |
-        | [50, 60]      | 5        | 0.10      | 0.95    | 0.76                             |
-        | [40, 80]      | 20       | 0.40      | 0.80    | 0.64                             |
-        | [0, 100]      | 50       | 1.00      | 0.50    | 0.40                             |
-        | singles [80]  | 0        | 0.00      | 1.00    | 0.80                             |
+        | Team          | $\sigma$ | $\beta$ | $K_{\text{eff}}$ (raw $K = 0.8$) |
+        |---------------|----------|---------|----------------------------------|
+        | [50, 50]      | 0        | 1.00    | 0.80                             |
+        | [50, 60]      | 5        | 0.95    | 0.76                             |
+        | [40, 80]      | 20       | 0.80    | 0.64                             |
+        | [0, 100]      | 50       | 0.50    | 0.40                             |
+        | singles [80]  | 0        | 1.00    | 0.80                             |
 
         Singles (1-player teams) are always unaffected ($\beta = 1.0$). Each team gets its own
         balance-adjusted K independently — a lopsided team 1 does not affect team 2's K.
+
+        ### Method 2 — Individual Win Probability
+
+        An alternative: instead of reducing K uniformly for the whole team, compute each
+        player's **individual expected win probability** by averaging their 1v1 Elo probability
+        against every opponent:
+
+        $$E_i = \frac{1}{|T_2|} \sum_{j \in T_2} \frac{1}{1 + 10^{(L_j - L_i)\,/\,D}}$$
+
+        Then apply $\Delta_i = K \times (\text{actual} - E_i)$ **individually** per player.
+        This naturally accounts for team spread without a separate dampening factor — a strong
+        player on a weak team has a high $E_i$ (their win is expected), while their weaker
+        partner has a low $E_i$ (their win is surprising).
         """
     )
     return
@@ -726,9 +716,9 @@ def _(K_MAX, K_SCALE, balance_factor, go, make_subplots, mo):
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(x=0.56, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
         xaxis=dict(title="Team level spread |L₁ − L₂|", gridcolor="#eee"),
-        yaxis=dict(range=[0.45, 1.05], title="Balance factor", gridcolor="#eee"),
+        yaxis=dict(title="Balance factor", gridcolor="#eee"),
         xaxis2=dict(title="Team level spread |L₁ − L₂|", gridcolor="#eee"),
-        yaxis2=dict(range=[0, 2], title="Effective K", gridcolor="#eee"),
+        yaxis2=dict(title="Effective K", gridcolor="#eee"),
         margin=dict(t=50),
     )
     mo.ui.plotly(_fig)
@@ -752,6 +742,357 @@ def _(mo):
         the weak one.
         """
     )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+        Method 1 reduces K uniformly for **both** players on an unbalanced team.
+        Its effect is identical regardless of which player is strong or weak — the team is
+        treated as a single entity. The charts below show the win and loss deltas for five
+        representative team matchups, both with and without the balance factor applied, using
+        $K_{\text{raw}} = K_{\text{default}}$ (no score entered).
+
+        Key insight: a [0, 100] team and a [50, 50] team are treated as identical in terms of
+        expected win probability (both average 50), but the unbalanced team gets **half the
+        delta** due to $\beta = 0.5$. All players on the team — the expert and the beginner
+        alike — receive the same reduced adjustment.
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(ELO_DIVISOR, K_DEFAULT, avg_level, balance_factor, go, mo, win_prob):
+    _scenarios_bf = [
+        ("[50,50] vs [50,50]",  [50, 50],   [50, 50]),
+        ("[40,80] vs [50,50]",  [40, 80],   [50, 50]),
+        ("[0,100] vs [50,50]",  [0, 100],   [50, 50]),
+        ("[0,100] vs [0,100]",  [0, 100],   [0, 100]),
+        ("[20,80] vs [40,60]",  [20, 80],   [40, 60]),
+    ]
+
+    _rows = []
+    for _label, _t1, _t2 in _scenarios_bf:
+        _a1, _a2 = avg_level(_t1), avg_level(_t2)
+        _ep1 = win_prob(_a1, _a2)
+        _ep2 = 1.0 - _ep1
+        _bf1 = balance_factor(_t1)
+        _bf2 = balance_factor(_t2)
+        _k1  = K_DEFAULT * _bf1
+        _k2  = K_DEFAULT * _bf2
+        _rows.append({
+            "label": _label,
+            "win_with_bf":    round(_k1 * (1.0 - _ep1), 3),
+            "win_without_bf": round(K_DEFAULT * (1.0 - _ep1), 3),
+            "loss_with_bf":   round(_k1 * (0.0 - _ep1), 3),
+            "loss_without_bf":round(K_DEFAULT * (0.0 - _ep1), 3),
+            "bf1": round(_bf1, 2),
+            "bf2": round(_bf2, 2),
+        })
+
+    _labels = [r["label"] for r in _rows]
+    _fig_bf = go.Figure()
+    _fig_bf.add_trace(go.Bar(
+        name="win Δ — with bf",    x=_labels, y=[r["win_with_bf"]    for r in _rows],
+        marker_color="#1f77b4", text=[str(r["win_with_bf"])    for r in _rows], textposition="outside",
+    ))
+    _fig_bf.add_trace(go.Bar(
+        name="win Δ — without bf", x=_labels, y=[r["win_without_bf"] for r in _rows],
+        marker_color="#aec7e8", text=[str(r["win_without_bf"]) for r in _rows], textposition="outside",
+    ))
+    _fig_bf.add_trace(go.Bar(
+        name="loss Δ — with bf",    x=_labels, y=[r["loss_with_bf"]   for r in _rows],
+        marker_color="#d62728", text=[str(r["loss_with_bf"])   for r in _rows], textposition="outside",
+    ))
+    _fig_bf.add_trace(go.Bar(
+        name="loss Δ — without bf", x=_labels, y=[r["loss_without_bf"] for r in _rows],
+        marker_color="#ffb09c", text=[str(r["loss_without_bf"]) for r in _rows], textposition="outside",
+    ))
+    _fig_bf.update_layout(
+        barmode="group", height=420,
+        title=f"Team 1 delta — K={K_DEFAULT}, D={ELO_DIVISOR} (with vs without balance factor)",
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
+        xaxis=dict(title="Matchup", gridcolor="#eee"),
+        yaxis=dict(title="Δ level", gridcolor="#eee"),
+        margin=dict(t=50, b=60),
+    )
+    return mo.ui.plotly(_fig_bf)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("### Comparison — Method 1 vs Method 2")
+    return
+
+
+@app.cell(hide_code=True)
+def _(ELO_DIVISOR, K_DEFAULT, avg_level, go, math, mo, win_prob):
+    def _individual_e(player_level, opponents):
+        """Average 1v1 Elo probability for one player against all opponents."""
+        if not opponents:
+            return 0.5
+        return sum(win_prob(player_level, opp) for opp in opponents) / len(opponents)
+
+    def _play_game_individual(t1, t2, k_raw):
+        """Apply per-player Elo deltas using individual win probabilities (no balance factor)."""
+        avg1, avg2 = avg_level(t1), avg_level(t2)
+        winner = 1 if avg1 >= avg2 else 2
+        act1, act2 = (1.0, 0.0) if winner == 1 else (0.0, 1.0)
+        d1 = [round(k_raw * (act1 - _individual_e(l, t2)), 3) for l in t1]
+        d2 = [round(k_raw * (act2 - _individual_e(l, t1)), 3) for l in t2]
+        return d1, d2, winner
+
+    def _bf_delta(player_levels, opp_levels, actual):
+        """Current approach: team avg Elo × balance factor."""
+        _a1, _a2 = avg_level(player_levels), avg_level(opp_levels)
+        _ep  = win_prob(_a1, _a2)
+        _avg = sum(player_levels) / len(player_levels) if player_levels else 50
+        _var = sum((l - _avg) ** 2 for l in player_levels) / len(player_levels) if len(player_levels) > 1 else 0
+        _bf  = 1.0 - 0.5 * min(1.0, math.sqrt(_var) / 50.0)
+        return round(K_DEFAULT * _bf * (actual - _ep), 3)
+
+    _scenarios_cmp = [
+        ("[50,50] vs [50,50]", [50, 50], [50, 50]),
+        ("[40,80] vs [50,50]", [40, 80], [50, 50]),
+        ("[0,100] vs [50,50]", [0, 100], [50, 50]),
+        ("[0,100] vs [0,100]", [0, 100], [0, 100]),
+        ("[20,80] vs [40,60]", [20, 80], [40, 60]),
+    ]
+
+    _player_labels_all = []
+    _delta_bf_all  = []
+    _delta_ind_all = []
+    _x_labels_all  = []
+
+    for _lbl, _t1s, _t2s in _scenarios_cmp:
+        _d_ind1, _d_ind2, _ = _play_game_individual(_t1s, _t2s, K_DEFAULT)
+        if len(set(_d_ind1)) > 1:  # skip if all same (no individual differentiation)
+            for _i, (_lv, _di) in enumerate(zip(_t1s, _d_ind1)):
+                _x_labels_all.append(f"{_lbl}<br>T1·P{_i+1}={_lv}")
+                _delta_bf_all.append(_bf_delta(_t1s, _t2s, 1.0))   # same for all on team
+                _delta_ind_all.append(_di)
+        if len(set(_d_ind2)) > 1:  # skip if all same (no individual differentiation)
+            for _i, (_lv, _di) in enumerate(zip(_t2s, _d_ind2)):
+                _x_labels_all.append(f"{_lbl}<br>T2·P{_i+1}={_lv}")
+                _delta_bf_all.append(_bf_delta(_t2s, _t1s, 0.0))   # team 2 lost
+                _delta_ind_all.append(_di)
+
+    _fig_cmp = go.Figure()
+    _fig_cmp.add_trace(go.Bar(
+        name="balance factor (current)", x=_x_labels_all, y=_delta_bf_all,
+        marker_color="#aec7e8",
+        text=[str(v) for v in _delta_bf_all], textposition="outside",
+    ))
+    _fig_cmp.add_trace(go.Bar(
+        name="individual Elo (proposed)", x=_x_labels_all, y=_delta_ind_all,
+        marker_color="#1f77b4",
+        text=[str(v) for v in _delta_ind_all], textposition="outside",
+    ))
+    _fig_cmp.update_layout(
+        barmode="group", height=450,
+        title=f"Win Δ per player — balance factor vs individual Elo (K={K_DEFAULT}, D={ELO_DIVISOR}, team 1 wins)",
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
+        xaxis=dict(title="Matchup · Player", gridcolor="#eee", tickangle=-30),
+        yaxis=dict(title="Win Δ per player", gridcolor="#eee"),
+        margin=dict(t=50, b=100),
+    )
+    return mo.ui.plotly(_fig_cmp)
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        """
+        Each group shows two players from team 1 (P1 and P2). **Light bars** = current
+        balance-factor approach (same delta for both teammates). **Dark bars** = individual
+        Elo approach (each player gets a delta matching their own expected performance).
+
+        Notable differences:
+
+        - **[40,80] vs [50,50]:** the weaker player (40) beats a team averaging 50 — a bigger
+          surprise than for the stronger player (80), who was slightly favoured. Individual Elo
+          rewards the weaker player more.
+        - **[0,100] vs [50,50]:** the level-0 player's win is a massive upset ($E \\approx 0.36$),
+          earning a large positive delta. The level-100 player's win was expected ($E \\approx 0.64$),
+          earning a smaller delta. The balance factor collapses both to the same dampened value.
+        - **[50,50] vs [50,50]:** both approaches give identical results — equal teams, no spread.
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+        ### Score Evolution & Recovery
+
+        The charts below show how a player's level evolves after an anomalous result — a
+        mismatched game that produces a surprising outcome — comparing all three approaches
+        (no adjustment, Method 1, Method 2).
+        """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(K_DEFAULT, K_MAX, avg_level, balance_factor, go, mo, win_prob):
+    # Score evolution: level-80 player on [80, 0] team loses 0-21 to [50, 50] (dominant bad loss, K_MAX).
+    # Then recovers via consecutive wins on perfectly balanced equal-level teams [cur, cur] vs [cur, cur].
+    #
+    # Key insight: for balanced equal-level recovery teams, BF=1 and individual_e=0.5, so all methods
+    # give the same +K_DEFAULT*0.5 per win. The ONLY difference between methods is the initial dip
+    # size — which is what this chart makes visible.
+
+    def _ind_e(player_level, opponents):
+        if not opponents:
+            return 0.5
+        return sum(win_prob(player_level, opp) for opp in opponents) / len(opponents)
+
+    def _simulate_recovery(start_level, partner_level, opp, k_anomalous, max_games=30):
+        """
+        Game 0 = start.
+        Game 1 = dominant bad loss on [start_level, partner_level] vs opp (uses k_anomalous).
+        Games 2+ = consecutive wins on [cur, cur] vs [cur, cur] (uses K_DEFAULT) until recovered.
+        Returns dict method -> level list.
+        """
+        trajectories = {}
+        for method in ("no_bf", "m1_bf", "m2_ind"):
+            cur = float(start_level)
+            levels = [cur]
+
+            # Anomalous game (loss)
+            t1 = [cur, float(partner_level)]
+            ep = win_prob(avg_level(t1), avg_level(opp))
+            if method == "no_bf":
+                delta = k_anomalous * (0.0 - ep)
+            elif method == "m1_bf":
+                delta = k_anomalous * balance_factor(t1) * (0.0 - ep)
+            else:
+                delta = k_anomalous * (0.0 - _ind_e(cur, opp))
+            cur = round(cur + delta, 4)
+            levels.append(cur)
+
+            # Recovery wins on balanced equal-level teams
+            for _ in range(max_games):
+                if cur >= start_level:
+                    break
+                # All methods reduce to K_DEFAULT * 0.5 for [cur,cur] vs [cur,cur]
+                cur = round(cur + K_DEFAULT * 0.5, 4)
+                levels.append(cur)
+
+            trajectories[method] = levels
+        return trajectories
+
+    _START = 80.0
+    _traj = _simulate_recovery(
+        start_level=_START, partner_level=0.0,
+        opp=[50.0, 50.0], k_anomalous=K_MAX,
+    )
+
+    # Pad to same length
+    _max_len = max(len(v) for v in _traj.values())
+    for _m in _traj:
+        while len(_traj[_m]) < _max_len:
+            _traj[_m].append(_traj[_m][-1])
+
+    _xs_evo = list(range(_max_len))
+    _labels_evo = {"no_bf": "No adjustment", "m1_bf": "Method 1 — Balance Factor", "m2_ind": "Method 2 — Individual Elo"}
+    _colors_evo = {"no_bf": "#d62728", "m1_bf": "#1f77b4", "m2_ind": "#2ca02c"}
+
+    _fig_evo = go.Figure()
+    for _m, _label in _labels_evo.items():
+        _fig_evo.add_trace(go.Scatter(
+            x=_xs_evo, y=_traj[_m], mode="lines+markers",
+            name=_label, line=dict(color=_colors_evo[_m], width=2),
+        ))
+    _fig_evo.add_annotation(
+        x=1, y=min(v[1] for v in _traj.values()) - 0.15,
+        text="<b>Bad loss (0–21)</b>", showarrow=True, arrowhead=2,
+        ax=50, ay=-25, font=dict(size=10),
+    )
+    _fig_evo.add_shape(type="line", x0=0, x1=_max_len - 1, y0=_START, y1=_START,
+                       line=dict(color="gray", dash="dot", width=1))
+    _fig_evo.update_layout(
+        height=420,
+        title=f"Level-{int(_START)} player on [{int(_START)}, 0] team loses 0–21 to [50, 50] — recovery via consecutive wins",
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(x=0.55, y=0.08, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
+        xaxis=dict(title="Game index (0 = start, 1 = bad loss, 2+ = recovery wins)", gridcolor="#eee"),
+        yaxis=dict(title="Player level", gridcolor="#eee"),
+        margin=dict(t=60),
+    )
+    mo.ui.plotly(_fig_evo)
+    return
+
+
+@app.cell(hide_code=True)
+def _(K_DEFAULT, K_MAX, avg_level, balance_factor, go, math, mo, win_prob):
+    # Recovery simulation: for each starting level, simulate the anomalous game then count
+    # how many consecutive normal wins (or losses) are needed to return to starting level.
+    #
+    # Anomalous game uses K_MAX (dominant score, worst-case impact).
+    # Recovery games use K_DEFAULT on balanced equal-level teams [cur,cur] vs [cur,cur],
+    # where all methods give the same +/- K_DEFAULT*0.5 per game.
+    # So recovery count = ceil(|anomalous_delta| / (K_DEFAULT * 0.5)).
+
+    def _ind_e_rec(player_level, opponents):
+        if not opponents:
+            return 0.5
+        return sum(win_prob(player_level, opp) for opp in opponents) / len(opponents)
+
+    _player_levels_sim = [0, 20, 40, 50, 80, 100]
+    _methods_sim = ["No adjustment", "Method 1 — BF", "Method 2 — Ind Elo"]
+    _colors_sim = ["#d62728", "#1f77b4", "#2ca02c"]
+    _recovery_sim = {m: [] for m in _methods_sim}
+
+    for _pl in _player_levels_sim:
+        # >=50: strong player on [pl, 0] team loses (bad loss)
+        # <50:  weak player on [pl, 100] team wins (lucky win)
+        _partner = 0 if _pl >= 50 else 100
+        _actual = 0.0 if _pl >= 50 else 1.0
+        _t1 = [float(_pl), float(_partner)]
+        _t2 = [50.0, 50.0]
+        _ep_team = win_prob(avg_level(_t1), avg_level(_t2))
+
+        _deltas = {
+            "No adjustment":     K_MAX * (_actual - _ep_team),
+            "Method 1 — BF":    K_MAX * balance_factor(_t1) * (_actual - _ep_team),
+            "Method 2 — Ind Elo": K_MAX * (_actual - _ind_e_rec(float(_pl), _t2)),
+        }
+
+        # Recovery rate is identical for all methods on balanced equal-level teams
+        _per_game = K_DEFAULT * 0.5  # K_DEFAULT * |1 - 0.5| or |0 - 0.5|
+
+        for _method in _methods_sim:
+            _n = math.ceil(abs(_deltas[_method]) / _per_game)
+            _recovery_sim[_method].append(_n)
+
+    _x_labels_sim = [str(l) for l in _player_levels_sim]
+    _fig_rec = go.Figure()
+    for _method, _color in zip(_methods_sim, _colors_sim):
+        _fig_rec.add_trace(go.Bar(
+            name=_method, x=_x_labels_sim, y=_recovery_sim[_method],
+            marker_color=_color,
+            text=[str(v) for v in _recovery_sim[_method]], textposition="outside",
+        ))
+
+    _fig_rec.update_layout(
+        barmode="group", height=450,
+        title="Consecutive normal wins to recover from a dominant anomalous game (K_MAX, 0–21 score)<br>"
+              "<sup>≥50: bad loss on [pl, 0] vs [50, 50] · <50: lucky win on [pl, 100] vs [50, 50]</sup>",
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
+        xaxis=dict(title="Player level", gridcolor="#eee"),
+        yaxis=dict(title="Recovery wins needed", gridcolor="#eee"),
+        margin=dict(t=80, b=60),
+    )
+    mo.ui.plotly(_fig_rec)
     return
 
 
@@ -1083,7 +1424,7 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, mo, play_game, random):
+def _(go, make_subplots, mo, play_game, random):
     def _simulate_doubles(initial_levels, n_rounds, seed=42, stochastic=True):
         """Randomly pair players into 2 doubles teams each round, simulate, track levels."""
         _rng = random.Random(seed)
@@ -1119,7 +1460,7 @@ def _(go, mo, play_game, random):
     _N = 80
     _N_det = 25  # deterministic converges in ~15-20 games; cap early to avoid flat plateau
 
-    _s_det_a, _s_det_b = _simulate_singles(70, 30, _N_det, stochastic=False)
+    _s_det_a, _s_det_b = _simulate_singles(50, 50, _N_det, stochastic=False)
     _s_sto_a, _s_sto_b = _simulate_singles(50, 50, _N, seed=7, stochastic=True)
     _init_4 = [10, 40, 60, 90]
     _hist_4  = _simulate_doubles(_init_4, _N, seed=42, stochastic=True)
@@ -1144,7 +1485,7 @@ def _(go, mo, play_game, random):
         subplot_titles=("Singles — deterministic", "Singles — stochastic"),
         column_widths=[0.5, 0.5],
     )
-    for _lbl, _hist, _col in [("A (start=70)", _s_det_a, "#E45756"), ("B (start=30)", _s_det_b, "#4C78A8")]:
+    for _lbl, _hist, _col in [("A (start=50)", _s_det_a, "#E45756"), ("B (start=50)", _s_det_b, "#4C78A8")]:
         _fig_singles.add_trace(
             go.Scatter(x=_games_det, y=_hist, mode="lines", name=_lbl,
                        line=dict(color=_col, width=2.5), legendgroup=_lbl),
@@ -1197,16 +1538,15 @@ def _(go, mo, play_game, random):
         mo.ui.plotly(_fig_singles),
         mo.hstack([
             mo.md("""
-**Deterministic (A=70, B=30):** the stronger player always wins every game. With a divisor
-of 400 over a 0–100 scale, the win probability only ranges ~36–64%, so the Elo update stays
-around 1.2 pts/game throughout — levels diverge steadily to 100/0 with no equilibrium or
-self-correction. The chart is capped at 25 games to show the full divergence before the
-plateau.
+**Deterministic (A=50, B=50):** both players start equal, but the deterministic rule
+(stronger always wins, ties go to A) immediately breaks symmetry — A wins every game and
+levels diverge steadily. The chart is capped at 25 games to show the divergence before the
+plateau at 0/100.
             """),
             mo.md("""
-**Stochastic (A=50, B=50):** the winner is drawn from the Elo win probability, introducing noise
-even between equal players. Random winning streaks push one player ahead until larger K swings
-pull them back. The result is a noisy but mean-reverting oscillation around level 50.
+**Stochastic (A=50, B=50):** the winner is drawn from the Elo win probability, introducing
+noise even between equal players. Random winning streaks push one player ahead until the
+rating update pulls them back. The result is a noisy, mean-reverting oscillation around 50.
             """),
         ]),
         mo.ui.plotly(_fig_doubles),
