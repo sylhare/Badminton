@@ -190,6 +190,8 @@ def _(mo):
         ---
         ## 1 · ELO Divisor
 
+        ### 1a · Win Probability Curve
+
         The **divisor** $D$ is a single number that controls how sensitive the win-probability
         formula is to differences in player levels. A small $D$ makes the curve very steep —
         even a modest level gap produces a near-certain outcome. A large $D$ flattens the curve,
@@ -204,7 +206,7 @@ def _(mo):
         | 400         | ~57 %                | Moderate (chess standard) |
         | 1000        | ~53 %                | Gentle |
         | 2000        | ~51 %                | Very gentle |
-        | **4000**    | **~51 %**            | **Nearly flat — chosen value** |
+        | **4000**    | **~51 %**            | **Nearly flat** |
 
         With $D = 400$ (the chess standard), a 100-point gap gives $E_A \approx 64\,\%$.
         With $D = 4000$, the same gap gives only $E_A \approx 51\,\%$ — levels barely influence
@@ -283,7 +285,7 @@ def _(mo):
 
         The two parameters that most influence rating change are the **divisor $D$** and the
         **K-factor**. This section shows how they interact across the full historical range:
-        divisors from 50 (very steep, chess-like) to 4000 (nearly flat, current value), and
+        divisors from 50 (very steep, chess-like) to 4000 (nearly flat), and
         all K tiers from the most dominant win ($K = 1.5$) down to deuce/no-score ($K = 0.3$).
 
         For a fixed level difference, the maximum rating delta is:
@@ -428,7 +430,7 @@ def _(mo):
         """
 **Top-left — divisor impact on max delta (K = 1.5).** At $D = 50$ even a 10-point gap
 produces a large swing, and a 100-point gap pushes the delta close to $K = 1.5$. At $D = 4000$
-(current value, bold line) the curve is almost flat — the maximum delta stays near $K/2 = 0.75$
+(bold line) the curve is almost flat — the maximum delta stays near $K/2 = 0.75$
 regardless of the level gap.
 
 **Top-right — K-factor impact at D = 4000.** With a fixed divisor of 4000, each K tier produces
@@ -437,8 +439,8 @@ of the rating change, with the level gap contributing less than 1 %.
 
 **Bottom-left — combined heatmap at level gap = 50.** Each cell is the winner's rating gain when
 the stronger team leads by 50 points. Moving right (larger $D$) rapidly flattens the effect.
-Moving up (larger $K$) scales it linearly. The current operating point is the cell at
-$D = 4000$, $K = 1.5$ — bottom-right region of the heatmap.
+Moving up (larger $K$) scales it linearly. The cell at
+$D = 4000$, $K = 1.5$ sits in the bottom-right region of the heatmap.
 
 **Bottom-right — win probability for each divisor.** The weaker team's win probability as a
 function of level gap. At $D = 50$ a 50-point gap gives the weaker team only ~9 % chance.
@@ -608,7 +610,7 @@ def _(mo):
 def _(mo):
     mo.md(
         r"""
-        ### Method 1 — Balance Factor (current)
+        ### Method 1 — Balance Factor
 
         **Step 1 — team standard deviation** (how spread out the team's levels are):
 
@@ -634,19 +636,6 @@ def _(mo):
 
         Singles (1-player teams) are always unaffected ($\beta = 1.0$). Each team gets its own
         balance-adjusted K independently — a lopsided team 1 does not affect team 2's K.
-
-        ### Method 2 — Individual Win Probability
-
-        An alternative: instead of reducing K uniformly for the whole team, compute each
-        player's **individual expected win probability** by averaging their 1v1 Elo probability
-        against every opponent:
-
-        $$E_i = \frac{1}{|T_2|} \sum_{j \in T_2} \frac{1}{1 + 10^{(L_j - L_i)\,/\,D}}$$
-
-        Then apply $\Delta_i = K \times (\text{actual} - E_i)$ **individually** per player.
-        This naturally accounts for team spread without a separate dampening factor — a strong
-        player on a weak team has a high $E_i$ (their win is expected), while their weaker
-        partner has a low $E_i$ (their win is surprising).
         """
     )
     return
@@ -825,7 +814,24 @@ def _(ELO_DIVISOR, K_DEFAULT, avg_level, balance_factor, go, mo, win_prob):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md("### Comparison — Method 1 vs Method 2")
+    mo.md(
+        r"""
+        ### Method 2 — Individual Win Probability
+
+        An alternative: instead of reducing K uniformly for the whole team, compute each
+        player's **individual expected win probability** by averaging their 1v1 Elo probability
+        against every opponent:
+
+        $$E_i = \frac{1}{|T_2|} \sum_{j \in T_2} \frac{1}{1 + 10^{(L_j - L_i)\,/\,D}}$$
+
+        Then apply $\Delta_i = K \times (\text{actual} - E_i)$ **individually** per player.
+        This naturally accounts for team spread without a separate dampening factor — a strong
+        player on a weak team has a high $E_i$ (their win is expected), while their weaker
+        partner has a low $E_i$ (their win is surprising).
+
+        ### Comparison — Method 1 vs Method 2
+        """
+    )
     return
 
 
@@ -847,7 +853,7 @@ def _(ELO_DIVISOR, K_DEFAULT, avg_level, go, math, mo, win_prob):
         return d1, d2, winner
 
     def _bf_delta(player_levels, opp_levels, actual):
-        """Current approach: team avg Elo × balance factor."""
+        """Method 1: team avg Elo × balance factor."""
         _a1, _a2 = avg_level(player_levels), avg_level(opp_levels)
         _ep  = win_prob(_a1, _a2)
         _avg = sum(player_levels) / len(player_levels) if player_levels else 50
@@ -863,38 +869,50 @@ def _(ELO_DIVISOR, K_DEFAULT, avg_level, go, math, mo, win_prob):
         ("[20,80] vs [40,60]", [20, 80], [40, 60]),
     ]
 
-    _player_labels_all = []
-    _delta_bf_all  = []
-    _delta_ind_all = []
-    _x_labels_all  = []
+    _delta_no_bf_all = []
+    _delta_bf_all    = []
+    _delta_ind_all   = []
+    _x_labels_all    = []
+
+    def _no_bf_delta(player_levels, opp_levels, actual):
+        """No adjustment: plain team-avg Elo, full K."""
+        _ep = win_prob(avg_level(player_levels), avg_level(opp_levels))
+        return round(K_DEFAULT * (actual - _ep), 3)
 
     for _lbl, _t1s, _t2s in _scenarios_cmp:
         _d_ind1, _d_ind2, _ = _play_game_individual(_t1s, _t2s, K_DEFAULT)
         if len(set(_d_ind1)) > 1:  # skip if all same (no individual differentiation)
             for _i, (_lv, _di) in enumerate(zip(_t1s, _d_ind1)):
                 _x_labels_all.append(f"{_lbl}<br>T1·P{_i+1}={_lv}")
-                _delta_bf_all.append(_bf_delta(_t1s, _t2s, 1.0))   # same for all on team
+                _delta_no_bf_all.append(_no_bf_delta(_t1s, _t2s, 1.0))
+                _delta_bf_all.append(_bf_delta(_t1s, _t2s, 1.0))
                 _delta_ind_all.append(_di)
         if len(set(_d_ind2)) > 1:  # skip if all same (no individual differentiation)
             for _i, (_lv, _di) in enumerate(zip(_t2s, _d_ind2)):
                 _x_labels_all.append(f"{_lbl}<br>T2·P{_i+1}={_lv}")
-                _delta_bf_all.append(_bf_delta(_t2s, _t1s, 0.0))   # team 2 lost
+                _delta_no_bf_all.append(_no_bf_delta(_t2s, _t1s, 0.0))
+                _delta_bf_all.append(_bf_delta(_t2s, _t1s, 0.0))
                 _delta_ind_all.append(_di)
 
     _fig_cmp = go.Figure()
     _fig_cmp.add_trace(go.Bar(
-        name="balance factor (current)", x=_x_labels_all, y=_delta_bf_all,
+        name="no adjustment", x=_x_labels_all, y=_delta_no_bf_all,
+        marker_color="#d9d9d9",
+        text=[str(v) for v in _delta_no_bf_all], textposition="outside",
+    ))
+    _fig_cmp.add_trace(go.Bar(
+        name="Method 1 — balance factor", x=_x_labels_all, y=_delta_bf_all,
         marker_color="#aec7e8",
         text=[str(v) for v in _delta_bf_all], textposition="outside",
     ))
     _fig_cmp.add_trace(go.Bar(
-        name="individual Elo (proposed)", x=_x_labels_all, y=_delta_ind_all,
+        name="Method 2 — individual Elo", x=_x_labels_all, y=_delta_ind_all,
         marker_color="#1f77b4",
         text=[str(v) for v in _delta_ind_all], textposition="outside",
     ))
     _fig_cmp.update_layout(
         barmode="group", height=450,
-        title=f"Win Δ per player — balance factor vs individual Elo (K={K_DEFAULT}, D={ELO_DIVISOR}, team 1 wins)",
+        title=f"Win Δ per player — no adjustment vs balance factor vs individual Elo (K={K_DEFAULT}, D={ELO_DIVISOR}, team 1 wins)",
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
         xaxis=dict(title="Matchup · Player", gridcolor="#eee", tickangle=-30),
@@ -908,9 +926,10 @@ def _(ELO_DIVISOR, K_DEFAULT, avg_level, go, math, mo, win_prob):
 def _(mo):
     mo.md(
         """
-        Each group shows two players from team 1 (P1 and P2). **Light bars** = current
-        balance-factor approach (same delta for both teammates). **Dark bars** = individual
-        Elo approach (each player gets a delta matching their own expected performance).
+        Each group shows two players from team 1 (P1 and P2). **Grey** = no adjustment
+        (plain team-avg Elo). **Light blue** = Method 1 balance factor (same reduced delta for
+        both teammates). **Dark blue** = Method 2 individual Elo (each player gets a delta
+        matching their own expected performance).
 
         Notable differences:
 
