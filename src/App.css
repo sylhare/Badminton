@@ -1557,6 +1557,47 @@ h1 {
     cursor: not-allowed;
 }
 
+.share-button {
+    background: #38a169;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.share-button:hover {
+    background: #2f855a;
+}
+
+.share-url-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #4a5568;
+    background: #f7fafc;
+    box-sizing: border-box;
+    margin-top: 8px;
+}
+
+.share-url-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.share-url-row .share-url-input {
+    flex: 1;
+    margin-top: 0;
+}
+
 .player-actions {
     display: flex;
     gap: 12px;
@@ -2078,6 +2119,15 @@ h1 {
         padding: 15px 12px;
         min-height: 44px;
     }
+
+    .leaderboard-table th, .leaderboard-table td {
+        padding: 8px 10px;
+    }
+}
+
+.leaderboard-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .leaderboard-table {

@@ -3,7 +3,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import ManualPlayerEntry from './components/ManualPlayerEntry';
 import PlayerList from './components/PlayerList';
+import ShareModal from './components/ShareModal';
+import ImportStateModal from './components/ImportStateModal';
 import { CourtAssignments } from './components/court';
+import { useShareState } from './hooks/useShareState';
 import Leaderboard from './components/Leaderboard';
 import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
@@ -41,6 +44,8 @@ function App(): React.ReactElement {
   const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState<boolean>(false);
+
+  const { shareUrl, setShareUrl, importState, handleShare, handleImportAccept, handleImportDecline } = useShareState();
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const hasLoadedRef = useRef(false);
@@ -269,6 +274,7 @@ function App(): React.ReactElement {
                   onToggleForceBench={handleToggleForceBench}
                   onToggleSmartEngine={handleToggleSmartEngine}
                   onUpdatePlayer={handleUpdatePlayer}
+                  onShare={handleShare}
                 />
               )}
             </div>
@@ -308,6 +314,19 @@ function App(): React.ReactElement {
           lossCounts={engine().getStats().lossCountMap}
         />
       </div>
+
+      <ShareModal
+        isOpen={shareUrl !== null}
+        shareUrl={shareUrl ?? ''}
+        onClose={() => setShareUrl(null)}
+      />
+
+      <ImportStateModal
+        isOpen={importState !== null}
+        currentBackupUrl={importState?.backupUrl ?? ''}
+        onAccept={handleImportAccept}
+        onDecline={handleImportDecline}
+      />
 
       <footer className="app-footer">
         <p>
