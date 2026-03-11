@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowClockwise, Pause, Play, Trash } from '@phosphor-icons/react';
+import { ArrowClockwise, Pause, Play, ShareNetwork, Trash } from '@phosphor-icons/react';
 
 import type { Player } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -21,6 +21,7 @@ interface PlayerListProps {
   onToggleForceBench?: (playerId: string) => void;
   onToggleSmartEngine?: () => void;
   onUpdatePlayer?: (id: string, gender: Player['gender'], level: number) => void;
+  onShare?: () => void;
 }
 
 const PlayerList: React.FC<PlayerListProps> = ({
@@ -34,6 +35,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   onToggleForceBench,
   onToggleSmartEngine,
   onUpdatePlayer,
+  onShare,
 }) => {
   const [showClearModal, setShowClearModal] = useState(false);
   const [showResetAlgorithmModal, setShowResetAlgorithmModal] = useState(false);
@@ -213,6 +215,15 @@ const PlayerList: React.FC<PlayerListProps> = ({
           >
             <Trash size={16} />
             Clear All Players
+          </button>
+          <button
+            onClick={onShare}
+            className="share-button"
+            data-testid="share-button"
+            title="Share session via URL"
+          >
+            <ShareNetwork size={16} />
+            Share
           </button>
         </div>
       )}
