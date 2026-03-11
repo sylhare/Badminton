@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
-import ManualCourtModal from '../ManualCourtModal';
+import ManualCourtModal from '../modals/ManualCourtModal';
 
 import { CourtCard } from './card';
 import { TeamPlayerList } from './team';

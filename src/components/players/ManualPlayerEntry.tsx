@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Camera, UserPlus } from '@phosphor-icons/react';
 
-import { validatePlayerNames } from '../utils/playerUtils';
-import { useAnalytics } from '../hooks/useAnalytics';
-
-import ImageUploadModal from './ImageUploadModal';
+import { validatePlayerNames } from '../../utils/playerUtils';
+import { useAnalytics } from '../../hooks/useAnalytics';
+import ImageUploadModal from '../modals/ImageUploadModal';
 
 interface ManualPlayerEntryProps {
   onPlayersAdded: (players: string[]) => void;

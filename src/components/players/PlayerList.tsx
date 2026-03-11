@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { ArrowClockwise, Pause, Play, ShareNetwork, Trash } from '@phosphor-icons/react';
 
-import type { Player } from '../types';
-import { useAnalytics } from '../hooks/useAnalytics';
-import { engine } from '../engines/engineSelector';
-
-import ConfirmModal from './ConfirmModal';
-import PlayerEditModal from './PlayerEditModal';
-import PlayerRemovalModal from './PlayerRemovalModal';
-import { Tooltip } from './Tooltip';
+import type { Player } from '../../types';
+import { useAnalytics } from '../../hooks/useAnalytics';
+import { engine } from '../../engines/engineSelector';
+import ConfirmModal from '../modals/ConfirmModal';
+import PlayerEditModal from '../modals/PlayerEditModal';
+import PlayerRemovalModal from '../modals/PlayerRemovalModal';
+import { Tooltip } from '../Tooltip';
 
 interface PlayerListProps {
   players: Player[];

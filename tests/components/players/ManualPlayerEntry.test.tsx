@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import ManualPlayerEntry from '../../src/components/ManualPlayerEntry';
+import ManualPlayerEntry from '../../../src/components/players/ManualPlayerEntry';
 
-vi.mock('../../src/components/ImageUploadModal', () => ({
+vi.mock('../../../src/components/modals/ImageUploadModal', () => ({
   default: ({ isOpen, onClose, onPlayersAdded }: {
     isOpen: boolean;
     onClose: () => void;
@@ -27,8 +27,16 @@ describe('ManualPlayerEntry Component', () => {
     vi.clearAllMocks();
   });
 
-  it('renders player entry form with input, camera button, and add button', () => {
+  function setup() {
+    const user = userEvent.setup();
     render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
+    const input = screen.getByTestId('player-entry-input');
+    const button = screen.getByTestId('add-player-button');
+    return { user, input, button };
+  }
+
+  it('renders player entry form with input, camera button, and add button', () => {
+    setup();
 
     expect(screen.getByTestId('player-entry-input')).toBeInTheDocument();
     expect(screen.getByTestId('open-image-modal-button')).toBeInTheDocument();
@@ -36,18 +44,13 @@ describe('ManualPlayerEntry Component', () => {
   });
 
   it('add button is disabled when input is empty', () => {
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
+    const { button } = setup();
 
-    const addButton = screen.getByTestId('add-player-button');
-    expect(addButton).toBeDisabled();
+    expect(button).toBeDisabled();
   });
 
   it('adds a single player correctly', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
-
-    const input = screen.getByTestId('player-entry-input');
-    const button = screen.getByTestId('add-player-button');
+    const { user, input, button } = setup();
 
     await act(async () => {
       await user.type(input, 'John Doe');
@@ -59,99 +62,62 @@ describe('ManualPlayerEntry Component', () => {
   });
 
   it('adds multiple players with comma separation', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
-
-    const input = screen.getByTestId('player-entry-input');
-    const button = screen.getByTestId('add-player-button');
+    const { user, input, button } = setup();
 
     await act(async () => {
       await user.type(input, 'John Doe, Jane Smith, Mike Johnson');
       await user.click(button);
     });
 
-    expect(mockOnPlayersAdded).toHaveBeenCalledWith([
-      'John Doe',
-      'Jane Smith',
-      'Mike Johnson',
-    ]);
+    expect(mockOnPlayersAdded).toHaveBeenCalledWith(['John Doe', 'Jane Smith', 'Mike Johnson']);
     expect(input).toHaveValue('');
   });
 
   it('adds multiple players with backtick separation', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
-
-    const input = screen.getByTestId('player-entry-input');
-    const button = screen.getByTestId('add-player-button');
+    const { user, input, button } = setup();
 
     await act(async () => {
       await user.type(input, 'John Doe`Jane Smith`Mike Johnson');
       await user.click(button);
     });
 
-    expect(mockOnPlayersAdded).toHaveBeenCalledWith([
-      'John Doe',
-      'Jane Smith',
-      'Mike Johnson',
-    ]);
+    expect(mockOnPlayersAdded).toHaveBeenCalledWith(['John Doe', 'Jane Smith', 'Mike Johnson']);
   });
 
   it('filters out empty entries', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
-
-    const input = screen.getByTestId('player-entry-input');
-    const button = screen.getByTestId('add-player-button');
+    const { user, input, button } = setup();
 
     await act(async () => {
       await user.type(input, 'John Doe,, Jane Smith,   ,Mike Johnson,');
       await user.click(button);
     });
 
-    expect(mockOnPlayersAdded).toHaveBeenCalledWith([
-      'John Doe',
-      'Jane Smith',
-      'Mike Johnson',
-    ]);
+    expect(mockOnPlayersAdded).toHaveBeenCalledWith(['John Doe', 'Jane Smith', 'Mike Johnson']);
   });
 
   it('trims whitespace from names', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
-
-    const input = screen.getByTestId('player-entry-input');
-    const button = screen.getByTestId('add-player-button');
+    const { user, input, button } = setup();
 
     await act(async () => {
       await user.type(input, '  John Doe  ,  Jane Smith  ');
       await user.click(button);
     });
 
-    expect(mockOnPlayersAdded).toHaveBeenCalledWith([
-      'John Doe',
-      'Jane Smith',
-    ]);
+    expect(mockOnPlayersAdded).toHaveBeenCalledWith(['John Doe', 'Jane Smith']);
   });
 
   it('does not add empty/whitespace only input', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
-
-    const input = screen.getByTestId('player-entry-input');
+    const { user, input, button } = setup();
 
     await act(async () => {
       await user.type(input, '   ');
     });
 
-    expect(screen.getByTestId('add-player-button')).toBeDisabled();
+    expect(button).toBeDisabled();
   });
 
   it('shows multi-input hint when multiple players detected', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
-
-    const input = screen.getByTestId('player-entry-input');
+    const { user, input } = setup();
 
     await act(async () => {
       await user.type(input, 'John, Jane, Bob');
@@ -161,8 +127,7 @@ describe('ManualPlayerEntry Component', () => {
   });
 
   it('opens image upload modal when camera button is clicked', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
+    const { user } = setup();
 
     expect(screen.queryByTestId('mock-image-upload-modal')).not.toBeInTheDocument();
 
@@ -174,8 +139,7 @@ describe('ManualPlayerEntry Component', () => {
   });
 
   it('closes image upload modal', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
+    const { user } = setup();
 
     await act(async () => {
       await user.click(screen.getByTestId('open-image-modal-button'));
@@ -191,8 +155,7 @@ describe('ManualPlayerEntry Component', () => {
   });
 
   it('adds players from image upload modal', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
+    const { user } = setup();
 
     await act(async () => {
       await user.click(screen.getByTestId('open-image-modal-button'));
@@ -206,20 +169,17 @@ describe('ManualPlayerEntry Component', () => {
   });
 
   it('updates button text based on player count', async () => {
-    const user = userEvent.setup();
-    render(<ManualPlayerEntry onPlayersAdded={mockOnPlayersAdded} />);
-
-    const input = screen.getByTestId('player-entry-input');
+    const { user, input, button } = setup();
 
     await act(async () => {
       await user.type(input, 'John');
     });
-    expect(screen.getByTestId('add-player-button')).toHaveTextContent('Add Player');
+    expect(button).toHaveTextContent('Add Player');
 
     await act(async () => {
       await user.clear(input);
       await user.type(input, 'John, Jane, Bob');
     });
-    expect(screen.getByTestId('add-player-button')).toHaveTextContent('Add 3 Players');
+    expect(button).toHaveTextContent('Add 3 Players');
   });
 });

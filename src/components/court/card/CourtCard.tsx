@@ -3,7 +3,7 @@ import React, { useRef, useState } from 'react';
 import type { Court } from '../../../types';
 import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
-import ScoreInputModal from '../../ScoreInputModal';
+import ScoreInputModal from '../../modals/ScoreInputModal';
 import { engine } from '../../../engines/engineSelector';
 
 import CourtHeader from './CourtHeader';

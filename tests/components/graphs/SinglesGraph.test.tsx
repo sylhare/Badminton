@@ -2,9 +2,9 @@ import React from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import SinglesGraph from '../../src/components/SinglesGraph';
-import { createLongNameGetter, createMockGetPlayerName } from '../data/testFactories';
-import { graphAssertions } from '../data/testHelpers';
+import SinglesGraph from '../../../src/components/graphs/SinglesGraph';
+import { createLongNameGetter, createMockGetPlayerName } from '../../data/testFactories';
+import { graphAssertions } from '../../data/testHelpers';
 
 describe('SinglesGraph Component', () => {
   const mockGetPlayerName = createMockGetPlayerName();

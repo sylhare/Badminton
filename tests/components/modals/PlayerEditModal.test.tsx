@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import PlayerEditModal from '../../src/components/PlayerEditModal';
-import type { Player } from '../../src/types';
+import PlayerEditModal from '../../../src/components/modals/PlayerEditModal';
+import type { Player } from '../../../src/types';
 
 function makePlayer(overrides: Partial<Player> = {}): Player {
   return {

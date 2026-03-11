@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import PlayerList from '../../src/components/PlayerList';
-import { setEngine } from '../../src/engines/engineSelector';
-import { createMockPlayer, createMockPlayers } from '../data/testFactories';
+import PlayerList from '../../../src/components/players/PlayerList';
+import { setEngine } from '../../../src/engines/engineSelector';
+import { createMockPlayer, createMockPlayers } from '../../data/testFactories';
 
 describe('PlayerList Component', () => {
   const user = userEvent.setup();

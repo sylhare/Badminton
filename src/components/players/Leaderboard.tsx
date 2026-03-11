@@ -1,7 +1,7 @@
 import React from 'react';
 
-import type { Player } from '../types';
-import { engine } from '../engines/engineSelector';
+import type { Player } from '../../types';
+import { engine } from '../../engines/engineSelector';
 
 interface LeaderboardProps {
   players: Player[];

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 
-import type { Player } from '../types';
+import type { Player } from '../../types';
 
 interface ScoreInputModalProps {
   isOpen: boolean;

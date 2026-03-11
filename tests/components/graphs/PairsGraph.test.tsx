@@ -2,8 +2,8 @@ import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import PairsGraph from '../../src/components/PairsGraph';
-import { graphAssertions } from '../data/testHelpers';
+import PairsGraph from '../../../src/components/graphs/PairsGraph';
+import { graphAssertions } from '../../data/testHelpers';
 
 describe('PairsGraph Component', () => {
   it('returns null when pairs data is empty', () => {

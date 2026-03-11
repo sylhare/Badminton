@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { getColorForCount, GRAPH_COLORS } from '../constants/graphColors';
+import { getColorForCount, GRAPH_COLORS } from '../../constants/graphColors';
 
 type GraphVariant = 'teammate' | 'opponent';
 

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { X } from '@phosphor-icons/react';
 
-import type { Player } from '../types';
-
-import { Tooltip } from './Tooltip';
+import type { Player } from '../../types';
+import { Tooltip } from '../Tooltip';
 
 interface PlayerEditModalProps {
   player: Player | null;

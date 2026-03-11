@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import ConfirmModal from '../../src/components/ConfirmModal';
+import ConfirmModal from '../../../src/components/modals/ConfirmModal';
 
 describe('ConfirmModal Component', () => {
   const mockOnConfirm = vi.fn();

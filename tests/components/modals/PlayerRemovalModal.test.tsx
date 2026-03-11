@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import PlayerRemovalModal from '../../src/components/PlayerRemovalModal';
+import PlayerRemovalModal from '../../../src/components/modals/PlayerRemovalModal';
 
 describe('PlayerRemovalModal Component', () => {
   const mockOnRemove = vi.fn();

@@ -3,10 +3,10 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import ImageUploadModal from '../../src/components/ImageUploadModal';
-import { useImageOcr } from '../../src/hooks/useImageOcr';
+import ImageUploadModal from '../../../src/components/modals/ImageUploadModal';
+import { useImageOcr } from '../../../src/hooks/useImageOcr';
 
-vi.mock('../../src/hooks/useImageOcr', () => ({
+vi.mock('../../../src/hooks/useImageOcr', () => ({
   useImageOcr: vi.fn(() => ({
     isProcessing: false,
     progress: 0,
@@ -14,7 +14,7 @@ vi.mock('../../src/hooks/useImageOcr', () => ({
   })),
 }));
 
-vi.mock('../../src/hooks/useDragAndDrop', () => ({
+vi.mock('../../../src/hooks/useDragAndDrop', () => ({
   useDragAndDrop: vi.fn(({ onFileDropped }) => ({
     isDragOver: false,
     handleDrop: (e: React.DragEvent) => {
@@ -27,7 +27,7 @@ vi.mock('../../src/hooks/useDragAndDrop', () => ({
   })),
 }));
 
-vi.mock('../../src/hooks/useAnalytics', () => ({
+vi.mock('../../../src/hooks/useAnalytics', () => ({
   useAnalytics: () => ({
     trackPlayerAction: vi.fn(),
   }),

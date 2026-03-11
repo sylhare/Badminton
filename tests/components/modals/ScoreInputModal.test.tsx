@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import ScoreInputModal from '../../src/components/ScoreInputModal';
-import type { Player } from '../../src/types';
+import ScoreInputModal from '../../../src/components/modals/ScoreInputModal';
+import type { Player } from '../../../src/types';
 
 const team1: Player[] = [{ id: '1', name: 'Alice', isPresent: true }];
 const team2: Player[] = [{ id: '2', name: 'Bob', isPresent: true }];

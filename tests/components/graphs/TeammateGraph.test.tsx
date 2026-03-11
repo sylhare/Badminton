@@ -2,9 +2,9 @@ import React from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import TeammateGraph from '../../src/components/TeammateGraph';
-import { createLongNameGetter, createMockGetPlayerName, GRAPH_COLORS } from '../data/testFactories';
-import { graphAssertions } from '../data/testHelpers';
+import TeammateGraph from '../../../src/components/graphs/TeammateGraph';
+import { createLongNameGetter, createMockGetPlayerName, GRAPH_COLORS } from '../../data/testFactories';
+import { graphAssertions } from '../../data/testHelpers';
 
 describe('TeammateGraph Component', () => {
   const mockGetPlayerName = createMockGetPlayerName();

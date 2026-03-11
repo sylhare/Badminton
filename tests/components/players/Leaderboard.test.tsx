@@ -2,9 +2,9 @@ import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import Leaderboard from '../../src/components/Leaderboard';
-import type { Player } from '../../src/types';
-import { TEST_PLAYERS } from '../data/testData';
+import Leaderboard from '../../../src/components/players/Leaderboard';
+import type { Player } from '../../../src/types';
+import { TEST_PLAYERS } from '../../data/testData';
 
 describe('Leaderboard Component', () => {
   const mockPlayers = TEST_PLAYERS.slice(0, 2);

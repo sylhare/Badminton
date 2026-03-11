@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import ImportStateModal from '../../src/components/ImportStateModal';
+import ImportStateModal from '../../../src/components/modals/ImportStateModal';
 
 describe('ImportStateModal', () => {
   const user = userEvent.setup();

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 
-import { getColorForCount, getGlowColorForCount, GRAPH_COLORS } from '../constants/graphColors';
+import { getColorForCount, getGlowColorForCount, GRAPH_COLORS } from '../../constants/graphColors';
 
 import { SvgChart } from './SvgChart';
 
