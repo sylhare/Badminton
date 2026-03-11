@@ -193,6 +193,27 @@ class StorageManager {
     return this.writeQueue;
   }
 
+  /** Returns the raw compressed+base64 localStorage value, or null if empty. */
+  getRawState(): string | null {
+    return localStorage.getItem(StorageManager.KEY);
+  }
+
+  /** Writes raw compressed state directly. Used for import — keeps all localStorage access inside StorageManager. */
+  importRawState(raw: string): void {
+    localStorage.setItem(StorageManager.KEY, raw);
+  }
+
+  /** Returns true if the raw string is a valid compressed state with players array. */
+  async isValidState(raw: string): Promise<boolean> {
+    try {
+      const decompressed = await decompress(raw);
+      const parsed = JSON.parse(decompressed);
+      return Array.isArray(parsed?.app?.players);
+    } catch {
+      return false;
+    }
+  }
+
   private toCompact(state: CourtEngineState): CompactEngineState {
     const allPlayerIds = new Set([
       ...Object.keys(state.benchCountMap),
@@ -287,7 +308,7 @@ class StorageManager {
   }
 
   private async read(): Promise<Partial<StorageData>> {
-    const raw = localStorage.getItem(StorageManager.KEY);
+    const raw = this.getRawState();
     if (!raw) {
       const oldApp = localStorage.getItem(OLD_KEYS.APP_STATE);
       const oldEngine = localStorage.getItem(OLD_KEYS.COURT_ENGINE_STATE);
