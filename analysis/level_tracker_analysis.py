@@ -957,70 +957,69 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, mo, win_prob):
     # 50-pt gap example
     _e_gap = round(win_prob(75, 25) * 100, 1)
 
-    mo.md(
-        f"""
-        ### Expected Win Probability
+    mo.vstack([
+        mo.md(f"""
+### 4a · Expected Win Probability
 
-        Before each game, the system estimates how likely each team is to win based on their
-        average player levels. Equal teams each get 50 %. The formula uses a divisor of {ELO_DIVISOR}
-        (see § 1), which makes the curve flat — even a very large level gap barely
-        moves the probability away from 50 %:
+Before each game, the system estimates how likely each team is to win based on their
+average player levels. Equal teams each get 50 %. The formula uses a divisor of {ELO_DIVISOR}
+(see § 1), which makes the curve flat — even a very large level gap barely
+moves the probability away from 50 %:
 
-        $$\\bar{{L}}_\\text{{team}} = \\frac{{1}}{{n}}\\sum_{{i=1}}^{{n}} L_i
-          \\qquad \\text{{(unknown level}} \\to 50\\text{{)}}$$
+$$\\bar{{L}}_\\text{{team}} = \\frac{{1}}{{n}}\\sum_{{i=1}}^{{n}} L_i
+  \\qquad \\text{{(unknown level}} \\to 50\\text{{)}}$$
 
-        $$E_A = \\frac{{1}}{{1 + 10^{{(\\bar{{L}}_B - \\bar{{L}}_A)\\,/\\,D}}}}, \\qquad E_B = 1 - E_A$$
+$$E_A = \\frac{{1}}{{1 + 10^{{(\\bar{{L}}_B - \\bar{{L}}_A)\\,/\\,D}}}}, \\qquad E_B = 1 - E_A$$
 
-        A 50-point level gap (level 75 vs level 25) gives $E_A \\approx {_e_gap}\\,\\%$ — close to a coin flip.
+A 50-point level gap (level 75 vs level 25) gives $E_A \\approx {_e_gap}\\,\\%$ — close to a coin flip.
 
-        ### Level Delta
+### 4b · Level Delta
 
-        After the game, every player on the winning team gains points and every player on the
-        losing team loses the same number. The size of the swing grows with how surprising the
-        result was: a massive upset earns far more than a comfortable expected win.
+After the game, every player on the winning team gains points and every player on the
+losing team loses the same number. The size of the swing grows with how surprising the
+result was: a massive upset earns far more than a comfortable expected win.
 
-        $$\\text{{actual}} = \\begin{{cases}} 1 & \\text{{(team won)}} \\\\ 0 & \\text{{(team lost)}} \\end{{cases}}
-          \\qquad \\Delta = K_{{\\text{{eff}}}} \\times (\\text{{actual}} - E)$$
+$$\\text{{actual}} = \\begin{{cases}} 1 & \\text{{(team won)}} \\\\ 0 & \\text{{(team lost)}} \\end{{cases}}
+  \\qquad \\Delta = K_{{\\text{{eff}}}} \\times (\\text{{actual}} - E)$$
 
-        $$L_{{\\text{{new}}}} = \\operatorname{{clamp}}(L + \\Delta,\\; 0,\\; 100) \\quad \\text{{rounded to 1 d.p.}}$$
+$$L_{{\\text{{new}}}} = \\operatorname{{clamp}}(L + \\Delta,\\; 0,\\; 100) \\quad \\text{{rounded to 1 d.p.}}$$
+        """),
+        mo.accordion({
+            f"Worked example — dominant win (21-5)": mo.md(f"""
+Team A (avg level 70) beats Team B (avg level 30) convincingly. The score diff is 16,
+so $K = {_k1}$ (most dominant bracket). With $D = {ELO_DIVISOR}$:
 
-        **Worked example — dominant win (21-5)**
+| | Team A (avg 70) | Team B (avg 30) |
+|---|---|---|
+| $K$ (diff = 16) | {_k1} | {_k1} |
+| $E$ | {_e1a} | {_e1b} |
+| actual | 1 (won) | 0 (lost) |
+| $\\Delta$ | $+{_k1} \\times (1 - {_e1a}) = \\mathbf{{+{_d1a}}}$ | $+{_k1} \\times (0 - {_e1b}) = \\mathbf{{{_d1b}}}$ |
+            """),
+            f"Worked example — upset (21-19, weak beats strong)": mo.md(f"""
+Team A (avg 30) shocks Team B (avg 70) in a tight game. The score diff is only 2,
+so $K = {_k2}$ (close-win bracket).
 
-        Team A (avg level 70) beats Team B (avg level 30) convincingly. The score diff is 16,
-        so $K = {_k1}$ (most dominant bracket). With $D = {ELO_DIVISOR}$:
+| | Team A (avg 30) | Team B (avg 70) |
+|---|---|---|
+| $K$ (diff = 2) | {_k2} | {_k2} |
+| $E$ | {_e2a} | {_e2b} |
+| actual | 1 (won) | 0 (lost) |
+| $\\Delta$ | $+{_k2} \\times (1 - {_e2a}) = \\mathbf{{+{_d2a}}}$ | $+{_k2} \\times (0 - {_e2b}) = \\mathbf{{{_d2b}}}$ |
+            """),
+            f"Worked example — expected win (21-15, strong beats weak)": mo.md(f"""
+A level-80 player beats a level-60 opponent with a comfortable margin. The score diff
+is 6, so $K = {_k3}$. With $D = {ELO_DIVISOR}$:
 
-        | | Team A (avg 70) | Team B (avg 30) |
-        |---|---|---|
-        | $K$ (diff = 16) | {_k1} | {_k1} |
-        | $E$ | {_e1a} | {_e1b} |
-        | actual | 1 (won) | 0 (lost) |
-        | $\\Delta$ | $+{_k1} \\times (1 - {_e1a}) = \\mathbf{{+{_d1a}}}$ | $+{_k1} \\times (0 - {_e1b}) = \\mathbf{{{_d1b}}}$ |
-
-        **Worked example — upset (21-19, weak beats strong)**
-
-        Team A (avg 30) shocks Team B (avg 70) in a tight game. The score diff is only 2,
-        so $K = {_k2}$ (close-win bracket).
-
-        | | Team A (avg 30) | Team B (avg 70) |
-        |---|---|---|
-        | $K$ (diff = 2) | {_k2} | {_k2} |
-        | $E$ | {_e2a} | {_e2b} |
-        | actual | 1 (won) | 0 (lost) |
-        | $\\Delta$ | $+{_k2} \\times (1 - {_e2a}) = \\mathbf{{+{_d2a}}}$ | $+{_k2} \\times (0 - {_e2b}) = \\mathbf{{{_d2b}}}$ |
-
-        **Worked example — expected win (21-15, strong beats weak)**
-
-        A level-80 player beats a level-60 opponent with a comfortable margin. The score diff
-        is 6, so $K = {_k3}$. With $D = {ELO_DIVISOR}$:
-
-        | | Level-80 player | Level-60 opponent |
-        |---|---|---|
-        | $K$ (diff = 6) | {_k3} | {_k3} |
-        | $E$ | {_e3a} | {_e3b} |
-        | **Win** (actual = 1) | $\\mathbf{{+{_d3w_a}}}$ → {round(80 + _d3w_a, 1)} | $\\mathbf{{{_d3l_b}}}$ → {round(60 + _d3l_b, 1)} |
-        | **Lose** (actual = 0) | $\\mathbf{{{_d3l_a}}}$ → {round(80 + _d3l_a, 1)} | $\\mathbf{{+{_d3w_b}}}$ → {round(60 + _d3w_b, 1)} |
-        """
-    )
+| | Level-80 player | Level-60 opponent |
+|---|---|---|
+| $K$ (diff = 6) | {_k3} | {_k3} |
+| $E$ | {_e3a} | {_e3b} |
+| **Win** (actual = 1) | $\\mathbf{{+{_d3w_a}}}$ → {round(80 + _d3w_a, 1)} | $\\mathbf{{{_d3l_b}}}$ → {round(60 + _d3l_b, 1)} |
+| **Lose** (actual = 0) | $\\mathbf{{{_d3l_a}}}$ → {round(80 + _d3l_a, 1)} | $\\mathbf{{+{_d3w_b}}}$ → {round(60 + _d3w_b, 1)} |
+            """),
+        }),
+    ])
     return
 
 
