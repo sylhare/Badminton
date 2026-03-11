@@ -114,7 +114,7 @@ test.describe('Court Workflow', () => {
     });
 
     test('Image workflow - import players from image', async ({ page }) => {
-      const imagePath = path.join(__dirname, '../tests/data/names.png');
+      const imagePath = path.join(__dirname, '../../tests/data/names.png');
 
       await test.step('open image upload modal', async () => {
         await page.getByTestId('open-image-modal-button').click();

@@ -11,11 +11,11 @@ import fs from 'fs';
 import path from 'path';
 
 function removeComments(content: string): string {
-    content = content.replace(/(\/\*\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}?)|(\/\*(?!\*)[\s\S]*?\*\/)/g, (match, preserve) => {
+    content = content.replace(/(\/\*\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}?)|(\/\*(?!\*)[\s\S]*?\*\/)/g, (_match, preserve) => {
         return preserve ? preserve : '';
     });
 
-    content = content.replace(/(\/\*\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}?|\/\/\/|[a-z]+:\/\/)|(\/\/[^/].*|\/\/$)/g, (match, preserve) => {
+    content = content.replace(/(\/\*\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}?|\/\/\/|[a-z]+:\/\/)|(\/\/[^/].*|\/\/$)/g, (_match, preserve) => {
         return preserve ? preserve : '';
     });
 

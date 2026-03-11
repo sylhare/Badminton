@@ -212,6 +212,11 @@ test.describe('Smart Engine', () => {
       await page.locator('.team-clickable').first().click();
       await mainPage.enterScore('21', '10');
       await mainPage.regenerate();
+      await expect(page.locator('.crown')).toHaveCount(0);
+
+      await page.locator('.team-clickable').first().click();
+      await mainPage.enterScore('21', '15');
+      await mainPage.regenerate();
 
       await page.locator('a[href*="stats"]').click();
 
