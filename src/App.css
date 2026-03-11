@@ -2078,6 +2078,15 @@ h1 {
         padding: 15px 12px;
         min-height: 44px;
     }
+
+    .leaderboard-table th, .leaderboard-table td {
+        padding: 8px 10px;
+    }
+}
+
+.leaderboard-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .leaderboard-table {
