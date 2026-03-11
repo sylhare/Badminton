@@ -16,8 +16,9 @@ describe('ShareModal Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.assign(navigator, {
-      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
     });
   });
 
@@ -89,12 +90,16 @@ describe('ShareModal Component', () => {
     });
 
     it('should copy share URL to clipboard when Copy URL is clicked', async () => {
-      const user = userEvent.setup();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
       render(<ShareModal {...defaultProps} />);
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('copy-share-url-button'));
+        await Promise.resolve();
+      });
 
-      await user.click(screen.getByTestId('copy-share-url-button'));
-
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(defaultProps.shareUrl);
+      expect(writeText).toHaveBeenCalledWith(defaultProps.shareUrl);
     });
 
     it('should show "Copied!" after clicking Copy URL', async () => {
