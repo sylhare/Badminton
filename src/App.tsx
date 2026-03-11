@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import './App.css';
-import ManualPlayerEntry from './components/ManualPlayerEntry';
-import PlayerList from './components/PlayerList';
-import ShareModal from './components/ShareModal';
-import ImportStateModal from './components/ImportStateModal';
+import ManualPlayerEntry from './components/players/ManualPlayerEntry';
+import PlayerList from './components/players/PlayerList';
+import ShareModal from './components/modals/ShareModal';
+import ImportStateModal from './components/modals/ImportStateModal';
 import { CourtAssignments } from './components/court';
 import { useShareState } from './hooks/useShareState';
-import Leaderboard from './components/Leaderboard';
+import Leaderboard from './components/players/Leaderboard';
 import { engine, getEngineType, setEngine } from './engines/engineSelector';
 import { createPlayersFromNames } from './utils/playerUtils';
 import { storageManager } from './utils/StorageManager';
