@@ -1,4 +1,6 @@
-import { Page, expect } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
+
+import type { MainPage } from './pages';
 
 /** Sample player names for bulk testing */
 export const BULK_PLAYERS = [
@@ -25,20 +27,6 @@ export async function goToApp(page: Page): Promise<void> {
   await page.goto(targetUrl);
   await expect(page).toHaveTitle(/Badminton/);
   await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
-}
-
-/**
- * Navigates to the stats/diagnostics page from the app or directly
- */
-export async function goToStatsPage(page: Page, fromApp = false): Promise<void> {
-  if (fromApp) {
-    const statsLink = page.locator('a[href*="stats"]');
-    await expect(statsLink).toBeVisible();
-    await statsLink.click();
-  } else {
-    const targetUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
-    await page.goto(`${targetUrl}/stats`);
-  }
 }
 
 /**
@@ -264,6 +252,47 @@ export async function assertAvgPtsNumeric(page: Page): Promise<void> {
   const avgPts = await leaderboardRows.first().locator('td').nth(3).textContent();
   expect(avgPts).not.toBe('—');
   expect(parseFloat(avgPts ?? '')).toBeGreaterThan(0);
+}
+
+/**
+ * Selects a winner on a specific court and team number.
+ * Clicks the team and waits briefly for the state update.
+ */
+export async function selectWinner(page: Page, courtNumber: number, teamNumber: 1 | 2 = 1): Promise<void> {
+  const court = page.getByTestId(`court-${courtNumber}`);
+  const teamLocator = teamNumber === 1 ? court.locator('.team-clickable').first() : court.locator('.team-clickable').last();
+  await expect(teamLocator).toBeVisible();
+  await teamLocator.click();
+  await page.waitForTimeout(200);
+}
+
+/**
+ * Returns the text content of all player elements in a given team on a court locator.
+ */
+export async function getTeamPlayers(court: Locator, teamNumber: 1 | 2): Promise<string[]> {
+  return court.locator(`[data-testid="team-${teamNumber}"] .team-player`).allTextContents();
+}
+
+/**
+ * Returns the player names from the leaderboard table, stripping leading medal/emoji characters.
+ */
+export async function getLeaderboardPlayerNames(page: Page): Promise<string[]> {
+  const nameCells = page.locator('.leaderboard-table tbody tr td:nth-child(2)');
+  const contents = await nameCells.allTextContents();
+  return contents.map(n => n.replace(/^[^\w]+/, '').trim());
+}
+
+/**
+ * Complete a full game workflow: generate, pick winner on court 1, regenerate, verify leaderboard and player stats.
+ */
+export async function completeWorkflow(mainPage: MainPage, page: Page, playerCount: number, courtCount?: number): Promise<void> {
+  await mainPage.generateAssignments(courtCount);
+  await mainPage.court(1).selectWinner();
+  await mainPage.regenerate();
+  await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
+  await mainPage.expandPlayersSection();
+  await expect(page.getByTestId('stats-present-count')).toHaveText(playerCount.toString());
+  await expect(page.getByTestId('stats-total-count')).toHaveText(playerCount.toString());
 }
 
 /**

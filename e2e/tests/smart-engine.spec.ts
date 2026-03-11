@@ -1,27 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-import {
-  goToApp,
-  addSinglePlayer,
-  addBulkPlayers,
-  setCourtCount,
-  toggleSmartEngine,
-  enterAndConfirmScore,
-  assertAvgPtsNumeric,
-} from './helpers';
+import { MainPage } from '../support/pages';
 
 const PLAYERS = ['Alice', 'Bob', 'Charlie', 'Diana'];
 
 test.describe('Smart Engine', () => {
+  let mainPage: MainPage;
+
   test.beforeEach(async ({ page }) => {
-    await goToApp(page);
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
+    mainPage = new MainPage(page);
+    await mainPage.goto();
+    await mainPage.reset();
   });
 
   test.describe('Tooltip', () => {
     test('tooltip click interactions', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player');
+      await mainPage.addPlayer('Test Player');
 
       const toggle = page.getByTestId('smart-engine-toggle');
       const tooltipIcon = page.getByTestId('smart-engine-tooltip-icon');
@@ -49,7 +43,7 @@ test.describe('Smart Engine', () => {
     });
 
     test('tooltip hover interactions', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player');
+      await mainPage.addPlayer('Test Player');
 
       const tooltipIcon = page.getByTestId('smart-engine-tooltip-icon');
       const tooltipPopup = page.getByTestId('smart-engine-tooltip-popup');
@@ -76,16 +70,16 @@ test.describe('Smart Engine', () => {
 
   test.describe('Toggle & theme', () => {
     test('theme toggle - on applies night-theme, off removes it', async ({ page }) => {
-      await addSinglePlayer(page, 'Test Player');
+      await mainPage.addPlayer('Test Player');
 
       await test.step('toggling on applies .night-theme', async () => {
         await expect(page.locator('.app')).not.toHaveClass(/night-theme/);
-        await toggleSmartEngine(page);
+        await mainPage.toggleSmartEngine();
         await expect(page.locator('.app')).toHaveClass(/night-theme/);
       });
 
       await test.step('toggling off removes .night-theme', async () => {
-        await toggleSmartEngine(page);
+        await mainPage.toggleSmartEngine();
         await expect(page.locator('.app')).not.toHaveClass(/night-theme/);
       });
     });
@@ -93,11 +87,9 @@ test.describe('Smart Engine', () => {
 
   test.describe('Score input modal', () => {
     test.beforeEach(async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await toggleSmartEngine(page);
-      await setCourtCount(page, 1);
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
+      await mainPage.addPlayers(PLAYERS);
+      await mainPage.toggleSmartEngine();
+      await mainPage.generateAssignments(1);
     });
 
     test('clicking a team opens score-input-modal', async ({ page }) => {
@@ -108,9 +100,7 @@ test.describe('Smart Engine', () => {
     test('cancelling does not set a winner', async ({ page }) => {
       await page.locator('.team-clickable').first().click();
       await expect(page.getByTestId('score-input-modal')).toBeVisible();
-
       await page.locator('[data-testid="score-input-modal"] .modal-close').click();
-
       await expect(page.getByTestId('score-input-modal')).not.toBeVisible();
       await expect(page.locator('.crown')).toHaveCount(0);
     });
@@ -126,11 +116,10 @@ test.describe('Smart Engine', () => {
         await page.getByTestId('score-input-team2').fill('');
       });
 
-      await enterAndConfirmScore(page, '21', '10');
+      await mainPage.enterScore('21', '10');
       await expect(page.locator('.crown')).toHaveCount(1);
 
-      await page.getByTestId('generate-assignments-button').click();
-      await page.waitForTimeout(300);
+      await mainPage.regenerate();
 
       const leaderboard = page.locator('.leaderboard-table');
       await expect(leaderboard).toBeVisible();
@@ -140,12 +129,10 @@ test.describe('Smart Engine', () => {
 
   test.describe('Enhanced Leaderboard', () => {
     test('Level / Avg Pts / Matches column headers visible in smart mode', async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await setCourtCount(page, 1);
-      await toggleSmartEngine(page);
-
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
+      await mainPage.addPlayers(PLAYERS);
+      await mainPage.setCourtCount(1);
+      await mainPage.toggleSmartEngine();
+      await mainPage.generateAssignments(1);
 
       await page.locator('.team-clickable').first().click();
       await expect(page.getByTestId('score-input-modal')).toBeVisible();
@@ -157,31 +144,32 @@ test.describe('Smart Engine', () => {
     });
 
     test('after a scored game, Avg Pts shows a numeric value', async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await setCourtCount(page, 1);
-      await toggleSmartEngine(page);
-
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
+      await mainPage.addPlayers(PLAYERS);
+      await mainPage.generateAssignments(1);
+      await mainPage.toggleSmartEngine();
 
       await page.locator('.team-clickable').first().click();
-      await enterAndConfirmScore(page, '21', '15');
-      await assertAvgPtsNumeric(page);
+      await mainPage.enterScore('21', '15');
+
+      await mainPage.regenerate();
+      await page.waitForTimeout(300);
+      const firstRow = page.locator('.leaderboard-table tbody tr').first();
+      await expect(firstRow).toBeVisible();
+      const avgPts = await firstRow.locator('td').nth(3).textContent();
+      expect(avgPts).not.toBe('—');
+      expect(parseFloat(avgPts ?? '')).toBeGreaterThan(0);
     });
   });
 
   test.describe('Stats Integration', () => {
     test('TeammateGraph shows gender legend when smart engine is enabled', async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await toggleSmartEngine(page);
-      await setCourtCount(page, 1);
-
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
+      await mainPage.addPlayers(PLAYERS);
+      await mainPage.toggleSmartEngine();
+      await mainPage.generateAssignments(1);
 
       await page.locator('.team-clickable').first().click();
-      await enterAndConfirmScore(page, '21', '10');
-      await assertAvgPtsNumeric(page);
+      await mainPage.enterScore('21', '10');
+      await mainPage.regenerate();
 
       await page.locator('a[href*="stats"]').click();
 
@@ -193,11 +181,8 @@ test.describe('Smart Engine', () => {
     });
 
     test('normal mode - no Level column, no gender legend, no Level Progression', async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await setCourtCount(page, 1);
-
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
+      await mainPage.addPlayers(PLAYERS);
+      await mainPage.generateAssignments(1);
       await page.locator('.team-clickable').first().click();
 
       await test.step('leaderboard does not show Level column', async () => {
@@ -205,8 +190,7 @@ test.describe('Smart Engine', () => {
         await expect(page.getByTestId('leaderboard-level-header')).not.toBeVisible();
       });
 
-      await page.getByTestId('generate-assignments-button').click();
-      await page.waitForTimeout(200);
+      await mainPage.regenerate();
       await page.locator('a[href*="stats"]').click();
 
       await test.step('TeammateGraph gender legend is absent', async () => {
@@ -221,16 +205,13 @@ test.describe('Smart Engine', () => {
     });
 
     test('Level Progression section shows updated lines after a scored round', async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await toggleSmartEngine(page);
-      await setCourtCount(page, 1);
-
-      await page.getByTestId('generate-assignments-button').click();
-      await expect(page.locator('.court-card')).toHaveCount(1);
+      await mainPage.addPlayers(PLAYERS);
+      await mainPage.toggleSmartEngine();
+      await mainPage.generateAssignments(1);
 
       await page.locator('.team-clickable').first().click();
-      await enterAndConfirmScore(page, '21', '10');
-      await assertAvgPtsNumeric(page);
+      await mainPage.enterScore('21', '10');
+      await mainPage.regenerate();
 
       await page.locator('a[href*="stats"]').click();
 
@@ -241,12 +222,9 @@ test.describe('Smart Engine', () => {
     });
 
     test('Level Progression section appears after first generate even without winners', async ({ page }) => {
-      await addBulkPlayers(page, PLAYERS);
-      await toggleSmartEngine(page);
-      await setCourtCount(page, 1);
-
-      await page.getByTestId('generate-assignments-button').click();
-      await page.waitForTimeout(300);
+      await mainPage.addPlayers(PLAYERS);
+      await mainPage.toggleSmartEngine();
+      await mainPage.generateAssignments(1);
 
       await page.locator('a[href*="stats"]').click();
 

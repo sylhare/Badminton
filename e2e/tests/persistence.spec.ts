@@ -1,24 +1,23 @@
 import { test, expect } from '@playwright/test';
 
-import { goToApp, addBulkPlayers, setCourtCount, generateCourtAssignments, expandSectionIfNeeded } from './helpers';
+import { MainPage } from '../support/pages';
 
 test.describe('State Persistence', () => {
+  let mainPage: MainPage;
+
   test.beforeEach(async ({ page }) => {
-    await goToApp(page);
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
+    mainPage = new MainPage(page);
+    await mainPage.goto();
+    await mainPage.reset();
   });
 
   test('should persist players and presence state across reload', async ({ page }) => {
-    await addBulkPlayers(page, ['Alice', 'Bob', 'Charlie', 'Diana']);
-
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
     await page.locator('[data-testid^="toggle-presence-"]').nth(1).click();
     await page.waitForTimeout(300);
-
     await page.reload();
 
-    await expandSectionIfNeeded(page, 'Manage Players');
-
+    await mainPage.expandPlayersSection();
     await expect(page.getByText('Alice')).toBeVisible();
     await expect(page.getByText('Bob')).toBeVisible();
     await expect(page.getByText('Charlie')).toBeVisible();
@@ -32,8 +31,8 @@ test.describe('State Persistence', () => {
   });
 
   test('should persist court count setting across reload', async ({ page }) => {
-    await addBulkPlayers(page, ['Alice', 'Bob', 'Charlie', 'Diana']);
-    await setCourtCount(page, 6);
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.setCourtCount(6);
     await expect(page.getByTestId('court-count-input')).toHaveValue('6');
 
     await page.waitForTimeout(300);
@@ -43,8 +42,8 @@ test.describe('State Persistence', () => {
   });
 
   test('should persist court assignments across reload', async ({ page }) => {
-    await addBulkPlayers(page, ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Hank']);
-    await generateCourtAssignments(page);
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Hank']);
+    await mainPage.generateAssignments();
 
     await expect(page.getByTestId('court-1')).toBeVisible();
     await expect(page.getByTestId('court-2')).toBeVisible();
@@ -57,10 +56,9 @@ test.describe('State Persistence', () => {
   });
 
   test('should collapse Manage Players section on reload when players exist', async ({ page }) => {
-    await addBulkPlayers(page, ['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
     await page.waitForTimeout(200);
     await page.reload();
-
     await expect(page.getByTestId('manage-players-section')).toHaveClass(/collapsed/);
   });
 
@@ -69,10 +67,10 @@ test.describe('State Persistence', () => {
   });
 
   test('should clear all data when clear all is confirmed and stay clear after reload', async ({ page }) => {
-    await addBulkPlayers(page, ['Alice', 'Bob', 'Charlie', 'Diana']);
-    await generateCourtAssignments(page);
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.generateAssignments();
 
-    await expandSectionIfNeeded(page, 'Manage Players');
+    await mainPage.expandPlayersSection();
     await page.getByTestId('clear-all-button').click();
     await page.getByTestId('confirm-modal-confirm').click();
 
@@ -85,34 +83,62 @@ test.describe('State Persistence', () => {
   });
 
   test('should persist reset algorithm state across reload', async ({ page }) => {
-    await addBulkPlayers(page, ['Alice', 'Bob', 'Charlie', 'Diana']);
-    await generateCourtAssignments(page);
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.generateAssignments();
 
-    await expandSectionIfNeeded(page, 'Manage Players');
+    await mainPage.expandPlayersSection();
     await page.getByTestId('reset-algorithm-button').click();
     await page.getByTestId('confirm-modal-confirm').click();
 
     await page.waitForTimeout(300);
     await page.reload();
 
-    await expandSectionIfNeeded(page, 'Manage Players');
+    await mainPage.expandPlayersSection();
     await expect(page.getByText('Alice')).toBeVisible();
+  });
+
+  test('App resilience after session data loss', async ({ page }) => {
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await expect(page.getByTestId('stats-total-count')).toHaveText('4');
+    await mainPage.generateAssignments(1);
+
+    await mainPage.court(1).selectWinner();
+    await expect(page.locator('.crown')).toHaveCount(1);
+
+    await mainPage.regenerate();
+    await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
+
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    await expect(page).toHaveTitle(/Badminton/);
+    await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
+    await expect(page.getByTestId('player-stats')).toHaveCount(0);
+    await expect(page.locator('.player-list')).toHaveCount(0);
+
+    await mainPage.addPlayer('New Player');
+    await expect(page.getByTestId('stats-total-count')).toHaveText('1');
+    await expect(page.getByTestId('stats-present-count')).toHaveText('1');
+
+    await mainPage.addPlayer('Second Player');
+    await mainPage.generateAssignments(1);
+    await expect(page.locator('.court-card')).toHaveCount(1);
   });
 });
 
 test.describe('Leaderboard Persistence', () => {
+  let mainPage: MainPage;
+
   test.beforeEach(async ({ page }) => {
-    await goToApp(page);
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
+    mainPage = new MainPage(page);
+    await mainPage.goto();
+    await mainPage.reset();
   });
 
   test('should persist leaderboard data across reload', async ({ page }) => {
-    await addBulkPlayers(page, ['Alice', 'Bob', 'Charlie', 'Diana']);
-    await generateCourtAssignments(page);
-
-    const firstTeam = page.locator('.team-clickable').first();
-    await firstTeam.click();
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.generateAssignments();
+    await mainPage.court(1).selectWinner();
 
     await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
 

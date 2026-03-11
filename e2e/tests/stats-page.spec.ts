@@ -1,12 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-import { goToApp, navigateToStats, setupGameWithPlayers, playRound } from './helpers';
+import { MainPage, StatsPage } from '../support/pages';
 
 test.describe('Stats Page', () => {
+  let mainPage: MainPage;
+  let statsPage: StatsPage;
+
   test.beforeEach(async ({ page }) => {
-    await goToApp(page);
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
+    mainPage = new MainPage(page);
+    statsPage = new StatsPage(page);
+    await mainPage.goto();
+    await mainPage.reset();
   });
 
   test('stats page navigation - to and from app', async ({ page }) => {
@@ -27,7 +31,7 @@ test.describe('Stats Page', () => {
     });
 
     await test.step('start game link navigates back to app', async () => {
-      await navigateToStats(page);
+      await statsPage.goto();
       await page.getByText('Start a Game →').click();
       await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
     });
@@ -40,7 +44,7 @@ test.describe('Stats Page', () => {
   });
 
   test('stats page empty state - no data message, notebook links and footer', async ({ page }) => {
-    await navigateToStats(page);
+    await statsPage.goto();
 
     await test.step('shows no data message', async () => {
       await expect(page.locator('.no-data')).toBeVisible();
@@ -70,9 +74,8 @@ test.describe('Stats Page', () => {
   });
 
   test('session diagnostics - all sections visible after playing', async ({ page }) => {
-    const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-    await setupGameWithPlayers(page, players);
-    await playRound(page);
+    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    await mainPage.playRound();
     await page.locator('a[href*="stats"]').click();
 
     await test.step('stats grid visible with key cards', async () => {
@@ -105,9 +108,8 @@ test.describe('Stats Page', () => {
   });
 
   test('bench section - expand and graph', async ({ page }) => {
-    const players = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'];
-    await setupGameWithPlayers(page, players);
-    await navigateToStats(page);
+    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    await statsPage.goto();
 
     await test.step('can expand bench counts section', async () => {
       const benchDetails = page.locator('summary').filter({ hasText: /View bench counts per player/ });
@@ -124,11 +126,10 @@ test.describe('Stats Page', () => {
   });
 
   test('can expand repeated pairs section when available', async ({ page }) => {
-    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-    await setupGameWithPlayers(page, players);
-    await playRound(page);
-    await playRound(page);
-    await navigateToStats(page);
+    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.playRound();
+    await mainPage.playRound();
+    await statsPage.goto();
 
     const teammateGraph = page.locator('.teammate-graph').first();
     if (await teammateGraph.isVisible()) {
@@ -141,9 +142,8 @@ test.describe('Stats Page', () => {
   });
 
   test('renders teammate network graph', async ({ page }) => {
-    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-    await setupGameWithPlayers(page, players);
-    await navigateToStats(page);
+    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await statsPage.goto();
 
     const teammateGraph = page.locator('.teammate-graph').first();
     await expect(teammateGraph).toBeVisible();
@@ -158,9 +158,8 @@ test.describe('Stats Page', () => {
   });
 
   test('data persistence - shows data after reload, clears after localStorage clear', async ({ page }) => {
-    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-    await setupGameWithPlayers(page, players);
-    await navigateToStats(page);
+    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await statsPage.goto();
 
     await test.step('shows data after page reload', async () => {
       await expect(page.locator('.stats-grid')).toBeVisible();

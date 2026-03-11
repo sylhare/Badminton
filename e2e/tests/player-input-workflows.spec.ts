@@ -3,29 +3,18 @@ import { fileURLToPath } from 'url';
 
 import { test, expect } from '@playwright/test';
 
+import { MainPage } from '../support/pages';
+import { BULK_PLAYERS, SINGLE_PLAYERS, completeWorkflow } from '../support/helpers';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import {
-  goToApp,
-  addBulkPlayers,
-  addSinglePlayer,
-  expandSectionIfNeeded,
-  removeFirstPlayer,
-  toggleFirstPlayer,
-  completeFullWorkflow,
-  generateCourtAssignments,
-  selectWinnerOnFirstCourt,
-  generateNewAssignments,
-  verifyLeaderboard,
-  BULK_PLAYERS,
-  SINGLE_PLAYERS,
-} from './helpers';
-
 test.describe('Player Input Workflows', () => {
+  let mainPage: MainPage;
+
   test.beforeEach(async ({ page }) => {
-    await goToApp(page);
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
+    mainPage = new MainPage(page);
+    await mainPage.goto();
+    await mainPage.reset();
   });
 
   test('Bulk workflow - add all at once, remove one, then play', async ({ page }) => {
@@ -44,12 +33,12 @@ test.describe('Player Input Workflows', () => {
     await expect(page.getByTestId('stats-present-count')).toHaveText('7');
     await expect(page.getByTestId('stats-total-count')).toHaveText('7');
 
-    await removeFirstPlayer(page);
+    await mainPage.removeFirstPlayer();
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('6');
     await expect(page.getByTestId('stats-present-count')).toHaveText('6');
 
-    await completeFullWorkflow(page, 6, 2);
+    await completeWorkflow(mainPage, page, 6, 2);
   });
 
   test('Bulk workflow - large player list', async ({ page }) => {
@@ -63,64 +52,64 @@ test.describe('Player Input Workflows', () => {
       'Maya Smith',
     ];
 
-    await addBulkPlayers(page, largeBulkList);
+    await mainPage.addPlayers(largeBulkList);
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('13');
     await expect(page.getByTestId('stats-present-count')).toHaveText('13');
 
-    await completeFullWorkflow(page, 13, 3);
+    await completeWorkflow(mainPage, page, 13, 3);
   });
 
   test('Single workflow - add one by one with toggle', async ({ page }) => {
     for (const playerName of BULK_PLAYERS.slice(0, 6)) {
-      await addSinglePlayer(page, playerName);
+      await mainPage.addPlayer(playerName);
     }
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('6');
     await expect(page.getByTestId('stats-present-count')).toHaveText('6');
 
-    await toggleFirstPlayer(page);
+    await mainPage.toggleFirstPlayer();
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('5');
     await expect(page.getByTestId('stats-absent-count')).toHaveText('1');
 
-    await toggleFirstPlayer(page);
+    await mainPage.toggleFirstPlayer();
 
-    await completeFullWorkflow(page, 6, 2);
+    await completeWorkflow(mainPage, page, 6, 2);
   });
 
   test('Mixed workflow - bulk first, then single additions', async ({ page }) => {
-    await addBulkPlayers(page, BULK_PLAYERS);
+    await mainPage.addPlayers(BULK_PLAYERS);
 
     await expect(page.getByTestId('stats-present-count')).toHaveText('7');
 
-    await expandSectionIfNeeded(page, 'Manage Players');
+    await mainPage.expandPlayersSection();
 
-    await addSinglePlayer(page, SINGLE_PLAYERS[0]);
-    await addSinglePlayer(page, SINGLE_PLAYERS[1]);
+    await mainPage.addPlayer(SINGLE_PLAYERS[0]);
+    await mainPage.addPlayer(SINGLE_PLAYERS[1]);
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('9');
 
-    await removeFirstPlayer(page);
+    await mainPage.removeFirstPlayer();
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('8');
     await expect(page.getByTestId('stats-present-count')).toHaveText('8');
 
-    await completeFullWorkflow(page, 8, 2);
+    await completeWorkflow(mainPage, page, 8, 2);
   });
 
   test('Mixed workflow - single first, then bulk addition', async ({ page }) => {
-    await addSinglePlayer(page, SINGLE_PLAYERS[0]);
-    await addSinglePlayer(page, SINGLE_PLAYERS[1]);
+    await mainPage.addPlayer(SINGLE_PLAYERS[0]);
+    await mainPage.addPlayer(SINGLE_PLAYERS[1]);
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('2');
 
-    await addBulkPlayers(page, BULK_PLAYERS.slice(0, 4));
+    await mainPage.addPlayers(BULK_PLAYERS.slice(0, 4));
 
     await expect(page.getByTestId('stats-total-count')).toHaveText('6');
     await expect(page.getByTestId('stats-present-count')).toHaveText('6');
 
-    await completeFullWorkflow(page, 6, 2);
+    await completeWorkflow(mainPage, page, 6, 2);
   });
 
   test('Image workflow - import players from image', async ({ page }) => {
@@ -149,13 +138,13 @@ test.describe('Player Input Workflows', () => {
     await test.step('add extracted players closes modal and updates count', async () => {
       await page.getByTestId('add-extracted-players-button').click();
       await expect(page.getByTestId('image-upload-modal')).not.toBeVisible();
-      const totalCount = parseInt(await page.getByTestId('stats-total-count').textContent() ?? '0');
+      const totalCount = parseInt((await page.getByTestId('stats-total-count').textContent()) ?? '0');
       expect(totalCount).toBeGreaterThanOrEqual(4);
     });
 
-    await generateCourtAssignments(page);
-    await selectWinnerOnFirstCourt(page);
-    await generateNewAssignments(page);
-    await verifyLeaderboard(page);
+    await mainPage.generateAssignments();
+    await mainPage.court(1).selectWinner();
+    await mainPage.regenerate();
+    await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
   });
 });
