@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { MainPage } from '../support/pages';
+import { MainPage } from '../support/pages/MainPage';
 
 test.describe('Session Sharing via URL', () => {
   let mainPage: MainPage;
@@ -18,7 +18,7 @@ test.describe('Session Sharing via URL', () => {
     await expect(page.getByTestId('share-button')).toBeVisible();
   });
 
-  test('Clicking Share opens modal with URL containing ?state=', async ({ page }) => {
+  test('Clicking Share opens modal with URL containing ?state=', async ({ page: _page }) => {
     await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
     await mainPage.openShareModal();
 

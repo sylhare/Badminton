@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { MainPage } from '../support/pages';
+import { MainPage } from '../support/pages/MainPage';
 
 test.describe('State Persistence', () => {
   let mainPage: MainPage;

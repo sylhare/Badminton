@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-import { MainPage, StatsPage } from '../support/pages';
+import { MainPage } from '../support/pages/MainPage';
+import { StatsPage } from '../support/pages/StatsPage';
 
 test.describe('Stats Page', () => {
   let mainPage: MainPage;

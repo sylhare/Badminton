@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { MainPage } from '../support/pages';
+import { MainPage } from '../support/pages/MainPage';
 
 const PLAYERS = ['Alice', 'Bob', 'Charlie', 'Diana'];
 
@@ -86,7 +86,7 @@ test.describe('Smart Engine', () => {
   });
 
   test.describe('Score input modal', () => {
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async ({ page: _page }) => {
       await mainPage.addPlayers(PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
