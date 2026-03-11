@@ -1,18 +1,18 @@
-#!/usr/bin/env node
+#!/usr/bin/env npx tsx
 
 /**
  * Integration test for OCR on a photo of handwritten names.
  *
- * Usage:  node tests/integration/ocr/handwritten-ocr-test.cjs
+ * Usage:  npx tsx e2e/integration/ocr/handwritten-ocr-test.ts
  * (Make sure you have run `npm install` so that tesseract.js is available.)
  */
 
-const { createWorker } = require('tesseract.js');
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-// Minimal name-extraction helper (same logic as in ocr-test.cjs)
-function extractPlayerNamesSimple(text) {
+import { createWorker } from 'tesseract.js';
+
+function extractPlayerNamesSimple(text: string): string[] {
   if (!text || typeof text !== 'string') return [];
 
   const lines = text
@@ -20,7 +20,7 @@ function extractPlayerNamesSimple(text) {
       .map((l) => l.trim())
       .filter((l) => l.length > 0);
 
-  const names = [];
+  const names: string[] = [];
   for (const line of lines) {
     if (line.length < 2) continue;
 
@@ -42,8 +42,7 @@ function extractPlayerNamesSimple(text) {
 async function run() {
   console.log('✏️  OCR test – handwritten-names.png');
 
-  // Resolve the sample image (tests/data/handwritten-names.png)
-  const imagePath = path.resolve(__dirname, '../../data/handwritten-names.png');
+  const imagePath = path.resolve(import.meta.dirname, '../../../tests/data/handwritten-names.png');
   if (!fs.existsSync(imagePath)) {
     console.error('❌  Sample image not found:', imagePath);
     process.exit(1);
@@ -80,8 +79,8 @@ async function run() {
     const matches = expected.filter((name) =>
         extracted.some((e) =>
             e.toLowerCase().includes(name.toLowerCase()) ||
-            name.toLowerCase().includes(e.toLowerCase())
-        )
+            name.toLowerCase().includes(e.toLowerCase()),
+        ),
     );
 
     console.log(`✅  Matched ${matches.length}/${expected.length} expected names`);
@@ -98,4 +97,4 @@ async function run() {
 run().catch((err) => {
   console.error('❌  Test errored:', err);
   process.exit(1);
-}); 
+});
