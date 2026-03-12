@@ -23,6 +23,16 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
     losses: lossCounts?.get(p.id) ?? 0,
   }));
 
+  const rankDeltas = engine().getRankDeltas(players, engine().supportsScoreTracking());
+
+  const renderRankDelta = (id: string) => {
+    const delta = rankDeltas.get(id);
+    if (!delta) return null;
+    return delta > 0
+      ? <span className="rank-up" data-testid={`rank-up-${id}`}>▲{delta}</span>
+      : <span className="rank-down" data-testid={`rank-down-${id}`}>▼{Math.abs(delta)}</span>;
+  };
+
   if (engine().supportsScoreTracking()) {
     const ranked = allPlayersWithData
       .filter(p => p.wins > 0 || p.losses > 0)
@@ -48,7 +58,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
             <tbody>
             {ranked.map((p, idx) => (
               <tr key={p.id} className={idx === 0 ? 'top' : undefined}>
-                <td>{idx + 1}</td>
+                <td>{idx + 1}{renderRankDelta(p.id)}</td>
                 <td>{medalForRank(idx)}{p.name}</td>
                 <td>{p.level?.toFixed(1) ?? '—'}</td>
                 <td>{p.averageScore?.toFixed(1) ?? '—'}</td>
@@ -84,7 +94,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
           <tbody>
           {ranked.map((p, idx) => (
             <tr key={p.id} className={idx === 0 ? 'top' : undefined}>
-              <td>{idx + 1}</td>
+              <td>{idx + 1}{renderRankDelta(p.id)}</td>
               <td>{medalForRank(idx)}{p.name}</td>
               <td>{p.wins}</td>
             </tr>

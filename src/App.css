@@ -2329,3 +2329,6 @@ h1 {
     --color-primary-hover: #7ba7e8;
     background: linear-gradient(135deg, #1e3a6b 0%, #0a1628 100%);
 }
+
+.rank-up   { color: #4caf50; font-size: 0.8em; margin-left: 4px; }
+.rank-down { color: #f44336; font-size: 0.8em; margin-left: 4px; }

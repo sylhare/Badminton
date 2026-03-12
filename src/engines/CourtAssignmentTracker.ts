@@ -38,6 +38,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Level history per player - tracks level after each round snapshot */
   protected static levelHistoryMap: Map<string, number[]> = new Map();
 
+  /** Wins snapshot per player at last generate — in-memory only, never persisted */
+  private static winsSnapshotMap: Map<string, number> = new Map();
+
   private static readonly MAX_LEVEL_HISTORY = MAX_LEVEL_HISTORY_ENTRIES;
 
   /** Timestamps for pruning stale pairings - tracks last update time */
@@ -93,6 +96,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.recordedWinsMap.clear();
     CourtAssignmentTracker.lastUpdatedMap.clear();
     CourtAssignmentTracker.levelHistoryMap.clear();
+    CourtAssignmentTracker.winsSnapshotMap.clear();
     CourtAssignmentTracker.globalCounter = 0;
     this.notifyStateChange();
   }
@@ -236,6 +240,60 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       if (history.length > CourtAssignmentTracker.MAX_LEVEL_HISTORY) history.shift();
       CourtAssignmentTracker.levelHistoryMap.set(p.id, history);
     }
+    // Snapshot current wins so getRankDeltas can compare next round vs this round
+    for (const p of players) {
+      CourtAssignmentTracker.winsSnapshotMap.set(
+        p.id,
+        CourtAssignmentTracker.winCountMap.get(p.id) ?? 0,
+      );
+    }
+  }
+
+  getRankDeltas(players: Player[], sortByLevel: boolean): Map<string, number> {
+    type StatRow = { id: string; name: string; level: number | undefined; wins: number; losses: number };
+
+    const withStats: StatRow[] = players
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        level: p.level,
+        wins: CourtAssignmentTracker.winCountMap.get(p.id) ?? 0,
+        losses: CourtAssignmentTracker.lossCountMap.get(p.id) ?? 0,
+      }))
+      .filter(p => p.wins > 0 || p.losses > 0);
+
+    const sortFn = sortByLevel
+      ? (a: StatRow, b: StatRow) => (b.level ?? 50) - (a.level ?? 50) || b.wins - a.wins || a.name.localeCompare(b.name)
+      : (a: StatRow, b: StatRow) => b.wins - a.wins || a.name.localeCompare(b.name);
+
+    const currentRank = new Map(
+      [...withStats].sort(sortFn).map((p, i) => [p.id, i + 1]),
+    );
+
+    const prevStats: StatRow[] = withStats.flatMap(p => {
+      if (sortByLevel) {
+        const history = CourtAssignmentTracker.levelHistoryMap.get(p.id) ?? [];
+        if (history.length < 2) return [];
+        return [{ ...p, level: history[history.length - 2] }];
+      } else {
+        const prevWins = CourtAssignmentTracker.winsSnapshotMap.get(p.id);
+        if (prevWins === undefined || prevWins === p.wins) return [];
+        return [{ ...p, wins: prevWins }];
+      }
+    });
+
+    if (prevStats.length === 0) return new Map();
+
+    const prevRank = new Map(
+      [...prevStats].sort(sortFn).map((p, i) => [p.id, i + 1]),
+    );
+
+    const deltas = new Map<string, number>();
+    for (const [id, curr] of currentRank) {
+      const prev = prevRank.get(id);
+      if (prev !== undefined) deltas.set(id, prev - curr);
+    }
+    return deltas;
   }
 
   /**

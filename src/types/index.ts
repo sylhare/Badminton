@@ -79,6 +79,7 @@ export interface ICourtAssignmentTracker {
   updateCourtTeamStats(court: Court, previousCourt?: Court): void;
   getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
   getStats(): TrackerStats;
+  getRankDeltas(players: Player[], sortByLevel: boolean): Map<string, number>;
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
