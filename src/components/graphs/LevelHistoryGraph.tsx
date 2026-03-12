@@ -78,6 +78,7 @@ export function LevelHistoryGraph({
   if (totalRounds === 0) return null;
 
   const xTicks = Array.from({ length: totalRounds }, (_, i) => i + 1);
+  const xLabelStep = Math.max(1, Math.ceil(totalRounds / 10));
 
   const polylinePoints = (history: number[]): string =>
     history.map((level, i) => `${toX(i + 1, totalRounds)},${toY(level)}`).join(' ');
@@ -116,6 +117,7 @@ export function LevelHistoryGraph({
         {/* X gridlines and labels */}
         {xTicks.map(round => {
           const x = toX(round, totalRounds);
+          const showLabel = round % xLabelStep === 0 || round === 1;
           return (
             <g key={round}>
               <line
@@ -126,15 +128,17 @@ export function LevelHistoryGraph({
                 stroke="#2a2a2a"
                 strokeWidth={1}
               />
-              <text
-                x={x}
-                y={MARGIN.top + INNER_H + 14}
-                textAnchor="middle"
-                fill="#8b949e"
-                fontSize={10}
-              >
-                {round}
-              </text>
+              {showLabel && (
+                <text
+                  x={x}
+                  y={MARGIN.top + INNER_H + 14}
+                  textAnchor="middle"
+                  fill="#8b949e"
+                  fontSize={10}
+                >
+                  {round}
+                </text>
+              )}
             </g>
           );
         })}

@@ -944,18 +944,18 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
   });
 
   describe('Level history cap', () => {
-    it('recordLevelSnapshot never exceeds 10 entries per player', () => {
+    it('recordLevelSnapshot never exceeds 50 entries per player', () => {
       engine.resetHistory();
       const players = mockPlayers(2);
 
-      for (let i = 0; i < 15; i++) {
-        engine.recordLevelSnapshot(players.map(p => ({ ...p, level: 50 + i })));
+      for (let i = 0; i < 60; i++) {
+        engine.recordLevelSnapshot(players.map(p => ({ ...p, level: 50 + (i % 50) })));
       }
 
       const state = engine.prepareStateForSaving(type);
       const history = state.levelHistory ?? {};
       for (const entries of Object.values(history)) {
-        expect(entries.length).toBeLessThanOrEqual(10);
+        expect(entries.length).toBeLessThanOrEqual(50);
       }
     });
 
