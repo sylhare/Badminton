@@ -83,6 +83,19 @@ describe('LevelTracker', () => {
     });
   });
 
+  describe('getLevelTrend', () => {
+    it.each([
+      ['no history',                    new Map(),                              null],
+      ['single entry',                  new Map([['p1', [50]]]),                null],
+      ['unchanged level',               new Map([['p1', [50, 50]]]),            null],
+      ['level went up',                 new Map([['p1', [50, 51]]]),            'up'],
+      ['level went down',               new Map([['p1', [50, 49]]]),            'down'],
+      ['only last two entries matter',  new Map([['p1', [40, 60, 55]]]),        'down'],
+    ] as const)('%s', (_label, history, expected) => {
+      expect(tracker.getLevelTrend('p1', history)).toEqual(expected);
+    });
+  });
+
   describe('updatePlayersLevels — averageScore', () => {
     let p1: Player;
     let p2: Player;

@@ -2,6 +2,8 @@ import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Play
 import { storageManager, MAX_LEVEL_HISTORY_ENTRIES } from '../utils/StorageManager';
 import { pairKey } from '../utils/playerUtils';
 
+import { levelTracker } from './LevelTracker';
+
 /**
  * CourtAssignmentTracker
  *
@@ -174,6 +176,10 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /**
    * Returns tracking statistics as Maps.
    */
+  getLevelTrend(playerId: string): 'up' | 'down' | null {
+    return levelTracker.getLevelTrend(playerId, CourtAssignmentTracker.levelHistoryMap);
+  }
+
   getStats(): TrackerStats {
     return {
       winCountMap: new Map(CourtAssignmentTracker.winCountMap),
