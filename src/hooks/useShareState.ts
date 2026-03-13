@@ -26,10 +26,7 @@ export function useShareState() {
       if (valid) {
         const currentRaw = storageManager.getRawState();
         const backupUrl = currentRaw ? buildStateUrl(currentRaw) : '';
-        const [sharedSavedAt, currentSavedAt] = await Promise.all([
-          storageManager.getSavedAt(stateParam),
-          currentRaw ? storageManager.getSavedAt(currentRaw) : Promise.resolve(undefined),
-        ]);
+        const { sharedSavedAt, currentSavedAt } = await storageManager.getImportTimestamps(stateParam, currentRaw);
         setImportState({ param: stateParam, backupUrl, sharedSavedAt, currentSavedAt });
       } else {
         history.replaceState(null, '', removeStateParam());

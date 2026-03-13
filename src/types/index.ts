@@ -35,6 +35,7 @@ export interface AppState {
   lastGeneratedAt?: number;
   isSmartEngineEnabled?: boolean;
   savedAt?: number;
+  sessionId?: string;
 }
 
 export interface CourtEngineState {
