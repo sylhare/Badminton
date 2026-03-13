@@ -2357,8 +2357,9 @@ h1 {
    white surfaces (cards, modals, inputs) remain white.
    ============================================================ */
 
-.trend-up   { color: #4caf50; font-size: 0.75em; margin-left: 2px; }
-.trend-down { color: #f44336; font-size: 0.75em; margin-left: 2px; }
+.level-cell { display: inline-flex; align-items: center; gap: 3px; }
+.trend-up   { color: #4caf50; font-size: 0.75em; line-height: 1; transform: translateY(5%); }
+.trend-down { color: #f44336; font-size: 0.75em; line-height: 1; transform: translateY(5%); }
 
 .app.night-theme {
     --color-primary-start: #1e3a6b;
