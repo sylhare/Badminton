@@ -2147,6 +2147,41 @@ h1 {
     text-align: left;
 }
 
+.leaderboard-table th.sortable-th {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.th-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.leaderboard-table th.sortable-th:hover {
+    filter: brightness(1.15);
+}
+
+.leaderboard-table th.sortable-th.sorted {
+    background: var(--color-primary-dark, #2b5db5);
+}
+
+.sort-icon {
+    font-size: 0.8em;
+    flex-shrink: 0;
+}
+
+.sort-icon--inactive {
+    opacity: 0.4;
+}
+
+.sort-icon--active {
+    opacity: 1;
+    color: white;
+}
+
 .leaderboard-table tbody tr:nth-child(even) {
     background: #f7fafc;
 }
