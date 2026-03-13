@@ -62,7 +62,7 @@ describe('ImportStateModal', () => {
     render(<ImportStateModal {...defaultProps} onDecline={onDecline} />);
 
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: '' }));
+      await user.click(screen.getByRole('button', { name: 'Close' }));
     });
 
     expect(onDecline).toHaveBeenCalledOnce();

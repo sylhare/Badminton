@@ -1,10 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { Camera, Check, X } from '@phosphor-icons/react';
+import { Camera, Check } from '@phosphor-icons/react';
 
 import { useImageOcr } from '../../hooks/useImageOcr';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { getFirstFile, isImageFile } from '../../utils/fileUtils';
 import { useAnalytics } from '../../hooks/useAnalytics';
+
+import Modal from './Modal';
 
 interface ImageUploadModalProps {
   isOpen: boolean;
@@ -86,138 +88,133 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay" onClick={handleClose} data-testid="image-upload-modal">
-      <div className="modal-content image-upload-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>📸 Import Players from Image</h3>
-          <button className="modal-close" onClick={handleClose}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          {extractedPlayers.length === 0 ? (
-            <>
-              <div
-                className={`upload-area modal-upload-area ${isDragOver ? 'dragover' : ''}`}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onClick={handleClick}
-              >
-                <div className="upload-content">
-                  <Camera size={48} weight="light" className="upload-icon" />
-                  <p>
-                    Take a photo or upload an image of your player list.
-                    <br />
-                    Drag and drop, or click to select.
-                  </p>
-                  <button type="button" className="upload-button">
-                    Choose Image
-                  </button>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileSelect}
-                  className="file-input"
-                  data-testid="image-file-input"
-                />
-              </div>
-
-              {isProcessing && (
-                <div className="processing">
-                  <p>🔍 Processing image and extracting player names...</p>
-                  <div className="progress-container">
-                    <div
-                      className="progress-bar"
-                      style={{ width: `${(progress * 100).toFixed(0)}%` }}
-                    />
-                  </div>
-                  <p>{Math.round(progress * 100)}%</p>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="extracted-players-section">
-              <div className="extracted-players-header">
-                <p className="extracted-count">
-                  Found <strong>{extractedPlayers.length}</strong> player{extractedPlayers.length !== 1 ? 's' : ''}
-                </p>
-                <div className="selection-actions">
-                  <button
-                    type="button"
-                    className="selection-action-btn"
-                    onClick={handleSelectAll}
-                    disabled={selectedPlayers.size === extractedPlayers.length}
-                  >
-                    Select all
-                  </button>
-                  <button
-                    type="button"
-                    className="selection-action-btn"
-                    onClick={handleDeselectAll}
-                    disabled={selectedPlayers.size === 0}
-                  >
-                    Deselect all
-                  </button>
-                </div>
-              </div>
-
-              <div className="extracted-players-list">
-                {extractedPlayers.map((player, index) => (
-                  <label
-                    key={`${player}-${index}`}
-                    className={`extracted-player-item ${selectedPlayers.has(player) ? 'selected' : ''}`}
-                  >
-                    <span className="player-checkbox">
-                      {selectedPlayers.has(player) && <Check size={14} weight="bold" />}
-                    </span>
-                    <span className="player-name-text">{player}</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedPlayers.has(player)}
-                      onChange={() => handlePlayerToggle(player)}
-                      className="hidden-checkbox"
-                      data-testid={`extracted-player-${index}`}
-                    />
-                  </label>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                className="try-another-image-btn"
-                onClick={handleClick}
-              >
-                📸 Try another image
-              </button>
-            </div>
-          )}
-        </div>
-
-        {extractedPlayers.length > 0 && (
-          <div className="modal-footer">
-            <button className="button button-secondary" onClick={handleClose}>
-              Cancel
-            </button>
-            <button
-              className="button button-primary"
-              onClick={handleAddPlayers}
-              disabled={selectedPlayers.size === 0}
-              data-testid="add-extracted-players-button"
+    <Modal
+      isOpen={isOpen}
+      title="📸 Import Players from Image"
+      onClose={handleClose}
+      testId="image-upload-modal"
+      className="image-upload-modal"
+    >
+      <div className="modal-body">
+        {extractedPlayers.length === 0 ? (
+          <>
+            <div
+              className={`upload-area modal-upload-area ${isDragOver ? 'dragover' : ''}`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={handleClick}
             >
-              Add {selectedPlayers.size} Player{selectedPlayers.size !== 1 ? 's' : ''}
+              <div className="upload-content">
+                <Camera size={48} weight="light" className="upload-icon" />
+                <p>
+                  Take a photo or upload an image of your player list.
+                  <br />
+                  Drag and drop, or click to select.
+                </p>
+                <button type="button" className="upload-button">
+                  Choose Image
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileSelect}
+                className="file-input"
+                data-testid="image-file-input"
+              />
+            </div>
+
+            {isProcessing && (
+              <div className="processing">
+                <p>🔍 Processing image and extracting player names...</p>
+                <div className="progress-container">
+                  <div
+                    className="progress-bar"
+                    style={{ width: `${(progress * 100).toFixed(0)}%` }}
+                  />
+                </div>
+                <p>{Math.round(progress * 100)}%</p>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="extracted-players-section">
+            <div className="extracted-players-header">
+              <p className="extracted-count">
+                Found <strong>{extractedPlayers.length}</strong> player{extractedPlayers.length !== 1 ? 's' : ''}
+              </p>
+              <div className="selection-actions">
+                <button
+                  type="button"
+                  className="selection-action-btn"
+                  onClick={handleSelectAll}
+                  disabled={selectedPlayers.size === extractedPlayers.length}
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  className="selection-action-btn"
+                  onClick={handleDeselectAll}
+                  disabled={selectedPlayers.size === 0}
+                >
+                  Deselect all
+                </button>
+              </div>
+            </div>
+
+            <div className="extracted-players-list">
+              {extractedPlayers.map((player, index) => (
+                <label
+                  key={`${player}-${index}`}
+                  className={`extracted-player-item ${selectedPlayers.has(player) ? 'selected' : ''}`}
+                >
+                  <span className="player-checkbox">
+                    {selectedPlayers.has(player) && <Check size={14} weight="bold" />}
+                  </span>
+                  <span className="player-name-text">{player}</span>
+                  <input
+                    type="checkbox"
+                    checked={selectedPlayers.has(player)}
+                    onChange={() => handlePlayerToggle(player)}
+                    className="hidden-checkbox"
+                    data-testid={`extracted-player-${index}`}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="try-another-image-btn"
+              onClick={handleClick}
+            >
+              📸 Try another image
             </button>
           </div>
         )}
       </div>
-    </div>
+
+      {extractedPlayers.length > 0 && (
+        <div className="modal-footer">
+          <button className="button button-secondary" onClick={handleClose}>
+            Cancel
+          </button>
+          <button
+            className="button button-primary"
+            onClick={handleAddPlayers}
+            disabled={selectedPlayers.size === 0}
+            data-testid="add-extracted-players-button"
+          >
+            Add {selectedPlayers.size} Player{selectedPlayers.size !== 1 ? 's' : ''}
+          </button>
+        </div>
+      )}
+    </Modal>
   );
 };
 

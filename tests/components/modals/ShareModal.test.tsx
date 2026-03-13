@@ -35,7 +35,7 @@ describe('ShareModal Component', () => {
       expect(screen.getByTestId('share-modal')).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Share Session');
       expect(screen.getByTestId('share-url-input')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Close' }).length).toBeGreaterThanOrEqual(1);
       expect(screen.getByTestId('copy-share-url-button')).toHaveTextContent('Copy URL');
     });
 
@@ -58,7 +58,7 @@ describe('ShareModal Component', () => {
       const user = userEvent.setup();
       render(<ShareModal {...defaultProps} />);
 
-      await user.click(screen.getByRole('button', { name: 'Close' }));
+      await user.click(screen.getAllByRole('button', { name: 'Close' })[1]);
 
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
@@ -67,7 +67,7 @@ describe('ShareModal Component', () => {
       const user = userEvent.setup();
       render(<ShareModal {...defaultProps} />);
 
-      const closeButton = screen.getByRole('button', { name: '' });
+      const closeButton = screen.getAllByRole('button', { name: 'Close' })[0];
       await user.click(closeButton);
 
       expect(mockOnClose).toHaveBeenCalledTimes(1);
