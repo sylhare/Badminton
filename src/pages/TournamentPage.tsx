@@ -6,6 +6,7 @@ import TournamentStandings from '../components/tournament/TournamentStandings';
 import type { Player } from '../types';
 import type { TournamentState } from '../types/tournament';
 import { calculateStandings, getCompletedRounds, getTotalRounds } from '../utils/tournamentUtils';
+
 import { storageManager } from '../utils/StorageManager';
 import './TournamentPage.css';
 
@@ -18,7 +19,7 @@ function TournamentPage(): React.ReactElement {
   useEffect(() => {
     storageManager.loadApp().then(state => {
       if (state.players) {
-        setInitialPlayers(state.players.filter(p => p.isPresent));
+        setInitialPlayers(state.players);
       }
       if (state.numberOfCourts !== undefined) {
         setInitialNumberOfCourts(state.numberOfCourts);
@@ -47,15 +48,9 @@ function TournamentPage(): React.ReactElement {
     });
   };
 
-  const handleComplete = () => {
-    setTournamentState(prev => (prev ? { ...prev, phase: 'completed' } : prev));
-  };
-
   const handleReset = () => {
     setTournamentState(null);
   };
-
-  const basePath = import.meta.env.BASE_URL || '/';
 
   let content: React.ReactNode;
 
@@ -67,7 +62,7 @@ function TournamentPage(): React.ReactElement {
         onStart={handleStart}
       />
     );
-  } else if (tournamentState.phase === 'active') {
+  } else {
     const standings = calculateStandings(tournamentState.teams, tournamentState.matches);
     const completedRounds = getCompletedRounds(tournamentState.matches);
     const totalRounds = getTotalRounds(tournamentState.matches);
@@ -77,28 +72,14 @@ function TournamentPage(): React.ReactElement {
         <TournamentMatches
           matches={tournamentState.matches}
           onMatchResult={handleMatchResult}
-          onComplete={handleComplete}
+          onComplete={handleReset}
         />
         <TournamentStandings
           standings={standings}
           currentRound={completedRounds}
           totalRounds={totalRounds}
-          isComplete={false}
         />
       </div>
-    );
-  } else {
-    const standings = calculateStandings(tournamentState.teams, tournamentState.matches);
-    const totalRounds = getTotalRounds(tournamentState.matches);
-
-    content = (
-      <TournamentStandings
-        standings={standings}
-        currentRound={totalRounds}
-        totalRounds={totalRounds}
-        isComplete={true}
-        onReset={handleReset}
-      />
     );
   }
 
@@ -106,13 +87,6 @@ function TournamentPage(): React.ReactElement {
     <div className="app tournament-page" data-loaded={isLoaded}>
       <div className="container main-container">
         <h1>🏆 Tournament Mode</h1>
-        <a
-          href={basePath}
-          className="back-link"
-          data-testid="back-to-app"
-        >
-          ← Back to Court Manager
-        </a>
         {content}
       </div>
     </div>

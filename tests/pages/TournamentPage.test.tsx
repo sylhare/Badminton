@@ -41,10 +41,6 @@ describe('TournamentPage', () => {
     expect(screen.getByText('🏆 Tournament Mode')).toBeInTheDocument();
   });
 
-  it('renders back-to-app link', () => {
-    render(<TournamentPage />);
-    expect(screen.getByTestId('back-to-app')).toBeInTheDocument();
-  });
 
   it('calls storageManager.loadApp on mount', async () => {
     render(<TournamentPage />);
@@ -61,11 +57,11 @@ describe('TournamentPage', () => {
     }, { timeout: 3000 });
   });
 
-  it('absent players are not pre-selected', async () => {
+  it('absent players are shown but not pre-selected', async () => {
     render(<TournamentPage />);
     await waitFor(() => {
-      // p5 (Eve) is absent → should not be shown (initialPlayers filtered to isPresent)
-      expect(screen.queryByTestId('player-checkbox-p5')).not.toBeInTheDocument();
+      // p5 (Eve) is absent → shown but unchecked
+      expect(screen.getByTestId('player-checkbox-p5')).not.toBeChecked();
     });
   });
 
@@ -83,27 +79,7 @@ describe('TournamentPage', () => {
     expect(screen.getByTestId('tournament-standings')).toBeInTheDocument();
   });
 
-  it('transitions from active to completed after Finish Tournament clicked', async () => {
-    const user = userEvent.setup();
-    render(<TournamentPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
-    }, { timeout: 3000 });
-
-    await user.click(screen.getByTestId('start-tournament-button'));
-
-    // Record result for the single match (4 players → 2 teams → 1 match)
-    const aliceEl = screen.getAllByText('Alice')[0];
-    await user.click(aliceEl);
-    await user.click(screen.getByTestId('score-modal-skip'));
-
-    await user.click(screen.getByTestId('finish-tournament-button'));
-
-    expect(screen.getByRole('heading', { level: 2, name: 'Final Results' })).toBeInTheDocument();
-  });
-
-  it('reset from completed phase goes back to setup', async () => {
+  it('clicking Start a New Tournament resets to setup', async () => {
     const user = userEvent.setup();
     render(<TournamentPage />);
 
@@ -115,11 +91,9 @@ describe('TournamentPage', () => {
 
     const aliceEl = screen.getAllByText('Alice')[0];
     await user.click(aliceEl);
-    await user.click(screen.getByTestId('score-modal-skip'));
-    await user.click(screen.getByTestId('finish-tournament-button'));
+    await user.click(screen.getByTestId('score-modal-confirm'));
 
-    expect(screen.getByTestId('reset-tournament-button')).toBeInTheDocument();
-    await user.click(screen.getByTestId('reset-tournament-button'));
+    await user.click(screen.getByTestId('new-tournament-button'));
 
     expect(screen.getByTestId('start-tournament-button')).toBeInTheDocument();
   });

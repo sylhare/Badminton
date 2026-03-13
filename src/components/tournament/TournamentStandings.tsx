@@ -6,8 +6,6 @@ interface TournamentStandingsProps {
   standings: TournamentStandingRow[];
   currentRound: number;
   totalRounds: number;
-  isComplete: boolean;
-  onReset?: () => void;
 }
 
 function teamLabel(row: TournamentStandingRow): string {
@@ -18,22 +16,15 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   standings,
   currentRound,
   totalRounds,
-  isComplete,
-  onReset,
 }) => {
-  const title = isComplete ? 'Final Results' : 'Standings';
-  const subtitle = isComplete
-    ? null
-    : currentRound > 0
-      ? `After Round ${currentRound} / ${totalRounds}`
-      : `Round 0 / ${totalRounds}`;
+  const subtitle = currentRound > 0
+    ? `After Round ${currentRound} / ${totalRounds}`
+    : `Round 0 / ${totalRounds}`;
 
   return (
     <div className="tournament-standings" data-testid="tournament-standings">
-      <h2>{title}</h2>
-      {subtitle && (
-        <p className="standings-subtitle" data-testid="standings-subtitle">{subtitle}</p>
-      )}
+      <h2>Standings</h2>
+      <p className="standings-subtitle" data-testid="standings-subtitle">{subtitle}</p>
 
       <table className="leaderboard-table standings-table">
         <thead>
@@ -66,15 +57,6 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
         </tbody>
       </table>
 
-      {isComplete && onReset && (
-        <button
-          className="button button-secondary"
-          onClick={onReset}
-          data-testid="reset-tournament-button"
-        >
-          Start New Tournament
-        </button>
-      )}
     </div>
   );
 };

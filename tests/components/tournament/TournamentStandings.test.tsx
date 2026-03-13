@@ -1,7 +1,6 @@
 import React from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 import TournamentStandings from '../../../src/components/tournament/TournamentStandings';
 import type { TournamentStandingRow, TournamentTeam } from '../../../src/types/tournament';
@@ -37,7 +36,6 @@ describe('TournamentStandings', () => {
         standings={standings}
         currentRound={2}
         totalRounds={3}
-        isComplete={false}
       />,
     );
 
@@ -53,7 +51,6 @@ describe('TournamentStandings', () => {
         standings={standings}
         currentRound={2}
         totalRounds={3}
-        isComplete={false}
       />,
     );
 
@@ -62,75 +59,16 @@ describe('TournamentStandings', () => {
     expect(screen.getByTestId('score-diff-2')).toHaveTextContent('-7');
   });
 
-  it('shows After Round N / M label when not complete', () => {
+  it('shows After Round N / M label', () => {
     render(
       <TournamentStandings
         standings={standings}
         currentRound={2}
         totalRounds={3}
-        isComplete={false}
       />,
     );
 
     expect(screen.getByTestId('standings-subtitle')).toHaveTextContent('After Round 2 / 3');
-  });
-
-  it('does NOT show reset button when isComplete=false', () => {
-    render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={2}
-        totalRounds={3}
-        isComplete={false}
-      />,
-    );
-
-    expect(screen.queryByTestId('reset-tournament-button')).not.toBeInTheDocument();
-  });
-
-  it('shows Final Results heading when isComplete=true', () => {
-    render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={3}
-        totalRounds={3}
-        isComplete={true}
-        onReset={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Final Results');
-  });
-
-  it('shows reset button when isComplete=true with onReset', () => {
-    render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={3}
-        totalRounds={3}
-        isComplete={true}
-        onReset={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByTestId('reset-tournament-button')).toBeInTheDocument();
-  });
-
-  it('calls onReset when reset button clicked', async () => {
-    const user = userEvent.setup();
-    const onReset = vi.fn();
-    render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={3}
-        totalRounds={3}
-        isComplete={true}
-        onReset={onReset}
-      />,
-    );
-
-    await user.click(screen.getByTestId('reset-tournament-button'));
-    expect(onReset).toHaveBeenCalledOnce();
   });
 
   it('applies top class to first row', () => {
@@ -139,7 +77,6 @@ describe('TournamentStandings', () => {
         standings={standings}
         currentRound={3}
         totalRounds={3}
-        isComplete={false}
       />,
     );
 
@@ -153,7 +90,6 @@ describe('TournamentStandings', () => {
         standings={standings}
         currentRound={2}
         totalRounds={3}
-        isComplete={false}
       />,
     );
 

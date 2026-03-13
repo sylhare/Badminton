@@ -50,6 +50,49 @@
   margin: 0;
 }
 
+.setup-warning {
+  color: #d97706;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Compact player entry inside tournament setup */
+
+.tournament-player-entry .player-entry-container {
+  margin-bottom: 10px;
+}
+
+.tournament-player-entry .player-entry-form {
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.tournament-player-entry .player-entry-input {
+  padding: 7px 10px;
+  font-size: 0.875rem;
+  min-height: unset;
+}
+
+.tournament-player-entry .player-entry-actions {
+  flex-direction: row;
+  flex-shrink: 0;
+  align-items: stretch;
+}
+
+.tournament-player-entry .add-player-button {
+  padding: 0 12px;
+  font-size: 0.875rem;
+  min-height: unset;
+  min-width: unset;
+  flex: unset;
+}
+
+.tournament-player-entry .camera-button {
+  padding: 0 10px;
+  min-height: unset;
+  min-width: unset;
+}
+
 /* Format pills */
 
 .format-pills {
@@ -316,4 +359,17 @@
 .button-secondary:hover {
   background: var(--color-primary);
   color: white;
+}
+
+/* On mobile, keep the tournament container white (main app uses gradient there) */
+
+@media (max-width: 768px) {
+  .tournament-page .main-container {
+    background: white;
+    border-radius: 0;
+    padding: 15px;
+    margin: 0;
+    width: 100%;
+    box-shadow: none;
+  }
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentState, TournamentTeam } from '../../types/tournament';
+import ManualPlayerEntry from '../players/ManualPlayerEntry';
 import {
   autoCreateDoubleTeams,
   autoCreateSingleTeams,
@@ -25,52 +26,141 @@ function deriveTeams(players: Player[], format: TournamentFormat): TournamentTea
   return autoCreateDoubleTeams(players);
 }
 
+function makeTeamId(index: number): string {
+  return `team-${Date.now()}-${index}`;
+}
+
+function makePlayerId(): string {
+  return `tournament-player-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 const TournamentSetup: React.FC<TournamentSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
   onStart,
 }) => {
+  const [extraPlayers, setExtraPlayers] = useState<Player[]>([]);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(
-    () => new Set(initialPlayers.map(p => p.id)),
+    () => new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id)),
   );
   const [format, setFormat] = useState<TournamentFormat>('doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
-    deriveTeams(initialPlayers, 'doubles'),
+    deriveTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
   const [swapSelection, setSwapSelection] = useState<SwapSelection | null>(null);
 
-  const selectedPlayers = initialPlayers.filter(p => selectedPlayerIds.has(p.id));
+  const allPlayers = [...initialPlayers, ...extraPlayers];
+  const selectedPlayers = allPlayers.filter(p => selectedPlayerIds.has(p.id));
 
   // Sync when initialPlayers loads asynchronously (e.g., from StorageManager)
   useEffect(() => {
     if (initialPlayers.length > 0) {
-      setSelectedPlayerIds(new Set(initialPlayers.map(p => p.id)));
+      const presentIds = new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id));
+      setSelectedPlayerIds(prev => {
+        // Keep any extra players that were already selected
+        const next = new Set(presentIds);
+        for (const id of prev) {
+          if (extraPlayers.some(p => p.id === id)) next.add(id);
+        }
+        return next;
+      });
+      const presentPlayers = [
+        ...initialPlayers.filter(p => p.isPresent),
+        ...extraPlayers.filter(p => selectedPlayerIds.has(p.id)),
+      ];
+      setTeams(deriveTeams(presentPlayers, format));
+      setSwapSelection(null);
     }
-  // Intentionally only re-run when initialPlayers reference changes (initial load)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPlayers]);
 
+  // Re-derive completely on format change
   useEffect(() => {
     setTeams(deriveTeams(selectedPlayers, format));
     setSwapSelection(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPlayerIds, format]);
+  }, [format]);
 
   const handleFormatChange = (f: TournamentFormat) => {
     setFormat(f);
   };
 
-  const handlePlayerToggle = (id: string) => {
-    setSelectedPlayerIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
+  const handlePlayersAdded = (names: string[]) => {
+    const newPlayers: Player[] = names.map(name => ({ id: makePlayerId(), name, isPresent: true }));
+    setExtraPlayers(prev => [...prev, ...newPlayers]);
+    setSelectedPlayerIds(prev => new Set([...prev, ...newPlayers.map(p => p.id)]));
+    setTeams(prev => {
+      let next = prev.map(t => ({ ...t, players: [...t.players] }));
+      for (const player of newPlayers) {
+        if (format === 'singles') {
+          next.push({ id: makeTeamId(next.length), players: [player] });
+        } else {
+          const incomplete = next.find(t => t.players.length < 2);
+          if (incomplete) {
+            incomplete.players.push(player);
+          } else {
+            next.push({ id: makeTeamId(next.length), players: [player] });
+          }
+        }
       }
       return next;
     });
+  };
+
+  const handlePlayerToggle = (id: string) => {
+    const isRemoving = selectedPlayerIds.has(id);
+    const player = allPlayers.find(p => p.id === id);
+    if (!player) return;
+
+    setSelectedPlayerIds(prev => {
+      const next = new Set(prev);
+      if (isRemoving) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+    setSwapSelection(null);
+
+    if (isRemoving) {
+      setTeams(prev => {
+        let next = prev
+          .map(t => ({ ...t, players: t.players.filter(p => p.id !== id) }))
+          .filter(t => t.players.length > 0);
+
+        // In doubles mode, merge any two incomplete (1-player) teams in-place
+        if (format === 'doubles') {
+          const soloIndices = next
+            .map((t, i) => (t.players.length === 1 ? i : -1))
+            .filter(i => i >= 0);
+          const toRemove = new Set<number>();
+          for (let i = 0; i + 1 < soloIndices.length; i += 2) {
+            const a = soloIndices[i];
+            const b = soloIndices[i + 1];
+            next[a] = { ...next[a], players: [...next[a].players, ...next[b].players] };
+            toRemove.add(b);
+          }
+          if (toRemove.size > 0) next = next.filter((_, i) => !toRemove.has(i));
+        }
+
+        return next;
+      });
+    } else {
+      setTeams(prev => {
+        const next = prev.map(t => ({ ...t, players: [...t.players] }));
+        if (format === 'singles') {
+          next.push({ id: makeTeamId(next.length), players: [player] });
+        } else {
+          const incomplete = next.find(t => t.players.length < 2);
+          if (incomplete) {
+            incomplete.players.push(player);
+          } else {
+            next.push({ id: makeTeamId(next.length), players: [player] });
+          }
+        }
+        return next;
+      });
+    }
   };
 
   const handlePlayerSlotClick = (teamIdx: number, playerIdx: number) => {
@@ -103,6 +193,11 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   };
 
   const validationError = validateTeams(teams, format);
+  const matchesPerRound = Math.floor(teams.length / 2);
+  const courtWarning =
+    !validationError && matchesPerRound > numberOfCourts
+      ? `${matchesPerRound} matches per round but only ${numberOfCourts} court${numberOfCourts > 1 ? 's' : ''} — some matches will need to wait.`
+      : null;
 
   const handleStart = () => {
     if (validationError) return;
@@ -142,8 +237,11 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
       <div className="setup-section">
         <h3>Players</h3>
+        <div className="tournament-player-entry">
+          <ManualPlayerEntry onPlayersAdded={handlePlayersAdded} />
+        </div>
         <div className="player-selection" data-testid="player-selection">
-          {initialPlayers.map(player => (
+          {allPlayers.map(player => (
             <label key={player.id} className="player-checkbox-label">
               <input
                 type="checkbox"
@@ -155,9 +253,6 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
             </label>
           ))}
         </div>
-        {initialPlayers.length === 0 && (
-          <p className="setup-hint">No present players found. Add players on the main page first.</p>
-        )}
       </div>
 
       <div className="setup-section">
@@ -215,6 +310,9 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
       {validationError && (
         <p className="setup-error" data-testid="setup-error">{validationError}</p>
+      )}
+      {courtWarning && (
+        <p className="setup-warning" data-testid="court-warning">{courtWarning}</p>
       )}
 
       <button

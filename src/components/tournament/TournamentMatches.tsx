@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import type { TournamentMatch } from '../../types/tournament';
 import { DoublesMatch, SinglesMatch } from '../court/display';
@@ -33,9 +33,21 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
   });
 
   const currentRound = getCurrentRound(matches);
-  const allDone = matches.every(m => m.winner !== undefined);
-
   const roundNums = Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
+
+  const prevCurrentRoundRef = useRef(currentRound);
+  useEffect(() => {
+    const prev = prevCurrentRoundRef.current;
+    if (prev !== currentRound) {
+      setExpandedRounds(existing => {
+        const next = new Set(existing);
+        next.delete(prev);
+        next.add(currentRound);
+        return next;
+      });
+      prevCurrentRoundRef.current = currentRound;
+    }
+  }, [currentRound]);
 
   const toggleRound = (round: number) => {
     setExpandedRounds(prev => {
@@ -61,13 +73,6 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
   const handleModalConfirm = (score: { team1: number; team2: number }) => {
     if (!modalMatch || pendingWinner === null) return;
     onMatchResult(modalMatch.id, pendingWinner, score);
-    setModalMatch(null);
-    setPendingWinner(null);
-  };
-
-  const handleModalSkip = () => {
-    if (!modalMatch || pendingWinner === null) return;
-    onMatchResult(modalMatch.id, pendingWinner, undefined);
     setModalMatch(null);
     setPendingWinner(null);
   };
@@ -156,10 +161,9 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
         <button
           className="button button-primary"
           onClick={onComplete}
-          disabled={!allDone}
-          data-testid="finish-tournament-button"
+          data-testid="new-tournament-button"
         >
-          Finish Tournament
+          Start a New Tournament
         </button>
       </div>
 
@@ -169,7 +173,6 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
         team1Players={modalMatch?.team1.players ?? []}
         team2Players={modalMatch?.team2.players ?? []}
         onConfirm={handleModalConfirm}
-        onSkip={handleModalSkip}
         onCancel={handleModalCancel}
       />
     </div>

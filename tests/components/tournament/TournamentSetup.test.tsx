@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+vi.mock('../../../src/components/modals/ImageUploadModal', () => ({
+  default: () => null,
+}));
+
 import TournamentSetup from '../../../src/components/tournament/TournamentSetup';
 import type { TournamentState } from '../../../src/types/tournament';
 import { createMockPlayer } from '../../data/testFactories';
@@ -189,6 +193,132 @@ describe('TournamentSetup', () => {
     expect(state.teams).toHaveLength(2);
     expect(state.matches).toHaveLength(1); // 2 teams → 1 match
     expect(state.teams[0].players).toHaveLength(2);
+  });
+
+  it('removing a player does not reset other team assignments', async () => {
+    const user = userEvent.setup();
+    render(
+      <TournamentSetup
+        initialPlayers={presentPlayers}
+        initialNumberOfCourts={2}
+        onStart={onStart}
+      />,
+    );
+
+    // Initial: Team 1 = [Alice, Bob], Team 2 = [Carol, Dave]
+    // Swap Alice and Carol first
+    await user.click(screen.getByTestId('player-slot-0-0')); // select Alice
+    await user.click(screen.getByTestId('player-slot-1-0')); // swap with Carol
+    // Now: Team 1 = [Carol, Bob], Team 2 = [Alice, Dave]
+    expect(screen.getByTestId('player-slot-0-0')).toHaveTextContent('Carol');
+    expect(screen.getByTestId('player-slot-1-0')).toHaveTextContent('Alice');
+
+    // Deselect Dave — Team 2 loses Dave, Team 1 is unchanged
+    await user.click(screen.getByTestId('player-checkbox-p4'));
+
+    // Team 1 should still be [Carol, Bob]
+    expect(screen.getByTestId('player-slot-0-0')).toHaveTextContent('Carol');
+    expect(screen.getByTestId('player-slot-0-1')).toHaveTextContent('Bob');
+    // Team 2 is now [Alice] (Dave removed)
+    expect(screen.getByTestId('player-slot-1-0')).toHaveTextContent('Alice');
+  });
+
+  it('adding a player fills the first incomplete team slot in doubles', async () => {
+    const user = userEvent.setup();
+    render(
+      <TournamentSetup
+        initialPlayers={presentPlayers}
+        initialNumberOfCourts={2}
+        onStart={onStart}
+      />,
+    );
+
+    // Deselect Dave — team 2 becomes [Carol] (incomplete)
+    await user.click(screen.getByTestId('player-checkbox-p4'));
+    expect(screen.queryByTestId('player-slot-1-1')).not.toBeInTheDocument();
+
+    // Re-select Dave — should fill team 2's incomplete slot
+    await user.click(screen.getByTestId('player-checkbox-p4'));
+    expect(screen.getByTestId('player-slot-1-1')).toHaveTextContent('Dave');
+  });
+
+  it('two solo-player teams merge when removing a player in doubles', async () => {
+    const user = userEvent.setup();
+    render(
+      <TournamentSetup
+        initialPlayers={presentPlayers}
+        initialNumberOfCourts={2}
+        onStart={onStart}
+      />,
+    );
+
+    // Initial: Team 1 = [Alice, Bob], Team 2 = [Carol, Dave]
+    // Remove Bob → Team 1 = [Alice] (solo), Team 2 = [Carol, Dave]
+    await user.click(screen.getByTestId('player-checkbox-p2'));
+    // Now: Team 1 = [Alice], Team 2 = [Carol, Dave]
+    expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(2);
+
+    // Remove Dave → Team 2 = [Carol] (solo), two solo teams should merge → Team 1 = [Alice, Carol]
+    await user.click(screen.getByTestId('player-checkbox-p4'));
+
+    expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(1);
+    expect(screen.getByTestId('player-slot-0-0')).toHaveTextContent('Alice');
+    expect(screen.getByTestId('player-slot-0-1')).toHaveTextContent('Carol');
+  });
+
+  it('adding a new player via the form selects them and adds to teams', async () => {
+    const user = userEvent.setup();
+    render(
+      <TournamentSetup
+        initialPlayers={presentPlayers}
+        initialNumberOfCourts={2}
+        onStart={onStart}
+      />,
+    );
+
+    const input = screen.getByTestId('player-entry-input');
+    await user.type(input, 'Zara');
+    await user.click(screen.getByTestId('add-player-button'));
+
+    // Zara appears in the player list as checked
+    expect(screen.getAllByText('Zara').length).toBeGreaterThan(0);
+
+    // Input is cleared
+    expect(input).toHaveValue('');
+  });
+
+  it('shows court warning when matches per round exceed courts', () => {
+    render(
+      <TournamentSetup
+        initialPlayers={presentPlayers}
+        initialNumberOfCourts={1}
+        onStart={onStart}
+      />,
+    );
+
+    // 4 players → 2 teams → 1 match per round, 1 court → no warning
+    expect(screen.queryByTestId('court-warning')).not.toBeInTheDocument();
+  });
+
+  it('shows court warning when matches per round exceed court count', () => {
+    const eightPlayers = [
+      ...presentPlayers,
+      createMockPlayer({ id: 'p5', name: 'Eve', isPresent: true }),
+      createMockPlayer({ id: 'p6', name: 'Frank', isPresent: true }),
+      createMockPlayer({ id: 'p7', name: 'Grace', isPresent: true }),
+      createMockPlayer({ id: 'p8', name: 'Hank', isPresent: true }),
+    ];
+    render(
+      <TournamentSetup
+        initialPlayers={eightPlayers}
+        initialNumberOfCourts={1}
+        onStart={onStart}
+      />,
+    );
+
+    // 8 players → 4 doubles teams → floor(4/2)=2 matches per round > 1 court → warning
+    expect(screen.getByTestId('court-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('court-warning')).toHaveTextContent('2 matches per round');
   });
 
   it('Start Tournament button enabled for valid doubles setup', () => {

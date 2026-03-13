@@ -113,7 +113,7 @@ describe('TournamentMatches', () => {
     expect(onMatchResult).toHaveBeenCalledWith('m1', 1, { team1: 21, team2: 15 });
   });
 
-  it('clicking skip calls onMatchResult with score=undefined', async () => {
+  it('confirming modal without entering scores uses defaults', async () => {
     const user = userEvent.setup();
     render(
       <TournamentMatches
@@ -124,10 +124,11 @@ describe('TournamentMatches', () => {
     );
 
     await user.click(screen.getAllByText('Alice')[0]);
-    await user.click(screen.getByTestId('score-modal-skip'));
+    await user.click(screen.getByTestId('score-modal-confirm'));
 
     expect(onMatchResult).toHaveBeenCalledOnce();
-    expect(onMatchResult).toHaveBeenCalledWith('m1', 1, undefined);
+    // Confirm with default scores (21 for winner, 18 for loser)
+    expect(onMatchResult).toHaveBeenCalledWith('m1', 1, { team1: 21, team2: 18 });
   });
 
   it('cancelling modal does not call onMatchResult', async () => {
@@ -168,7 +169,7 @@ describe('TournamentMatches', () => {
     expect(onMatchResult).toHaveBeenCalledWith('m1', 1);
   });
 
-  it('Finish Tournament button disabled while matches unfinished', () => {
+  it('Start a New Tournament button always visible', () => {
     render(
       <TournamentMatches
         matches={threeMatchSingles}
@@ -177,10 +178,10 @@ describe('TournamentMatches', () => {
       />,
     );
 
-    expect(screen.getByTestId('finish-tournament-button')).toBeDisabled();
+    expect(screen.getByTestId('new-tournament-button')).toBeInTheDocument();
   });
 
-  it('Finish Tournament button enabled when all matches done', () => {
+  it('Start a New Tournament button shown when all matches done', () => {
     const allDone: TournamentMatch[] = [
       makeMatch('m1', 1, teamA, teamB, 1),
       makeMatch('m2', 2, teamA, teamC, 2),
@@ -194,10 +195,10 @@ describe('TournamentMatches', () => {
       />,
     );
 
-    expect(screen.getByTestId('finish-tournament-button')).not.toBeDisabled();
+    expect(screen.getByTestId('new-tournament-button')).toBeInTheDocument();
   });
 
-  it('clicking Finish Tournament calls onComplete', async () => {
+  it('clicking Start a New Tournament calls onComplete', async () => {
     const user = userEvent.setup();
     const allDone: TournamentMatch[] = [
       makeMatch('m1', 1, teamA, teamB, 1),
@@ -212,7 +213,7 @@ describe('TournamentMatches', () => {
       />,
     );
 
-    await user.click(screen.getByTestId('finish-tournament-button'));
+    await user.click(screen.getByTestId('new-tournament-button'));
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
