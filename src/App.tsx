@@ -324,6 +324,8 @@ function App(): React.ReactElement {
       <ImportStateModal
         isOpen={importState !== null}
         currentBackupUrl={importState?.backupUrl ?? ''}
+        sharedSavedAt={importState?.sharedSavedAt}
+        currentSavedAt={importState?.currentSavedAt}
         onAccept={handleImportAccept}
         onDecline={handleImportDecline}
       />
