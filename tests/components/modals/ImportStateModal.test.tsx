@@ -84,6 +84,24 @@ describe('ImportStateModal', () => {
     expect(writeText).toHaveBeenCalledWith(defaultProps.currentBackupUrl);
   });
 
+  it('should display shared and current timestamps when both are provided', () => {
+    render(<ImportStateModal {...defaultProps} sharedSavedAt={1700000000000} currentSavedAt={1700003600000} />);
+    expect(screen.getByTestId('shared-saved-at')).toBeInTheDocument();
+    expect(screen.getByTestId('current-saved-at')).toBeInTheDocument();
+  });
+
+  it('should display only shared timestamp when currentSavedAt is not provided', () => {
+    render(<ImportStateModal {...defaultProps} sharedSavedAt={1700000000000} />);
+    expect(screen.getByTestId('shared-saved-at')).toBeInTheDocument();
+    expect(screen.queryByTestId('current-saved-at')).not.toBeInTheDocument();
+  });
+
+  it('should not display timestamp section when neither timestamp is provided', () => {
+    render(<ImportStateModal {...defaultProps} />);
+    expect(screen.queryByTestId('shared-saved-at')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('current-saved-at')).not.toBeInTheDocument();
+  });
+
   it('should show "Copied!" after clicking copy button', async () => {
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: vi.fn().mockResolvedValue(undefined) },

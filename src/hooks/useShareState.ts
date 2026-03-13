@@ -16,7 +16,7 @@ function removeStateParam(): string {
 
 export function useShareState() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [importState, setImportState] = useState<{ param: string; backupUrl: string } | null>(null);
+  const [importState, setImportState] = useState<{ param: string; backupUrl: string; sharedSavedAt?: number; currentSavedAt?: number } | null>(null);
 
   useEffect(() => {
     const detectImportState = async () => {
@@ -26,7 +26,11 @@ export function useShareState() {
       if (valid) {
         const currentRaw = storageManager.getRawState();
         const backupUrl = currentRaw ? buildStateUrl(currentRaw) : '';
-        setImportState({ param: stateParam, backupUrl });
+        const [sharedSavedAt, currentSavedAt] = await Promise.all([
+          storageManager.getSavedAt(stateParam),
+          currentRaw ? storageManager.getSavedAt(currentRaw) : Promise.resolve(undefined),
+        ]);
+        setImportState({ param: stateParam, backupUrl, sharedSavedAt, currentSavedAt });
       } else {
         history.replaceState(null, '', removeStateParam());
       }

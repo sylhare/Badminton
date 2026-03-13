@@ -4,13 +4,24 @@ import { X } from '@phosphor-icons/react';
 interface ImportStateModalProps {
   isOpen: boolean;
   currentBackupUrl: string;
+  sharedSavedAt?: number;
+  currentSavedAt?: number;
   onAccept: () => void;
   onDecline: () => void;
+}
+
+function formatTimestamp(ts: number): string {
+  return new Date(ts).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 }
 
 const ImportStateModal: React.FC<ImportStateModalProps> = ({
   isOpen,
   currentBackupUrl,
+  sharedSavedAt,
+  currentSavedAt,
   onAccept,
   onDecline,
 }) => {
@@ -36,6 +47,20 @@ const ImportStateModal: React.FC<ImportStateModalProps> = ({
 
         <div className="modal-body">
           <p>A shared session was found in the URL. Loading it will replace your current session.</p>
+          {(sharedSavedAt || currentSavedAt) && (
+            <div className="import-state-timestamps">
+              {sharedSavedAt && (
+                <p data-testid="shared-saved-at">
+                  Shared session saved: <strong>{formatTimestamp(sharedSavedAt)}</strong>
+                </p>
+              )}
+              {currentSavedAt && (
+                <p data-testid="current-saved-at">
+                  Your session saved: <strong>{formatTimestamp(currentSavedAt)}</strong>
+                </p>
+              )}
+            </div>
+          )}
           {currentBackupUrl && (
             <>
               <p>Save this link to restore your current session later:</p>

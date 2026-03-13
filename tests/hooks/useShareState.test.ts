@@ -9,6 +9,7 @@ vi.mock('../../src/utils/StorageManager', () => ({
     getRawState: vi.fn(),
     isValidState: vi.fn(),
     importRawState: vi.fn(),
+    getSavedAt: vi.fn(),
   },
 }));
 
@@ -65,9 +66,26 @@ describe('useShareState', () => {
       expect(result.current.importState?.backupUrl).toContain('?state=backup123');
     });
 
-    it('sets empty backupUrl when no existing state in storage', async () => {
+    it('sets sharedSavedAt and currentSavedAt when both states have timestamps', async () => {
+      vi.mocked(storageManager.isValidState).mockResolvedValue(true);
+      vi.mocked(storageManager.getRawState).mockReturnValue('backup123');
+      vi.mocked(storageManager.getSavedAt).mockImplementation((raw) =>
+        Promise.resolve(raw === 'shared456' ? 1700000000000 : 1700003600000),
+      );
+      history.replaceState(null, '', '?state=shared456');
+
+      const { result } = renderHook(() => useShareState());
+
+      await waitFor(() => expect(result.current.importState).not.toBeNull());
+
+      expect(result.current.importState?.sharedSavedAt).toBe(1700000000000);
+      expect(result.current.importState?.currentSavedAt).toBe(1700003600000);
+    });
+
+    it('sets empty backupUrl and no currentSavedAt when no existing state in storage', async () => {
       vi.mocked(storageManager.isValidState).mockResolvedValue(true);
       vi.mocked(storageManager.getRawState).mockReturnValue(null);
+      vi.mocked(storageManager.getSavedAt).mockResolvedValue(1700000000000);
       history.replaceState(null, '', '?state=shared456');
 
       const { result } = renderHook(() => useShareState());
@@ -75,6 +93,7 @@ describe('useShareState', () => {
       await waitFor(() => expect(result.current.importState).not.toBeNull());
 
       expect(result.current.importState?.backupUrl).toBe('');
+      expect(result.current.importState?.currentSavedAt).toBeUndefined();
     });
 
     it('cleans ?state= from URL when param is invalid', async () => {
