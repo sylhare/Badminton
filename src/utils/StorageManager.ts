@@ -135,7 +135,7 @@ class StorageManager {
 
   async saveApp(state: Partial<AppState>): Promise<void> {
     return this.save(
-      current => ({ ...current, app: { ...(current.app ?? {}), ...state } as AppState }),
+      current => ({ ...current, app: { ...(current.app ?? {}), ...state, savedAt: Date.now() } as AppState }),
     );
   }
 
@@ -154,6 +154,7 @@ class StorageManager {
         assignments: Array.isArray(app.assignments) ? app.assignments : [],
         lastGeneratedAt: typeof app.lastGeneratedAt === 'number' ? app.lastGeneratedAt : undefined,
         isSmartEngineEnabled: typeof app.isSmartEngineEnabled === 'boolean' ? app.isSmartEngineEnabled : undefined,
+        savedAt: typeof app.savedAt === 'number' ? app.savedAt : undefined,
       };
     } catch (error) {
       console.warn('Failed to load app state from localStorage:', error);
@@ -205,12 +206,24 @@ class StorageManager {
 
   /** Returns true if the raw string is a valid compressed state with players array. */
   async isValidState(raw: string): Promise<boolean> {
+    const parsed = await this.decompressJson(raw);
+    return Array.isArray(parsed?.app?.players);
+  }
+
+  /** Returns the savedAt timestamp from a raw compressed state string, or undefined. */
+  async getSavedAt(raw: string): Promise<number | undefined> {
+    const parsed = await this.decompressJson(raw);
+    const savedAt = parsed?.app?.savedAt;
+    return typeof savedAt === 'number' ? savedAt : undefined;
+  }
+
+  /** Decompresses and JSON-parses a raw compressed state string. Returns null on failure. */
+  private async decompressJson(raw: string): Promise<Partial<StorageData> | null> {
     try {
-      const decompressed = await decompress(raw);
-      const parsed = JSON.parse(decompressed);
-      return Array.isArray(parsed?.app?.players);
+      const parsed = JSON.parse(await decompress(raw));
+      return typeof parsed === 'object' && parsed !== null ? parsed as Partial<StorageData> : null;
     } catch {
-      return false;
+      return null;
     }
   }
 
@@ -328,14 +341,7 @@ class StorageManager {
       return {};
     }
 
-    try {
-      const decompressed = await decompress(raw);
-      const parsed = JSON.parse(decompressed);
-      if (typeof parsed === 'object' && parsed !== null) return parsed as Partial<StorageData>;
-    } catch {  }
-    const parsed = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return {};
-    return parsed as Partial<StorageData>;
+    return (await this.decompressJson(raw)) ?? {};
   }
 
   private async write(data: Partial<StorageData>): Promise<void> {
