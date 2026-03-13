@@ -110,7 +110,7 @@ async function decompress(data: string): Promise<string> {
  * concurrent `saveApp` / `saveEngine` calls never race on read→modify→write.
  */
 /** Maximum number of level-history snapshots stored per player. */
-export const MAX_LEVEL_HISTORY_ENTRIES = 10;
+export const MAX_LEVEL_HISTORY_ENTRIES = 50;
 
 class StorageManager {
   private static readonly KEY = 'badminton-state';

@@ -161,6 +161,32 @@ test.describe('Smart Engine', () => {
     });
   });
 
+  test.describe('Level Trend Indicator', () => {
+    test.beforeEach(async ({ page: _page }) => {
+      await mainPage.addPlayers(PLAYERS);
+      await mainPage.toggleSmartEngine();
+      await mainPage.generateAssignments(1);
+    });
+
+    test('shows ▲/▼ in leaderboard level column after second round', async ({ page }) => {
+      await page.locator('.team-clickable').first().click();
+      await mainPage.enterScore('21', '10');
+      await mainPage.regenerate();
+
+      const trendIndicator = page.locator('.leaderboard-table .trend-up, .leaderboard-table .trend-down');
+      await expect(trendIndicator.first()).toBeVisible();
+    });
+
+    test('no ▲/▼ on first round (only one snapshot)', async ({ page }) => {
+      await page.locator('.team-clickable').first().click();
+      await expect(page.getByTestId('score-input-modal')).toBeVisible();
+      await page.getByTestId('score-modal-confirm').click();
+
+      await expect(page.locator('.leaderboard-table .trend-up')).toHaveCount(0);
+      await expect(page.locator('.leaderboard-table .trend-down')).toHaveCount(0);
+    });
+  });
+
   test.describe('Stats Integration', () => {
     test('TeammateGraph shows gender legend when smart engine is enabled', async ({ page }) => {
       await mainPage.addPlayers(PLAYERS);

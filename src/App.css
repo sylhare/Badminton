@@ -2322,6 +2322,9 @@ h1 {
    white surfaces (cards, modals, inputs) remain white.
    ============================================================ */
 
+.trend-up   { color: #4caf50; font-size: 0.75em; margin-left: 2px; }
+.trend-down { color: #f44336; font-size: 0.75em; margin-left: 2px; }
+
 .app.night-theme {
     --color-primary-start: #1e3a6b;
     --color-primary-end: #0a1628;

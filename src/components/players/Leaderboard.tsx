@@ -46,16 +46,23 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
             </tr>
             </thead>
             <tbody>
-            {ranked.map((p, idx) => (
+            {ranked.map((p, idx) => {
+              const trend = engine().getLevelTrend(p.id);
+              return (
               <tr key={p.id} className={idx === 0 ? 'top' : undefined}>
                 <td>{idx + 1}</td>
                 <td>{medalForRank(idx)}{p.name}</td>
-                <td>{p.level?.toFixed(1) ?? '—'}</td>
+                <td>
+                  {p.level?.toFixed(1) ?? '—'}
+                  {trend === 'up' && <span className="trend-up">▲</span>}
+                  {trend === 'down' && <span className="trend-down">▼</span>}
+                </td>
                 <td>{p.averageScore?.toFixed(1) ?? '—'}</td>
                 <td>{p.wins}</td>
                 <td>{p.wins + p.losses}</td>
               </tr>
-            ))}
+              );
+            })}
             </tbody>
           </table>
         </div>
