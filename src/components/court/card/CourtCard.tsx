@@ -5,6 +5,7 @@ import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from 
 import { triggerConfetti } from '../../../utils/confetti.ts';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 import { engine } from '../../../engines/engineSelector';
+import { useAnalytics } from '../../../hooks/useAnalytics';
 
 import CourtHeader from './CourtHeader';
 
@@ -27,6 +28,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
 }) => {
   const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
   const clickCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const { trackGameAction } = useAnalytics();
 
   const handleTeamClick = (event: React.MouseEvent, teamNumber: 1 | 2) => {
     if (!onWinnerChange) return;
@@ -46,6 +48,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   const handleRotateTeams = onRotateTeams ? () => onRotateTeams(court.courtNumber) : undefined;
   const handleModalConfirm = (score: { team1: number; team2: number }) => {
     if (pendingWinner === null || !onWinnerChange) return;
+    trackGameAction('set_winner', { gameType: score.team1 > 0 || score.team2 > 0 ? 'with_score' : 'no_score', courtNumber: court.courtNumber });
     onWinnerChange(court.courtNumber, pendingWinner);
     onScoreChange?.(court.courtNumber, score);
     triggerConfetti(clickCoordsRef.current.x, clickCoordsRef.current.y, 30);

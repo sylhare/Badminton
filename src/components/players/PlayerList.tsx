@@ -40,7 +40,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const [showResetAlgorithmModal, setShowResetAlgorithmModal] = useState(false);
   const [playerToRemove, setPlayerToRemove] = useState<Player | null>(null);
   const [playerToEdit, setPlayerToEdit] = useState<Player | null>(null);
-  const { trackPlayerAction, trackGameAction } = useAnalytics();
+  const { trackPlayerAction, trackGameAction, trackUIAction } = useAnalytics();
 
   const presentCount = players.filter(p => p.isPresent).length;
   const totalCount = players.length;
@@ -233,7 +233,10 @@ const PlayerList: React.FC<PlayerListProps> = ({
           <input
             type="checkbox"
             checked={engine().supportsScoreTracking()}
-            onChange={() => onToggleSmartEngine?.()}
+            onChange={() => {
+              trackUIAction('toggle_smart_engine', { section: engine().supportsScoreTracking() ? 'disable' : 'enable' });
+              onToggleSmartEngine?.();
+            }}
             data-testid="smart-engine-toggle"
           />
           <span className={`toggle-switch ${engine().supportsScoreTracking() ? 'active smart-engine-active' : ''}`}></span>
