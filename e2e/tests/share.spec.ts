@@ -37,6 +37,8 @@ test.describe('Session Sharing via URL', () => {
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByTestId('import-state-modal')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('shared-saved-at')).toBeVisible();
+    await expect(page.getByTestId('current-saved-at')).not.toBeVisible();
   });
 
   test('Accept import loads players from shared state', async ({ page }) => {
@@ -70,6 +72,8 @@ test.describe('Session Sharing via URL', () => {
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByTestId('import-state-modal')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('shared-saved-at')).not.toBeVisible();
+    await expect(page.getByTestId('current-saved-at')).not.toBeVisible();
     await page.getByTestId('import-state-decline').click();
 
     await expect(page.getByTestId('import-state-modal')).not.toBeVisible();

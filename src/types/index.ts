@@ -34,6 +34,8 @@ export interface AppState {
   assignments: Court[];
   lastGeneratedAt?: number;
   isSmartEngineEnabled?: boolean;
+  savedAt?: number;
+  sessionId?: string;
 }
 
 export interface CourtEngineState {

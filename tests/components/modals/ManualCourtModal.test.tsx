@@ -74,7 +74,7 @@ describe('ManualCourtModal Component', () => {
       renderModal();
 
       await act(async () => {
-        await user.click(screen.getByRole('button', { name: '×' }));
+        await user.click(screen.getByRole('button', { name: 'Close' }));
       });
 
       expect(mockOnClose).toHaveBeenCalled();
@@ -198,7 +198,7 @@ describe('ManualCourtModal Component', () => {
       renderModal({ players: [mockPlayers[0], mockPlayers[1]] });
 
       await act(async () => {
-        await user.click(screen.getAllByText('×')[1]);
+        await user.click(screen.getAllByText('×')[0]);
       });
 
       expect(mockOnSelectionChange).toHaveBeenCalledWith({

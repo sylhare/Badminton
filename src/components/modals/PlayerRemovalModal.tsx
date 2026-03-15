@@ -1,5 +1,7 @@
 import React from 'react';
-import { Pause, Trash, X } from '@phosphor-icons/react';
+import { Pause, Trash } from '@phosphor-icons/react';
+
+import Modal from './Modal';
 
 interface PlayerRemovalModalProps {
   isOpen: boolean;
@@ -16,49 +18,39 @@ const PlayerRemovalModal: React.FC<PlayerRemovalModalProps> = ({
   onMarkAbsent,
   onCancel,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay" onClick={onCancel} data-testid="player-removal-modal">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Remove Player</h3>
-          <button
-            className="modal-close"
-            onClick={onCancel}
-            data-testid="player-removal-modal-close"
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <p>
-            What would you like to do with <strong>{playerName}</strong>?
-          </p>
-        </div>
-
-        <div className="modal-footer player-removal-actions">
-          <button
-            className="button button-absent"
-            onClick={onMarkAbsent}
-            data-testid="player-removal-modal-absent"
-          >
-            <Pause size={14} weight="bold" />
-            Mark as Absent
-          </button>
-          <button
-            className="button button-danger"
-            onClick={onRemove}
-            data-testid="player-removal-modal-remove"
-          >
-            <Trash size={14} />
-            Remove Player
-          </button>
-        </div>
+    <Modal
+      isOpen={isOpen}
+      title="Remove Player"
+      onClose={onCancel}
+      testId="player-removal-modal"
+      closeButtonTestId="player-removal-modal-close"
+    >
+      <div className="modal-body">
+        <p>
+          What would you like to do with <strong>{playerName}</strong>?
+        </p>
       </div>
-    </div>
+
+      <div className="modal-footer player-removal-actions">
+        <button
+          className="button button-absent"
+          onClick={onMarkAbsent}
+          data-testid="player-removal-modal-absent"
+        >
+          <Pause size={14} weight="bold" />
+          Mark as Absent
+        </button>
+        <button
+          className="button button-danger"
+          onClick={onRemove}
+          data-testid="player-removal-modal-remove"
+        >
+          <Trash size={14} />
+          Remove Player
+        </button>
+      </div>
+    </Modal>
   );
 };
 

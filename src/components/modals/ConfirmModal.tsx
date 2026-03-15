@@ -1,5 +1,6 @@
 import React from 'react';
-import { X } from '@phosphor-icons/react';
+
+import Modal from './Modal';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -22,36 +23,25 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onCancel,
   isDestructive = false,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay" onClick={onCancel} data-testid="confirm-modal">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>{title}</h3>
-          <button className="modal-close" onClick={onCancel}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <p>{message}</p>
-        </div>
-
-        <div className="modal-footer">
-          <button className="button button-secondary" onClick={onCancel}>
-            {cancelText}
-          </button>
-          <button
-            className={`button ${isDestructive ? 'button-danger' : 'button-primary'}`}
-            onClick={onConfirm}
-            data-testid="confirm-modal-confirm"
-          >
-            {confirmText}
-          </button>
-        </div>
+    <Modal isOpen={isOpen} title={title} onClose={onCancel} testId="confirm-modal">
+      <div className="modal-body">
+        <p>{message}</p>
       </div>
-    </div>
+
+      <div className="modal-footer">
+        <button className="button button-secondary" onClick={onCancel}>
+          {cancelText}
+        </button>
+        <button
+          className={`button ${isDestructive ? 'button-danger' : 'button-primary'}`}
+          onClick={onConfirm}
+          data-testid="confirm-modal-confirm"
+        >
+          {confirmText}
+        </button>
+      </div>
+    </Modal>
   );
 };
 

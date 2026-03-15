@@ -2,6 +2,8 @@ import React from 'react';
 
 import type { ManualCourtSelection, Player } from '../../types';
 
+import Modal from './Modal';
+
 interface ManualCourtModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -57,100 +59,90 @@ const ManualCourtModal: React.FC<ManualCourtModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="modal-overlay"
-      onClick={onClose}
-      data-testid="manual-court-modal"
+    <Modal
+      isOpen={isOpen}
+      title="Manual Court 1 Assignment"
+      onClose={onClose}
+      testId="manual-court-modal"
+      className="manual-court-modal-content"
     >
-      <div
-        className="modal-content manual-court-modal-content"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <h3>Manual Court 1 Assignment</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+      <div className="modal-body">
+        <p className="manual-court-description">
+          Select 2-4 players to play together on Court 1. The rest will be assigned automatically.
+        </p>
+
+        {currentSelection && currentSelection.players.length > 0 && (
+          <div className="manual-court-selected">
+            <div className="selected-players">
+              <strong>Selected for Court 1:</strong>
+              <div className="selected-player-list">
+                {currentSelection.players.map(player => (
+                  <span key={player.id} className="selected-player-tag">
+                    {player.name}
+                    <button
+                      onClick={() => handlePlayerToggle(player)}
+                      className="remove-selected-player"
+                      title="Remove from manual court"
+                      aria-label={`Remove ${player.name} from manual court`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={clearSelection}
+              className="clear-manual-selection"
+              data-testid="clear-manual-selection"
+            >
+              Clear Selection
+            </button>
+          </div>
+        )}
+
+        <div className="player-selection-grid">
+          {presentPlayers.map(player => {
+            const isSelected = selectedPlayerIds.has(player.id);
+            const isDisabled = !isSelected && selectedPlayerIds.size >= maxPlayers;
+
+            return (
+              <button
+                key={player.id}
+                onClick={() => handlePlayerToggle(player)}
+                disabled={isDisabled}
+                className={`player-selection-button ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                data-testid={`manual-court-player-${player.id}`}
+                aria-label={`${isSelected ? 'Remove' : 'Add'} ${player.name} ${isSelected ? 'from' : 'to'} manual court`}
+              >
+                <span className="player-selection-checkbox">
+                  {isSelected ? '✓' : ''}
+                </span>
+                <span className="player-selection-name">{player.name}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="modal-body">
-          <p className="manual-court-description">
-            Select 2-4 players to play together on Court 1. The rest will be assigned automatically.
-          </p>
-
-          {currentSelection && currentSelection.players.length > 0 && (
-            <div className="manual-court-selected">
-              <div className="selected-players">
-                <strong>Selected for Court 1:</strong>
-                <div className="selected-player-list">
-                  {currentSelection.players.map(player => (
-                    <span key={player.id} className="selected-player-tag">
-                      {player.name}
-                      <button
-                        onClick={() => handlePlayerToggle(player)}
-                        className="remove-selected-player"
-                        title="Remove from manual court"
-                        aria-label={`Remove ${player.name} from manual court`}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <button
-                onClick={clearSelection}
-                className="clear-manual-selection"
-                data-testid="clear-manual-selection"
-              >
-                Clear Selection
-              </button>
+        <div className="manual-court-info">
+          <div className="selection-count">
+            {selectedPlayerIds.size}/{maxPlayers} players selected
+          </div>
+          {selectedPlayerIds.size >= 2 && (
+            <div className="match-preview">
+              Will create: {getMatchType(selectedPlayerIds.size)}
             </div>
           )}
-
-          <div className="player-selection-grid">
-            {presentPlayers.map(player => {
-              const isSelected = selectedPlayerIds.has(player.id);
-              const isDisabled = !isSelected && selectedPlayerIds.size >= maxPlayers;
-
-              return (
-                <button
-                  key={player.id}
-                  onClick={() => handlePlayerToggle(player)}
-                  disabled={isDisabled}
-                  className={`player-selection-button ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
-                  data-testid={`manual-court-player-${player.id}`}
-                  aria-label={`${isSelected ? 'Remove' : 'Add'} ${player.name} ${isSelected ? 'from' : 'to'} manual court`}
-                >
-                  <span className="player-selection-checkbox">
-                    {isSelected ? '✓' : ''}
-                  </span>
-                  <span className="player-selection-name">{player.name}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="manual-court-info">
-            <div className="selection-count">
-              {selectedPlayerIds.size}/{maxPlayers} players selected
-            </div>
-            {selectedPlayerIds.size >= 2 && (
-              <div className="match-preview">
-                Will create: {getMatchType(selectedPlayerIds.size)}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button className="modal-cancel-button" onClick={onClose}>
-            Done
-          </button>
         </div>
       </div>
-    </div>
+
+      <div className="modal-footer">
+        <button className="modal-cancel-button" onClick={onClose}>
+          Done
+        </button>
+      </div>
+    </Modal>
   );
 };
 

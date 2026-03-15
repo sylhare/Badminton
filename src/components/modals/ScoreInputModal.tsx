@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X } from '@phosphor-icons/react';
 
 import type { Player } from '../../types';
+
+import Modal from './Modal';
 
 interface ScoreInputModalProps {
   isOpen: boolean;
@@ -29,8 +30,6 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
       setScore2(winnerTeam === 2 ? '21' : '');
     }
   }, [isOpen, winnerTeam]);
-
-  if (!isOpen) return null;
 
   const handleScore1Change = (value: string) => {
     setScore1(value);
@@ -77,57 +76,53 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   const teamNames = (players: Player[]) => players.map(p => p.name).join(' & ');
 
   return (
-    <div className="modal-overlay" onClick={handleCancel} data-testid="score-input-modal">
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>🏆 Team {winnerTeam} wins!</h3>
-          <button className="modal-close" onClick={handleCancel}>
-            <X size={20} />
-          </button>
+    <Modal
+      isOpen={isOpen}
+      title={`🏆 Team ${winnerTeam} wins!`}
+      onClose={handleCancel}
+      testId="score-input-modal"
+    >
+      <div className="modal-body">
+        <p>Optionally enter the score:</p>
+        <div className="score-modal-teams">
+          <span className="score-modal-team-name">{teamNames(team1Players)}</span>
+          <span className="score-modal-vs">vs</span>
+          <span className="score-modal-team-name">{teamNames(team2Players)}</span>
         </div>
-
-        <div className="modal-body">
-          <p>Optionally enter the score:</p>
-          <div className="score-modal-teams">
-            <span className="score-modal-team-name">{teamNames(team1Players)}</span>
-            <span className="score-modal-vs">vs</span>
-            <span className="score-modal-team-name">{teamNames(team2Players)}</span>
-          </div>
-          <div className="score-modal-inputs">
-            <input
-              type="number"
-              min="0"
-              value={score1}
-              onChange={(e) => handleScore1Change(e.target.value)}
-              placeholder={winnerTeam === 2 ? '18' : '21'}
-              aria-label="Team 1 score"
-              data-testid="score-input-team1"
-            />
-            <span className="court-score-separator">—</span>
-            <input
-              type="number"
-              min="0"
-              value={score2}
-              onChange={(e) => handleScore2Change(e.target.value)}
-              placeholder={winnerTeam === 1 ? '18' : '21'}
-              aria-label="Team 2 score"
-              data-testid="score-input-team2"
-            />
-          </div>
-        </div>
-
-        <div className="modal-footer">
-          <button
-            className="button button-primary"
-            onClick={handleConfirm}
-            disabled={isConfirmDisabled}
-            data-testid="score-modal-confirm"
-          >
-            Confirm
-          </button>
+        <div className="score-modal-inputs">
+          <input
+            type="number"
+            min="0"
+            value={score1}
+            onChange={(e) => handleScore1Change(e.target.value)}
+            placeholder={winnerTeam === 2 ? '18' : '21'}
+            aria-label="Team 1 score"
+            data-testid="score-input-team1"
+          />
+          <span className="court-score-separator">—</span>
+          <input
+            type="number"
+            min="0"
+            value={score2}
+            onChange={(e) => handleScore2Change(e.target.value)}
+            placeholder={winnerTeam === 1 ? '18' : '21'}
+            aria-label="Team 2 score"
+            data-testid="score-input-team2"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="modal-footer">
+        <button
+          className="button button-primary"
+          onClick={handleConfirm}
+          disabled={isConfirmDisabled}
+          data-testid="score-modal-confirm"
+        >
+          Confirm
+        </button>
+      </div>
+    </Modal>
   );
 };
 

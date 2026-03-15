@@ -114,7 +114,7 @@ describe('ConfirmModal Component', () => {
     it('should call onCancel when close button is clicked', async () => {
       render(<ConfirmModal {...defaultProps} />);
 
-      const closeButton = screen.getByRole('button', { name: '' });
+      const closeButton = screen.getByRole('button', { name: 'Close' });
       await user.click(closeButton);
 
       expect(mockOnCancel).toHaveBeenCalledTimes(1);

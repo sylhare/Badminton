@@ -9,12 +9,14 @@ vi.mock('../../src/utils/StorageManager', () => ({
     getRawState: vi.fn(),
     isValidState: vi.fn(),
     importRawState: vi.fn(),
+    getImportTimestamps: vi.fn().mockResolvedValue({}),
   },
 }));
 
 describe('useShareState', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(storageManager.getImportTimestamps).mockResolvedValue({});
     history.replaceState(null, '', window.location.pathname);
   });
 
@@ -65,7 +67,24 @@ describe('useShareState', () => {
       expect(result.current.importState?.backupUrl).toContain('?state=backup123');
     });
 
-    it('sets empty backupUrl when no existing state in storage', async () => {
+    it('sets sharedSavedAt and currentSavedAt from getImportTimestamps', async () => {
+      vi.mocked(storageManager.isValidState).mockResolvedValue(true);
+      vi.mocked(storageManager.getRawState).mockReturnValue('backup123');
+      vi.mocked(storageManager.getImportTimestamps).mockResolvedValue({
+        sharedSavedAt: 1700000000000,
+        currentSavedAt: 1700003600000,
+      });
+      history.replaceState(null, '', '?state=shared456');
+
+      const { result } = renderHook(() => useShareState());
+
+      await waitFor(() => expect(result.current.importState).not.toBeNull());
+
+      expect(result.current.importState?.sharedSavedAt).toBe(1700000000000);
+      expect(result.current.importState?.currentSavedAt).toBe(1700003600000);
+    });
+
+    it('sets empty backupUrl and no timestamps when no existing state in storage', async () => {
       vi.mocked(storageManager.isValidState).mockResolvedValue(true);
       vi.mocked(storageManager.getRawState).mockReturnValue(null);
       history.replaceState(null, '', '?state=shared456');
@@ -75,6 +94,7 @@ describe('useShareState', () => {
       await waitFor(() => expect(result.current.importState).not.toBeNull());
 
       expect(result.current.importState?.backupUrl).toBe('');
+      expect(result.current.importState?.currentSavedAt).toBeUndefined();
     });
 
     it('cleans ?state= from URL when param is invalid', async () => {

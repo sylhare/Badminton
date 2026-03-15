@@ -59,14 +59,18 @@ async function compress(data: string): Promise<string> {
 }
 
 async function decompress(data: string): Promise<string> {
-  const binary = atob(data);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const stream = new DecompressionStream('gzip');
-  const writer = stream.writable.getWriter();
-  writer.write(bytes);
-  writer.close();
-  return new TextDecoder().decode(await readAllChunks(stream.readable.getReader()));
+  try {
+    const binary = atob(data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const stream = new DecompressionStream('gzip');
+    const writer = stream.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    return new TextDecoder().decode(await readAllChunks(stream.readable.getReader()));
+  } catch {
+    return data;
+  }
 }
 
 /**
@@ -135,7 +139,7 @@ class StorageManager {
 
   async saveApp(state: Partial<AppState>): Promise<void> {
     return this.save(
-      current => ({ ...current, app: { ...(current.app ?? {}), ...state } as AppState }),
+      current => ({ ...current, app: { ...(current.app ?? {}), ...state, savedAt: Date.now(), sessionId: (current.app as AppState)?.sessionId ?? crypto.randomUUID() } as AppState }),
     );
   }
 
@@ -154,6 +158,8 @@ class StorageManager {
         assignments: Array.isArray(app.assignments) ? app.assignments : [],
         lastGeneratedAt: typeof app.lastGeneratedAt === 'number' ? app.lastGeneratedAt : undefined,
         isSmartEngineEnabled: typeof app.isSmartEngineEnabled === 'boolean' ? app.isSmartEngineEnabled : undefined,
+        savedAt: typeof app.savedAt === 'number' ? app.savedAt : undefined,
+        sessionId: typeof app.sessionId === 'string' ? app.sessionId : undefined,
       };
     } catch (error) {
       console.warn('Failed to load app state from localStorage:', error);
@@ -205,12 +211,42 @@ class StorageManager {
 
   /** Returns true if the raw string is a valid compressed state with players array. */
   async isValidState(raw: string): Promise<boolean> {
+    const parsed = await this.decompressJson(raw);
+    return Array.isArray(parsed?.app?.players);
+  }
+
+  /**
+   * Returns savedAt timestamps for the import modal.
+   * Returns undefined for both if both raw states share the same sessionId
+   * (i.e. the user is sharing their own session back to themselves).
+   */
+  async getImportTimestamps(
+    sharedRaw: string,
+    currentRaw: string | null,
+  ): Promise<{ sharedSavedAt?: number; currentSavedAt?: number }> {
+    const [shared, current] = await Promise.all([
+      this.decompressJson(sharedRaw),
+      currentRaw ? this.decompressJson(currentRaw) : Promise.resolve(null),
+    ]);
+
+    const sharedSessionId = shared?.app?.sessionId;
+    const currentSessionId = current?.app?.sessionId;
+    if (sharedSessionId && currentSessionId && sharedSessionId === currentSessionId) {
+      return {};
+    }
+
+    const sharedSavedAt = typeof shared?.app?.savedAt === 'number' ? shared.app.savedAt : undefined;
+    const currentSavedAt = typeof current?.app?.savedAt === 'number' ? current.app.savedAt : undefined;
+    return { sharedSavedAt, currentSavedAt };
+  }
+
+  /** Decompresses and JSON-parses a raw compressed state string. Returns null on failure. */
+  private async decompressJson(raw: string): Promise<Partial<StorageData> | null> {
     try {
-      const decompressed = await decompress(raw);
-      const parsed = JSON.parse(decompressed);
-      return Array.isArray(parsed?.app?.players);
+      const parsed = JSON.parse(await decompress(raw));
+      return typeof parsed === 'object' && parsed !== null ? parsed as Partial<StorageData> : null;
     } catch {
-      return false;
+      return null;
     }
   }
 
@@ -328,14 +364,12 @@ class StorageManager {
       return {};
     }
 
-    try {
-      const decompressed = await decompress(raw);
-      const parsed = JSON.parse(decompressed);
-      if (typeof parsed === 'object' && parsed !== null) return parsed as Partial<StorageData>;
-    } catch {  }
-    const parsed = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return {};
-    return parsed as Partial<StorageData>;
+    const data = await this.decompressJson(raw);
+    if (data === null) {
+      localStorage.removeItem(StorageManager.KEY);
+      return {};
+    }
+    return data;
   }
 
   private async write(data: Partial<StorageData>): Promise<void> {

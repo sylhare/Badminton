@@ -74,7 +74,7 @@ describe('ImageUploadModal', () => {
 
     it('should have a close button', () => {
       renderModal();
-      const closeButton = screen.getByRole('button', { name: '' });
+      const closeButton = screen.getByRole('button', { name: 'Close' });
       expect(closeButton).toHaveClass('modal-close');
     });
   });
@@ -110,7 +110,7 @@ describe('ImageUploadModal', () => {
 
     it('should call onClose when clicking the close button', async () => {
       renderModal();
-      const closeButton = screen.getByRole('button', { name: '' });
+      const closeButton = screen.getByRole('button', { name: 'Close' });
       await user.click(closeButton);
       expect(mockOnClose).toHaveBeenCalled();
     });
