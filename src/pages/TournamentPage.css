@@ -33,7 +33,7 @@
 
 .setup-section h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #213547;
 }
@@ -89,8 +89,10 @@
 
 .tournament-player-entry .camera-button {
   padding: 0 10px;
+  height: unset;
   min-height: unset;
   min-width: unset;
+  width: unset;
 }
 
 /* Format pills */
@@ -364,6 +366,12 @@
 /* On mobile, keep the tournament container white (main app uses gradient there) */
 
 @media (max-width: 768px) {
+  .tournament-page h1 {
+    font-size: 1.6rem;
+    white-space: nowrap;
+    color: #2d3748;
+  }
+
   .tournament-page .main-container {
     background: white;
     border-radius: 0;

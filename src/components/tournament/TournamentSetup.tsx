@@ -217,8 +217,6 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   return (
     <div className="tournament-setup">
-      <h2>Tournament Setup</h2>
-
       <div className="setup-section">
         <h3>Format</h3>
         <div className="format-pills" data-testid="format-pills">

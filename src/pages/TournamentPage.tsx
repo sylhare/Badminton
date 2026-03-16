@@ -86,7 +86,7 @@ function TournamentPage(): React.ReactElement {
   return (
     <div className="app tournament-page" data-loaded={isLoaded}>
       <div className="container main-container">
-        <h1>🏆 Tournament Mode</h1>
+        <h1><span className="title-emoji">🏆 </span>Tournament</h1>
         {content}
       </div>
     </div>
