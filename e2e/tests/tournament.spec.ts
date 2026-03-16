@@ -118,6 +118,23 @@ test.describe('Tournament Page', () => {
     await expect(lastRound.locator('.round-matches')).not.toBeVisible();
   });
 
+  test('tournament state persists across page reload', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await tournamentPage.start();
+
+    const team1 = page.locator('[data-testid="team-1"]').first();
+    await team1.click();
+    await expect(page.getByTestId('score-input-modal')).toBeVisible();
+    await page.getByTestId('score-input-team1').fill('21');
+    await page.getByTestId('score-input-team2').fill('10');
+    await page.getByTestId('score-modal-confirm').click();
+
+    await page.reload();
+
+    await expect(page.getByTestId('tournament-matches')).toBeVisible();
+    await expect(page.getByTestId('score-diff-0')).toBeVisible();
+  });
+
   test('doubles tournament: start, record match, start new tournament', async ({ page }) => {
     await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
     await tournamentPage.start();

@@ -16,16 +16,20 @@ function TournamentPage(): React.ReactElement {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    storageManager.loadApp().then(state => {
-      if (state.players) {
-        setInitialPlayers(state.players);
-      }
-      if (state.numberOfCourts !== undefined) {
-        setInitialNumberOfCourts(state.numberOfCourts);
-      }
-      setIsLoaded(true);
-    });
+    Promise.all([storageManager.loadApp(), storageManager.loadTournament()]).then(
+      ([appState, savedTournament]) => {
+        if (appState.players) setInitialPlayers(appState.players);
+        if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
+        if (savedTournament) setTournamentState(savedTournament);
+        setIsLoaded(true);
+      },
+    );
   }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    storageManager.saveTournament(tournamentState);
+  }, [tournamentState, isLoaded]);
 
   const handleStart = (state: TournamentState) => {
     setTournamentState(state);
