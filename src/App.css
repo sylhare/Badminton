@@ -983,6 +983,20 @@ h1 {
     padding-top: 5px;
 }
 
+@media (max-width: 600px) {
+    .regenerate-section {
+        flex-direction: column;
+        align-items: center;
+        padding-bottom: 0;
+    }
+
+    .last-generated {
+        position: static;
+        margin-top: 6px;
+        text-align: center;
+    }
+}
+
 .no-assignments-hint .generate-button {
     margin-top: 16px;
 }
