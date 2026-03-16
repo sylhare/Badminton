@@ -5,8 +5,10 @@ import userEvent from '@testing-library/user-event';
 
 import TournamentPage from '../../src/pages/TournamentPage';
 
-const { mockLoadApp } = vi.hoisted(() => ({
+const { mockLoadApp, mockLoadTournament, mockSaveTournament } = vi.hoisted(() => ({
   mockLoadApp: vi.fn(),
+  mockLoadTournament: vi.fn(),
+  mockSaveTournament: vi.fn(),
 }));
 
 vi.mock('../../src/utils/StorageManager', () => ({
@@ -16,6 +18,8 @@ vi.mock('../../src/utils/StorageManager', () => ({
     loadEngine: vi.fn(),
     saveEngine: vi.fn(),
     clearAll: vi.fn(),
+    loadTournament: mockLoadTournament,
+    saveTournament: mockSaveTournament,
   },
 }));
 
@@ -30,6 +34,8 @@ const mockPlayers = [
 describe('TournamentPage', () => {
   beforeEach(() => {
     mockLoadApp.mockResolvedValue({ players: mockPlayers, numberOfCourts: 2 });
+    mockLoadTournament.mockResolvedValue(null);
+    mockSaveTournament.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -41,10 +47,11 @@ describe('TournamentPage', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tournament');
   });
 
-  it('calls storageManager.loadApp on mount', async () => {
+  it('calls storageManager.loadApp and loadTournament on mount', async () => {
     render(<TournamentPage />);
     await waitFor(() => {
       expect(mockLoadApp).toHaveBeenCalledOnce();
+      expect(mockLoadTournament).toHaveBeenCalledOnce();
     });
   });
 
@@ -94,6 +101,82 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('new-tournament-button'));
 
     expect(screen.getByTestId('start-tournament-button')).toBeInTheDocument();
+  });
+
+  it('restores an in-progress tournament from saved state on mount', async () => {
+    const savedState = {
+      phase: 'active' as const,
+      format: 'singles' as const,
+      type: 'round-robin' as const,
+      numberOfCourts: 2,
+      teams: [
+        { id: 't1', players: [mockPlayers[0]] },
+        { id: 't2', players: [mockPlayers[1]] },
+      ],
+      matches: [
+        {
+          id: 'm1', round: 1, courtNumber: 1,
+          team1: { id: 't1', players: [mockPlayers[0]] },
+          team2: { id: 't2', players: [mockPlayers[1]] },
+        },
+      ],
+    };
+    mockLoadTournament.mockResolvedValue(savedState);
+
+    render(<TournamentPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
+    });
+  });
+
+  it('calls saveTournament after starting a tournament', async () => {
+    const user = userEvent.setup();
+    render(<TournamentPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
+    }, { timeout: 3000 });
+
+    await user.click(screen.getByTestId('start-tournament-button'));
+
+    await waitFor(() => {
+      const calls = mockSaveTournament.mock.calls;
+      const activeCall = calls.find(([s]) => s?.phase === 'active');
+      expect(activeCall).toBeDefined();
+    });
+  });
+
+  it('calls saveTournament(null) after reset', async () => {
+    const user = userEvent.setup();
+    render(<TournamentPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
+    }, { timeout: 3000 });
+
+    await user.click(screen.getByTestId('start-tournament-button'));
+    const aliceEl = screen.getAllByText('Alice')[0];
+    await user.click(aliceEl);
+    await user.click(screen.getByTestId('score-modal-confirm'));
+    await user.click(screen.getByTestId('new-tournament-button'));
+
+    await waitFor(() => {
+      const lastCall = mockSaveTournament.mock.calls.at(-1);
+      expect(lastCall?.[0]).toBeNull();
+    });
+  });
+
+  it('does not call saveTournament before isLoaded', async () => {
+    let resolveLoad!: (v: unknown) => void;
+    mockLoadApp.mockReturnValue(new Promise(r => { resolveLoad = r; }));
+    mockLoadTournament.mockReturnValue(new Promise(() => {}));
+
+    render(<TournamentPage />);
+
+    expect(mockSaveTournament).not.toHaveBeenCalled();
+
+    resolveLoad({ players: mockPlayers, numberOfCourts: 2 });
   });
 
   it('match result update propagates to standings (score diff updates)', async () => {

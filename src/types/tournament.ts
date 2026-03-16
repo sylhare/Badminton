@@ -36,3 +36,12 @@ export interface TournamentState {
   teams: TournamentTeam[];
   matches: TournamentMatch[];
 }
+
+export const DEFAULT_TOURNAMENT_STATE: TournamentState = {
+  phase: 'setup',
+  format: 'doubles',
+  type: 'round-robin',
+  numberOfCourts: 4,
+  teams: [],
+  matches: [],
+};
