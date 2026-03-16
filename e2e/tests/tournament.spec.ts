@@ -23,8 +23,8 @@ test.describe('Tournament Page', () => {
     await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
 
     await expect(page.locator('h1')).toContainText('Tournament');
-    await expect(page.getByText('Alice')).toBeVisible();
-    await expect(page.getByText('Bob')).toBeVisible();
+    await expect(page.getByTestId('player-selection').getByText('Alice')).toBeVisible();
+    await expect(page.getByTestId('player-selection').getByText('Bob')).toBeVisible();
   });
 
   test('format switch: singles vs doubles updates team display', async ({ page }) => {
