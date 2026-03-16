@@ -53,12 +53,10 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const allPlayers = [...initialPlayers, ...extraPlayers];
   const selectedPlayers = allPlayers.filter(p => selectedPlayerIds.has(p.id));
 
-  // Sync when initialPlayers loads asynchronously (e.g., from StorageManager)
   useEffect(() => {
     if (initialPlayers.length > 0) {
       const presentIds = new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id));
       setSelectedPlayerIds(prev => {
-        // Keep any extra players that were already selected
         const next = new Set(presentIds);
         for (const id of prev) {
           if (extraPlayers.some(p => p.id === id)) next.add(id);
@@ -72,14 +70,11 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
       setTeams(deriveTeams(presentPlayers, format));
       setSwapSelection(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPlayers]);
 
-  // Re-derive completely on format change
   useEffect(() => {
     setTeams(deriveTeams(selectedPlayers, format));
     setSwapSelection(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [format]);
 
   const handleFormatChange = (f: TournamentFormat) => {
@@ -128,7 +123,6 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
           .map(t => ({ ...t, players: t.players.filter(p => p.id !== id) }))
           .filter(t => t.players.length > 0);
 
-        // In doubles mode, merge any two incomplete (1-player) teams in-place
         if (format === 'doubles') {
           const soloIndices = next
             .map((t, i) => (t.players.length === 1 ? i : -1))

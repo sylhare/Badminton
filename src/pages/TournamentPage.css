@@ -205,19 +205,12 @@
   border-color: var(--color-primary);
 }
 
-/* Active layout: two columns on wide screens */
+/* Active layout: single column, standings always below rounds */
 
 .tournament-active-layout {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
-}
-
-@media (min-width: 900px) {
-  .tournament-active-layout {
-    grid-template-columns: 1fr 360px;
-    align-items: start;
-  }
 }
 
 /* Matches */
@@ -333,10 +326,6 @@
   font-size: 0.9rem;
 }
 
-.standings-table {
-  width: 100%;
-}
-
 .standings-table tr.top {
   background: linear-gradient(
     135deg,
@@ -361,6 +350,21 @@
 .button-secondary:hover {
   background: var(--color-primary);
   color: white;
+}
+
+.tournament-matches,
+.tournament-standings {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.standings-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.standings-table {
+  width: 100%;
 }
 
 /* On mobile, keep the tournament container white (main app uses gradient there) */

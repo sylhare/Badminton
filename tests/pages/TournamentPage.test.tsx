@@ -38,9 +38,8 @@ describe('TournamentPage', () => {
 
   it('renders the tournament page heading', () => {
     render(<TournamentPage />);
-    expect(screen.getByText('🏆 Tournament Mode')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tournament');
   });
-
 
   it('calls storageManager.loadApp on mount', async () => {
     render(<TournamentPage />);
@@ -60,7 +59,6 @@ describe('TournamentPage', () => {
   it('absent players are shown but not pre-selected', async () => {
     render(<TournamentPage />);
     await waitFor(() => {
-      // p5 (Eve) is absent → shown but unchecked
       expect(screen.getByTestId('player-checkbox-p5')).not.toBeChecked();
     });
   });
@@ -117,7 +115,6 @@ describe('TournamentPage', () => {
     await user.type(screen.getByTestId('score-input-team2'), '10');
     await user.click(screen.getByTestId('score-modal-confirm'));
 
-    // Team 1 (Alice & Bob) wins with scoreDiff = +11
     expect(screen.getByTestId('score-diff-0')).toHaveTextContent('+11');
   });
 });

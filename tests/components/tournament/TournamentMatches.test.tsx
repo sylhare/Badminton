@@ -31,11 +31,9 @@ const teamC = makeTeam('c', ['Carol']);
 
 describe('TournamentMatches', () => {
   let onMatchResult: ReturnType<typeof vi.fn>;
-  let onComplete: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     onMatchResult = vi.fn();
-    onComplete = vi.fn();
   });
 
   afterEach(() => {
@@ -53,7 +51,6 @@ describe('TournamentMatches', () => {
       <TournamentMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
-        onComplete={onComplete}
       />,
     );
 
@@ -67,7 +64,6 @@ describe('TournamentMatches', () => {
       <TournamentMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
-        onComplete={onComplete}
       />,
     );
 
@@ -81,7 +77,6 @@ describe('TournamentMatches', () => {
       <TournamentMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
-        onComplete={onComplete}
       />,
     );
 
@@ -98,7 +93,6 @@ describe('TournamentMatches', () => {
       <TournamentMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
-        onComplete={onComplete}
       />,
     );
 
@@ -119,7 +113,6 @@ describe('TournamentMatches', () => {
       <TournamentMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
-        onComplete={onComplete}
       />,
     );
 
@@ -127,7 +120,6 @@ describe('TournamentMatches', () => {
     await user.click(screen.getByTestId('score-modal-confirm'));
 
     expect(onMatchResult).toHaveBeenCalledOnce();
-    // Confirm with default scores (21 for winner, 18 for loser)
     expect(onMatchResult).toHaveBeenCalledWith('m1', 1, { team1: 21, team2: 18 });
   });
 
@@ -137,14 +129,12 @@ describe('TournamentMatches', () => {
       <TournamentMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
-        onComplete={onComplete}
       />,
     );
 
     await user.click(screen.getAllByText('Alice')[0]);
     expect(screen.getByTestId('score-input-modal')).toBeInTheDocument();
 
-    // Click the overlay to cancel
     await user.click(screen.getByTestId('score-input-modal'));
 
     expect(onMatchResult).not.toHaveBeenCalled();
@@ -152,69 +142,18 @@ describe('TournamentMatches', () => {
 
   it('clicking winner again on completed match clears winner', async () => {
     const user = userEvent.setup();
-    // Single match in round 1 (already completed) so it's the current/expanded round
     const matchWithWinner = makeMatch('m1', 1, teamA, teamB, 1);
     render(
       <TournamentMatches
         matches={[matchWithWinner]}
         onMatchResult={onMatchResult}
-        onComplete={onComplete}
       />,
     );
 
-    // Alice is team1Player with winner=1 → clicking again should deselect
     const aliceEl = screen.getAllByText('Alice')[0];
     await user.click(aliceEl);
 
     expect(onMatchResult).toHaveBeenCalledWith('m1', 1);
-  });
-
-  it('Start a New Tournament button always visible', () => {
-    render(
-      <TournamentMatches
-        matches={threeMatchSingles}
-        onMatchResult={onMatchResult}
-        onComplete={onComplete}
-      />,
-    );
-
-    expect(screen.getByTestId('new-tournament-button')).toBeInTheDocument();
-  });
-
-  it('Start a New Tournament button shown when all matches done', () => {
-    const allDone: TournamentMatch[] = [
-      makeMatch('m1', 1, teamA, teamB, 1),
-      makeMatch('m2', 2, teamA, teamC, 2),
-      makeMatch('m3', 3, teamB, teamC, 1),
-    ];
-    render(
-      <TournamentMatches
-        matches={allDone}
-        onMatchResult={onMatchResult}
-        onComplete={onComplete}
-      />,
-    );
-
-    expect(screen.getByTestId('new-tournament-button')).toBeInTheDocument();
-  });
-
-  it('clicking Start a New Tournament calls onComplete', async () => {
-    const user = userEvent.setup();
-    const allDone: TournamentMatch[] = [
-      makeMatch('m1', 1, teamA, teamB, 1),
-      makeMatch('m2', 2, teamA, teamC, 2),
-      makeMatch('m3', 3, teamB, teamC, 1),
-    ];
-    render(
-      <TournamentMatches
-        matches={allDone}
-        onMatchResult={onMatchResult}
-        onComplete={onComplete}
-      />,
-    );
-
-    await user.click(screen.getByTestId('new-tournament-button'));
-    expect(onComplete).toHaveBeenCalledOnce();
   });
 
   it('completed round shows score inline', () => {
@@ -223,7 +162,6 @@ describe('TournamentMatches', () => {
       <TournamentMatches
         matches={[completedMatch]}
         onMatchResult={onMatchResult}
-        onComplete={onComplete}
       />,
     );
 

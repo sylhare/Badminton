@@ -6,7 +6,10 @@ interface TournamentStandingsProps {
   standings: TournamentStandingRow[];
   currentRound: number;
   totalRounds: number;
+  isFinal?: boolean;
 }
+
+const RANK_EMOJI = ['🥇', '🥈', '🥉'];
 
 function teamLabel(row: TournamentStandingRow): string {
   return row.team.players.map(p => p.name).join(' & ');
@@ -16,6 +19,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   standings,
   currentRound,
   totalRounds,
+  isFinal,
 }) => {
   const subtitle = currentRound > 0
     ? `After Round ${currentRound} / ${totalRounds}`
@@ -26,6 +30,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
       <h2>Standings</h2>
       <p className="standings-subtitle" data-testid="standings-subtitle">{subtitle}</p>
 
+      <div className="standings-table-wrapper">
       <table className="leaderboard-table standings-table">
         <thead>
           <tr>
@@ -44,7 +49,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
               className={index === 0 && standings.length > 1 ? 'top' : ''}
               data-testid={`standing-row-${index}`}
             >
-              <td>{index + 1}</td>
+              <td>{isFinal && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
               <td>{teamLabel(row)}</td>
               <td>{row.won}</td>
               <td>{row.lost}</td>
@@ -56,6 +61,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
           ))}
         </tbody>
       </table>
+      </div>
 
     </div>
   );

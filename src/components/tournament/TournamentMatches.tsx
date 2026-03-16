@@ -7,7 +7,6 @@ import ScoreInputModal from '../modals/ScoreInputModal';
 interface TournamentMatchesProps {
   matches: TournamentMatch[];
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
-  onComplete: () => void;
 }
 
 function getCurrentRound(matches: TournamentMatch[]): number {
@@ -23,7 +22,6 @@ function getCurrentRound(matches: TournamentMatch[]): number {
 const TournamentMatches: React.FC<TournamentMatchesProps> = ({
   matches,
   onMatchResult,
-  onComplete,
 }) => {
   const [modalMatch, setModalMatch] = useState<TournamentMatch | null>(null);
   const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
@@ -34,6 +32,8 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
 
   const currentRound = getCurrentRound(matches);
   const roundNums = Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
+
+  const allComplete = matches.every(m => m.winner !== undefined);
 
   const prevCurrentRoundRef = useRef(currentRound);
   useEffect(() => {
@@ -48,6 +48,14 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
       prevCurrentRoundRef.current = currentRound;
     }
   }, [currentRound]);
+
+  const prevAllCompleteRef = useRef(allComplete);
+  useEffect(() => {
+    if (allComplete && !prevAllCompleteRef.current) {
+      setExpandedRounds(new Set());
+    }
+    prevAllCompleteRef.current = allComplete;
+  }, [allComplete]);
 
   const toggleRound = (round: number) => {
     setExpandedRounds(prev => {
@@ -93,7 +101,7 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
     <div className="tournament-matches" data-testid="tournament-matches">
       {roundNums.map(round => {
         const roundMatches = matches.filter(m => m.round === round);
-        const isExpanded = expandedRounds.has(round) || round === currentRound;
+        const isExpanded = expandedRounds.has(round) || (!allComplete && round === currentRound);
         const roundDone = roundMatches.every(m => m.winner !== undefined);
 
         return (
@@ -156,16 +164,6 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
           </div>
         );
       })}
-
-      <div className="matches-footer">
-        <button
-          className="button button-primary"
-          onClick={onComplete}
-          data-testid="new-tournament-button"
-        >
-          Start a New Tournament
-        </button>
-      </div>
 
       <ScoreInputModal
         isOpen={modalMatch !== null && pendingWinner !== null}

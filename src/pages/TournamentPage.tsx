@@ -6,7 +6,6 @@ import TournamentStandings from '../components/tournament/TournamentStandings';
 import type { Player } from '../types';
 import type { TournamentState } from '../types/tournament';
 import { calculateStandings, getCompletedRounds, getTotalRounds } from '../utils/tournamentUtils';
-
 import { storageManager } from '../utils/StorageManager';
 import './TournamentPage.css';
 
@@ -66,19 +65,27 @@ function TournamentPage(): React.ReactElement {
     const standings = calculateStandings(tournamentState.teams, tournamentState.matches);
     const completedRounds = getCompletedRounds(tournamentState.matches);
     const totalRounds = getTotalRounds(tournamentState.matches);
+    const isFinal = totalRounds > 0 && completedRounds === totalRounds;
 
     content = (
       <div className="tournament-active-layout">
         <TournamentMatches
           matches={tournamentState.matches}
           onMatchResult={handleMatchResult}
-          onComplete={handleReset}
         />
         <TournamentStandings
           standings={standings}
           currentRound={completedRounds}
           totalRounds={totalRounds}
+          isFinal={isFinal}
         />
+        <button
+          className="button button-primary"
+          onClick={handleReset}
+          data-testid="new-tournament-button"
+        >
+          Start a New Tournament
+        </button>
       </div>
     );
   }

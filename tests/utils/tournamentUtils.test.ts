@@ -101,7 +101,6 @@ describe('generateRoundRobinMatches', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C'])];
     const matches = generateRoundRobinMatches(teams, 1);
     expect(matches).toHaveLength(3);
-    // each round has exactly 1 match
     for (const m of matches) {
       expect(m.team1.id).not.toBe('bye');
       expect(m.team2.id).not.toBe('bye');
@@ -159,7 +158,6 @@ describe('calculateStandings', () => {
       makeMatch('m1', 1, teamA, teamB, 1, { team1: 21, team2: 10 }),
       makeMatch('m2', 2, teamC, teamB, 1, { team1: 21, team2: 15 }),
     ];
-    // teamA and teamC both have 1 win; teamA scoreDiff=11, teamC scoreDiff=6
     const standings = calculateStandings([teamA, teamB, teamC], matches);
     expect(standings[0].team.id).toBe('a');
     expect(standings[1].team.id).toBe('c');
@@ -170,7 +168,6 @@ describe('calculateStandings', () => {
       makeMatch('m1', 1, teamA, teamB, 1),
       makeMatch('m2', 1, teamC, teamB, 2),
     ];
-    // teamA and teamB both have 1 win; scoreDiff = 0; Alice < Bob alphabetically
     const standings = calculateStandings([teamA, teamB, teamC], matches);
     const names = standings.map(r => r.team.players[0].name);
     expect(names[0]).toBe('Alice');
@@ -244,7 +241,6 @@ describe('validateTeams', () => {
 
   it('returns error for doubles team with 1 player', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B'])];
-    // team 'a' only has 1 player → invalid for doubles
     expect(validateTeams(teams, 'doubles')).not.toBeNull();
   });
 

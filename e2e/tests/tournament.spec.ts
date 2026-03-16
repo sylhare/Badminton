@@ -1,51 +1,46 @@
 import { test, expect } from '@playwright/test';
 
 import { MainPage } from '../support/pages/MainPage';
-
-const TOURNAMENT_URL = (process.env.E2E_BASE_URL || 'http://localhost:5173') + '/tournament';
+import { TournamentPage } from '../support/pages/TournamentPage';
 
 test.describe('Tournament Page', () => {
   let mainPage: MainPage;
+  let tournamentPage: TournamentPage;
 
   test.beforeEach(async ({ page }) => {
     mainPage = new MainPage(page);
+    tournamentPage = new TournamentPage(page, mainPage);
     await mainPage.goto();
     await mainPage.reset();
   });
 
   test('navigate to tournament page directly', async ({ page }) => {
-    await page.goto(TOURNAMENT_URL);
-    await expect(page.locator('h1')).toContainText('🏆 Tournament Mode');
+    await tournamentPage.goto();
+    await expect(page.locator('h1')).toContainText('Tournament');
   });
 
   test('setup flow - present players pre-selected', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
-    await page.goto(TOURNAMENT_URL);
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
 
-    await expect(page.locator('h1')).toContainText('Tournament Mode');
+    await expect(page.locator('h1')).toContainText('Tournament');
     await expect(page.getByText('Alice')).toBeVisible();
     await expect(page.getByText('Bob')).toBeVisible();
   });
 
   test('format switch: singles vs doubles updates team display', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
-    await page.goto(TOURNAMENT_URL);
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
 
-    // Default: doubles → 2 teams
     await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(2);
 
-    // Switch to singles → 4 teams
     await page.getByTestId('format-pill-singles').click();
     await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(4);
 
-    // Switch back to doubles → 2 teams
     await page.getByTestId('format-pill-doubles').click();
     await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(2);
   });
 
   test('team swap: click two slots swaps players', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
-    await page.goto(TOURNAMENT_URL);
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
 
     const slot00 = page.getByTestId('player-slot-0-0');
     const slot10 = page.getByTestId('player-slot-1-0');
@@ -63,29 +58,24 @@ test.describe('Tournament Page', () => {
   });
 
   test('odd player count in doubles disables Start Tournament', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie']);
-    await page.goto(TOURNAMENT_URL);
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie']);
 
     await expect(page.getByTestId('start-tournament-button')).toBeDisabled();
     await expect(page.getByTestId('setup-error')).toBeVisible();
   });
 
   test('full singles tournament with 3 players: 3 rounds, record results, finish', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie']);
-    await page.goto(TOURNAMENT_URL);
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie']);
 
     await page.getByTestId('format-pill-singles').click();
 
     await expect(page.getByTestId('start-tournament-button')).not.toBeDisabled();
-    await page.getByTestId('start-tournament-button').click();
-
-    await expect(page.getByTestId('tournament-matches')).toBeVisible();
+    await tournamentPage.start();
 
     await expect(page.getByTestId('round-1')).toBeVisible();
     await expect(page.getByTestId('round-2')).toBeVisible();
     await expect(page.getByTestId('round-3')).toBeVisible();
 
-    // Record result for round 1
     const firstClickable = page.locator('.singles-player-clickable').first();
     await firstClickable.click();
 
@@ -95,28 +85,42 @@ test.describe('Tournament Page', () => {
     await page.getByTestId('score-modal-confirm').click();
     await expect(page.getByTestId('score-input-modal')).not.toBeVisible();
 
-    // Standings should show After Round 1 / 3
     await expect(page.getByTestId('standings-subtitle')).toContainText('After Round 1 / 3');
   });
 
   test('tiebreaker: standings table renders with score diff', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
-    await page.goto(TOURNAMENT_URL);
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
 
     await page.getByTestId('format-pill-singles').click();
-    await page.getByTestId('start-tournament-button').click();
+    await tournamentPage.start();
 
     await expect(page.getByTestId('tournament-standings')).toBeVisible();
     await expect(page.locator('.standings-table')).toBeVisible();
   });
 
-  test('doubles tournament: start, record match, start new tournament', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
-    await page.goto(TOURNAMENT_URL);
+  test('last round collapses when all matches complete', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await tournamentPage.start();
 
-    // Doubles: 4 players → 2 teams → 1 match
-    await page.getByTestId('start-tournament-button').click();
-    await expect(page.getByTestId('tournament-matches')).toBeVisible();
+    const totalRounds = await page.locator('[data-testid^="round-"]').count();
+    for (let r = 1; r <= totalRounds; r++) {
+      const roundSection = page.getByTestId(`round-${r}`);
+      const team1Buttons = roundSection.locator('[data-testid="team-1"]');
+      const count = await team1Buttons.count();
+      for (let i = 0; i < count; i++) {
+        await team1Buttons.nth(i).click();
+        await expect(page.getByTestId('score-input-modal')).toBeVisible();
+        await page.getByTestId('score-modal-confirm').click();
+      }
+    }
+
+    const lastRound = page.getByTestId(`round-${totalRounds}`);
+    await expect(lastRound.locator('.round-matches')).not.toBeVisible();
+  });
+
+  test('doubles tournament: start, record match, start new tournament', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await tournamentPage.start();
 
     const team1 = page.locator('[data-testid="team-1"]').first();
     await team1.click();

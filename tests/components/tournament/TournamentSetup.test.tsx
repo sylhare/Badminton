@@ -69,12 +69,10 @@ describe('TournamentSetup', () => {
       />,
     );
 
-    // Default: doubles mode → 2 teams of 2
     expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(2);
 
     await user.click(screen.getByTestId('format-pill-singles'));
 
-    // Singles mode → 4 teams of 1
     expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(4);
   });
 
@@ -104,9 +102,8 @@ describe('TournamentSetup', () => {
       />,
     );
 
-    // Initial: team 0 = [Alice, Bob], team 1 = [Carol, Dave]
-    const slot00 = screen.getByTestId('player-slot-0-0'); // Alice
-    const slot10 = screen.getByTestId('player-slot-1-0'); // Carol
+    const slot00 = screen.getByTestId('player-slot-0-0');
+    const slot10 = screen.getByTestId('player-slot-1-0');
 
     expect(slot00).toHaveTextContent('Alice');
     expect(slot10).toHaveTextContent('Carol');
@@ -116,7 +113,6 @@ describe('TournamentSetup', () => {
 
     await user.click(slot10);
 
-    // After swap: slot00 = Carol, slot10 = Alice
     expect(screen.getByTestId('player-slot-0-0')).toHaveTextContent('Carol');
     expect(screen.getByTestId('player-slot-1-0')).toHaveTextContent('Alice');
     expect(screen.getByTestId('player-slot-0-0')).not.toHaveClass('swap-selected');
@@ -142,7 +138,6 @@ describe('TournamentSetup', () => {
   });
 
   it('shows error and disables Start when odd player count in doubles', async () => {
-    const user = userEvent.setup();
     const threePlayers = presentPlayers.slice(0, 3);
     render(
       <TournamentSetup
@@ -191,7 +186,7 @@ describe('TournamentSetup', () => {
     expect(state.type).toBe('round-robin');
     expect(state.numberOfCourts).toBe(2);
     expect(state.teams).toHaveLength(2);
-    expect(state.matches).toHaveLength(1); // 2 teams → 1 match
+    expect(state.matches).toHaveLength(1);
     expect(state.teams[0].players).toHaveLength(2);
   });
 
@@ -205,21 +200,16 @@ describe('TournamentSetup', () => {
       />,
     );
 
-    // Initial: Team 1 = [Alice, Bob], Team 2 = [Carol, Dave]
-    // Swap Alice and Carol first
-    await user.click(screen.getByTestId('player-slot-0-0')); // select Alice
-    await user.click(screen.getByTestId('player-slot-1-0')); // swap with Carol
-    // Now: Team 1 = [Carol, Bob], Team 2 = [Alice, Dave]
+    await user.click(screen.getByTestId('player-slot-0-0'));
+    await user.click(screen.getByTestId('player-slot-1-0'));
+
     expect(screen.getByTestId('player-slot-0-0')).toHaveTextContent('Carol');
     expect(screen.getByTestId('player-slot-1-0')).toHaveTextContent('Alice');
 
-    // Deselect Dave — Team 2 loses Dave, Team 1 is unchanged
     await user.click(screen.getByTestId('player-checkbox-p4'));
 
-    // Team 1 should still be [Carol, Bob]
     expect(screen.getByTestId('player-slot-0-0')).toHaveTextContent('Carol');
     expect(screen.getByTestId('player-slot-0-1')).toHaveTextContent('Bob');
-    // Team 2 is now [Alice] (Dave removed)
     expect(screen.getByTestId('player-slot-1-0')).toHaveTextContent('Alice');
   });
 
@@ -233,11 +223,9 @@ describe('TournamentSetup', () => {
       />,
     );
 
-    // Deselect Dave — team 2 becomes [Carol] (incomplete)
     await user.click(screen.getByTestId('player-checkbox-p4'));
     expect(screen.queryByTestId('player-slot-1-1')).not.toBeInTheDocument();
 
-    // Re-select Dave — should fill team 2's incomplete slot
     await user.click(screen.getByTestId('player-checkbox-p4'));
     expect(screen.getByTestId('player-slot-1-1')).toHaveTextContent('Dave');
   });
@@ -252,13 +240,9 @@ describe('TournamentSetup', () => {
       />,
     );
 
-    // Initial: Team 1 = [Alice, Bob], Team 2 = [Carol, Dave]
-    // Remove Bob → Team 1 = [Alice] (solo), Team 2 = [Carol, Dave]
     await user.click(screen.getByTestId('player-checkbox-p2'));
-    // Now: Team 1 = [Alice], Team 2 = [Carol, Dave]
     expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(2);
 
-    // Remove Dave → Team 2 = [Carol] (solo), two solo teams should merge → Team 1 = [Alice, Carol]
     await user.click(screen.getByTestId('player-checkbox-p4'));
 
     expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(1);
@@ -280,10 +264,8 @@ describe('TournamentSetup', () => {
     await user.type(input, 'Zara');
     await user.click(screen.getByTestId('add-player-button'));
 
-    // Zara appears in the player list as checked
     expect(screen.getAllByText('Zara').length).toBeGreaterThan(0);
 
-    // Input is cleared
     expect(input).toHaveValue('');
   });
 
@@ -296,7 +278,6 @@ describe('TournamentSetup', () => {
       />,
     );
 
-    // 4 players → 2 teams → 1 match per round, 1 court → no warning
     expect(screen.queryByTestId('court-warning')).not.toBeInTheDocument();
   });
 
@@ -316,7 +297,6 @@ describe('TournamentSetup', () => {
       />,
     );
 
-    // 8 players → 4 doubles teams → floor(4/2)=2 matches per round > 1 court → warning
     expect(screen.getByTestId('court-warning')).toBeInTheDocument();
     expect(screen.getByTestId('court-warning')).toHaveTextContent('2 matches per round');
   });
