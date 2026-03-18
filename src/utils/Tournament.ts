@@ -16,10 +16,6 @@ export default class Tournament {
     this.state = state;
   }
 
-  // ---------------------------------------------------------------------------
-  // Factory
-  // ---------------------------------------------------------------------------
-
   /**
    * Create and start a new tournament from a set of teams.
    * Generates the initial round of matches for the given type.
@@ -42,10 +38,6 @@ export default class Tournament {
   static from(state: TournamentState): Tournament {
     return new Tournament(state);
   }
-
-  // ---------------------------------------------------------------------------
-  // Team helpers (static — no instance needed)
-  // ---------------------------------------------------------------------------
 
   /** Create doubles teams by pairing consecutive players (2 per team). */
   static createDoubleTeams(players: Player[]): TournamentTeam[] {
@@ -84,10 +76,6 @@ export default class Tournament {
   static getSortedRoundNums(matches: TournamentMatch[]): number[] {
     return Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
   }
-
-  // ---------------------------------------------------------------------------
-  // State read
-  // ---------------------------------------------------------------------------
 
   /** Serialize this instance for storage. */
   toState(): TournamentState {
@@ -155,10 +143,6 @@ export default class Tournament {
     return total > 0 && this.getCompletedRounds() === total;
   }
 
-  // ---------------------------------------------------------------------------
-  // Mutation → returns new instance
-  // ---------------------------------------------------------------------------
-
   /**
    * Record a match result and return a new Tournament instance.
    * For double elimination, automatically generates the next stage when all
@@ -194,10 +178,6 @@ export default class Tournament {
 
     return new Tournament({ ...this.state, matches: updatedMatches });
   }
-
-  // ---------------------------------------------------------------------------
-  // Private statics
-  // ---------------------------------------------------------------------------
 
   private static _makeTeamId(index: number): string {
     return `team-${Date.now()}-${index}`;
@@ -358,7 +338,6 @@ export default class Tournament {
       survivingLbSlots.push(Tournament._getWinnerId(match));
     }
 
-    // Grand Final: 1 WB champion, 1 LB champion, no new LB entrants
     if (newWbSlots.length === 1 && survivingLbSlots.length === 1 && newLbEntrants.length === 0) {
       const matchIndex = completedMatches.length;
       const gfMatch: TournamentMatch = {
@@ -375,7 +354,6 @@ export default class Tournament {
       };
     }
 
-    // Build LB pairs
     const newLbPairs: [string, string][] = [];
     if (survivingLbSlots.length === 0) {
       for (let i = 0; i + 1 < newLbEntrants.length; i += 2) {

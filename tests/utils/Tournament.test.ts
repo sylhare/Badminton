@@ -23,10 +23,6 @@ function makeMatch(
   return { id, round, courtNumber: 1, team1, team2, winner, score, bracket };
 }
 
-// ---------------------------------------------------------------------------
-// generateRoundRobinMatches (via Tournament.start)
-// ---------------------------------------------------------------------------
-
 describe('Tournament RR match generation', () => {
   it('produces 1 match for 2 teams', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B'])];
@@ -88,10 +84,6 @@ describe('Tournament RR match generation', () => {
     ).toHaveLength(0);
   });
 });
-
-// ---------------------------------------------------------------------------
-// getStandings (RR)
-// ---------------------------------------------------------------------------
 
 describe('Tournament.getStandings (round-robin)', () => {
   const teamA = makeTeam('a', ['Alice']);
@@ -164,10 +156,6 @@ describe('Tournament.getStandings (round-robin)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// getCompletedRounds
-// ---------------------------------------------------------------------------
-
 describe('Tournament.getCompletedRounds', () => {
   const teamA = makeTeam('a', ['A']);
   const teamB = makeTeam('b', ['B']);
@@ -215,10 +203,6 @@ describe('Tournament.getCompletedRounds', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// getTotalRounds
-// ---------------------------------------------------------------------------
-
 describe('Tournament.getTotalRounds', () => {
   const teamA = makeTeam('a', ['A']);
   const teamB = makeTeam('b', ['B']);
@@ -242,10 +226,6 @@ describe('Tournament.getTotalRounds', () => {
     }).getTotalRounds()).toBe(3);
   });
 });
-
-// ---------------------------------------------------------------------------
-// validate
-// ---------------------------------------------------------------------------
 
 describe('Tournament.validate', () => {
   it('returns error for fewer than 2 teams', () => {
@@ -274,10 +254,6 @@ describe('Tournament.validate', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// createDoubleTeams
-// ---------------------------------------------------------------------------
-
 describe('Tournament.createDoubleTeams', () => {
   it('creates correct pairs for even count', () => {
     const players = [
@@ -305,10 +281,6 @@ describe('Tournament.createDoubleTeams', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// createSingleTeams
-// ---------------------------------------------------------------------------
-
 describe('Tournament.createSingleTeams', () => {
   it('wraps each player in their own team', () => {
     const players = [
@@ -321,10 +293,6 @@ describe('Tournament.createSingleTeams', () => {
     expect(teams[1].players[0].name).toBe('Bob');
   });
 });
-
-// ---------------------------------------------------------------------------
-// DE first stage (via Tournament.start)
-// ---------------------------------------------------------------------------
 
 describe('Tournament DE first stage', () => {
   it('generates 2 WB matches for 4 teams with no bye', () => {
@@ -361,10 +329,6 @@ describe('Tournament DE first stage', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// DE progression (via recordResult)
-// ---------------------------------------------------------------------------
-
 describe('Tournament DE walkthrough — 4 teams', () => {
   const teamA = makeTeam('a', ['A']);
   const teamB = makeTeam('b', ['B']);
@@ -379,16 +343,16 @@ describe('Tournament DE walkthrough — 4 teams', () => {
   it('stage 2: generates WB R2 + LB R1 after WB R1 results', () => {
     let t = Tournament.start(teams, 2, 'singles', 'double-elimination');
     const r1 = t.toState().matches;
-    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); // A beats B
-    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); // C beats D
+    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); 
+    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); 
 
     const state = t.toState();
     const r2 = state.matches.filter(m => m.round === 2);
     const wbMatches = r2.filter(m => m.bracket === 'winners');
     const lbMatches = r2.filter(m => m.bracket === 'losers');
 
-    expect(wbMatches).toHaveLength(1); // A vs C
-    expect(lbMatches).toHaveLength(1); // B vs D
+    expect(wbMatches).toHaveLength(1); 
+    expect(lbMatches).toHaveLength(1); 
     expect(wbMatches[0].team1.id).toBe('a');
     expect(wbMatches[0].team2.id).toBe('c');
     expect(state.deBracket!.wbSlots).toEqual(['a', 'c']);
@@ -399,40 +363,35 @@ describe('Tournament DE walkthrough — 4 teams', () => {
   it('stage 3: generates LB R2 only when WB R2 produces 1 winner', () => {
     let t = Tournament.start(teams, 2, 'singles', 'double-elimination');
 
-    // R1
     const r1 = t.toState().matches;
-    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); // A beats B
-    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); // C beats D
+    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); 
+    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); 
 
-    // R2
     const r2 = t.toState().matches.filter(m => m.round === 2);
-    t = t.recordResult(findMatch(r2, 'a', 'c').id, 1); // A beats C (WB R2)
-    t = t.recordResult(r2.filter(m => m.bracket === 'losers')[0].id, 1); // B beats D (LB R1)
+    t = t.recordResult(findMatch(r2, 'a', 'c').id, 1); 
+    t = t.recordResult(r2.filter(m => m.bracket === 'losers')[0].id, 1); 
 
     const state = t.toState();
     const r3 = state.matches.filter(m => m.round === 3);
 
     expect(r3.filter(m => m.bracket === 'winners')).toHaveLength(0);
-    expect(r3.filter(m => m.bracket === 'losers')).toHaveLength(1); // B vs C
+    expect(r3.filter(m => m.bracket === 'losers')).toHaveLength(1); 
     expect(state.deBracket!.wbSlots).toEqual(['a']);
   });
 
   it('stage 4: generates Grand Final when 1 WB + 1 LB champion', () => {
     let t = Tournament.start(teams, 2, 'singles', 'double-elimination');
 
-    // R1
     const r1 = t.toState().matches;
-    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); // A beats B
-    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); // C beats D
+    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); 
+    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); 
 
-    // R2
     const r2 = t.toState().matches.filter(m => m.round === 2);
-    t = t.recordResult(findMatch(r2, 'a', 'c').id, 1); // A beats C
-    t = t.recordResult(r2.filter(m => m.bracket === 'losers')[0].id, 1); // B beats D
+    t = t.recordResult(findMatch(r2, 'a', 'c').id, 1); 
+    t = t.recordResult(r2.filter(m => m.bracket === 'losers')[0].id, 1); 
 
-    // R3 (B vs C)
     const r3 = t.toState().matches.filter(m => m.round === 3);
-    t = t.recordResult(r3[0].id, 1); // B beats C
+    t = t.recordResult(r3[0].id, 1); 
 
     const state = t.toState();
     const gf = state.matches.filter(m => m.bracket === 'grand-final');
@@ -444,10 +403,6 @@ describe('Tournament DE walkthrough — 4 teams', () => {
     expect(state.deBracket!.lbSlots).toContain('b');
   });
 });
-
-// ---------------------------------------------------------------------------
-// isComplete
-// ---------------------------------------------------------------------------
 
 describe('Tournament.isComplete', () => {
   const teamA = makeTeam('a', ['A']);
