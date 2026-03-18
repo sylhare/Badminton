@@ -16,6 +16,10 @@ interface NodeCardProps {
 export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
   const style = { position: 'absolute' as const, top, left, width: CW, height: MH };
 
+  if (node.type === 'empty') {
+    return <div style={style} />;
+  }
+
   if (node.type === 'bye-advance') {
     return (
       <div className="bracket-match bracket-match-bye" style={style}>

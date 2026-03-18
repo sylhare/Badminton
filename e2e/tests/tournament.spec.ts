@@ -162,40 +162,42 @@ test.describe('Tournament — Elimination', () => {
     await mainPage.reset();
   });
 
-  test('singles elimination — 4 players full walkthrough', async ({ page }) => {
-    await tournamentPage.setup(['Alice', 'Bob', 'Carol', 'Dana']);
+  test('singles elimination — 6 players full walkthrough', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Carol', 'Dana', 'Eve', 'Frank']);
     await page.getByTestId('format-pill-singles').click();
     await tournamentPage.selectEliminationType();
     await tournamentPage.startElimination();
 
     const matchCards = page.locator('[data-testid^="bracket-match-"]');
-    await expect(matchCards).toHaveCount(2);
+    await expect(matchCards).toHaveCount(3);
 
-    const matchIds = await matchCards.evaluateAll((els: Element[]) =>
-      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
-    );
+    const playAllPending = async () => {
+      const ids = await matchCards.evaluateAll((els: Element[]) =>
+        els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+      );
+      for (const id of ids) {
+        const isDone = await page.getByTestId(`bracket-match-${id}`).evaluate(
+          (el: Element) => el.classList.contains('bracket-match-done'),
+        );
+        if (!isDone) {
+          await tournamentPage.clickBracketTeam(id, 1);
+          await tournamentPage.confirmResult();
+        }
+      }
+    };
 
-    await tournamentPage.clickBracketTeam(matchIds[0], 1);
-    await tournamentPage.confirmResult();
-    await tournamentPage.clickBracketTeam(matchIds[1], 1);
-    await tournamentPage.confirmResult();
+    // Play R1 (3 matches) → generates WB-R2 + LB-R1
+    await playAllPending();
+    await expect(matchCards).toHaveCount(5);
 
-    await expect(matchCards).toHaveCount(4);
+    // Play WB-R2 + LB-R1 → generates WB-R3 + LB-R2
+    await playAllPending();
+    await expect(matchCards).toHaveCount(7);
 
-    const afterR1 = await matchCards.evaluateAll((els: Element[]) =>
-      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
-    );
-    const newIds = afterR1.filter(id => !matchIds.includes(id));
-    const wbfId = newIds[0];
-    const consolId = newIds[1];
+    // Play WB-R3 (WBF) + LB-R2 (3rd place)
+    await playAllPending();
 
-    await tournamentPage.clickBracketTeam(wbfId, 1);
-    await tournamentPage.confirmResult();
-
-    await tournamentPage.clickBracketTeam(consolId, 1);
-    await tournamentPage.confirmResult();
-
-    await expect(page.getByTestId('se-status-0')).toContainText('🏆');
+    await expect(page.getByTestId('se-status-0')).toContainText('🥇');
     await expect(page.getByTestId('se-status-1')).toContainText('🥈');
     await expect(page.getByTestId('se-status-2')).toContainText('🥉');
   });
@@ -216,12 +218,12 @@ test.describe('Tournament — Elimination', () => {
     await tournamentPage.clickBracketTeam(matchIds[1], 2);
     await tournamentPage.confirmResult();
 
-    await expect(page.getByText('Battle for 3rd')).toBeVisible();
+    await expect(page.getByText('Consolation Bracket')).toBeVisible();
 
     const team1NameM0 = await page.getByTestId(`bracket-team-1-${matchIds[0]}`).textContent();
     const team1NameM1 = await page.getByTestId(`bracket-team-1-${matchIds[1]}`).textContent();
 
-    const lbSection = page.locator('text=Battle for 3rd').locator('..');
+    const lbSection = page.locator('text=Consolation Bracket').locator('..');
     await expect(lbSection).toContainText(team1NameM0!.trim());
     await expect(lbSection).toContainText(team1NameM1!.trim());
   });
@@ -239,7 +241,7 @@ test.describe('Tournament — Elimination', () => {
     await tournamentPage.clickBracketTeam(matchId, 1);
     await tournamentPage.confirmResult();
 
-    await expect(page.getByTestId('se-status-0')).toContainText('🏆');
+    await expect(page.getByTestId('se-status-0')).toContainText('🥇');
   });
 
   test('singles elimination — 3 players bye handling', async ({ page }) => {
@@ -266,7 +268,7 @@ test.describe('Tournament — Elimination', () => {
     await tournamentPage.clickBracketTeam(r2MatchId, 1);
     await tournamentPage.confirmResult();
 
-    await expect(page.getByTestId('se-status-0')).toContainText('🏆');
+    await expect(page.getByTestId('se-status-0')).toContainText('🥇');
   });
 
   test('elimination state persists across reload', async ({ page }) => {

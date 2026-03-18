@@ -16,7 +16,10 @@ export function computeBracketTree(
   for (let i = 0; i < size / 2; i++) {
     const t1Id = seeding[2 * i];
     const t2Id = seeding[2 * i + 1];
-    if (t1Id === null || t2Id === null) {
+    if (t1Id === null && t2Id === null) {
+      // null-null: permanently empty slot, never produces an advancer
+      r1Nodes.push({ type: 'empty', team1: null, team2: null });
+    } else if (t1Id === null || t2Id === null) {
       const advancingId = t1Id ?? t2Id;
       r1Nodes.push({
         type: 'bye-advance',
@@ -48,16 +51,30 @@ export function computeBracketTree(
     return null;
   };
 
+  // Returns true only for structurally absent slots (null-null pairs) that can never advance.
+  const isPermanentlyEmpty = (node: BracketNode): boolean => node.type === 'empty';
+
   for (let r = 1; r < totalRounds; r++) {
     const prevNodes = nodes[r - 1];
     const curCount = size >> (r + 1);
     const curNodes: BracketNode[] = [];
 
     for (let i = 0; i < curCount; i++) {
-      const t1 = getAdvancer(prevNodes[2 * i]);
-      const t2 = getAdvancer(prevNodes[2 * i + 1]);
+      const leftNode = prevNodes[2 * i];
+      const rightNode = prevNodes[2 * i + 1];
+      const t1 = getAdvancer(leftNode);
+      const t2 = getAdvancer(rightNode);
+      const left0 = isPermanentlyEmpty(leftNode);
+      const right0 = isPermanentlyEmpty(rightNode);
 
-      if (t1 && t2) {
+      if (left0 && right0) {
+        curNodes.push({ type: 'empty', team1: null, team2: null });
+      } else if (right0) {
+        // Left slot will produce an advancer; right is permanently absent → structural bye
+        curNodes.push({ type: 'bye-advance', team1: t1, team2: null });
+      } else if (left0) {
+        curNodes.push({ type: 'bye-advance', team1: t2, team2: null });
+      } else if (t1 && t2) {
         const match = matches.find(
           m => (m.bracket ?? 'wb') === 'wb' &&
             m.round === r + 1 &&
@@ -70,7 +87,7 @@ export function computeBracketTree(
             : { type: 'tbd', team1: t1, team2: t2 },
         );
       } else {
-        curNodes.push({ type: 'tbd', team1: null, team2: null });
+        curNodes.push({ type: 'tbd', team1: t1, team2: t2 });
       }
     }
     nodes.push(curNodes);

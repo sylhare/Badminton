@@ -8,6 +8,7 @@ import { BracketConnectors } from './BracketConnectors';
 import { LBBracket } from './LBBracket';
 import { CW, CN, MH, SH, wbTop } from './types';
 import { computeBracketTree } from './computeBracketTree';
+import { computeConsolationTree } from './computeConsolationTree';
 import { NodeCard } from './NodeCard';
 
 interface Props {
@@ -43,9 +44,9 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
   };
 
   const wbMatches = matches.filter(m => (m.bracket ?? 'wb') === 'wb');
-  const lbMatches = matches.filter(m => (m.bracket ?? 'wb') === 'lb');
 
   const nodes = computeBracketTree(seBracket, teams, wbMatches);
+  const consolationNodes = computeConsolationTree(seBracket, matches);
   const r1Count = seBracket.size / 2;
   const totalH = Math.max(r1Count, 1) * SH + MH;
   const totalW = nodes.length * CW + Math.max(nodes.length - 1, 0) * CN;
@@ -60,7 +61,7 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
   return (
     <div className="elimination-bracket" data-testid="elimination-bracket">
       {isDe && (
-        <h3 className="bracket-section-label">Battle for 1st &amp; 2nd</h3>
+        <h3 className="bracket-section-label">Winners Bracket</h3>
       )}
       <div className="bracket-section">
         <div className="bracket-section-scroll">
@@ -96,8 +97,8 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
 
       {isDe && (
         <>
-          <h3 className="bracket-section-label">Battle for 3rd</h3>
-          <LBBracket lbMatches={lbMatches} teams={teams} onTeamClick={handleTeamClick} />
+          <h3 className="bracket-section-label">Consolation Bracket</h3>
+          <LBBracket nodes={consolationNodes} onTeamClick={handleTeamClick} />
         </>
       )}
 

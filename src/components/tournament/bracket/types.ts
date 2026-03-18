@@ -33,10 +33,11 @@ export function wbTop(roundIdx: number, matchIdx: number): number {
  *
  * - `match`: a real match with two known teams.
  * - `bye-advance`: one team advances automatically (no opponent).
- * - `tbd`: teams not yet determined.
+ * - `tbd`: teams not yet determined but will be (pending match results).
+ * - `empty`: structurally absent slot (e.g. null-null seeding pair) — never produces an advancer.
  */
 export interface BracketNode {
-  type: 'match' | 'bye-advance' | 'tbd';
+  type: 'match' | 'bye-advance' | 'tbd' | 'empty';
   match?: TournamentMatch;
   team1: TournamentTeam | null;
   team2: TournamentTeam | null;

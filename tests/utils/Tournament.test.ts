@@ -313,14 +313,14 @@ describe('Tournament SE first stage', () => {
     expect(matches.every(m => m.round === 1)).toBe(true);
   });
 
-  it('6 teams → size=8, seeding has 2 nulls (byes), 2 R1 matches', () => {
+  it('6 teams → size=8, seeding has 2 nulls (null-null pair), 3 R1 matches', () => {
     const teams = ['a','b','c','d','e','f'].map(id => makeTeam(id, [id.toUpperCase()]));
     const { matches, seBracket } = Tournament.start(teams, 4, 'singles', 'elimination').toState();
     expect(seBracket!.size).toBe(8);
     expect(seBracket!.seeding).toHaveLength(8);
     const nullCount = seBracket!.seeding.filter(s => s === null).length;
     expect(nullCount).toBe(2);
-    expect(matches).toHaveLength(2);
+    expect(matches).toHaveLength(3);
     expect(matches.every(m => m.round === 1)).toBe(true);
   });
 
@@ -394,19 +394,21 @@ describe('Tournament SE walkthrough — 4 teams', () => {
 describe('Tournament SE walkthrough — 6 teams', () => {
   const teams = ['a','b','c','d','e','f'].map(id => makeTeam(id, [id.toUpperCase()]));
 
-  it('R1 has 2 matches (4 teams play, 2 get byes)', () => {
+  it('R1 has 3 matches (all 6 teams play)', () => {
     const { matches } = Tournament.start(teams, 4, 'singles', 'elimination').toState();
-    expect(matches.filter(m => m.round === 1)).toHaveLength(2);
+    expect(matches.filter(m => m.round === 1)).toHaveLength(3);
   });
 
-  it('after R1, R2 has 2 matches (R1 winners + bye teams)', () => {
+  it('after R1, R2 has 1 match (2 R1 winners play; 3rd winner gets bye)', () => {
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
     const r1 = t.toState().matches;
+    expect(r1).toHaveLength(3);
     t = t.recordResult(r1[0].id, 1);
     t = t.recordResult(r1[1].id, 1);
+    t = t.recordResult(r1[2].id, 1);
 
-    const r2 = t.toState().matches.filter(m => m.round === 2);
-    expect(r2).toHaveLength(2);
+    const r2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    expect(r2).toHaveLength(1);
   });
 
   it('after R2, final (R3) is generated', () => {
@@ -414,12 +416,12 @@ describe('Tournament SE walkthrough — 6 teams', () => {
     const r1 = t.toState().matches;
     t = t.recordResult(r1[0].id, 1);
     t = t.recordResult(r1[1].id, 1);
+    t = t.recordResult(r1[2].id, 1);
 
-    const r2 = t.toState().matches.filter(m => m.round === 2);
+    const r2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
     t = t.recordResult(r2[0].id, 1);
-    t = t.recordResult(r2[1].id, 1);
 
-    const r3 = t.toState().matches.filter(m => m.round === 3);
+    const r3 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 3);
     expect(r3).toHaveLength(1);
     expect(t.isComplete()).toBe(false);
   });
@@ -427,24 +429,34 @@ describe('Tournament SE walkthrough — 6 teams', () => {
   it('isComplete after consolation final (6-team walkthrough)', () => {
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
+    // WB R1: 3 matches
     const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    expect(wb1).toHaveLength(3);
     t = t.recordResult(wb1[0].id, 1);
     t = t.recordResult(wb1[1].id, 1);
+    t = t.recordResult(wb1[2].id, 1);
 
+    // WB R2: 1 match (W0 vs W1); W2 gets bye
     const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    expect(wb2).toHaveLength(1);
     t = t.recordResult(wb2[0].id, 1);
-    t = t.recordResult(wb2[1].id, 1);
 
+    // LB R1: 1 match (L(R1m0) vs L(R1m1)); L(R1m2) exits
     const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    expect(lb1).toHaveLength(1);
     t = t.recordResult(lb1[0].id, 1);
 
+    // LB R2: 1 match triggered (LB-R1 survivor vs WB-R2 loser)
+    const lb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2);
+    expect(lb2).toHaveLength(1);
+
+    // WB R3 (WBF): W(R2) vs W2-bye
     const wb3 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 3);
+    expect(wb3).toHaveLength(1);
     t = t.recordResult(wb3[0].id, 1);
     expect(t.isComplete()).toBe(false);
 
-    const lb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2);
     t = t.recordResult(lb2[0].id, 1);
-    
     expect(t.isComplete()).toBe(true);
     expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb')).toHaveLength(2);
   });

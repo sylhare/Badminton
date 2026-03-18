@@ -291,26 +291,15 @@ export default class Tournament {
 
   /**
    * Build the seeding array for a bracket of `size` slots with `teams.length` teams.
-   * Slots are filled as: first `numRealPairs*2` slots get paired teams (real R1 matches),
-   * then remaining slots alternate team/null (bye pairs).
+   * Fills consecutive slots with teams, leaving remaining slots as null.
+   * Pairs: [A,B], [C,D], ... are real matches; [X,null] are byes; [null,null] produce no match/survivor.
    */
   private static _buildSESeeding(teams: TournamentTeam[], size: number): (string | null)[] {
     const n = teams.length;
-    const numRealPairs = n - size / 2;
-    const numByePairs = size / 2 - numRealPairs;
     const seeding: (string | null)[] = new Array(size).fill(null);
-
-    for (let i = 0; i < numRealPairs * 2; i++) {
+    for (let i = 0; i < n; i++) {
       seeding[i] = teams[i].id;
     }
-
-    let teamIdx = numRealPairs * 2;
-    for (let i = 0; i < numByePairs; i++) {
-      seeding[numRealPairs * 2 + i * 2] = teams[teamIdx].id;
-
-      teamIdx++;
-    }
-
     return seeding;
   }
 
@@ -360,7 +349,9 @@ export default class Tournament {
       for (let i = 0; i < size / 2; i++) {
         const t1Id = seeding[2 * i];
         const t2Id = seeding[2 * i + 1];
-        if (t1Id === null) {
+        if (t1Id === null && t2Id === null) {
+          // null-null pair: no survivor
+        } else if (t1Id === null) {
           survivors.push(t2Id!);
         } else if (t2Id === null) {
           survivors.push(t1Id);
@@ -380,7 +371,7 @@ export default class Tournament {
 
     const prevSurvivors = Tournament._resolveSurvivors(seBracket, matches, round - 1);
     const survivors: string[] = [];
-    for (let i = 0; i < prevSurvivors.length / 2; i++) {
+    for (let i = 0; i < Math.floor(prevSurvivors.length / 2); i++) {
       const t1Id = prevSurvivors[2 * i];
       const t2Id = prevSurvivors[2 * i + 1];
       const match = matches.find(
@@ -391,6 +382,10 @@ export default class Tournament {
            (m.team1.id === t2Id && m.team2.id === t1Id)),
       );
       survivors.push(match!.winner === 1 ? match!.team1.id : match!.team2.id);
+    }
+    // Odd survivor advances via bye (no match needed)
+    if (prevSurvivors.length % 2 === 1) {
+      survivors.push(prevSurvivors[prevSurvivors.length - 1]);
     }
     return survivors;
   }
@@ -458,7 +453,7 @@ export default class Tournament {
 
     const prevSurvivors = Tournament._resolveSurvivors(seBracket, matches, wbRound - 1);
     const losers: string[] = [];
-    for (let i = 0; i < prevSurvivors.length / 2; i++) {
+    for (let i = 0; i < Math.floor(prevSurvivors.length / 2); i++) {
       const t1Id = prevSurvivors[2 * i];
       const t2Id = prevSurvivors[2 * i + 1];
       const match = matches.find(

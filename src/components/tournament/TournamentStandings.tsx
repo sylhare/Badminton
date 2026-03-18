@@ -19,7 +19,7 @@ function seStatus(
   isFinal: boolean | undefined,
 ): string {
   if (isFinal) {
-    if (index === 0) return '🏆';
+    if (index === 0) return '🥇';
     if (index === 1) return '🥈';
     if (index === 2) return '🥉';
     return 'Out';

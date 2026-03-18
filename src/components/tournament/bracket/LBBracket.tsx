@@ -1,30 +1,21 @@
 import React from 'react';
 
-import type { TournamentMatch, TournamentTeam } from '../../../types/tournament';
+import type { TournamentMatch } from '../../../types/tournament';
 
+import type { BracketNode } from './types';
 import { CW, CN, MH, MG } from './types';
 import { NodeCard } from './NodeCard';
 
 interface LBBracketProps {
-  lbMatches: TournamentMatch[];
-  teams: TournamentTeam[];
+  nodes: BracketNode[][];
   onTeamClick: (match: TournamentMatch, team: 1 | 2) => void;
 }
 
-export function LBBracket({ lbMatches, teams: _teams, onTeamClick }: LBBracketProps) {
-  if (lbMatches.length === 0) {
-    return <p className="bracket-pending">Awaiting Winners Bracket round 1...</p>;
-  }
+export function LBBracket({ nodes, onTeamClick }: LBBracketProps) {
+  if (nodes.length === 0) return null;
 
-  const roundMap = new Map<number, TournamentMatch[]>();
-  for (const m of lbMatches) {
-    if (!roundMap.has(m.round)) roundMap.set(m.round, []);
-    roundMap.get(m.round)!.push(m);
-  }
-
-  const rounds = Array.from(roundMap.entries()).sort(([a], [b]) => a - b);
-  const numCols = rounds.length;
-  const maxMatchesInRound = Math.max(...rounds.map(([, ms]) => ms.length));
+  const numCols = nodes.length;
+  const maxMatchesInRound = Math.max(...nodes.map(r => r.length));
 
   const totalW = numCols * CW + Math.max(numCols - 1, 0) * CN;
   const totalH = maxMatchesInRound * (MH + MG) + MG;
@@ -33,14 +24,13 @@ export function LBBracket({ lbMatches, teams: _teams, onTeamClick }: LBBracketPr
     <div className="bracket-section">
       <div className="bracket-section-scroll">
         <div style={{ position: 'relative', width: totalW, height: totalH }}>
-          {rounds.map(([, roundMatches], colIdx) => {
+          {nodes.map((roundNodes, colIdx) => {
             const colLeft = colIdx * (CW + CN);
-            return roundMatches.map((match, rowIdx) => {
+            return roundNodes.map((node, rowIdx) => {
               const top = rowIdx * (MH + MG) + MG;
-              const node = { type: 'match' as const, match, team1: match.team1, team2: match.team2 };
               return (
                 <NodeCard
-                  key={match.id}
+                  key={node.match?.id ?? `tbd-${colIdx}-${rowIdx}`}
                   node={node}
                   top={top}
                   left={colLeft}
