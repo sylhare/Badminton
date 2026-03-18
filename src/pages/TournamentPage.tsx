@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
+import EliminationBracket from '../components/tournament/EliminationBracket';
 import TournamentMatches from '../components/tournament/TournamentMatches';
 import TournamentSetup from '../components/tournament/TournamentSetup';
 import TournamentStandings from '../components/tournament/TournamentStandings';
@@ -65,10 +66,18 @@ function TournamentPage(): React.ReactElement {
 
     content = (
       <div className="tournament-active-layout">
-        <TournamentMatches
-          matches={matches}
-          onMatchResult={handleMatchResult}
-        />
+        {tournamentType === 'double-elimination' ? (
+          <EliminationBracket
+            matches={matches}
+            teams={tournament.toState().teams}
+            onMatchResult={handleMatchResult}
+          />
+        ) : (
+          <TournamentMatches
+            matches={matches}
+            onMatchResult={handleMatchResult}
+          />
+        )}
         <TournamentStandings
           standings={standings}
           currentRound={completedRounds}
