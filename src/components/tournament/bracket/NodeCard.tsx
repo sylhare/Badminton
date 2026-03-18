@@ -38,6 +38,12 @@ export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
 
   const match = node.match!;
   const w = match.winner;
+  let team1Class = '';
+  if (w === 1) team1Class = ' bracket-team-winner';
+  else if (w === 2) team1Class = ' bracket-team-loser';
+  let team2Class = '';
+  if (w === 2) team2Class = ' bracket-team-winner';
+  else if (w === 1) team2Class = ' bracket-team-loser';
   return (
     <div
       className={`bracket-match${w ? ' bracket-match-done' : ''}`}
@@ -45,7 +51,7 @@ export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
       data-testid={`bracket-match-${match.id}`}
     >
       <div
-        className={`bracket-team${w === 1 ? ' bracket-team-winner' : w === 2 ? ' bracket-team-loser' : ''}`}
+        className={`bracket-team${team1Class}`}
         data-testid={`bracket-team-1-${match.id}`}
         onClick={() => (!w || w === 1) ? onTeamClick(match, 1) : undefined}
       >
@@ -53,7 +59,7 @@ export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
         {match.score && w === 1 && <span className="bracket-score">{match.score.team1}–{match.score.team2}</span>}
       </div>
       <div
-        className={`bracket-team${w === 2 ? ' bracket-team-winner' : w === 1 ? ' bracket-team-loser' : ''}`}
+        className={`bracket-team${team2Class}`}
         data-testid={`bracket-team-2-${match.id}`}
         onClick={() => (!w || w === 2) ? onTeamClick(match, 2) : undefined}
       >

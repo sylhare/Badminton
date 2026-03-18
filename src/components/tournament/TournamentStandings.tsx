@@ -9,29 +9,23 @@ interface TournamentStandingsProps {
   totalRounds: number;
   isFinal?: boolean;
   tournamentType?: TournamentType;
-  gfWinnerId?: string;
-  gfLoserId?: string;
 }
 
 const RANK_EMOJI = ['🥇', '🥈', '🥉'];
 
 function seStatus(
   row: TournamentStandingRow,
+  index: number,
   isFinal: boolean | undefined,
-  gfWinnerId?: string,
-  gfLoserId?: string,
 ): string {
-
-  if (gfWinnerId !== undefined) {
-    if (isFinal && row.team.id === gfWinnerId) return '🏆';
-    if (isFinal && gfLoserId && row.team.id === gfLoserId) return 'Runner-up';
-    if (row.lost >= 2) return 'Out';
-    return 'In';
+  if (isFinal) {
+    if (index === 0) return '🏆';
+    if (index === 1) return '🥈';
+    if (index === 2) return '🥉';
+    return 'Out';
   }
-
-  if (isFinal && row.lost === 0) return '🏆';
-  if (row.lost === 0) return 'In';
-  return 'Out';
+  if (row.lost >= 2) return 'Out';
+  return 'In';
 }
 
 const TournamentStandings: React.FC<TournamentStandingsProps> = ({
@@ -40,8 +34,6 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   totalRounds,
   isFinal,
   tournamentType,
-  gfWinnerId,
-  gfLoserId,
 }) => {
   const isSE = tournamentType === 'elimination';
 
@@ -80,7 +72,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
               <td>{row.won}</td>
               <td>{row.lost}</td>
               {isSE ? (
-                <td data-testid={`se-status-${index}`}>{seStatus(row, isFinal, gfWinnerId, gfLoserId)}</td>
+                <td data-testid={`se-status-${index}`}>{seStatus(row, index, isFinal)}</td>
               ) : (
                 <>
                   <td>{row.points}</td>

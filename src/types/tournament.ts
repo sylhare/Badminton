@@ -4,19 +4,18 @@ export type TournamentFormat = 'singles' | 'doubles';
 export type TournamentType = 'round-robin' | 'elimination';
 export type TournamentPhase = 'setup' | 'active' | 'completed';
 /**
- * Which bracket a match belongs to in a double-elimination tournament.
+ * Which bracket a match belongs to in a consolation-bracket elimination tournament.
  *
  * - `wb` — Winners Bracket: teams that have not yet lost. A loss here drops
- *   the team into the Losers Bracket instead of eliminating them.
- * - `lb` — Losers Bracket: teams that have lost exactly once. A second loss
- *   here eliminates the team entirely.
- * - `gf` — Grand Final: the single match between the Winners Bracket champion
- *   (undefeated) and the Losers Bracket champion (one loss). The winner is
- *   the tournament champion.
+ *   the team into the consolation bracket instead of eliminating them.
+ *   The WB Final winner is the tournament champion (1st place), and the WB
+ *   Final loser takes 2nd place without playing consolation.
+ * - `lb` — Consolation Bracket: teams that have lost exactly once. A second
+ *   loss here eliminates the team. The consolation final winner takes 3rd place.
  *
  * Absent or `undefined` is treated as `'wb'` for backward compatibility.
  */
-export type MatchBracket = 'wb' | 'lb' | 'gf';
+export type MatchBracket = 'wb' | 'lb';
 
 export interface TournamentTeam {
   id: string;

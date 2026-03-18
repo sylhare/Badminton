@@ -66,14 +66,6 @@ function TournamentPage(): React.ReactElement {
     const isFinal = tournament.isComplete();
     const { type: tournamentType, matches } = tournament.toState();
 
-    const gfMatch = matches.find(m => (m.bracket ?? 'wb') === 'gf' && m.winner !== undefined);
-    const gfWinnerId = gfMatch
-      ? (gfMatch.winner === 1 ? gfMatch.team1.id : gfMatch.team2.id)
-      : undefined;
-    const gfLoserId = gfMatch
-      ? (gfMatch.winner === 1 ? gfMatch.team2.id : gfMatch.team1.id)
-      : undefined;
-
     content = (
       <div className="tournament-active-layout">
         {tournamentType === 'elimination' ? (
@@ -95,8 +87,6 @@ function TournamentPage(): React.ReactElement {
           totalRounds={totalRounds}
           isFinal={isFinal}
           tournamentType={tournamentType}
-          gfWinnerId={gfWinnerId}
-          gfLoserId={gfLoserId}
         />
         <button
           className="button button-primary"

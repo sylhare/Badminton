@@ -134,23 +134,13 @@ export default class Tournament {
 
   /**
    * True when the tournament has ended.
-   * Elimination (DE): the Grand Final match has a winner.
-   * Elimination (2 teams / no LB): the WB final has a winner.
+   * Elimination: all generated matches (WB + consolation) have results.
    * Round robin: all rounds are complete.
    */
   isComplete(): boolean {
-    const { type, matches, seBracket } = this.state;
+    const { type, matches } = this.state;
     if (type === 'elimination') {
-      if (!seBracket) return false;
-      const wbRounds = Math.log2(seBracket.size);
-      const lbRounds = 2 * (wbRounds - 1);
-      if (lbRounds === 0) {
-
-        const finalMatches = matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === wbRounds);
-        return finalMatches.length === 1 && finalMatches[0].winner !== undefined;
-      }
-      const gfMatches = matches.filter(m => (m.bracket ?? 'wb') === 'gf');
-      return gfMatches.length === 1 && gfMatches[0].winner !== undefined;
+      return matches.length > 0 && matches.every(m => m.winner !== undefined);
     }
     const total = this.getTotalRounds();
     return total > 0 && this.getCompletedRounds() === total;
@@ -509,9 +499,9 @@ export default class Tournament {
     currentMatches: TournamentMatch[],
   ): TournamentMatch[] {
     const wbRounds = Math.log2(seBracket.size);
-    const lbRounds = 2 * (wbRounds - 1);
+    const lbRounds = 2 * (wbRounds - 1) - 1;
 
-    if (lbRounds === 0) return [];
+    if (lbRounds <= 0) return [];
 
     const teamMap = new Map(teams.map(t => [t.id, t]));
     const newMatches: TournamentMatch[] = [];
@@ -519,7 +509,6 @@ export default class Tournament {
     const all = () => [...currentMatches, ...newMatches];
     const getWBRound = (r: number) => all().filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === r);
     const getLBRound = (r: number) => all().filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === r);
-    const getGF = () => all().filter(m => (m.bracket ?? 'wb') === 'gf');
 
     const makeMatch = (t1Id: string, t2Id: string, round: number, bracket: MatchBracket): TournamentMatch => {
       const idx = all().length;
@@ -563,22 +552,6 @@ export default class Tournament {
         const wbLosers = Tournament._resolveWBLosers(seBracket, all(), wbR);
         for (let i = 0; i < lbSurvivors.length; i++) {
           newMatches.push(makeMatch(lbSurvivors[i], wbLosers[i], lbRound, 'lb'));
-        }
-      }
-    }
-
-    if (getGF().length === 0) {
-      const wbFinal = getWBRound(wbRounds);
-      if (wbFinal.length === 1 && wbFinal[0].winner !== undefined) {
-        const allLB = all().filter(m => (m.bracket ?? 'wb') === 'lb');
-        const maxLBRound = allLB.length > 0 ? Math.max(...allLB.map(m => m.round)) : 0;
-        if (maxLBRound > 0) {
-          const lbFinal = getLBRound(maxLBRound);
-          if (lbFinal.length === 1 && lbFinal[0].winner !== undefined) {
-            const wbChampId = wbFinal[0].winner === 1 ? wbFinal[0].team1.id : wbFinal[0].team2.id;
-            const lbChampId = lbFinal[0].winner === 1 ? lbFinal[0].team1.id : lbFinal[0].team2.id;
-            newMatches.push(makeMatch(wbChampId, lbChampId, 1, 'gf'));
-          }
         }
       }
     }
