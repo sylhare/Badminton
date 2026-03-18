@@ -2,8 +2,9 @@ import React from 'react';
 
 import type { TournamentMatch } from '../../../types/tournament';
 import Tournament from '../../../utils/Tournament';
-import { CW, MH } from './bracketLayout';
-import type { BracketNode } from './bracketTypes';
+
+import { CW, MH } from './types';
+import type { BracketNode } from './types';
 
 interface NodeCardProps {
   node: BracketNode;
@@ -35,7 +36,6 @@ export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
     );
   }
 
-  // type === 'match'
   const match = node.match!;
   const w = match.winner;
   return (

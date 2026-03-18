@@ -104,11 +104,10 @@ describe('computeBracketTree', () => {
 
   it('advancer resolution: after R1 winner set, R2 picks up correct teams', () => {
     const bracket: SEBracket = { size: 4, seeding: ['a', 'b', 'c', 'd'] };
-    const m1 = makeMatch('m1', 1, tA, tB, 2); // Bob wins
-    const m2 = makeMatch('m2', 1, tC, tD, 1); // Carol wins
+    const m1 = makeMatch('m1', 1, tA, tB, 2);
+    const m2 = makeMatch('m2', 1, tC, tD, 1);
     const nodes = computeBracketTree(bracket, [tA, tB, tC, tD], [m1, m2]);
 
-    // R2 tbd node should have t1=Bob, t2=Carol
     expect(nodes[1][0].type).toBe('tbd');
     expect(nodes[1][0].team1?.id).toBe('b');
     expect(nodes[1][0].team2?.id).toBe('c');

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { CN, CW, MG, MH, SH, wbTop } from '../../../../src/components/tournament/bracket/bracketLayout';
+import { CN, CW, MG, MH, SH, wbTop } from '../../../../src/components/tournament/bracket/types';
 
-describe('bracketLayout constants', () => {
+describe('bracket/types constants', () => {
   it('has expected numeric values', () => {
     expect(MH).toBe(64);
     expect(MG).toBe(12);

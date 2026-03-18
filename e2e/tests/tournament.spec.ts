@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { MainPage } from '../support/pages/MainPage';
 import { TournamentPage } from '../support/pages/TournamentPage';
 
-test.describe('Tournament Page', () => {
+test.describe('Tournament — Round Robin', () => {
   let mainPage: MainPage;
   let tournamentPage: TournamentPage;
 
@@ -148,5 +148,169 @@ test.describe('Tournament Page', () => {
     await page.getByTestId('new-tournament-button').click();
 
     await expect(page.getByTestId('start-tournament-button')).toBeVisible();
+  });
+});
+
+test.describe('Tournament — Elimination', () => {
+  let mainPage: MainPage;
+  let tournamentPage: TournamentPage;
+
+  test.beforeEach(async ({ page }) => {
+    mainPage = new MainPage(page);
+    tournamentPage = new TournamentPage(page, mainPage);
+    await mainPage.goto();
+    await mainPage.reset();
+  });
+
+  test('singles elimination — 4 players full walkthrough', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Carol', 'Dana']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectEliminationType();
+    await tournamentPage.startElimination();
+
+    const matchCards = page.locator('[data-testid^="bracket-match-"]');
+    await expect(matchCards).toHaveCount(2);
+
+    const matchIds = await matchCards.evaluateAll((els: Element[]) =>
+      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+    );
+
+    await tournamentPage.clickBracketTeam(matchIds[0], 1);
+    await tournamentPage.confirmResult();
+    await tournamentPage.clickBracketTeam(matchIds[1], 1);
+    await tournamentPage.confirmResult();
+
+    await expect(matchCards).toHaveCount(3);
+
+    const allIds = await matchCards.evaluateAll((els: Element[]) =>
+      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+    );
+    const r2MatchId = allIds.find(id => !matchIds.includes(id))!;
+
+    await tournamentPage.clickBracketTeam(r2MatchId, 1);
+    await tournamentPage.confirmResult();
+
+    await expect(matchCards).toHaveCount(4);
+
+    const afterWBF = await matchCards.evaluateAll((els: Element[]) =>
+      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+    );
+    const lbR1Id = afterWBF.find(id => !allIds.includes(id))!;
+
+    await tournamentPage.clickBracketTeam(lbR1Id, 1);
+    await tournamentPage.confirmResult();
+
+    await expect(matchCards).toHaveCount(5);
+
+    const afterLBR1 = await matchCards.evaluateAll((els: Element[]) =>
+      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+    );
+    const lbR2Id = afterLBR1.find(id => ![...allIds, lbR1Id].includes(id))!;
+
+    await tournamentPage.clickBracketTeam(lbR2Id, 1);
+    await tournamentPage.confirmResult();
+
+    await expect(matchCards).toHaveCount(6);
+
+    const afterLBF = await matchCards.evaluateAll((els: Element[]) =>
+      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+    );
+    const gfId = afterLBF.find(id => ![...allIds, lbR1Id, lbR2Id].includes(id))!;
+
+    await tournamentPage.clickBracketTeam(gfId, 1);
+    await tournamentPage.confirmResult();
+
+    await expect(page.getByTestId('se-status-0')).toContainText('🏆');
+  });
+
+  test('WB loser drops into Losers Bracket after WB R1', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Carol', 'Dana']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectEliminationType();
+    await tournamentPage.startElimination();
+
+    const matchCards = page.locator('[data-testid^="bracket-match-"]');
+    const matchIds = await matchCards.evaluateAll((els: Element[]) =>
+      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+    );
+
+    await tournamentPage.clickBracketTeam(matchIds[0], 2);
+    await tournamentPage.confirmResult();
+    await tournamentPage.clickBracketTeam(matchIds[1], 2);
+    await tournamentPage.confirmResult();
+
+    await expect(page.getByText('Losers Bracket')).toBeVisible();
+
+    const team1NameM0 = await page.getByTestId(`bracket-team-1-${matchIds[0]}`).textContent();
+    const team1NameM1 = await page.getByTestId(`bracket-team-1-${matchIds[1]}`).textContent();
+
+    const lbSection = page.locator('text=Losers Bracket').locator('..');
+    await expect(lbSection).toContainText(team1NameM0!.trim());
+    await expect(lbSection).toContainText(team1NameM1!.trim());
+  });
+
+  test('doubles elimination — 4 players (2 teams, 1 match)', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Carol', 'Dana']);
+    await tournamentPage.selectEliminationType();
+    await tournamentPage.startElimination();
+
+    const matchCards = page.locator('[data-testid^="bracket-match-"]');
+    await expect(matchCards).toHaveCount(1);
+
+    const matchId = await matchCards.first().getAttribute('data-testid').then(id => id!.replace('bracket-match-', ''));
+
+    await tournamentPage.clickBracketTeam(matchId, 1);
+    await tournamentPage.confirmResult();
+
+    await expect(page.getByTestId('se-status-0')).toContainText('🏆');
+  });
+
+  test('singles elimination — 3 players bye handling', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Carol']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectEliminationType();
+    await tournamentPage.startElimination();
+
+    const matchCards = page.locator('[data-testid^="bracket-match-"]');
+    await expect(matchCards).toHaveCount(1);
+    await expect(page.getByText('BYE')).toBeVisible();
+
+    const matchId = await matchCards.first().getAttribute('data-testid').then(id => id!.replace('bracket-match-', ''));
+    await tournamentPage.clickBracketTeam(matchId, 1);
+    await tournamentPage.confirmResult();
+
+    await expect(matchCards).toHaveCount(2);
+
+    const allIds = await matchCards.evaluateAll((els: Element[]) =>
+      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+    );
+    const r2MatchId = allIds.find(id => id !== matchId)!;
+
+    await tournamentPage.clickBracketTeam(r2MatchId, 1);
+    await tournamentPage.confirmResult();
+
+    await expect(page.getByTestId('se-status-0')).toContainText('🏆');
+  });
+
+  test('elimination state persists across reload', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Carol', 'Dana']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectEliminationType();
+    await tournamentPage.startElimination();
+
+    const matchCards = page.locator('[data-testid^="bracket-match-"]');
+    const matchIds = await matchCards.evaluateAll((els: Element[]) =>
+      els.map(el => el.getAttribute('data-testid')!.replace('bracket-match-', '')),
+    );
+
+    await tournamentPage.clickBracketTeam(matchIds[0], 1);
+    await tournamentPage.confirmResult();
+
+    await expect(page.getByTestId(`bracket-team-1-${matchIds[0]}`)).toHaveClass(/bracket-team-winner/);
+
+    await page.reload();
+
+    await expect(page.getByTestId('elimination-bracket')).toBeVisible();
+    await expect(page.getByTestId(`bracket-team-1-${matchIds[0]}`)).toHaveClass(/bracket-team-winner/);
   });
 });

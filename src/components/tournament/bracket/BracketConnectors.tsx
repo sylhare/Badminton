@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { CN, MH } from './bracketLayout';
+import { CN, MH } from './types';
 
 interface ConnectorsProps {
   fromTops: number[];
@@ -13,7 +13,6 @@ export function BracketConnectors({ fromTops, toTops, height, left }: Connectors
   const lines: React.ReactNode[] = [];
   const xMid = CN / 2;
 
-  // Always 2-to-1 (binary bracket)
   toTops.forEach((destY, i) => {
     const y1 = fromTops[2 * i] + MH / 2;
     const y2 = (fromTops[2 * i + 1] ?? fromTops[2 * i]) + MH / 2;

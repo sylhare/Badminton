@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { NodeCard } from '../../../../src/components/tournament/bracket/NodeCard';
-import type { BracketNode } from '../../../../src/components/tournament/bracket/bracketTypes';
+import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
 import type { TournamentMatch, TournamentTeam } from '../../../../src/types/tournament';
 import { createMockPlayer } from '../../../data/testFactories';
 
@@ -34,14 +34,14 @@ function renderNode(node: BracketNode, onTeamClick = vi.fn()) {
 }
 
 describe('NodeCard', () => {
-  describe("type='tbd'", () => {
+  describe('type=\'tbd\'', () => {
     it('renders two TBD texts', () => {
       renderNode({ type: 'tbd', team1: null, team2: null });
       expect(screen.getAllByText('TBD')).toHaveLength(2);
     });
   });
 
-  describe("type='bye-advance'", () => {
+  describe('type=\'bye-advance\'', () => {
     it('renders team name + BYE', () => {
       renderNode({ type: 'bye-advance', team1: tA, team2: null });
       expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe('NodeCard', () => {
     });
   });
 
-  describe("type='match'", () => {
+  describe('type=\'match\'', () => {
     it('renders both team names', () => {
       const match = makeMatch('m1', tA, tB);
       renderNode({ type: 'match', match, team1: tA, team2: tB });

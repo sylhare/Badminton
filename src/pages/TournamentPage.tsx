@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-import EliminationBracket from '../components/tournament/bracket';
+import EliminationBracket from '../components/tournament/bracket/EliminationBracket';
 import TournamentMatches from '../components/tournament/TournamentMatches';
 import TournamentSetup from '../components/tournament/TournamentSetup';
 import TournamentStandings from '../components/tournament/TournamentStandings';
@@ -20,8 +20,7 @@ function TournamentPage(): React.ReactElement {
       ([appState, savedTournament]) => {
         if (appState.players) setInitialPlayers(appState.players);
         if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
-        // Discard stale double-elimination state (incompatible structure)
-        if (savedTournament && (savedTournament.type as string) !== 'double-elimination') {
+        if (savedTournament) {
           setTournament(Tournament.from(savedTournament));
         }
         setIsLoaded(true);
@@ -67,6 +66,14 @@ function TournamentPage(): React.ReactElement {
     const isFinal = tournament.isComplete();
     const { type: tournamentType, matches } = tournament.toState();
 
+    const gfMatch = matches.find(m => (m.bracket ?? 'wb') === 'gf' && m.winner !== undefined);
+    const gfWinnerId = gfMatch
+      ? (gfMatch.winner === 1 ? gfMatch.team1.id : gfMatch.team2.id)
+      : undefined;
+    const gfLoserId = gfMatch
+      ? (gfMatch.winner === 1 ? gfMatch.team2.id : gfMatch.team1.id)
+      : undefined;
+
     content = (
       <div className="tournament-active-layout">
         {tournamentType === 'elimination' ? (
@@ -88,6 +95,8 @@ function TournamentPage(): React.ReactElement {
           totalRounds={totalRounds}
           isFinal={isFinal}
           tournamentType={tournamentType}
+          gfWinnerId={gfWinnerId}
+          gfLoserId={gfLoserId}
         />
         <button
           className="button button-primary"

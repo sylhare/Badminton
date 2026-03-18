@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 
 import { BracketConnectors } from '../../../../src/components/tournament/bracket/BracketConnectors';
-import { CN } from '../../../../src/components/tournament/bracket/bracketLayout';
+import { CN } from '../../../../src/components/tournament/bracket/types';
 
 describe('BracketConnectors', () => {
   it('renders one <g> group for 2 fromTops → 1 toTop', () => {
@@ -46,7 +46,6 @@ describe('BracketConnectors', () => {
       </svg>,
     );
 
-    // The inner svg rendered by BracketConnectors uses style for width
     const innerSvg = container.querySelector('.bracket-connectors') as HTMLElement | null;
     expect(innerSvg).not.toBeNull();
     expect(innerSvg?.style.width).toBe(`${CN}px`);

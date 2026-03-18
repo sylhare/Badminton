@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 
 import type { SEBracket, TournamentMatch, TournamentTeam } from '../../../types/tournament';
 import ScoreInputModal from '../../modals/ScoreInputModal';
+
 import './EliminationBracket.css';
 import { BracketConnectors } from './BracketConnectors';
-import { CW, CN, MH, SH, wbTop } from './bracketLayout';
+import { GrandFinal } from './GrandFinal';
+import { LBBracket } from './LBBracket';
+import { CW, CN, MH, SH, wbTop } from './types';
 import { computeBracketTree } from './computeBracketTree';
 import { NodeCard } from './NodeCard';
 
@@ -40,7 +43,11 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
     setPendingWinner(null);
   };
 
-  const nodes = computeBracketTree(seBracket, teams, matches);
+  const wbMatches = matches.filter(m => (m.bracket ?? 'wb') === 'wb');
+  const lbMatches = matches.filter(m => (m.bracket ?? 'wb') === 'lb');
+  const gfMatch = matches.find(m => (m.bracket ?? 'wb') === 'gf') ?? null;
+
+  const nodes = computeBracketTree(seBracket, teams, wbMatches);
   const r1Count = seBracket.size / 2;
   const totalH = Math.max(r1Count, 1) * SH + MH;
   const totalW = nodes.length * CW + Math.max(nodes.length - 1, 0) * CN;
@@ -49,8 +56,14 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
     roundNodes.map((_, mIdx) => wbTop(rIdx, mIdx)),
   );
 
+  const wbRounds = Math.log2(seBracket.size);
+  const isDe = wbRounds > 1;
+
   return (
     <div className="elimination-bracket" data-testid="elimination-bracket">
+      {isDe && (
+        <h3 className="bracket-section-label">Winners Bracket</h3>
+      )}
       <div className="bracket-section">
         <div className="bracket-section-scroll">
           <div style={{ position: 'relative', width: totalW, height: totalH }}>
@@ -82,6 +95,15 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
           </div>
         </div>
       </div>
+
+      {isDe && (
+        <>
+          <h3 className="bracket-section-label">Losers Bracket</h3>
+          <LBBracket lbMatches={lbMatches} teams={teams} onTeamClick={handleTeamClick} />
+          <h3 className="bracket-section-label">Grand Final</h3>
+          <GrandFinal gfMatch={gfMatch} onTeamClick={handleTeamClick} />
+        </>
+      )}
 
       <ScoreInputModal
         isOpen={modalMatch !== null && pendingWinner !== null}

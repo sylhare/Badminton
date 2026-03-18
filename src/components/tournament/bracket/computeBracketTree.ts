@@ -1,5 +1,6 @@
 import type { SEBracket, TournamentMatch, TournamentTeam } from '../../../types/tournament';
-import type { BracketNode } from './bracketTypes';
+
+import type { BracketNode } from './types';
 
 export function computeBracketTree(
   seBracket: SEBracket,
@@ -11,7 +12,6 @@ export function computeBracketTree(
   const teamMap = new Map(teams.map(t => [t.id, t]));
   const nodes: BracketNode[][] = [];
 
-  // R1: derive from seeding pairs
   const r1Nodes: BracketNode[] = [];
   for (let i = 0; i < size / 2; i++) {
     const t1Id = seeding[2 * i];
@@ -25,7 +25,8 @@ export function computeBracketTree(
       });
     } else {
       const match = matches.find(
-        m => m.round === 1 &&
+        m => (m.bracket ?? 'wb') === 'wb' &&
+          m.round === 1 &&
           ((m.team1.id === t1Id && m.team2.id === t2Id) ||
            (m.team1.id === t2Id && m.team2.id === t1Id)),
       );
@@ -38,7 +39,6 @@ export function computeBracketTree(
   }
   nodes.push(r1Nodes);
 
-  // R2+: derive team1/team2 from parent node advancers
   const getAdvancer = (node: BracketNode): TournamentTeam | null => {
     if (node.type === 'bye-advance') return node.team1;
     if (node.type === 'match' && node.match) {
@@ -59,7 +59,8 @@ export function computeBracketTree(
 
       if (t1 && t2) {
         const match = matches.find(
-          m => m.round === r + 1 &&
+          m => (m.bracket ?? 'wb') === 'wb' &&
+            m.round === r + 1 &&
             ((m.team1.id === t1.id && m.team2.id === t2.id) ||
              (m.team1.id === t2.id && m.team2.id === t1.id)),
         );
