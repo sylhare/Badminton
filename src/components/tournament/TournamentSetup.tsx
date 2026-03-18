@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
-import type { TournamentFormat, TournamentState, TournamentTeam } from '../../types/tournament';
+import type { TournamentFormat, TournamentState, TournamentTeam, TournamentType } from '../../types/tournament';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 import {
   autoCreateDoubleTeams,
   autoCreateSingleTeams,
+  generateDEFirstStage,
   generateRoundRobinMatches,
   validateTeams,
 } from '../../utils/tournamentUtils';
@@ -43,6 +44,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(
     () => new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id)),
   );
+  const [tournamentType, setTournamentType] = useState<TournamentType>('round-robin');
   const [format, setFormat] = useState<TournamentFormat>('doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
@@ -195,15 +197,13 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handleStart = () => {
     if (validationError) return;
-    const matches = generateRoundRobinMatches(teams, numberOfCourts);
-    onStart({
-      phase: 'active',
-      format,
-      type: 'round-robin',
-      numberOfCourts,
-      teams,
-      matches,
-    });
+    if (tournamentType === 'double-elimination') {
+      const { matches, deBracket } = generateDEFirstStage(teams, numberOfCourts);
+      onStart({ phase: 'active', format, type: 'double-elimination', numberOfCourts, teams, matches, deBracket });
+    } else {
+      const matches = generateRoundRobinMatches(teams, numberOfCourts);
+      onStart({ phase: 'active', format, type: 'round-robin', numberOfCourts, teams, matches });
+    }
   };
 
   const teamPlayerName = (team: TournamentTeam) =>
@@ -211,6 +211,22 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   return (
     <div className="tournament-setup">
+      <div className="setup-section">
+        <h3>Tournament Type</h3>
+        <div className="format-pills" data-testid="tournament-type-pills">
+          {(['round-robin', 'double-elimination'] as TournamentType[]).map(t => (
+            <button
+              key={t}
+              className={`format-pill${tournamentType === t ? ' format-pill-active' : ''}`}
+              onClick={() => setTournamentType(t)}
+              data-testid={`tournament-type-pill-${t}`}
+            >
+              {t === 'round-robin' ? 'Round Robin' : 'Double Elimination'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="setup-section">
         <h3>Format</h3>
         <div className="format-pills" data-testid="format-pills">

@@ -5,7 +5,13 @@ import TournamentSetup from '../components/tournament/TournamentSetup';
 import TournamentStandings from '../components/tournament/TournamentStandings';
 import type { Player } from '../types';
 import type { TournamentState } from '../types/tournament';
-import { calculateStandings, getCompletedRounds, getTotalRounds } from '../utils/tournamentUtils';
+import {
+  calculateStandings,
+  generateNextDEStage,
+  getCompletedRounds,
+  getTotalRounds,
+  isDoubleEliminationComplete,
+} from '../utils/tournamentUtils';
 import { storageManager } from '../utils/StorageManager';
 import './TournamentPage.css';
 
@@ -42,12 +48,19 @@ function TournamentPage(): React.ReactElement {
   ) => {
     setTournamentState(prev => {
       if (!prev) return prev;
-      return {
-        ...prev,
-        matches: prev.matches.map(m =>
-          m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
-        ),
-      };
+      const updatedMatches = prev.matches.map(m =>
+        m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
+      );
+      if (prev.type === 'double-elimination') {
+        const allDone = updatedMatches.every(m => m.winner !== undefined);
+        if (allDone && !isDoubleEliminationComplete(updatedMatches)) {
+          const { newMatches, updatedBracket } = generateNextDEStage(
+            prev.deBracket!, prev.teams, updatedMatches, prev.numberOfCourts,
+          );
+          return { ...prev, matches: [...updatedMatches, ...newMatches], deBracket: updatedBracket };
+        }
+      }
+      return { ...prev, matches: updatedMatches };
     });
   };
 
@@ -69,7 +82,9 @@ function TournamentPage(): React.ReactElement {
     const standings = calculateStandings(tournamentState.teams, tournamentState.matches);
     const completedRounds = getCompletedRounds(tournamentState.matches);
     const totalRounds = getTotalRounds(tournamentState.matches);
-    const isFinal = totalRounds > 0 && completedRounds === totalRounds;
+    const isFinal = tournamentState.type === 'double-elimination'
+      ? isDoubleEliminationComplete(tournamentState.matches)
+      : totalRounds > 0 && completedRounds === totalRounds;
 
     content = (
       <div className="tournament-active-layout">
@@ -82,6 +97,7 @@ function TournamentPage(): React.ReactElement {
           currentRound={completedRounds}
           totalRounds={totalRounds}
           isFinal={isFinal}
+          tournamentType={tournamentState.type}
         />
         <button
           className="button button-primary"

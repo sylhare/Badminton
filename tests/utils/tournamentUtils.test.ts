@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import type { TournamentMatch, TournamentTeam } from '../../src/types/tournament';
+import type { DEBracket, TournamentMatch, TournamentTeam } from '../../src/types/tournament';
 import {
   autoCreateDoubleTeams,
   autoCreateSingleTeams,
   calculateStandings,
+  generateDEFirstStage,
+  generateNextDEStage,
   generateRoundRobinMatches,
   getCompletedRounds,
   getTotalRounds,
+  isDoubleEliminationComplete,
   validateTeams,
 } from '../../src/utils/tournamentUtils';
 import { createMockPlayer } from '../data/testFactories';
@@ -26,8 +29,9 @@ function makeMatch(
   team2: TournamentTeam,
   winner?: 1 | 2,
   score?: { team1: number; team2: number },
+  bracket?: TournamentMatch['bracket'],
 ): TournamentMatch {
-  return { id, round, courtNumber: 1, team1, team2, winner, score };
+  return { id, round, courtNumber: 1, team1, team2, winner, score, bracket };
 }
 
 describe('generateRoundRobinMatches', () => {
@@ -300,5 +304,122 @@ describe('autoCreateSingleTeams', () => {
     expect(teams).toHaveLength(2);
     expect(teams[0].players[0].name).toBe('Alice');
     expect(teams[1].players[0].name).toBe('Bob');
+  });
+});
+
+describe('generateDEFirstStage', () => {
+  it('generates 2 WB matches for 4 teams with no bye', () => {
+    const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C']), makeTeam('d', ['D'])];
+    const { matches, deBracket } = generateDEFirstStage(teams, 2);
+    expect(matches).toHaveLength(2);
+    expect(matches.every(m => m.bracket === 'winners')).toBe(true);
+    expect(matches.every(m => m.round === 1)).toBe(true);
+    expect(deBracket.wbSlots).toEqual(['a', 'b', 'c', 'd']);
+    expect(deBracket.lbSlots).toEqual([]);
+  });
+
+  it('generates 4 WB matches for 8 teams with no bye', () => {
+    const teams = ['a','b','c','d','e','f','g','h'].map(id => makeTeam(id, [id.toUpperCase()]));
+    const { matches, deBracket } = generateDEFirstStage(teams, 4);
+    expect(matches).toHaveLength(4);
+    expect(deBracket.wbSlots).toHaveLength(8);
+    expect(deBracket.lbSlots).toHaveLength(0);
+  });
+
+  it('gives a bye to the first team when odd count', () => {
+    const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C'])];
+    const { matches, deBracket } = generateDEFirstStage(teams, 2);
+    // Only 1 match (b vs c), team a has a bye
+    expect(matches).toHaveLength(1);
+    expect(matches[0].team1.id).toBe('b');
+    expect(matches[0].team2.id).toBe('c');
+    expect(deBracket.wbSlots[0]).toBe('a');
+  });
+
+  it('cycles court numbers', () => {
+    const teams = ['a','b','c','d'].map(id => makeTeam(id, [id]));
+    const { matches } = generateDEFirstStage(teams, 1);
+    expect(matches.every(m => m.courtNumber === 1)).toBe(true);
+  });
+});
+
+describe('generateNextDEStage — 4-team walkthrough', () => {
+  const teamA = makeTeam('a', ['A']);
+  const teamB = makeTeam('b', ['B']);
+  const teamC = makeTeam('c', ['C']);
+  const teamD = makeTeam('d', ['D']);
+  const teams = [teamA, teamB, teamC, teamD];
+
+  it('stage 2: generates WB R2 + LB R1 after WB R1 results', () => {
+    const r1Matches: TournamentMatch[] = [
+      makeMatch('m1', 1, teamA, teamB, 1, undefined, 'winners'), // A wins
+      makeMatch('m2', 1, teamC, teamD, 1, undefined, 'winners'), // C wins
+    ];
+    const bracket: DEBracket = { wbSlots: ['a', 'b', 'c', 'd'], lbSlots: [] };
+    const { newMatches, updatedBracket } = generateNextDEStage(bracket, teams, r1Matches, 2);
+
+    const wbMatches = newMatches.filter(m => m.bracket === 'winners');
+    const lbMatches = newMatches.filter(m => m.bracket === 'losers');
+    expect(wbMatches).toHaveLength(1); // A vs C
+    expect(lbMatches).toHaveLength(1); // B vs D
+    expect(wbMatches[0].team1.id).toBe('a');
+    expect(wbMatches[0].team2.id).toBe('c');
+    expect(updatedBracket.wbSlots).toEqual(['a', 'c']);
+    expect(updatedBracket.lbSlots).toContain('b');
+    expect(updatedBracket.lbSlots).toContain('d');
+  });
+
+  it('stage 3: generates LB R2 only when WB R2 produces 1 winner', () => {
+    const allMatches: TournamentMatch[] = [
+      makeMatch('m1', 1, teamA, teamB, 1, undefined, 'winners'), // A wins
+      makeMatch('m2', 1, teamC, teamD, 1, undefined, 'winners'), // C wins
+      makeMatch('m3', 2, teamA, teamC, 1, undefined, 'winners'), // A wins WB R2
+      makeMatch('m4', 2, teamB, teamD, 1, undefined, 'losers'),  // B wins LB R1
+    ];
+    const bracket: DEBracket = { wbSlots: ['a', 'c'], lbSlots: ['b', 'd'] };
+    const { newMatches, updatedBracket } = generateNextDEStage(bracket, teams, allMatches, 2);
+
+    expect(newMatches.filter(m => m.bracket === 'winners')).toHaveLength(0); // only 1 WB team
+    expect(newMatches.filter(m => m.bracket === 'losers')).toHaveLength(1); // B vs C
+    expect(updatedBracket.wbSlots).toEqual(['a']);
+  });
+
+  it('stage 4: generates Grand Final when 1 WB + 1 LB champion', () => {
+    const allMatches: TournamentMatch[] = [
+      makeMatch('m1', 1, teamA, teamB, 1, undefined, 'winners'),
+      makeMatch('m2', 1, teamC, teamD, 1, undefined, 'winners'),
+      makeMatch('m3', 2, teamA, teamC, 1, undefined, 'winners'),
+      makeMatch('m4', 2, teamB, teamD, 1, undefined, 'losers'),
+      makeMatch('m5', 3, teamB, teamC, 1, undefined, 'losers'), // B wins LB R2
+    ];
+    const bracket: DEBracket = { wbSlots: ['a'], lbSlots: ['b', 'c'] };
+    const { newMatches, updatedBracket } = generateNextDEStage(bracket, teams, allMatches, 2);
+
+    expect(newMatches).toHaveLength(1);
+    expect(newMatches[0].bracket).toBe('grand-final');
+    expect(newMatches[0].team1.id).toBe('a');
+    expect(newMatches[0].team2.id).toBe('b');
+    expect(updatedBracket.wbSlots).toEqual(['a']);
+    expect(updatedBracket.lbSlots).toEqual(['b']);
+  });
+});
+
+describe('isDoubleEliminationComplete', () => {
+  const teamA = makeTeam('a', ['A']);
+  const teamB = makeTeam('b', ['B']);
+
+  it('returns false when no grand-final match exists', () => {
+    const matches = [makeMatch('m1', 1, teamA, teamB, 1, undefined, 'winners')];
+    expect(isDoubleEliminationComplete(matches)).toBe(false);
+  });
+
+  it('returns false when grand-final has no winner yet', () => {
+    const matches = [makeMatch('m1', 2, teamA, teamB, undefined, undefined, 'grand-final')];
+    expect(isDoubleEliminationComplete(matches)).toBe(false);
+  });
+
+  it('returns true when grand-final has a winner', () => {
+    const matches = [makeMatch('m1', 2, teamA, teamB, 1, undefined, 'grand-final')];
+    expect(isDoubleEliminationComplete(matches)).toBe(true);
   });
 });

@@ -1,5 +1,6 @@
 import type { Player } from '../types';
 import type {
+  DEBracket,
   TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
@@ -156,6 +157,160 @@ export function getCompletedRounds(matches: TournamentMatch[]): number {
 export function getTotalRounds(matches: TournamentMatch[]): number {
   if (matches.length === 0) return 0;
   return Math.max(...matches.map(m => m.round));
+}
+
+export function generateDEFirstStage(
+  teams: TournamentTeam[],
+  numberOfCourts: number,
+): { matches: TournamentMatch[]; deBracket: DEBracket } {
+  const wbSlots = teams.map(t => t.id);
+  const teamMap = new Map(teams.map(t => [t.id, t]));
+  const matches: TournamentMatch[] = [];
+  let matchIndex = 0;
+
+  // First team gets a bye if odd count
+  const startIdx = wbSlots.length % 2 !== 0 ? 1 : 0;
+  for (let i = startIdx; i + 1 < wbSlots.length; i += 2) {
+    matches.push({
+      id: makeMatchId(matchIndex),
+      round: 1,
+      courtNumber: (matchIndex % numberOfCourts) + 1,
+      team1: teamMap.get(wbSlots[i])!,
+      team2: teamMap.get(wbSlots[i + 1])!,
+      bracket: 'winners',
+    });
+    matchIndex++;
+  }
+
+  return { matches, deBracket: { wbSlots, lbSlots: [] } };
+}
+
+export function generateNextDEStage(
+  deBracket: DEBracket,
+  teams: TournamentTeam[],
+  completedMatches: TournamentMatch[],
+  numberOfCourts: number,
+): { newMatches: TournamentMatch[]; updatedBracket: DEBracket } {
+  const teamMap = new Map(teams.map(t => [t.id, t]));
+
+  const maxRound = Math.max(...completedMatches.map(m => m.round));
+  const lastRoundMatches = completedMatches.filter(m => m.round === maxRound);
+  const nextRound = maxRound + 1;
+
+  const wbMatches = lastRoundMatches.filter(m => m.bracket === 'winners');
+  const lbMatches = lastRoundMatches.filter(m => m.bracket === 'losers');
+
+  const { wbSlots } = deBracket;
+  const wbHadBye = wbSlots.length % 2 !== 0;
+  const wbByeTeam = wbHadBye ? wbSlots[0] : null;
+
+  const newWbSlots: string[] = wbByeTeam ? [wbByeTeam] : [];
+  const newLbEntrants: string[] = [];
+
+  for (const match of wbMatches) {
+    const winnerId = match.winner === 1 ? match.team1.id : match.team2.id;
+    const loserId = match.winner === 1 ? match.team2.id : match.team1.id;
+    newWbSlots.push(winnerId);
+    newLbEntrants.push(loserId);
+  }
+
+  const survivingLbSlots: string[] = [];
+  for (const match of lbMatches) {
+    const winnerId = match.winner === 1 ? match.team1.id : match.team2.id;
+    survivingLbSlots.push(winnerId);
+  }
+
+  // Grand Final: 1 WB champion, 1 LB champion, no new LB entrants
+  if (newWbSlots.length === 1 && survivingLbSlots.length === 1 && newLbEntrants.length === 0) {
+    let matchIndex = completedMatches.length;
+    const gfMatch: TournamentMatch = {
+      id: makeMatchId(matchIndex),
+      round: nextRound,
+      courtNumber: (matchIndex % numberOfCourts) + 1,
+      team1: teamMap.get(newWbSlots[0])!,
+      team2: teamMap.get(survivingLbSlots[0])!,
+      bracket: 'grand-final',
+    };
+    return {
+      newMatches: [gfMatch],
+      updatedBracket: { wbSlots: newWbSlots, lbSlots: survivingLbSlots },
+    };
+  }
+
+  // Build LB pairs
+  const newLbPairs: [string, string][] = [];
+  if (survivingLbSlots.length === 0) {
+    // First LB stage: pair entrants consecutively
+    for (let i = 0; i + 1 < newLbEntrants.length; i += 2) {
+      newLbPairs.push([newLbEntrants[i], newLbEntrants[i + 1]]);
+    }
+  } else if (newLbEntrants.length > 0) {
+    // Cross-pair: survivor[i] vs entrant[i]
+    const pairCount = Math.min(survivingLbSlots.length, newLbEntrants.length);
+    for (let i = 0; i < pairCount; i++) {
+      newLbPairs.push([survivingLbSlots[i], newLbEntrants[i]]);
+    }
+    // Extra survivors pair among themselves
+    const extraSurvivors = survivingLbSlots.slice(pairCount);
+    for (let i = 0; i + 1 < extraSurvivors.length; i += 2) {
+      newLbPairs.push([extraSurvivors[i], extraSurvivors[i + 1]]);
+    }
+    // Extra entrants pair among themselves
+    const extraEntrants = newLbEntrants.slice(pairCount);
+    for (let i = 0; i + 1 < extraEntrants.length; i += 2) {
+      newLbPairs.push([extraEntrants[i], extraEntrants[i + 1]]);
+    }
+  } else {
+    // Only survivors: consolidation
+    for (let i = 0; i + 1 < survivingLbSlots.length; i += 2) {
+      newLbPairs.push([survivingLbSlots[i], survivingLbSlots[i + 1]]);
+    }
+  }
+
+  const newMatches: TournamentMatch[] = [];
+  let matchIndex = completedMatches.length;
+
+  // WB matches
+  if (newWbSlots.length >= 2) {
+    const wbHasNewBye = newWbSlots.length % 2 !== 0;
+    const startIdx = wbHasNewBye ? 1 : 0;
+    for (let i = startIdx; i + 1 < newWbSlots.length; i += 2) {
+      newMatches.push({
+        id: makeMatchId(matchIndex),
+        round: nextRound,
+        courtNumber: (matchIndex % numberOfCourts) + 1,
+        team1: teamMap.get(newWbSlots[i])!,
+        team2: teamMap.get(newWbSlots[i + 1])!,
+        bracket: 'winners',
+      });
+      matchIndex++;
+    }
+  }
+
+  // LB matches
+  for (const [id1, id2] of newLbPairs) {
+    newMatches.push({
+      id: makeMatchId(matchIndex),
+      round: nextRound,
+      courtNumber: (matchIndex % numberOfCourts) + 1,
+      team1: teamMap.get(id1)!,
+      team2: teamMap.get(id2)!,
+      bracket: 'losers',
+    });
+    matchIndex++;
+  }
+
+  const newLbSlots: string[] = newLbPairs.flat();
+
+  return {
+    newMatches,
+    updatedBracket: { wbSlots: newWbSlots, lbSlots: newLbSlots },
+  };
+}
+
+export function isDoubleEliminationComplete(matches: TournamentMatch[]): boolean {
+  const gfMatch = matches.find(m => m.bracket === 'grand-final');
+  return gfMatch !== undefined && gfMatch.winner !== undefined;
 }
 
 export function validateTeams(
