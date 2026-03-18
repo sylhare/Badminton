@@ -525,6 +525,22 @@ function StatsPage(): React.ReactElement {
               </div>
               <span className="notebook-arrow">→</span>
             </a>
+
+            <a
+              href={`${basePath}level-tracker`}
+              className="notebook-card"
+              data-testid="level-tracker-link"
+            >
+              <div className="notebook-icon">📊</div>
+              <div className="notebook-content">
+                <h3>Level Tracker Analysis</h3>
+                <p>
+                  Elo-style rating system simulation with K-factor curves, team balance
+                  factors, and level progression visualizations.
+                </p>
+              </div>
+              <span className="notebook-arrow">→</span>
+            </a>
           </div>
         </section>
 
