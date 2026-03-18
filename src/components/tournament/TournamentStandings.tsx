@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { TournamentStandingRow, TournamentType } from '../../types/tournament';
+import Tournament from '../../utils/Tournament';
 
 interface TournamentStandingsProps {
   standings: TournamentStandingRow[];
@@ -12,25 +13,11 @@ interface TournamentStandingsProps {
 
 const RANK_EMOJI = ['🥇', '🥈', '🥉'];
 
-function teamLabel(row: TournamentStandingRow): string {
-  return row.team.players.map(p => p.name).join(' & ');
-}
-
 function deBracketStatus(row: TournamentStandingRow, isFinal: boolean | undefined): string {
   if (isFinal && row.lost === 0) return '🏆';
   if (row.lost === 0) return 'WB';
   if (row.lost === 1) return 'LB';
   return 'Out';
-}
-
-function sortDEStandings(rows: TournamentStandingRow[]): TournamentStandingRow[] {
-  return [...rows].sort((a, b) => {
-    if (a.lost !== b.lost) return a.lost - b.lost;
-    if (b.won !== a.won) return b.won - a.won;
-    const nameA = a.team.players[0]?.name ?? '';
-    const nameB = b.team.players[0]?.name ?? '';
-    return nameA.localeCompare(nameB);
-  });
 }
 
 const TournamentStandings: React.FC<TournamentStandingsProps> = ({
@@ -42,13 +29,12 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
 }) => {
   const isDE = tournamentType === 'double-elimination';
 
-  const subtitle = isDE
-    ? (isFinal ? 'Tournament Complete' : 'Double Elimination')
-    : currentRound > 0
-      ? `After Round ${currentRound} / ${totalRounds}`
-      : `Round 0 / ${totalRounds}`;
-
-  const displayStandings = isDE ? sortDEStandings(standings) : standings;
+  let subtitle: string;
+  if (isDE) {
+    subtitle = isFinal ? 'Tournament Complete' : 'Double Elimination';
+  } else {
+    subtitle = currentRound > 0 ? `After Round ${currentRound} / ${totalRounds}` : `Round 0 / ${totalRounds}`;
+  }
 
   return (
     <div className="tournament-standings" data-testid="tournament-standings">
@@ -67,14 +53,14 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
           </tr>
         </thead>
         <tbody>
-          {displayStandings.map((row, index) => (
+          {standings.map((row, index) => (
             <tr
               key={row.team.id}
-              className={index === 0 && displayStandings.length > 1 ? 'top' : ''}
+              className={index === 0 && standings.length > 1 ? 'top' : ''}
               data-testid={`standing-row-${index}`}
             >
               <td>{isFinal && !isDE && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
-              <td>{teamLabel(row)}</td>
+              <td>{Tournament.formatTeamName(row.team)}</td>
               <td>{row.won}</td>
               <td>{row.lost}</td>
               {isDE ? (

@@ -180,7 +180,7 @@ describe('TournamentSetup', () => {
     await user.click(screen.getByTestId('start-tournament-button'));
 
     expect(onStart).toHaveBeenCalledOnce();
-    const state: TournamentState = onStart.mock.calls[0][0];
+    const state: TournamentState = onStart.mock.calls[0][0].toState();
     expect(state.phase).toBe('active');
     expect(state.format).toBe('doubles');
     expect(state.type).toBe('round-robin');
@@ -328,7 +328,7 @@ describe('TournamentSetup', () => {
 
     await user.click(screen.getByTestId('start-tournament-button'));
 
-    const state: TournamentState = onStart.mock.calls[0][0];
+    const state: TournamentState = onStart.mock.calls[0][0].toState();
     expect(state.numberOfCourts).toBe(3);
   });
 });

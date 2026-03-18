@@ -4,21 +4,14 @@ import TournamentMatches from '../components/tournament/TournamentMatches';
 import TournamentSetup from '../components/tournament/TournamentSetup';
 import TournamentStandings from '../components/tournament/TournamentStandings';
 import type { Player } from '../types';
-import type { TournamentState } from '../types/tournament';
-import {
-  calculateStandings,
-  generateNextDEStage,
-  getCompletedRounds,
-  getTotalRounds,
-  isDoubleEliminationComplete,
-} from '../utils/tournamentUtils';
+import Tournament from '../utils/Tournament';
 import { storageManager } from '../utils/StorageManager';
 import './TournamentPage.css';
 
 function TournamentPage(): React.ReactElement {
   const [initialPlayers, setInitialPlayers] = useState<Player[]>([]);
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
-  const [tournamentState, setTournamentState] = useState<TournamentState | null>(null);
+  const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -26,7 +19,7 @@ function TournamentPage(): React.ReactElement {
       ([appState, savedTournament]) => {
         if (appState.players) setInitialPlayers(appState.players);
         if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
-        if (savedTournament) setTournamentState(savedTournament);
+        if (savedTournament) setTournament(Tournament.from(savedTournament));
         setIsLoaded(true);
       },
     );
@@ -34,11 +27,11 @@ function TournamentPage(): React.ReactElement {
 
   useEffect(() => {
     if (!isLoaded) return;
-    storageManager.saveTournament(tournamentState);
-  }, [tournamentState, isLoaded]);
+    storageManager.saveTournament(tournament?.toState() ?? null);
+  }, [tournament, isLoaded]);
 
-  const handleStart = (state: TournamentState) => {
-    setTournamentState(state);
+  const handleStart = (t: Tournament) => {
+    setTournament(t);
   };
 
   const handleMatchResult = (
@@ -46,31 +39,16 @@ function TournamentPage(): React.ReactElement {
     winner: 1 | 2,
     score?: { team1: number; team2: number },
   ) => {
-    setTournamentState(prev => {
-      if (!prev) return prev;
-      const updatedMatches = prev.matches.map(m =>
-        m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
-      );
-      if (prev.type === 'double-elimination') {
-        const allDone = updatedMatches.every(m => m.winner !== undefined);
-        if (allDone && !isDoubleEliminationComplete(updatedMatches)) {
-          const { newMatches, updatedBracket } = generateNextDEStage(
-            prev.deBracket!, prev.teams, updatedMatches, prev.numberOfCourts,
-          );
-          return { ...prev, matches: [...updatedMatches, ...newMatches], deBracket: updatedBracket };
-        }
-      }
-      return { ...prev, matches: updatedMatches };
-    });
+    setTournament(prev => prev?.recordResult(matchId, winner, score) ?? prev);
   };
 
   const handleReset = () => {
-    setTournamentState(null);
+    setTournament(null);
   };
 
   let content: React.ReactNode;
 
-  if (!tournamentState || tournamentState.phase === 'setup') {
+  if (!tournament) {
     content = (
       <TournamentSetup
         initialPlayers={initialPlayers}
@@ -79,17 +57,16 @@ function TournamentPage(): React.ReactElement {
       />
     );
   } else {
-    const standings = calculateStandings(tournamentState.teams, tournamentState.matches);
-    const completedRounds = getCompletedRounds(tournamentState.matches);
-    const totalRounds = getTotalRounds(tournamentState.matches);
-    const isFinal = tournamentState.type === 'double-elimination'
-      ? isDoubleEliminationComplete(tournamentState.matches)
-      : totalRounds > 0 && completedRounds === totalRounds;
+    const standings = tournament.getStandings();
+    const completedRounds = tournament.getCompletedRounds();
+    const totalRounds = tournament.getTotalRounds();
+    const isFinal = tournament.isComplete();
+    const { type: tournamentType, matches } = tournament.toState();
 
     content = (
       <div className="tournament-active-layout">
         <TournamentMatches
-          matches={tournamentState.matches}
+          matches={matches}
           onMatchResult={handleMatchResult}
         />
         <TournamentStandings
@@ -97,7 +74,7 @@ function TournamentPage(): React.ReactElement {
           currentRound={completedRounds}
           totalRounds={totalRounds}
           isFinal={isFinal}
-          tournamentType={tournamentState.type}
+          tournamentType={tournamentType}
         />
         <button
           className="button button-primary"

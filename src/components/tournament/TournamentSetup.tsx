@@ -1,20 +1,14 @@
 import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
-import type { TournamentFormat, TournamentState, TournamentTeam, TournamentType } from '../../types/tournament';
+import type { TournamentFormat, TournamentTeam, TournamentType } from '../../types/tournament';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
-import {
-  autoCreateDoubleTeams,
-  autoCreateSingleTeams,
-  generateDEFirstStage,
-  generateRoundRobinMatches,
-  validateTeams,
-} from '../../utils/tournamentUtils';
+import Tournament from '../../utils/Tournament';
 
 interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
-  onStart: (state: TournamentState) => void;
+  onStart: (tournament: Tournament) => void;
 }
 
 interface SwapSelection {
@@ -23,8 +17,8 @@ interface SwapSelection {
 }
 
 function deriveTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
-  if (format === 'singles') return autoCreateSingleTeams(players);
-  return autoCreateDoubleTeams(players);
+  if (format === 'singles') return Tournament.createSingleTeams(players);
+  return Tournament.createDoubleTeams(players);
 }
 
 function makeTeamId(index: number): string {
@@ -188,7 +182,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
     setSwapSelection(null);
   };
 
-  const validationError = validateTeams(teams, format);
+  const validationError = Tournament.validate(teams, format);
   const matchesPerRound = Math.floor(teams.length / 2);
   const courtWarning =
     !validationError && matchesPerRound > numberOfCourts
@@ -197,17 +191,8 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handleStart = () => {
     if (validationError) return;
-    if (tournamentType === 'double-elimination') {
-      const { matches, deBracket } = generateDEFirstStage(teams, numberOfCourts);
-      onStart({ phase: 'active', format, type: 'double-elimination', numberOfCourts, teams, matches, deBracket });
-    } else {
-      const matches = generateRoundRobinMatches(teams, numberOfCourts);
-      onStart({ phase: 'active', format, type: 'round-robin', numberOfCourts, teams, matches });
-    }
+    onStart(Tournament.start(teams, numberOfCourts, format, tournamentType));
   };
-
-  const teamPlayerName = (team: TournamentTeam) =>
-    team.players.map(p => p.name).join(' & ');
 
   return (
     <div className="tournament-setup">
@@ -306,7 +291,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
                 ) : (
                   <div className="team-players-slots">
                     <div className="player-slot" data-testid={`player-slot-${teamIdx}-0`}>
-                      {teamPlayerName(team)}
+                      {Tournament.formatTeamName(team)}
                     </div>
                   </div>
                 )}

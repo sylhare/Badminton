@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import type { TournamentMatch } from '../../types/tournament';
+import Tournament from '../../utils/Tournament';
 import { DoublesMatch, SinglesMatch } from '../court/display';
 import ScoreInputModal from '../modals/ScoreInputModal';
 
@@ -10,7 +11,7 @@ interface TournamentMatchesProps {
 }
 
 function getCurrentRound(matches: TournamentMatch[]): number {
-  const roundNums = Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
+  const roundNums = Tournament.getSortedRoundNums(matches);
   for (const r of roundNums) {
     if (matches.filter(m => m.round === r).some(m => m.winner === undefined)) {
       return r;
@@ -56,7 +57,7 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
   });
 
   const currentRound = getCurrentRound(matches);
-  const roundNums = Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
+  const roundNums = Tournament.getSortedRoundNums(matches);
 
   const allComplete = matches.every(m => m.winner !== undefined);
 
@@ -149,41 +150,42 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
 
             {isExpanded && (
               <div className="round-matches">
-                {roundMatches.map(match => (
-                  <div
-                    key={match.id}
-                    className={`match-row${match.winner ? ' match-complete' : ''}`}
-                    data-testid={`match-${match.id}`}
-                  >
-                    <div className="match-court">Court {match.courtNumber}</div>
-                    <div className="match-display">
-                      {isSingles(match) ? (
-                        <SinglesMatch
-                          team1Player={match.team1.players[0]}
-                          team2Player={match.team2.players[0]}
-                          winner={match.winner}
-                          isClickable={true}
-                          onPlayerClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
-                        />
-                      ) : (
-                        <DoublesMatch
-                          team1Players={match.team1.players}
-                          team2Players={match.team2.players}
-                          winner={match.winner}
-                          isClickable={true}
-                          onTeamClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
-                        />
-                      )}
-                    </div>
-                    {match.winner && (
-                      <div className="match-result" data-testid={`match-result-${match.id}`}>
-                        {formatScore(match) && (
-                          <span className="match-score">{formatScore(match)}</span>
+                {roundMatches.map(match => {
+                  const score = formatScore(match);
+                  return (
+                    <div
+                      key={match.id}
+                      className={`match-row${match.winner ? ' match-complete' : ''}`}
+                      data-testid={`match-${match.id}`}
+                    >
+                      <div className="match-court">Court {match.courtNumber}</div>
+                      <div className="match-display">
+                        {isSingles(match) ? (
+                          <SinglesMatch
+                            team1Player={match.team1.players[0]}
+                            team2Player={match.team2.players[0]}
+                            winner={match.winner}
+                            isClickable={true}
+                            onPlayerClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
+                          />
+                        ) : (
+                          <DoublesMatch
+                            team1Players={match.team1.players}
+                            team2Players={match.team2.players}
+                            winner={match.winner}
+                            isClickable={true}
+                            onTeamClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
+                          />
                         )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {match.winner && (
+                        <div className="match-result" data-testid={`match-result-${match.id}`}>
+                          {score && <span className="match-score">{score}</span>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
