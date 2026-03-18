@@ -28,4 +28,25 @@ export class TournamentPage {
     await this.page.getByTestId('start-tournament-button').click();
     await expect(this.page.getByTestId('tournament-matches')).toBeVisible();
   }
+
+  /** Click the Elimination type pill. */
+  async selectEliminationType(): Promise<void> {
+    await this.page.getByTestId('tournament-type-pill-elimination').click();
+  }
+
+  /** Start tournament and wait for the elimination bracket to appear. */
+  async startElimination(): Promise<void> {
+    await this.page.getByTestId('start-tournament-button').click();
+    await expect(this.page.getByTestId('elimination-bracket')).toBeVisible();
+  }
+
+  /** Click a team row in the bracket by match data-testid and team number. */
+  async clickBracketTeam(matchId: string, team: 1 | 2): Promise<void> {
+    await this.page.getByTestId(`bracket-team-${team}-${matchId}`).click();
+  }
+
+  /** Confirm the score modal (uses default scores). */
+  async confirmResult(): Promise<void> {
+    await this.page.getByTestId('score-modal-confirm').click();
+  }
 }

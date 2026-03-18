@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-import EliminationBracket from '../components/tournament/EliminationBracket';
+import EliminationBracket from '../components/tournament/bracket';
 import TournamentMatches from '../components/tournament/TournamentMatches';
 import TournamentSetup from '../components/tournament/TournamentSetup';
 import TournamentStandings from '../components/tournament/TournamentStandings';
