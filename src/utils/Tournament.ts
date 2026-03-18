@@ -1,6 +1,6 @@
 import type { Player } from '../types';
 import type {
-  DEBracket,
+  SEBracket,
   TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
@@ -26,9 +26,9 @@ export default class Tournament {
     format: TournamentFormat,
     type: TournamentType,
   ): Tournament {
-    if (type === 'double-elimination') {
-      const { matches, deBracket } = Tournament._generateDEFirstStage(teams, numberOfCourts);
-      return new Tournament({ phase: 'active', format, type, numberOfCourts, teams, matches, deBracket });
+    if (type === 'elimination') {
+      const { matches, seBracket } = Tournament._generateSEFirstStage(teams, numberOfCourts);
+      return new Tournament({ phase: 'active', format, type, numberOfCourts, teams, matches, seBracket });
     }
     const matches = Tournament._generateRoundRobinMatches(teams, numberOfCourts);
     return new Tournament({ phase: 'active', format, type, numberOfCourts, teams, matches });
@@ -85,11 +85,11 @@ export default class Tournament {
   /**
    * Standings sorted appropriately for the tournament type.
    * Round-robin: descending by points → scoreDiff → name.
-   * Double elimination: ascending by losses → descending by wins → name.
+   * Elimination: ascending by losses → descending by wins → name.
    */
   getStandings(): TournamentStandingRow[] {
     const standings = Tournament._calculateStandings(this.state.teams, this.state.matches);
-    if (this.state.type === 'double-elimination') {
+    if (this.state.type === 'elimination') {
       return [...standings].sort((a, b) => {
         if (a.lost !== b.lost) return a.lost - b.lost;
         if (b.won !== a.won) return b.won - a.won;
@@ -121,23 +121,28 @@ export default class Tournament {
     return completed;
   }
 
-  /** Highest round number present in the match list. */
+  /** Total rounds: for SE returns log2(size) from start; for RR returns max round in match list. */
   getTotalRounds(): number {
-    const { matches } = this.state;
+    const { type, matches, seBracket } = this.state;
+    if (type === 'elimination' && seBracket) {
+      return Math.log2(seBracket.size);
+    }
     if (matches.length === 0) return 0;
     return Math.max(...matches.map(m => m.round));
   }
 
   /**
    * True when the tournament has ended.
-   * Double elimination: the grand-final match has a winner.
+   * Elimination: the final-round match has a winner.
    * Round robin: all rounds are complete.
    */
   isComplete(): boolean {
-    const { type, matches } = this.state;
-    if (type === 'double-elimination') {
-      const gf = matches.find(m => m.bracket === 'grand-final');
-      return gf !== undefined && gf.winner !== undefined;
+    const { type, matches, seBracket } = this.state;
+    if (type === 'elimination') {
+      if (!seBracket) return false;
+      const finalRound = Math.log2(seBracket.size);
+      const finalMatches = matches.filter(m => m.round === finalRound);
+      return finalMatches.length === 1 && finalMatches[0].winner !== undefined;
     }
     const total = this.getTotalRounds();
     return total > 0 && this.getCompletedRounds() === total;
@@ -145,8 +150,8 @@ export default class Tournament {
 
   /**
    * Record a match result and return a new Tournament instance.
-   * For double elimination, automatically generates the next stage when all
-   * current matches are decided and the grand final is not yet complete.
+   * For elimination, automatically generates the next round when all
+   * current-round matches are decided and the tournament is not yet complete.
    */
   recordResult(
     matchId: string,
@@ -157,13 +162,15 @@ export default class Tournament {
       m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
     );
 
-    if (this.state.type === 'double-elimination') {
-      const allDone = updatedMatches.every(m => m.winner !== undefined);
-      const gf = updatedMatches.find(m => m.bracket === 'grand-final');
-      const gfDone = gf !== undefined && gf.winner !== undefined;
-      if (allDone && !gfDone) {
-        const { newMatches, updatedBracket } = Tournament._generateNextDEStage(
-          this.state.deBracket!,
+    if (this.state.type === 'elimination' && this.state.seBracket) {
+      const maxRound = Math.max(...updatedMatches.map(m => m.round));
+      const currentRoundMatches = updatedMatches.filter(m => m.round === maxRound);
+      const allCurrentDone = currentRoundMatches.every(m => m.winner !== undefined);
+      const totalRounds = Math.log2(this.state.seBracket.size);
+
+      if (allCurrentDone && maxRound < totalRounds) {
+        const newMatches = Tournament._generateNextSERound(
+          this.state.seBracket,
           this.state.teams,
           updatedMatches,
           this.state.numberOfCourts,
@@ -171,7 +178,6 @@ export default class Tournament {
         return new Tournament({
           ...this.state,
           matches: [...updatedMatches, ...newMatches],
-          deBracket: updatedBracket,
         });
       }
     }
@@ -185,14 +191,6 @@ export default class Tournament {
 
   private static _makeMatchId(index: number): string {
     return `match-${Date.now()}-${index}`;
-  }
-
-  private static _getWinnerId(match: TournamentMatch): string {
-    return match.winner === 1 ? match.team1.id : match.team2.id;
-  }
-
-  private static _getLoserId(match: TournamentMatch): string {
-    return match.winner === 1 ? match.team2.id : match.team1.id;
   }
 
   private static _compareTeamsByName(
@@ -282,136 +280,141 @@ export default class Tournament {
     return matches;
   }
 
-  private static _generateDEFirstStage(
+  // ─── Single Elimination ──────────────────────────────────────────────────────
+
+  private static _nextPowerOfTwo(n: number): number {
+    let p = 1;
+    while (p < n) p <<= 1;
+    return p;
+  }
+
+  /**
+   * Build the seeding array for a bracket of `size` slots with `teams.length` teams.
+   * Slots are filled as: first `numRealPairs*2` slots get paired teams (real R1 matches),
+   * then remaining slots alternate team/null (bye pairs).
+   */
+  private static _buildSESeeding(teams: TournamentTeam[], size: number): (string | null)[] {
+    const n = teams.length;
+    const numRealPairs = n - size / 2;
+    const numByePairs = size / 2 - numRealPairs;
+    const seeding: (string | null)[] = new Array(size).fill(null);
+
+    // Fill real pairs (consecutive teams, no byes)
+    for (let i = 0; i < numRealPairs * 2; i++) {
+      seeding[i] = teams[i].id;
+    }
+
+    // Fill bye pairs (one team per pair, null in the second slot)
+    let teamIdx = numRealPairs * 2;
+    for (let i = 0; i < numByePairs; i++) {
+      seeding[numRealPairs * 2 + i * 2] = teams[teamIdx].id;
+      // seeding[numRealPairs * 2 + i * 2 + 1] stays null (bye)
+      teamIdx++;
+    }
+
+    return seeding;
+  }
+
+  private static _generateSEFirstStage(
     teams: TournamentTeam[],
     numberOfCourts: number,
-  ): { matches: TournamentMatch[]; deBracket: DEBracket } {
-    const wbSlots = teams.map(t => t.id);
+  ): { matches: TournamentMatch[]; seBracket: SEBracket } {
+    const size = Tournament._nextPowerOfTwo(teams.length);
+    const seeding = Tournament._buildSESeeding(teams, size);
     const teamMap = new Map(teams.map(t => [t.id, t]));
     const matches: TournamentMatch[] = [];
     let matchIndex = 0;
 
-    const startIdx = wbSlots.length % 2 !== 0 ? 1 : 0;
-    for (let i = startIdx; i + 1 < wbSlots.length; i += 2) {
-      matches.push({
-        id: Tournament._makeMatchId(matchIndex),
-        round: 1,
-        courtNumber: (matchIndex % numberOfCourts) + 1,
-        team1: teamMap.get(wbSlots[i])!,
-        team2: teamMap.get(wbSlots[i + 1])!,
-        bracket: 'winners',
-      });
-      matchIndex++;
-    }
-
-    return { matches, deBracket: { wbSlots, lbSlots: [] } };
-  }
-
-  private static _generateNextDEStage(
-    deBracket: DEBracket,
-    teams: TournamentTeam[],
-    completedMatches: TournamentMatch[],
-    numberOfCourts: number,
-  ): { newMatches: TournamentMatch[]; updatedBracket: DEBracket } {
-    const teamMap = new Map(teams.map(t => [t.id, t]));
-    const maxRound = Math.max(...completedMatches.map(m => m.round));
-    const lastRoundMatches = completedMatches.filter(m => m.round === maxRound);
-    const nextRound = maxRound + 1;
-
-    const wbMatches = lastRoundMatches.filter(m => m.bracket === 'winners');
-    const lbMatches = lastRoundMatches.filter(m => m.bracket === 'losers');
-
-    const { wbSlots } = deBracket;
-    const wbHadBye = wbSlots.length % 2 !== 0;
-    const wbByeTeam = wbHadBye ? wbSlots[0] : null;
-
-    const newWbSlots: string[] = wbByeTeam ? [wbByeTeam] : [];
-    const newLbEntrants: string[] = [];
-
-    for (const match of wbMatches) {
-      newWbSlots.push(Tournament._getWinnerId(match));
-      newLbEntrants.push(Tournament._getLoserId(match));
-    }
-
-    const survivingLbSlots: string[] = [];
-    for (const match of lbMatches) {
-      survivingLbSlots.push(Tournament._getWinnerId(match));
-    }
-
-    if (newWbSlots.length === 1 && survivingLbSlots.length === 1 && newLbEntrants.length === 0) {
-      const matchIndex = completedMatches.length;
-      const gfMatch: TournamentMatch = {
-        id: Tournament._makeMatchId(matchIndex),
-        round: nextRound,
-        courtNumber: (matchIndex % numberOfCourts) + 1,
-        team1: teamMap.get(newWbSlots[0])!,
-        team2: teamMap.get(survivingLbSlots[0])!,
-        bracket: 'grand-final',
-      };
-      return {
-        newMatches: [gfMatch],
-        updatedBracket: { wbSlots: newWbSlots, lbSlots: survivingLbSlots },
-      };
-    }
-
-    const newLbPairs: [string, string][] = [];
-    if (survivingLbSlots.length === 0) {
-      for (let i = 0; i + 1 < newLbEntrants.length; i += 2) {
-        newLbPairs.push([newLbEntrants[i], newLbEntrants[i + 1]]);
-      }
-    } else if (newLbEntrants.length > 0) {
-      const pairCount = Math.min(survivingLbSlots.length, newLbEntrants.length);
-      for (let i = 0; i < pairCount; i++) {
-        newLbPairs.push([survivingLbSlots[i], newLbEntrants[i]]);
-      }
-      const extraSurvivors = survivingLbSlots.slice(pairCount);
-      for (let i = 0; i + 1 < extraSurvivors.length; i += 2) {
-        newLbPairs.push([extraSurvivors[i], extraSurvivors[i + 1]]);
-      }
-      const extraEntrants = newLbEntrants.slice(pairCount);
-      for (let i = 0; i + 1 < extraEntrants.length; i += 2) {
-        newLbPairs.push([extraEntrants[i], extraEntrants[i + 1]]);
-      }
-    } else {
-      for (let i = 0; i + 1 < survivingLbSlots.length; i += 2) {
-        newLbPairs.push([survivingLbSlots[i], survivingLbSlots[i + 1]]);
-      }
-    }
-
-    const newMatches: TournamentMatch[] = [];
-    let matchIndex = completedMatches.length;
-
-    if (newWbSlots.length >= 2) {
-      const wbHasNewBye = newWbSlots.length % 2 !== 0;
-      const startIdx = wbHasNewBye ? 1 : 0;
-      for (let i = startIdx; i + 1 < newWbSlots.length; i += 2) {
-        newMatches.push({
+    // Create matches only for real pairs (both slots non-null)
+    for (let i = 0; i < size / 2; i++) {
+      const t1Id = seeding[2 * i];
+      const t2Id = seeding[2 * i + 1];
+      if (t1Id !== null && t2Id !== null) {
+        matches.push({
           id: Tournament._makeMatchId(matchIndex),
-          round: nextRound,
+          round: 1,
           courtNumber: (matchIndex % numberOfCourts) + 1,
-          team1: teamMap.get(newWbSlots[i])!,
-          team2: teamMap.get(newWbSlots[i + 1])!,
-          bracket: 'winners',
+          team1: teamMap.get(t1Id)!,
+          team2: teamMap.get(t2Id)!,
         });
         matchIndex++;
       }
     }
 
-    for (const [id1, id2] of newLbPairs) {
+    return { matches, seBracket: { size, seeding } };
+  }
+
+  /**
+   * Returns the ordered list of team IDs that advanced after `round` rounds.
+   * Size of result: size / 2^round.
+   * Bye slots advance automatically; real match slots use match winner.
+   */
+  private static _resolveSurvivors(
+    seBracket: SEBracket,
+    matches: TournamentMatch[],
+    round: number,
+  ): string[] {
+    const { size, seeding } = seBracket;
+
+    if (round === 1) {
+      const survivors: string[] = [];
+      for (let i = 0; i < size / 2; i++) {
+        const t1Id = seeding[2 * i];
+        const t2Id = seeding[2 * i + 1];
+        if (t1Id === null) {
+          survivors.push(t2Id!);
+        } else if (t2Id === null) {
+          survivors.push(t1Id);
+        } else {
+          const match = matches.find(
+            m => m.round === 1 &&
+              ((m.team1.id === t1Id && m.team2.id === t2Id) ||
+               (m.team1.id === t2Id && m.team2.id === t1Id)),
+          );
+          survivors.push(match!.winner === 1 ? match!.team1.id : match!.team2.id);
+        }
+      }
+      return survivors;
+    }
+
+    const prevSurvivors = Tournament._resolveSurvivors(seBracket, matches, round - 1);
+    const survivors: string[] = [];
+    for (let i = 0; i < prevSurvivors.length / 2; i++) {
+      const t1Id = prevSurvivors[2 * i];
+      const t2Id = prevSurvivors[2 * i + 1];
+      const match = matches.find(
+        m => m.round === round &&
+          ((m.team1.id === t1Id && m.team2.id === t2Id) ||
+           (m.team1.id === t2Id && m.team2.id === t1Id)),
+      );
+      survivors.push(match!.winner === 1 ? match!.team1.id : match!.team2.id);
+    }
+    return survivors;
+  }
+
+  private static _generateNextSERound(
+    seBracket: SEBracket,
+    teams: TournamentTeam[],
+    completedMatches: TournamentMatch[],
+    numberOfCourts: number,
+  ): TournamentMatch[] {
+    const maxRound = Math.max(...completedMatches.map(m => m.round));
+    const survivors = Tournament._resolveSurvivors(seBracket, completedMatches, maxRound);
+    const nextRound = maxRound + 1;
+    const teamMap = new Map(teams.map(t => [t.id, t]));
+    const newMatches: TournamentMatch[] = [];
+
+    for (let i = 0; i < survivors.length / 2; i++) {
+      const matchIndex = completedMatches.length + newMatches.length;
       newMatches.push({
         id: Tournament._makeMatchId(matchIndex),
         round: nextRound,
         courtNumber: (matchIndex % numberOfCourts) + 1,
-        team1: teamMap.get(id1)!,
-        team2: teamMap.get(id2)!,
-        bracket: 'losers',
+        team1: teamMap.get(survivors[2 * i])!,
+        team2: teamMap.get(survivors[2 * i + 1])!,
       });
-      matchIndex++;
     }
 
-    return {
-      newMatches,
-      updatedBracket: { wbSlots: newWbSlots, lbSlots: newLbPairs.flat() },
-    };
+    return newMatches;
   }
 }

@@ -199,14 +199,14 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
       <div className="setup-section">
         <h3>Tournament Type</h3>
         <div className="format-pills" data-testid="tournament-type-pills">
-          {(['round-robin', 'double-elimination'] as TournamentType[]).map(t => (
+          {(['round-robin', 'elimination'] as TournamentType[]).map(t => (
             <button
               key={t}
               className={`format-pill${tournamentType === t ? ' format-pill-active' : ''}`}
               onClick={() => setTournamentType(t)}
               data-testid={`tournament-type-pill-${t}`}
             >
-              {t === 'round-robin' ? 'Round Robin' : 'Double Elimination'}
+              {t === 'round-robin' ? 'Round Robin' : 'Elimination'}
             </button>
           ))}
         </div>

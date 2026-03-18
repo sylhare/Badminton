@@ -105,3 +105,27 @@
   stroke-width: 1.5;
   fill: none;
 }
+
+/* TBD placeholder slot */
+
+.bracket-team-tbd {
+  color: #bbb;
+  font-style: italic;
+  cursor: default;
+}
+
+.bracket-team-tbd:hover {
+  background: inherit;
+}
+
+/* Bye-advance slot */
+
+.bracket-team-bye {
+  color: #ccc;
+  font-style: italic;
+  cursor: default;
+}
+
+.bracket-team-bye:hover {
+  background: inherit;
+}

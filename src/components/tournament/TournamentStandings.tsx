@@ -13,10 +13,9 @@ interface TournamentStandingsProps {
 
 const RANK_EMOJI = ['🥇', '🥈', '🥉'];
 
-function deBracketStatus(row: TournamentStandingRow, isFinal: boolean | undefined): string {
+function seStatus(row: TournamentStandingRow, isFinal: boolean | undefined): string {
   if (isFinal && row.lost === 0) return '🏆';
-  if (row.lost === 0) return 'WB';
-  if (row.lost === 1) return 'LB';
+  if (row.lost === 0) return 'In';
   return 'Out';
 }
 
@@ -27,11 +26,11 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   isFinal,
   tournamentType,
 }) => {
-  const isDE = tournamentType === 'double-elimination';
+  const isSE = tournamentType === 'elimination';
 
   let subtitle: string;
-  if (isDE) {
-    subtitle = isFinal ? 'Tournament Complete' : 'Double Elimination';
+  if (isSE) {
+    subtitle = isFinal ? 'Tournament Complete' : 'Elimination';
   } else {
     subtitle = currentRound > 0 ? `After Round ${currentRound} / ${totalRounds}` : `Round 0 / ${totalRounds}`;
   }
@@ -49,7 +48,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
             <th>Team</th>
             <th>W</th>
             <th>L</th>
-            {isDE ? <th>Status</th> : <><th>Pts</th><th>Score Diff</th></>}
+            {isSE ? <th>Status</th> : <><th>Pts</th><th>Score Diff</th></>}
           </tr>
         </thead>
         <tbody>
@@ -59,12 +58,12 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
               className={index === 0 && standings.length > 1 ? 'top' : ''}
               data-testid={`standing-row-${index}`}
             >
-              <td>{isFinal && !isDE && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
+              <td>{isFinal && !isSE && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
               <td>{Tournament.formatTeamName(row.team)}</td>
               <td>{row.won}</td>
               <td>{row.lost}</td>
-              {isDE ? (
-                <td data-testid={`de-status-${index}`}>{deBracketStatus(row, isFinal)}</td>
+              {isSE ? (
+                <td data-testid={`se-status-${index}`}>{seStatus(row, isFinal)}</td>
               ) : (
                 <>
                   <td>{row.points}</td>

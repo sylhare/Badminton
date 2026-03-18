@@ -1,7 +1,7 @@
 import type { Player } from './index';
 
 export type TournamentFormat = 'singles' | 'doubles';
-export type TournamentType = 'round-robin' | 'double-elimination';
+export type TournamentType = 'round-robin' | 'elimination';
 export type TournamentPhase = 'setup' | 'active' | 'completed';
 
 export interface TournamentTeam {
@@ -17,7 +17,6 @@ export interface TournamentMatch {
   team2: TournamentTeam;
   winner?: 1 | 2;
   score?: { team1: number; team2: number };
-  bracket?: 'winners' | 'losers' | 'grand-final';
 }
 
 export interface TournamentStandingRow {
@@ -29,9 +28,9 @@ export interface TournamentStandingRow {
   scoreDiff: number;
 }
 
-export interface DEBracket {
-  wbSlots: string[];
-  lbSlots: string[];
+export interface SEBracket {
+  size: number;                  // next power of 2 >= N
+  seeding: (string | null)[];   // team IDs in bracket slot order; null = bye
 }
 
 export interface TournamentState {
@@ -41,7 +40,7 @@ export interface TournamentState {
   numberOfCourts: number;
   teams: TournamentTeam[];
   matches: TournamentMatch[];
-  deBracket?: DEBracket;
+  seBracket?: SEBracket;
 }
 
 export const DEFAULT_TOURNAMENT_STATE: TournamentState = {

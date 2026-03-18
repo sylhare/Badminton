@@ -20,28 +20,7 @@ function getCurrentRound(matches: TournamentMatch[]): number {
   return roundNums[roundNums.length - 1] ?? 1;
 }
 
-function getRoundLabel(allMatches: TournamentMatch[], round: number): string {
-  const roundMatches = allMatches.filter(m => m.round === round);
-  if (roundMatches.length === 0) return `Round ${round}`;
-  if (roundMatches.some(m => m.bracket === 'grand-final')) return 'Grand Final';
-  if (!roundMatches[0].bracket) return `Round ${round}`;
-
-  const brackets = new Set(roundMatches.map(m => m.bracket));
-  if (brackets.size > 1) return `Stage ${round}`;
-
-  const bracket = [...brackets][0];
-  if (bracket === 'winners') {
-    const wbRoundNum = new Set(
-      allMatches.filter(m => m.bracket === 'winners' && m.round <= round).map(m => m.round),
-    ).size;
-    return `Winners Round ${wbRoundNum}`;
-  }
-  if (bracket === 'losers') {
-    const lbRoundNum = new Set(
-      allMatches.filter(m => m.bracket === 'losers' && m.round <= round).map(m => m.round),
-    ).size;
-    return `Losers Round ${lbRoundNum}`;
-  }
+function getRoundLabel(_allMatches: TournamentMatch[], round: number): string {
   return `Round ${round}`;
 }
 

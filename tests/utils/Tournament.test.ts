@@ -18,9 +18,8 @@ function makeMatch(
   team2: TournamentTeam,
   winner?: 1 | 2,
   score?: { team1: number; team2: number },
-  bracket?: TournamentMatch['bracket'],
 ): TournamentMatch {
-  return { id, round, courtNumber: 1, team1, team2, winner, score, bracket };
+  return { id, round, courtNumber: 1, team1, team2, winner, score };
 }
 
 describe('Tournament RR match generation', () => {
@@ -207,14 +206,14 @@ describe('Tournament.getTotalRounds', () => {
   const teamA = makeTeam('a', ['A']);
   const teamB = makeTeam('b', ['B']);
 
-  it('returns 0 for a tournament with no matches', () => {
+  it('returns 0 for a RR tournament with no matches', () => {
     expect(Tournament.from({
       phase: 'active', format: 'singles', type: 'round-robin',
       numberOfCourts: 2, teams: [], matches: [],
     }).getTotalRounds()).toBe(0);
   });
 
-  it('returns max round number', () => {
+  it('returns max round number for RR', () => {
     expect(Tournament.from({
       phase: 'active', format: 'singles', type: 'round-robin',
       numberOfCourts: 2, teams: [teamA, teamB],
@@ -224,6 +223,15 @@ describe('Tournament.getTotalRounds', () => {
         makeMatch('m3', 3, teamA, teamB),
       ],
     }).getTotalRounds()).toBe(3);
+  });
+
+  it('returns log2(size) for SE regardless of matches generated', () => {
+    const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C']), makeTeam('d', ['D'])];
+    const t = Tournament.start(teams, 2, 'singles', 'elimination');
+    // 4 teams → size=4 → log2(4)=2 rounds total
+    expect(t.getTotalRounds()).toBe(2);
+    // Still 2 after R1 matches exist but R2 not yet generated
+    expect(t.getTotalRounds()).toBe(2);
   });
 });
 
@@ -294,143 +302,174 @@ describe('Tournament.createSingleTeams', () => {
   });
 });
 
-describe('Tournament DE first stage', () => {
-  it('generates 2 WB matches for 4 teams with no bye', () => {
+describe('Tournament SE first stage', () => {
+  it('4 teams → size=4, 2 R1 matches, no nulls in seeding', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C']), makeTeam('d', ['D'])];
-    const { matches, deBracket } = Tournament.start(teams, 2, 'singles', 'double-elimination').toState();
+    const { matches, seBracket } = Tournament.start(teams, 2, 'singles', 'elimination').toState();
+    expect(seBracket!.size).toBe(4);
+    expect(seBracket!.seeding).toHaveLength(4);
+    expect(seBracket!.seeding.every(s => s !== null)).toBe(true);
     expect(matches).toHaveLength(2);
-    expect(matches.every(m => m.bracket === 'winners')).toBe(true);
     expect(matches.every(m => m.round === 1)).toBe(true);
-    expect(deBracket!.wbSlots).toEqual(['a', 'b', 'c', 'd']);
-    expect(deBracket!.lbSlots).toEqual([]);
   });
 
-  it('generates 4 WB matches for 8 teams with no bye', () => {
-    const teams = ['a','b','c','d','e','f','g','h'].map(id => makeTeam(id, [id.toUpperCase()]));
-    const { matches, deBracket } = Tournament.start(teams, 4, 'singles', 'double-elimination').toState();
-    expect(matches).toHaveLength(4);
-    expect(deBracket!.wbSlots).toHaveLength(8);
-    expect(deBracket!.lbSlots).toHaveLength(0);
+  it('6 teams → size=8, seeding has 2 nulls (byes), 2 R1 matches', () => {
+    const teams = ['a','b','c','d','e','f'].map(id => makeTeam(id, [id.toUpperCase()]));
+    const { matches, seBracket } = Tournament.start(teams, 4, 'singles', 'elimination').toState();
+    expect(seBracket!.size).toBe(8);
+    expect(seBracket!.seeding).toHaveLength(8);
+    const nullCount = seBracket!.seeding.filter(s => s === null).length;
+    expect(nullCount).toBe(2);
+    expect(matches).toHaveLength(2);
+    expect(matches.every(m => m.round === 1)).toBe(true);
   });
 
-  it('gives a bye to the first team when odd count', () => {
+  it('3 teams → size=4, 1 R1 match + 1 bye pair', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C'])];
-    const { matches, deBracket } = Tournament.start(teams, 2, 'singles', 'double-elimination').toState();
+    const { matches, seBracket } = Tournament.start(teams, 2, 'singles', 'elimination').toState();
+    expect(seBracket!.size).toBe(4);
+    expect(seBracket!.seeding).toHaveLength(4);
+    const nullCount = seBracket!.seeding.filter(s => s === null).length;
+    expect(nullCount).toBe(1);
     expect(matches).toHaveLength(1);
-    expect(matches[0].team1.id).toBe('b');
-    expect(matches[0].team2.id).toBe('c');
-    expect(deBracket!.wbSlots[0]).toBe('a');
   });
 
   it('cycles court numbers', () => {
     const teams = ['a','b','c','d'].map(id => makeTeam(id, [id]));
-    const { matches } = Tournament.start(teams, 1, 'singles', 'double-elimination').toState();
+    const { matches } = Tournament.start(teams, 1, 'singles', 'elimination').toState();
     expect(matches.every(m => m.courtNumber === 1)).toBe(true);
   });
 });
 
-describe('Tournament DE walkthrough — 4 teams', () => {
+describe('Tournament SE walkthrough — 4 teams', () => {
   const teamA = makeTeam('a', ['A']);
   const teamB = makeTeam('b', ['B']);
   const teamC = makeTeam('c', ['C']);
   const teamD = makeTeam('d', ['D']);
   const teams = [teamA, teamB, teamC, teamD];
 
-  function findMatch(matches: TournamentMatch[], t1Id: string, t2Id: string) {
-    return matches.find(m => m.team1.id === t1Id && m.team2.id === t2Id)!;
-  }
-
-  it('stage 2: generates WB R2 + LB R1 after WB R1 results', () => {
-    let t = Tournament.start(teams, 2, 'singles', 'double-elimination');
+  it('R1 results → R2 generated with correct matchup', () => {
+    let t = Tournament.start(teams, 2, 'singles', 'elimination');
     const r1 = t.toState().matches;
-    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); 
-    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); 
+    expect(r1).toHaveLength(2);
+
+    // Record both R1 results: A beats B, C beats D
+    t = t.recordResult(r1[0].id, 1); // A beats B
+    t = t.recordResult(r1[1].id, 1); // C beats D
 
     const state = t.toState();
     const r2 = state.matches.filter(m => m.round === 2);
-    const wbMatches = r2.filter(m => m.bracket === 'winners');
-    const lbMatches = r2.filter(m => m.bracket === 'losers');
-
-    expect(wbMatches).toHaveLength(1); 
-    expect(lbMatches).toHaveLength(1); 
-    expect(wbMatches[0].team1.id).toBe('a');
-    expect(wbMatches[0].team2.id).toBe('c');
-    expect(state.deBracket!.wbSlots).toEqual(['a', 'c']);
-    expect(state.deBracket!.lbSlots).toContain('b');
-    expect(state.deBracket!.lbSlots).toContain('d');
+    expect(r2).toHaveLength(1);
+    // R2 should be A vs C (both R1 winners)
+    const r2Teams = [r2[0].team1.id, r2[0].team2.id].sort();
+    expect(r2Teams).toContain('a');
+    expect(r2Teams).toContain('c');
   });
 
-  it('stage 3: generates LB R2 only when WB R2 produces 1 winner', () => {
-    let t = Tournament.start(teams, 2, 'singles', 'double-elimination');
+  it('isComplete after final match decided', () => {
+    let t = Tournament.start(teams, 2, 'singles', 'elimination');
+    expect(t.isComplete()).toBe(false);
 
     const r1 = t.toState().matches;
-    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); 
-    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); 
+    t = t.recordResult(r1[0].id, 1);
+    t = t.recordResult(r1[1].id, 1);
+    expect(t.isComplete()).toBe(false);
 
     const r2 = t.toState().matches.filter(m => m.round === 2);
-    t = t.recordResult(findMatch(r2, 'a', 'c').id, 1); 
-    t = t.recordResult(r2.filter(m => m.bracket === 'losers')[0].id, 1); 
-
-    const state = t.toState();
-    const r3 = state.matches.filter(m => m.round === 3);
-
-    expect(r3.filter(m => m.bracket === 'winners')).toHaveLength(0);
-    expect(r3.filter(m => m.bracket === 'losers')).toHaveLength(1); 
-    expect(state.deBracket!.wbSlots).toEqual(['a']);
+    t = t.recordResult(r2[0].id, 1);
+    expect(t.isComplete()).toBe(true);
   });
 
-  it('stage 4: generates Grand Final when 1 WB + 1 LB champion', () => {
-    let t = Tournament.start(teams, 2, 'singles', 'double-elimination');
-
-    const r1 = t.toState().matches;
-    t = t.recordResult(findMatch(r1, 'a', 'b').id, 1); 
-    t = t.recordResult(findMatch(r1, 'c', 'd').id, 1); 
-
-    const r2 = t.toState().matches.filter(m => m.round === 2);
-    t = t.recordResult(findMatch(r2, 'a', 'c').id, 1); 
-    t = t.recordResult(r2.filter(m => m.bracket === 'losers')[0].id, 1); 
-
-    const r3 = t.toState().matches.filter(m => m.round === 3);
-    t = t.recordResult(r3[0].id, 1); 
-
-    const state = t.toState();
-    const gf = state.matches.filter(m => m.bracket === 'grand-final');
-
-    expect(gf).toHaveLength(1);
-    expect(gf[0].team1.id).toBe('a');
-    expect(gf[0].team2.id).toBe('b');
-    expect(state.deBracket!.wbSlots).toEqual(['a']);
-    expect(state.deBracket!.lbSlots).toContain('b');
+  it('getTotalRounds returns 2 (log2(4)) from the start', () => {
+    const t = Tournament.start(teams, 2, 'singles', 'elimination');
+    expect(t.getTotalRounds()).toBe(2);
   });
 });
 
-describe('Tournament.isComplete', () => {
+describe('Tournament SE walkthrough — 6 teams', () => {
+  const teams = ['a','b','c','d','e','f'].map(id => makeTeam(id, [id.toUpperCase()]));
+
+  it('R1 has 2 matches (4 teams play, 2 get byes)', () => {
+    const { matches } = Tournament.start(teams, 4, 'singles', 'elimination').toState();
+    expect(matches.filter(m => m.round === 1)).toHaveLength(2);
+  });
+
+  it('after R1, R2 has 2 matches (R1 winners + bye teams)', () => {
+    let t = Tournament.start(teams, 4, 'singles', 'elimination');
+    const r1 = t.toState().matches;
+    t = t.recordResult(r1[0].id, 1);
+    t = t.recordResult(r1[1].id, 1);
+
+    const r2 = t.toState().matches.filter(m => m.round === 2);
+    expect(r2).toHaveLength(2);
+  });
+
+  it('after R2, final (R3) is generated', () => {
+    let t = Tournament.start(teams, 4, 'singles', 'elimination');
+    const r1 = t.toState().matches;
+    t = t.recordResult(r1[0].id, 1);
+    t = t.recordResult(r1[1].id, 1);
+
+    const r2 = t.toState().matches.filter(m => m.round === 2);
+    t = t.recordResult(r2[0].id, 1);
+    t = t.recordResult(r2[1].id, 1);
+
+    const r3 = t.toState().matches.filter(m => m.round === 3);
+    expect(r3).toHaveLength(1);
+    expect(t.isComplete()).toBe(false);
+  });
+
+  it('isComplete after final decided', () => {
+    let t = Tournament.start(teams, 4, 'singles', 'elimination');
+    const r1 = t.toState().matches;
+    t = t.recordResult(r1[0].id, 1);
+    t = t.recordResult(r1[1].id, 1);
+
+    const r2 = t.toState().matches.filter(m => m.round === 2);
+    t = t.recordResult(r2[0].id, 1);
+    t = t.recordResult(r2[1].id, 1);
+
+    const r3 = t.toState().matches.filter(m => m.round === 3);
+    t = t.recordResult(r3[0].id, 1);
+    expect(t.isComplete()).toBe(true);
+  });
+
+  it('getTotalRounds returns 3 (log2(8)) from the start', () => {
+    const t = Tournament.start(teams, 4, 'singles', 'elimination');
+    expect(t.getTotalRounds()).toBe(3);
+  });
+});
+
+describe('Tournament SE isComplete', () => {
   const teamA = makeTeam('a', ['A']);
   const teamB = makeTeam('b', ['B']);
 
-  it('returns false for DE when no grand-final match exists', () => {
+  it('returns false when no matches', () => {
     const t = Tournament.from({
-      phase: 'active', format: 'singles', type: 'double-elimination',
+      phase: 'active', format: 'singles', type: 'elimination',
       numberOfCourts: 2, teams: [teamA, teamB],
-      matches: [makeMatch('m1', 1, teamA, teamB, 1, undefined, 'winners')],
+      matches: [],
+      seBracket: { size: 2, seeding: ['a', 'b'] },
     });
     expect(t.isComplete()).toBe(false);
   });
 
-  it('returns false for DE when grand-final has no winner yet', () => {
+  it('returns false when final match has no winner yet', () => {
     const t = Tournament.from({
-      phase: 'active', format: 'singles', type: 'double-elimination',
+      phase: 'active', format: 'singles', type: 'elimination',
       numberOfCourts: 2, teams: [teamA, teamB],
-      matches: [makeMatch('m1', 2, teamA, teamB, undefined, undefined, 'grand-final')],
+      matches: [makeMatch('m1', 1, teamA, teamB)],
+      seBracket: { size: 2, seeding: ['a', 'b'] },
     });
     expect(t.isComplete()).toBe(false);
   });
 
-  it('returns true for DE when grand-final has a winner', () => {
+  it('returns true when final match has a winner', () => {
     const t = Tournament.from({
-      phase: 'active', format: 'singles', type: 'double-elimination',
+      phase: 'active', format: 'singles', type: 'elimination',
       numberOfCourts: 2, teams: [teamA, teamB],
-      matches: [makeMatch('m1', 2, teamA, teamB, 1, undefined, 'grand-final')],
+      matches: [makeMatch('m1', 1, teamA, teamB, 1)],
+      seBracket: { size: 2, seeding: ['a', 'b'] },
     });
     expect(t.isComplete()).toBe(true);
   });

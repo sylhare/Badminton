@@ -20,7 +20,10 @@ function TournamentPage(): React.ReactElement {
       ([appState, savedTournament]) => {
         if (appState.players) setInitialPlayers(appState.players);
         if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
-        if (savedTournament) setTournament(Tournament.from(savedTournament));
+        // Discard stale double-elimination state (incompatible structure)
+        if (savedTournament && (savedTournament.type as string) !== 'double-elimination') {
+          setTournament(Tournament.from(savedTournament));
+        }
         setIsLoaded(true);
       },
     );
@@ -66,10 +69,11 @@ function TournamentPage(): React.ReactElement {
 
     content = (
       <div className="tournament-active-layout">
-        {tournamentType === 'double-elimination' ? (
+        {tournamentType === 'elimination' ? (
           <EliminationBracket
             matches={matches}
             teams={tournament.toState().teams}
+            seBracket={tournament.toState().seBracket!}
             onMatchResult={handleMatchResult}
           />
         ) : (
