@@ -164,7 +164,7 @@ export default class Tournament {
       const { seBracket, teams, numberOfCourts } = this.state;
       const wbRounds = Math.log2(seBracket.size);
 
-      const wbMatches = updatedMatches.filter(m => (m.bracket ?? 'wb') === 'wb');
+      const wbMatches = updatedMatches.filter(m => Tournament.isWB(m));
       if (wbMatches.length > 0) {
         const maxWBRound = Math.max(...wbMatches.map(m => m.round));
         if (maxWBRound < wbRounds) {
@@ -186,6 +186,14 @@ export default class Tournament {
     }
 
     return new Tournament({ ...this.state, matches: updatedMatches });
+  }
+
+  private static isWB(m: TournamentMatch): boolean {
+    return (m.bracket ?? 'wb') === 'wb';
+  }
+
+  private static isLB(m: TournamentMatch): boolean {
+    return m.bracket === 'lb';
   }
 
   private static _makeTeamId(index: number): string {
@@ -358,7 +366,7 @@ export default class Tournament {
         } else {
           const match = matches.find(
             m =>
-              (m.bracket ?? 'wb') === 'wb' &&
+              Tournament.isWB(m) &&
               m.round === 1 &&
               ((m.team1.id === t1Id && m.team2.id === t2Id) ||
                (m.team1.id === t2Id && m.team2.id === t1Id)),
@@ -376,7 +384,7 @@ export default class Tournament {
       const t2Id = prevSurvivors[2 * i + 1];
       const match = matches.find(
         m =>
-          (m.bracket ?? 'wb') === 'wb' &&
+          Tournament.isWB(m) &&
           m.round === round &&
           ((m.team1.id === t1Id && m.team2.id === t2Id) ||
            (m.team1.id === t2Id && m.team2.id === t1Id)),
@@ -396,7 +404,7 @@ export default class Tournament {
     completedMatches: TournamentMatch[],
     numberOfCourts: number,
   ): TournamentMatch[] {
-    const wbMatches = completedMatches.filter(m => (m.bracket ?? 'wb') === 'wb');
+    const wbMatches = completedMatches.filter(m => Tournament.isWB(m));
     const maxRound = Math.max(...wbMatches.map(m => m.round));
     const survivors = Tournament._resolveSurvivors(seBracket, completedMatches, maxRound);
     const nextRound = maxRound + 1;
@@ -437,7 +445,7 @@ export default class Tournament {
         if (t1Id !== null && t2Id !== null) {
           const match = matches.find(
             m =>
-              (m.bracket ?? 'wb') === 'wb' &&
+              Tournament.isWB(m) &&
               m.round === 1 &&
               ((m.team1.id === t1Id && m.team2.id === t2Id) ||
                (m.team1.id === t2Id && m.team2.id === t1Id)),
@@ -458,7 +466,7 @@ export default class Tournament {
       const t2Id = prevSurvivors[2 * i + 1];
       const match = matches.find(
         m =>
-          (m.bracket ?? 'wb') === 'wb' &&
+          Tournament.isWB(m) &&
           m.round === wbRound &&
           ((m.team1.id === t1Id && m.team2.id === t2Id) ||
            (m.team1.id === t2Id && m.team2.id === t1Id)),
@@ -479,7 +487,7 @@ export default class Tournament {
     lbRound: number,
   ): string[] {
     return matches
-      .filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === lbRound && m.winner !== undefined)
+      .filter(m => Tournament.isLB(m) && m.round === lbRound && m.winner !== undefined)
       .map(m => (m.winner === 1 ? m.team1.id : m.team2.id));
   }
 
@@ -502,8 +510,8 @@ export default class Tournament {
     const newMatches: TournamentMatch[] = [];
 
     const all = () => [...currentMatches, ...newMatches];
-    const getWBRound = (r: number) => all().filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === r);
-    const getLBRound = (r: number) => all().filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === r);
+    const getWBRound = (r: number) => all().filter(m => Tournament.isWB(m) && m.round === r);
+    const getLBRound = (r: number) => all().filter(m => Tournament.isLB(m) && m.round === r);
 
     const makeMatch = (t1Id: string, t2Id: string, round: number, bracket: MatchBracket): TournamentMatch => {
       const idx = all().length;

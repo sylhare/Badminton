@@ -1,22 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { computeBracketTree } from '../../../../src/components/tournament/bracket/computeBracketTree';
-import type { SEBracket, TournamentMatch, TournamentTeam } from '../../../../src/types/tournament';
-import { createMockPlayer } from '../../../data/testFactories';
-
-function makeTeam(id: string, name: string): TournamentTeam {
-  return { id, players: [createMockPlayer({ id: `${id}-p0`, name })] };
-}
-
-function makeMatch(
-  id: string,
-  round: number,
-  team1: TournamentTeam,
-  team2: TournamentTeam,
-  winner?: 1 | 2,
-): TournamentMatch {
-  return { id, round, courtNumber: 1, team1, team2, winner };
-}
+import type { SEBracket } from '../../../../src/types/tournament';
+import { makeTeam, makeMatch } from '../../../data/tournamentFactories';
 
 const tA = makeTeam('a', 'Alice');
 const tB = makeTeam('b', 'Bob');

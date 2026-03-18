@@ -4,11 +4,7 @@ import { render, screen } from '@testing-library/react';
 
 import TournamentStandings from '../../../src/components/tournament/TournamentStandings';
 import type { TournamentStandingRow, TournamentTeam } from '../../../src/types/tournament';
-import { createMockPlayer } from '../../data/testFactories';
-
-function makeTeam(id: string, name: string): TournamentTeam {
-  return { id, players: [createMockPlayer({ id: `${id}-p`, name })] };
-}
+import { makeTeam } from '../../data/tournamentFactories';
 
 function makeRow(team: TournamentTeam, won: number, lost: number, scoreDiff: number): TournamentStandingRow {
   const points = won * 2;

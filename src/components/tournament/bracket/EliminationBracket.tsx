@@ -55,8 +55,7 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
     roundNodes.map((_, mIdx) => wbTop(rIdx, mIdx)),
   );
 
-  const wbRounds = Math.log2(seBracket.size);
-  const isDe = wbRounds > 1;
+  const isDe = Math.log2(seBracket.size) > 1;
 
   return (
     <div className="elimination-bracket" data-testid="elimination-bracket">

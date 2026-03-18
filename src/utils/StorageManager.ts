@@ -21,7 +21,7 @@ const OLD_KEYS = {
  *
  * Fields:
  *   v   — format version (3)
- *   et  — engine type ('sa' | 'mc' | 'cg' | 'sl')
+ *   et  — engine type ('sa' | 'sl')
  *   pi  — player ID index: pi[i] = playerId
  *   ps  — per-player stats, same order as pi: [bench, single, win, loss]
  *   pc  — pair counts keyed "i:j" (i < j): [teammate, opponent]

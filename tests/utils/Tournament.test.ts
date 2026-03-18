@@ -3,24 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { TournamentMatch, TournamentTeam } from '../../src/types/tournament';
 import Tournament from '../../src/utils/Tournament';
 import { createMockPlayer } from '../data/testFactories';
-
-function makeTeam(id: string, playerNames: string[]): TournamentTeam {
-  return {
-    id,
-    players: playerNames.map((name, i) => createMockPlayer({ id: `${id}-p${i}`, name })),
-  };
-}
-
-function makeMatch(
-  id: string,
-  round: number,
-  team1: TournamentTeam,
-  team2: TournamentTeam,
-  winner?: 1 | 2,
-  score?: { team1: number; team2: number },
-): TournamentMatch {
-  return { id, round, courtNumber: 1, team1, team2, winner, score };
-}
+import { makeTeam, makeMatch } from '../data/tournamentFactories';
 
 describe('Tournament RR match generation', () => {
   it('produces 1 match for 2 teams', () => {
@@ -380,7 +363,7 @@ describe('Tournament SE walkthrough — 4 teams', () => {
 
     const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
     t = t.recordResult(lb1[0].id, 1);
-    
+
     expect(t.isComplete()).toBe(true);
     expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb')).toHaveLength(1);
   });
@@ -532,12 +515,12 @@ describe('Consolation Bracket', () => {
 
     const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
     for (const m of lb1) t = t.recordResult(m.id, 1);
-    
+
     expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2)).toHaveLength(0);
 
     const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
     for (const m of wb2) t = t.recordResult(m.id, 1);
-    
+
     expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2)).toHaveLength(2);
   });
 

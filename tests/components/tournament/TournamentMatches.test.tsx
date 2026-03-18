@@ -4,26 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TournamentMatches from '../../../src/components/tournament/TournamentMatches';
-import type { TournamentMatch, TournamentTeam } from '../../../src/types/tournament';
-import { createMockPlayer } from '../../data/testFactories';
-
-function makeTeam(id: string, playerNames: string[]): TournamentTeam {
-  return {
-    id,
-    players: playerNames.map((name, i) => createMockPlayer({ id: `${id}-p${i}`, name })),
-  };
-}
-
-function makeMatch(
-  id: string,
-  round: number,
-  team1: TournamentTeam,
-  team2: TournamentTeam,
-  winner?: 1 | 2,
-  score?: { team1: number; team2: number },
-): TournamentMatch {
-  return { id, round, courtNumber: 1, team1, team2, winner, score };
-}
+import { makeTeam, makeMatch } from '../../data/tournamentFactories';
 
 const teamA = makeTeam('a', ['Alice']);
 const teamB = makeTeam('b', ['Bob']);

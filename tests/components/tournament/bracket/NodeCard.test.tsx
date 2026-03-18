@@ -5,22 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import { NodeCard } from '../../../../src/components/tournament/bracket/NodeCard';
 import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
-import type { TournamentMatch, TournamentTeam } from '../../../../src/types/tournament';
-import { createMockPlayer } from '../../../data/testFactories';
-
-function makeTeam(id: string, name: string): TournamentTeam {
-  return { id, players: [createMockPlayer({ id: `${id}-p0`, name })] };
-}
-
-function makeMatch(
-  id: string,
-  team1: TournamentTeam,
-  team2: TournamentTeam,
-  winner?: 1 | 2,
-  score?: { team1: number; team2: number },
-): TournamentMatch {
-  return { id, round: 1, courtNumber: 1, team1, team2, winner, score };
-}
+import { makeTeam, makeMatch } from '../../../data/tournamentFactories';
 
 const tA = makeTeam('a', 'Alice');
 const tB = makeTeam('b', 'Bob');
@@ -57,7 +42,7 @@ describe('NodeCard', () => {
 
   describe('type=\'match\'', () => {
     it('renders both team names', () => {
-      const match = makeMatch('m1', tA, tB);
+      const match = makeMatch('m1', 1, tA, tB);
       renderNode({ type: 'match', match, team1: tA, team2: tB });
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.getByText('Bob')).toBeInTheDocument();
@@ -66,7 +51,7 @@ describe('NodeCard', () => {
     it('clicking team1 calls onTeamClick(match, 1)', async () => {
       const user = userEvent.setup();
       const onTeamClick = vi.fn();
-      const match = makeMatch('m1', tA, tB);
+      const match = makeMatch('m1', 1, tA, tB);
       renderNode({ type: 'match', match, team1: tA, team2: tB }, onTeamClick);
 
       await user.click(screen.getByTestId('bracket-team-1-m1'));
@@ -76,7 +61,7 @@ describe('NodeCard', () => {
     it('clicking team2 calls onTeamClick(match, 2)', async () => {
       const user = userEvent.setup();
       const onTeamClick = vi.fn();
-      const match = makeMatch('m1', tA, tB);
+      const match = makeMatch('m1', 1, tA, tB);
       renderNode({ type: 'match', match, team1: tA, team2: tB }, onTeamClick);
 
       await user.click(screen.getByTestId('bracket-team-2-m1'));
@@ -84,7 +69,7 @@ describe('NodeCard', () => {
     });
 
     it('winner=1: team1 has bracket-team-winner class, team2 has bracket-team-loser class', () => {
-      const match = makeMatch('m1', tA, tB, 1);
+      const match = makeMatch('m1', 1, tA, tB, 1);
       renderNode({ type: 'match', match, team1: tA, team2: tB });
 
       expect(screen.getByTestId('bracket-team-1-m1')).toHaveClass('bracket-team-winner');
@@ -94,7 +79,7 @@ describe('NodeCard', () => {
     it('winner=1: clicking team2 (loser) does not call onTeamClick', async () => {
       const user = userEvent.setup();
       const onTeamClick = vi.fn();
-      const match = makeMatch('m1', tA, tB, 1);
+      const match = makeMatch('m1', 1, tA, tB, 1);
       renderNode({ type: 'match', match, team1: tA, team2: tB }, onTeamClick);
 
       await user.click(screen.getByTestId('bracket-team-2-m1'));
@@ -102,14 +87,14 @@ describe('NodeCard', () => {
     });
 
     it('shows score next to winner name', () => {
-      const match = makeMatch('m1', tA, tB, 1, { team1: 21, team2: 15 });
+      const match = makeMatch('m1', 1, tA, tB, 1, { team1: 21, team2: 15 });
       renderNode({ type: 'match', match, team1: tA, team2: tB });
 
       expect(screen.getByText('21–15')).toBeInTheDocument();
     });
 
     it('data-testid attributes are present', () => {
-      const match = makeMatch('m1', tA, tB);
+      const match = makeMatch('m1', 1, tA, tB);
       renderNode({ type: 'match', match, team1: tA, team2: tB });
 
       expect(screen.getByTestId('bracket-match-m1')).toBeInTheDocument();

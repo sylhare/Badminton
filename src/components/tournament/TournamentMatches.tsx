@@ -20,7 +20,7 @@ function getCurrentRound(matches: TournamentMatch[]): number {
   return roundNums[roundNums.length - 1] ?? 1;
 }
 
-function getRoundLabel(_allMatches: TournamentMatch[], round: number): string {
+function getRoundLabel(round: number): string {
   return `Round ${round}`;
 }
 
@@ -120,7 +120,7 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
               onClick={() => toggleRound(round)}
               data-testid={`round-header-${round}`}
             >
-              <h3>{getRoundLabel(matches, round)}</h3>
+              <h3>{getRoundLabel(round)}</h3>
               <span className="round-status">
                 {roundDone ? '✓ Complete' : `${roundMatches.filter(m => m.winner).length}/${roundMatches.length} done`}
               </span>

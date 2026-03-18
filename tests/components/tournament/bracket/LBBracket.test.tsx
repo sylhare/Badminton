@@ -5,15 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { LBBracket } from '../../../../src/components/tournament/bracket/LBBracket';
 import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
-import type { TournamentMatch, TournamentTeam } from '../../../../src/types/tournament';
-
-function makeTeam(id: string, name: string): TournamentTeam {
-  return { id, players: [{ id: `p-${id}`, name, isPresent: true }] };
-}
-
-function makeMatch(id: string, team1: TournamentTeam, team2: TournamentTeam, round = 1): TournamentMatch {
-  return { id, round, bracket: 'lb', courtNumber: 1, team1, team2 };
-}
+import { makeTeam, makeMatch } from '../../../data/tournamentFactories';
 
 describe('LBBracket', () => {
   it('renders nothing when nodes is empty', () => {
@@ -35,8 +27,8 @@ describe('LBBracket', () => {
     const carol = makeTeam('c', 'Carol');
     const dana = makeTeam('d', 'Dana');
 
-    const match1 = makeMatch('m1', alice, bob, 1);
-    const match2 = makeMatch('m2', carol, dana, 2);
+    const match1 = makeMatch('m1', 1, alice, bob, undefined, undefined, 'lb');
+    const match2 = makeMatch('m2', 2, carol, dana, undefined, undefined, 'lb');
 
     const nodes: BracketNode[][] = [
       [{ type: 'match', match: match1, team1: alice, team2: bob }],
@@ -55,7 +47,7 @@ describe('LBBracket', () => {
     const user = userEvent.setup();
     const alice = makeTeam('a', 'Alice');
     const bob = makeTeam('b', 'Bob');
-    const match = makeMatch('m1', alice, bob, 1);
+    const match = makeMatch('m1', 1, alice, bob, undefined, undefined, 'lb');
     const onTeamClick = vi.fn();
 
     const nodes: BracketNode[][] = [

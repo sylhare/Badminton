@@ -20,12 +20,6 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
   protected readonly BALANCE_PENALTY = 2000;
   protected readonly SINGLES_REPEAT_PENALTY = 100;
 
-  configure(params: Record<string, unknown>): void {
-    if (typeof params.iterations === 'number') this.SA_ITERATIONS = params.iterations;
-    if (typeof params.initialTemperature === 'number') this.INITIAL_TEMPERATURE = params.initialTemperature;
-    if (typeof params.coolingRate === 'number') this.COOLING_RATE = params.coolingRate;
-  }
-
   protected abstract evaluateTotalCost(courts: Court[]): number;
 
   protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
@@ -59,13 +53,11 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
         if (currentCost < bestCost) {
           best = this.cloneCourts(current);
           bestCost = currentCost;
-          if (bestCost === 0) console.log(`[${this.getName()} ANNEAL] Found 0 cost at iteration ${i}, temp ${temperature.toFixed(2)}`);
         }
       }
 
       temperature *= this.COOLING_RATE;
     }
-    console.log(`[${this.getName()} ANNEAL] Finished. Best cost: ${bestCost}`);
     return best;
   }
 
