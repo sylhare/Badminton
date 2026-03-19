@@ -151,6 +151,40 @@ test.describe('Tournament — Round Robin', () => {
   });
 });
 
+test.describe('player isolation across pages', () => {
+  let mainPage: MainPage;
+  let tournamentPage: TournamentPage;
+
+  test.beforeEach(async ({ page }) => {
+    mainPage = new MainPage(page);
+    tournamentPage = new TournamentPage(page, mainPage);
+    await mainPage.goto();
+    await mainPage.reset();
+  });
+
+  test('player added on main page while tournament active is not in tournament but available for next', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Carol', 'Dave']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.start();
+
+    await expect(page.getByTestId('tournament-matches')).toBeVisible();
+    await expect(page.getByTestId('tournament-matches')).not.toContainText('Eve');
+
+    await mainPage.goto();
+    await mainPage.expandPlayersSection();
+    await mainPage.addPlayer('Eve');
+
+    await tournamentPage.goto();
+
+    await expect(page.getByTestId('tournament-matches')).toBeVisible();
+    await expect(page.getByTestId('tournament-matches')).not.toContainText('Eve');
+
+    await page.getByTestId('new-tournament-button').click();
+
+    await expect(page.getByTestId('player-selection')).toContainText('Eve');
+  });
+});
+
 test.describe('Tournament — Elimination', () => {
   let mainPage: MainPage;
   let tournamentPage: TournamentPage;

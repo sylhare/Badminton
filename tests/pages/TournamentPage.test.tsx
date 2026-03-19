@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TournamentPage from '../../src/pages/TournamentPage';
@@ -158,6 +158,76 @@ describe('TournamentPage', () => {
     expect(mockSaveTournament).not.toHaveBeenCalled();
 
     resolveLoad({ players: mockPlayers, numberOfCourts: 2 });
+  });
+
+  describe('player isolation', () => {
+    const activeTournamentState = {
+      phase: 'active' as const,
+      format: 'singles' as const,
+      type: 'round-robin' as const,
+      numberOfCourts: 2,
+      teams: [
+        { id: 't1', players: [mockPlayers[0]] },
+        { id: 't2', players: [mockPlayers[1]] },
+      ],
+      matches: [
+        {
+          id: 'm1', round: 1, courtNumber: 1,
+          team1: { id: 't1', players: [mockPlayers[0]] },
+          team2: { id: 't2', players: [mockPlayers[1]] },
+        },
+      ],
+    };
+
+    it('player in app state but not in saved tournament does not appear in active matches', async () => {
+      const playersWithEvePresent = [
+        ...mockPlayers.slice(0, 4),
+        { id: 'p5', name: 'Eve', isPresent: true },
+      ];
+      mockLoadApp.mockResolvedValue({ players: playersWithEvePresent, numberOfCourts: 2 });
+      mockLoadTournament.mockResolvedValue(activeTournamentState);
+
+      render(<TournamentPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
+      });
+
+      const matchesEl = screen.getByTestId('tournament-matches');
+      expect(within(matchesEl).queryByText('Eve')).toBeNull();
+    });
+
+    it('after reset, app-state-only player appears in setup player list', async () => {
+      const playersWithEvePresent = [
+        ...mockPlayers.slice(0, 4),
+        { id: 'p5', name: 'Eve', isPresent: true },
+      ];
+      mockLoadApp.mockResolvedValue({ players: playersWithEvePresent, numberOfCourts: 2 });
+      mockLoadTournament.mockResolvedValue(activeTournamentState);
+
+      const user = userEvent.setup();
+      render(<TournamentPage />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId('new-tournament-button'));
+
+      expect(within(screen.getByTestId('player-selection')).getByText('Eve')).toBeInTheDocument();
+    });
+
+    it('absent player is not in tournament matches but survives reset and appears in setup', async () => {
+      const user = userEvent.setup();
+      await startTournament(user);
+
+      const matchesEl = screen.getByTestId('tournament-matches');
+      expect(within(matchesEl).queryByText('Eve')).toBeNull();
+
+      await user.click(screen.getByTestId('new-tournament-button'));
+
+      expect(within(screen.getByTestId('player-selection')).getByText('Eve')).toBeInTheDocument();
+    });
   });
 
   it('match result update propagates to standings (score diff updates)', async () => {
