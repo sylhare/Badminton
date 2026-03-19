@@ -31,9 +31,9 @@ export function computeConsolationTree(
     if (lbRound === 1) {
       roundCount = Math.floor(numWBR1Matches / 2);
     } else if (lbRound % 2 === 0) {
-      roundCount = prevRoundCount; // challenge round: same count as previous
+      roundCount = prevRoundCount;
     } else {
-      roundCount = Math.floor(prevRoundCount / 2); // consolidation round
+      roundCount = Math.floor(prevRoundCount / 2);
     }
     if (roundCount === 0) break;
 

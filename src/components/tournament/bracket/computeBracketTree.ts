@@ -17,7 +17,6 @@ export function computeBracketTree(
     const t1Id = seeding[2 * i];
     const t2Id = seeding[2 * i + 1];
     if (t1Id === null && t2Id === null) {
-      // null-null: permanently empty slot, never produces an advancer
       r1Nodes.push({ type: 'empty', team1: null, team2: null });
     } else if (t1Id === null || t2Id === null) {
       const advancingId = t1Id ?? t2Id;
@@ -51,7 +50,6 @@ export function computeBracketTree(
     return null;
   };
 
-  // Returns true only for structurally absent slots (null-null pairs) that can never advance.
   const isPermanentlyEmpty = (node: BracketNode): boolean => node.type === 'empty';
 
   for (let r = 1; r < totalRounds; r++) {
@@ -70,7 +68,6 @@ export function computeBracketTree(
       if (left0 && right0) {
         curNodes.push({ type: 'empty', team1: null, team2: null });
       } else if (right0) {
-        // Left slot will produce an advancer; right is permanently absent → structural bye
         curNodes.push({ type: 'bye-advance', team1: t1, team2: null });
       } else if (left0) {
         curNodes.push({ type: 'bye-advance', team1: t2, team2: null });

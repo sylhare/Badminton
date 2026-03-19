@@ -420,28 +420,23 @@ describe('Tournament SE walkthrough — 6 teams', () => {
   it('isComplete after consolation final (6-team walkthrough)', () => {
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
-    // WB R1: 3 matches
     const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     expect(wb1).toHaveLength(3);
     t = t.recordResult(wb1[0].id, 1);
     t = t.recordResult(wb1[1].id, 1);
     t = t.recordResult(wb1[2].id, 1);
 
-    // WB R2: 1 match (W0 vs W1); W2 gets bye
     const wb2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     expect(wb2).toHaveLength(1);
     t = t.recordResult(wb2[0].id, 1);
 
-    // LB R1: 1 match (L(R1m0) vs L(R1m1)); L(R1m2) exits
     const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     expect(lb1).toHaveLength(1);
     t = t.recordResult(lb1[0].id, 1);
 
-    // LB R2: 1 match triggered (LB-R1 survivor vs WB-R2 loser)
     const lb2 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 2);
     expect(lb2).toHaveLength(1);
 
-    // WB R3 (WBF): W(R2) vs W2-bye
     const wb3 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 3);
     expect(wb3).toHaveLength(1);
     t = t.recordResult(wb3[0].id, 1);

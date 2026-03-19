@@ -220,15 +220,12 @@ test.describe('Tournament — Elimination', () => {
       }
     };
 
-    // Play R1 (3 matches) → generates WB-R2 + LB-R1
     await playAllPending();
     await expect(matchCards).toHaveCount(5);
 
-    // Play WB-R2 + LB-R1 → generates WB-R3 + LB-R2
     await playAllPending();
     await expect(matchCards).toHaveCount(7);
 
-    // Play WB-R3 (WBF) + LB-R2 (3rd place)
     await playAllPending();
 
     await expect(page.getByTestId('se-status-0')).toContainText('🥇');

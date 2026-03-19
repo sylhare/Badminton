@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 
 import { Player } from '../../src/types';
 
-export { GRAPH_COLORS, GRAPH_LEGEND_LABELS } from '../../src/constants/graphColors';
+export { GRAPH_COLORS, GRAPH_LEGEND_LABELS } from '../../src/types/graphColors.ts';
 
 /** Standard player ID to name mapping for graph tests */
 export const GRAPH_PLAYER_NAMES: Record<string, string> = {

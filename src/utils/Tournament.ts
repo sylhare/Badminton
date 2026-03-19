@@ -363,7 +363,6 @@ export default class Tournament {
         const t1Id = seeding[2 * i];
         const t2Id = seeding[2 * i + 1];
         if (t1Id === null && t2Id === null) {
-          // null-null pair: no survivor
         } else if (t1Id === null) {
           survivors.push(t2Id!);
         } else if (t2Id === null) {
@@ -396,7 +395,6 @@ export default class Tournament {
       );
       survivors.push(match!.winner === 1 ? match!.team1.id : match!.team2.id);
     }
-    // Odd survivor advances via bye (no match needed)
     if (prevSurvivors.length % 2 === 1) {
       survivors.push(prevSurvivors[prevSurvivors.length - 1]);
     }
