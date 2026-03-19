@@ -75,9 +75,52 @@ export default class Tournament {
     return team.playerIds.map(id => players.find(p => p.id === id)?.name ?? id).join(' & ');
   }
 
-  /** Sorted unique round numbers from a match list. */
-  private static _getSortedRoundNums(matches: TournamentMatch[]): number[] {
-    return Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
+  /** Build a round→matches map and sorted round number list in one O(n) pass. */
+  private static _buildRoundMap(
+    matches: TournamentMatch[],
+  ): { roundMap: Map<number, TournamentMatch[]>; roundNums: number[] } {
+    const roundMap = new Map<number, TournamentMatch[]>();
+    for (const match of matches) {
+      if (!roundMap.has(match.round)) roundMap.set(match.round, []);
+      roundMap.get(match.round)!.push(match);
+    }
+    const roundNums = Array.from(roundMap.keys()).sort((a, b) => a - b);
+    return { roundMap, roundNums };
+  }
+
+  private static _findWBMatch(
+    matches: TournamentMatch[],
+    round: number,
+    t1Id: string,
+    t2Id: string,
+  ): TournamentMatch | undefined {
+    return matches.find(
+      m =>
+        Tournament.isWB(m) &&
+        m.round === round &&
+        ((m.team1.id === t1Id && m.team2.id === t2Id) ||
+         (m.team1.id === t2Id && m.team2.id === t1Id)),
+    );
+  }
+
+  private static _pairWBRound(
+    matches: TournamentMatch[],
+    wbRound: number,
+    prevSurvivors: string[],
+  ): { winnerId: string; loserId: string }[] {
+    const pairs: { winnerId: string; loserId: string }[] = [];
+    for (let i = 0; i < Math.floor(prevSurvivors.length / 2); i++) {
+      const t1Id = prevSurvivors[2 * i];
+      const t2Id = prevSurvivors[2 * i + 1];
+      const match = Tournament._findWBMatch(matches, wbRound, t1Id, t2Id);
+      if (match?.winner !== undefined) {
+        pairs.push({
+          winnerId: match.winner === 1 ? match.team1.id : match.team2.id,
+          loserId:  match.winner === 1 ? match.team2.id : match.team1.id,
+        });
+      }
+    }
+    return pairs;
   }
 
   /** Serialize this instance for storage. */
@@ -104,9 +147,9 @@ export default class Tournament {
 
   /** Current active round and sorted round list derived from match state. */
   roundInfo(): { currentRound: number; roundNums: number[] } {
-    const roundNums = Tournament._getSortedRoundNums(this.state.matches);
+    const { roundMap, roundNums } = Tournament._buildRoundMap(this.state.matches);
     for (const r of roundNums) {
-      if (this.state.matches.filter(m => m.round === r).some(m => m.winner === undefined)) {
+      if (roundMap.get(r)!.some(m => m.winner === undefined)) {
         return { currentRound: r, roundNums };
       }
     }
@@ -117,15 +160,9 @@ export default class Tournament {
   getCompletedRounds(): number {
     const { matches } = this.state;
     if (matches.length === 0) return 0;
-
-    const roundMap = new Map<number, TournamentMatch[]>();
-    for (const match of matches) {
-      if (!roundMap.has(match.round)) roundMap.set(match.round, []);
-      roundMap.get(match.round)!.push(match);
-    }
-
+    const { roundMap, roundNums } = Tournament._buildRoundMap(matches);
     let completed = 0;
-    for (const round of Tournament._getSortedRoundNums(matches)) {
+    for (const round of roundNums) {
       if (roundMap.get(round)!.every(m => m.winner !== undefined)) {
         completed = round;
       } else {
@@ -379,13 +416,7 @@ export default class Tournament {
         } else if (t2Id === null) {
           survivors.push(t1Id);
         } else {
-          const match = matches.find(
-            m =>
-              Tournament.isWB(m) &&
-              m.round === 1 &&
-              ((m.team1.id === t1Id && m.team2.id === t2Id) ||
-               (m.team1.id === t2Id && m.team2.id === t1Id)),
-          );
+          const match = Tournament._findWBMatch(matches, 1, t1Id, t2Id);
           survivors.push(match!.winner === 1 ? match!.team1.id : match!.team2.id);
         }
       }
@@ -393,22 +424,8 @@ export default class Tournament {
     }
 
     const prevSurvivors = Tournament._resolveSurvivors(seBracket, matches, round - 1);
-    const survivors: string[] = [];
-    for (let i = 0; i < Math.floor(prevSurvivors.length / 2); i++) {
-      const t1Id = prevSurvivors[2 * i];
-      const t2Id = prevSurvivors[2 * i + 1];
-      const match = matches.find(
-        m =>
-          Tournament.isWB(m) &&
-          m.round === round &&
-          ((m.team1.id === t1Id && m.team2.id === t2Id) ||
-           (m.team1.id === t2Id && m.team2.id === t1Id)),
-      );
-      survivors.push(match!.winner === 1 ? match!.team1.id : match!.team2.id);
-    }
-    if (prevSurvivors.length % 2 === 1) {
-      survivors.push(prevSurvivors[prevSurvivors.length - 1]);
-    }
+    const survivors = Tournament._pairWBRound(matches, round, prevSurvivors).map(p => p.winnerId);
+    if (prevSurvivors.length % 2 === 1) survivors.push(prevSurvivors[prevSurvivors.length - 1]);
     return survivors;
   }
 
@@ -457,13 +474,7 @@ export default class Tournament {
         const t1Id = seeding[2 * i];
         const t2Id = seeding[2 * i + 1];
         if (t1Id !== null && t2Id !== null) {
-          const match = matches.find(
-            m =>
-              Tournament.isWB(m) &&
-              m.round === 1 &&
-              ((m.team1.id === t1Id && m.team2.id === t2Id) ||
-               (m.team1.id === t2Id && m.team2.id === t1Id)),
-          );
+          const match = Tournament._findWBMatch(matches, 1, t1Id, t2Id);
           if (match?.winner !== undefined) {
             losers.push(match.winner === 1 ? match.team2.id : match.team1.id);
           }
@@ -474,22 +485,7 @@ export default class Tournament {
     }
 
     const prevSurvivors = Tournament._resolveSurvivors(seBracket, matches, wbRound - 1);
-    const losers: string[] = [];
-    for (let i = 0; i < Math.floor(prevSurvivors.length / 2); i++) {
-      const t1Id = prevSurvivors[2 * i];
-      const t2Id = prevSurvivors[2 * i + 1];
-      const match = matches.find(
-        m =>
-          Tournament.isWB(m) &&
-          m.round === wbRound &&
-          ((m.team1.id === t1Id && m.team2.id === t2Id) ||
-           (m.team1.id === t2Id && m.team2.id === t1Id)),
-      );
-      if (match?.winner !== undefined) {
-        losers.push(match.winner === 1 ? match.team2.id : match.team1.id);
-      }
-    }
-    return losers;
+    return Tournament._pairWBRound(matches, wbRound, prevSurvivors).map(p => p.loserId);
   }
 
   /**
@@ -541,9 +537,7 @@ export default class Tournament {
 
     for (let lbRound = 1; lbRound <= lbRounds; lbRound++) {
       if (getLBRound(lbRound).length > 0) continue;
-
       if (lbRound === 1) {
-
         const wbR1 = getWBRound(1);
         if (!wbR1.length || !wbR1.every(m => m.winner !== undefined)) continue;
         const losers = Tournament._resolveWBLosers(seBracket, all(), 1);
@@ -551,7 +545,6 @@ export default class Tournament {
           newMatches.push(makeMatch(losers[2 * i], losers[2 * i + 1], 1, 'lb'));
         }
       } else if (lbRound % 2 === 1) {
-
         const prevLB = getLBRound(lbRound - 1);
         if (!prevLB.length || !prevLB.every(m => m.winner !== undefined)) continue;
         const survivors = Tournament._resolveLBSurvivors(all(), lbRound - 1);
@@ -559,7 +552,6 @@ export default class Tournament {
           newMatches.push(makeMatch(survivors[2 * i], survivors[2 * i + 1], lbRound, 'lb'));
         }
       } else {
-
         const wbR = lbRound / 2 + 1;
         const prevLB = getLBRound(lbRound - 1);
         const wbRMatches = getWBRound(wbR);
