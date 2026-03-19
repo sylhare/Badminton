@@ -1,6 +1,6 @@
 import type { AppState, CourtEngineState, EngineType } from '../types';
-import { DEFAULT_TOURNAMENT_STATE } from '../types/tournament';
 import type { TournamentState } from '../types/tournament';
+import { DEFAULT_TOURNAMENT_STATE } from '../types/tournament';
 
 interface StorageData {
   app: AppState;
@@ -38,7 +38,7 @@ interface CompactEngineState {
 
 export async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
-  for (;;) {
+  for (; ;) {
     const { done, value } = await reader.read();
     if (done) break;
     chunks.push(value);
@@ -46,22 +46,25 @@ export async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Arr
   const total = chunks.reduce((n, c) => n + c.length, 0);
   const result = new Uint8Array(total);
   let offset = 0;
-  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.length; }
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
   return result;
 }
 
 async function compress(data: string): Promise<string> {
   const stream = new CompressionStream('gzip');
   const writer = stream.writable.getWriter();
-  writer.write(new TextEncoder().encode(data));
-  writer.close();
+  await writer.write(new TextEncoder().encode(data));
+  await writer.close();
   const result = await readAllChunks(stream.readable.getReader());
   let binary = '';
   for (let i = 0; i < result.length; i++) binary += String.fromCharCode(result[i]);
   return btoa(binary);
 }
 
-async function decompress(data: string): Promise<string> {
+export async function decompress(data: string): Promise<string> {
   try {
     const binary = atob(data);
     const bytes = new Uint8Array(binary.length);
@@ -150,7 +153,13 @@ class StorageManager {
 
   async saveApp(state: Partial<AppState>): Promise<void> {
     return this.save(
-      current => ({ ...current, app: { ...(current.app ?? {}), ...state, savedAt: Date.now(), sessionId: (current.app as AppState)?.sessionId ?? crypto.randomUUID() } as AppState }),
+      current => ({ ...current,
+        app: {
+          ...(current.app ?? {}), ...state,
+          savedAt: Date.now(),
+          sessionId: (current.app as AppState)?.sessionId ?? crypto.randomUUID(),
+        } as AppState,
+      }),
     );
   }
 
@@ -215,7 +224,10 @@ class StorageManager {
     try {
       const data = await this.read();
       if (!data.tournament) return null;
-      return { ...DEFAULT_TOURNAMENT_STATE, ...data.tournament };
+      const state = { ...DEFAULT_TOURNAMENT_STATE, ...data.tournament };
+      if (state.teams.some(t => !Array.isArray(t.playerIds))) return null;
+      if (state.matches.some(m => !Array.isArray(m.team1?.playerIds) || !Array.isArray(m.team2?.playerIds))) return null;
+      return state;
     } catch {
       return null;
     }
@@ -294,7 +306,10 @@ class StorageManager {
     const pairKeys = [...new Set([...Object.keys(state.teammateCountMap), ...Object.keys(state.opponentCountMap)])];
     for (const key of pairKeys) {
       const sep = key.indexOf('|');
-      if (sep !== -1) { allPlayerIds.add(key.slice(0, sep)); allPlayerIds.add(key.slice(sep + 1)); }
+      if (sep !== -1) {
+        allPlayerIds.add(key.slice(0, sep));
+        allPlayerIds.add(key.slice(sep + 1));
+      }
     }
 
     const pi = [...allPlayerIds];
@@ -303,8 +318,8 @@ class StorageManager {
     const ps: Array<[number, number, number, number]> = pi.map(id => [
       state.benchCountMap[id] ?? 0,
       state.singleCountMap[id] ?? 0,
-      state.winCountMap[id]   ?? 0,
-      state.lossCountMap[id]  ?? 0,
+      state.winCountMap[id] ?? 0,
+      state.lossCountMap[id] ?? 0,
     ]);
 
     const pc: Record<string, [number, number]> = {};
@@ -341,10 +356,10 @@ class StorageManager {
       const entry = ps[i];
       if (!entry) continue;
       const [b, s, w, l] = entry;
-      if (b) benchCountMap[id]  = b;
+      if (b) benchCountMap[id] = b;
       if (s) singleCountMap[id] = s;
-      if (w) winCountMap[id]    = w;
-      if (l) lossCountMap[id]   = l;
+      if (w) winCountMap[id] = w;
+      if (l) lossCountMap[id] = l;
     }
 
     for (const [key, [t, o]] of Object.entries(c.pc ?? {})) {
@@ -384,10 +399,16 @@ class StorageManager {
       if (oldApp || oldEngine) {
         const merged: Partial<StorageData> = {};
         if (oldApp) {
-          try { merged.app = JSON.parse(oldApp); } catch {  }
+          try {
+            merged.app = JSON.parse(oldApp);
+          } catch {
+          }
         }
         if (oldEngine) {
-          try { merged.engine = JSON.parse(oldEngine); } catch {  }
+          try {
+            merged.engine = JSON.parse(oldEngine);
+          } catch {
+          }
         }
         localStorage.removeItem(OLD_KEYS.APP_STATE);
         localStorage.removeItem(OLD_KEYS.COURT_ENGINE_STATE);

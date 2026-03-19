@@ -1,28 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readAllChunks, storageManager } from '../../src/utils/StorageManager';
+import { decompress, storageManager } from '../../src/utils/StorageManager';
 import type { Court, CourtEngineState, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
 const OLD_APP_KEY = 'badminton-app-state';
 const OLD_ENGINE_KEY = 'badminton-court-engine-state';
 
-async function readDecompressed(): Promise<unknown> {
+async function readStorage(): Promise<unknown> {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
-  try {
-    const binary = atob(raw);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const stream = new DecompressionStream('gzip');
-    const writer = stream.writable.getWriter();
-    writer.write(bytes);
-    writer.close();
-    const result = await readAllChunks(stream.readable.getReader());
-    return JSON.parse(new TextDecoder().decode(result));
-  } catch {
-    return JSON.parse(raw);
-  }
+  return JSON.parse(await decompress(raw));
 }
 
 describe('StorageManager', () => {
@@ -65,7 +53,7 @@ describe('StorageManager', () => {
       const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
-      const parsed = await readDecompressed() as { app: { players: Player[]; numberOfCourts: number; assignments: Court[] } };
+      const parsed = await readStorage() as { app: { players: Player[]; numberOfCourts: number; assignments: Court[] } };
       expect(parsed.app.players).toEqual(mockPlayers);
       expect(parsed.app.numberOfCourts).toBe(6);
       expect(parsed.app.assignments).toEqual(mockAssignments);
@@ -119,7 +107,7 @@ describe('StorageManager', () => {
       const savedData = localStorage.getItem(STORAGE_KEY);
       expect(savedData).toBeTruthy();
 
-      const parsed = await readDecompressed() as {
+      const parsed = await readStorage() as {
         engine: {
           v: number;
           pi: string[];
@@ -296,7 +284,7 @@ describe('StorageManager', () => {
 
       await storageManager.saveEngine(engineState);
 
-      const parsed = await readDecompressed() as { engine: { lh: Record<string, number[]> } };
+      const parsed = await readStorage() as { engine: { lh: Record<string, number[]> } };
 
       const histories = Object.values(parsed.engine.lh);
       histories.forEach(h => {
@@ -323,7 +311,7 @@ describe('StorageManager', () => {
         levelHistory,
       });
 
-      const parsed = await readDecompressed() as { engine: { lh: number[][] } };
+      const parsed = await readStorage() as { engine: { lh: number[][] } };
       expect(parsed.engine.lh).toEqual([]);
 
       const raw = localStorage.getItem(STORAGE_KEY)!;
@@ -349,7 +337,7 @@ describe('StorageManager', () => {
         lossCountMap: {},
       });
 
-      const parsed = await readDecompressed() as { engine: { pc: Record<string, [number, number]> } };
+      const parsed = await readStorage() as { engine: { pc: Record<string, [number, number]> } };
 
       const allKeys = Object.keys(parsed.engine.pc);
       expect(allKeys.length).toBeLessThanOrEqual(200);
@@ -403,7 +391,7 @@ describe('StorageManager', () => {
       };
       await storageManager.saveEngine(state);
 
-      const parsed = await readDecompressed() as { engine: { v: number; pi: string[] } };
+      const parsed = await readStorage() as { engine: { v: number; pi: string[] } };
       expect(parsed.engine.v).toBe(3);
       expect(parsed.engine.pi).toContain('p1');
       expect(parsed.engine.pi).toContain('p3');
@@ -424,7 +412,7 @@ describe('StorageManager', () => {
         lossCountMap: {},
       });
 
-      const parsed = await readDecompressed() as { engine: { pi: string[]; pc: Record<string, unknown> } };
+      const parsed = await readStorage() as { engine: { pi: string[]; pc: Record<string, unknown> } };
       const i1 = parsed.engine.pi.indexOf(uuid1);
       const i2 = parsed.engine.pi.indexOf(uuid2);
       const expectedKey = i1 < i2 ? `${i1}:${i2}` : `${i2}:${i1}`;
@@ -439,7 +427,7 @@ describe('StorageManager', () => {
       format: 'singles' as const,
       type: 'round-robin' as const,
       numberOfCourts: 2,
-      teams: [{ id: 't1', players: [{ id: 'p1', name: 'Alice', isPresent: true }] }],
+      teams: [{ id: 't1', playerIds: ['p1'] }],
       matches: [],
     };
 
@@ -451,7 +439,7 @@ describe('StorageManager', () => {
 
     it('should store tournament under the tournament key', async () => {
       await storageManager.saveTournament(mockTournamentState);
-      const parsed = await readDecompressed() as { tournament: { phase: string } };
+      const parsed = await readStorage() as { tournament: { phase: string } };
       expect(parsed.tournament.phase).toBe('active');
     });
 
@@ -482,7 +470,7 @@ describe('StorageManager', () => {
     it('should remove the tournament key when saveTournament(null) is called', async () => {
       await storageManager.saveTournament(mockTournamentState);
       await storageManager.saveTournament(null);
-      const parsed = await readDecompressed() as { tournament?: unknown };
+      const parsed = await readStorage() as { tournament?: unknown };
       expect(parsed.tournament).toBeUndefined();
     });
 

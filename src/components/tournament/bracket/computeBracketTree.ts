@@ -1,4 +1,5 @@
 import type { SEBracket, TournamentMatch, TournamentTeam } from '../../../types/tournament';
+import Tournament from '../../../utils/Tournament';
 
 import type { BracketNode } from './types';
 
@@ -27,7 +28,7 @@ export function computeBracketTree(
       });
     } else {
       const match = matches.find(
-        m => (m.bracket ?? 'wb') === 'wb' &&
+        m => Tournament.isWB(m) &&
           m.round === 1 &&
           ((m.team1.id === t1Id && m.team2.id === t2Id) ||
            (m.team1.id === t2Id && m.team2.id === t1Id)),
@@ -73,7 +74,7 @@ export function computeBracketTree(
         curNodes.push({ type: 'bye-advance', team1: t2, team2: null });
       } else if (t1 && t2) {
         const match = matches.find(
-          m => (m.bracket ?? 'wb') === 'wb' &&
+          m => Tournament.isWB(m) &&
             m.round === r + 1 &&
             ((m.team1.id === t1.id && m.team2.id === t2.id) ||
              (m.team1.id === t2.id && m.team2.id === t1.id)),
