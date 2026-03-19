@@ -1,6 +1,6 @@
 import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats, UpdateWinnerParams } from '../types';
 import { storageManager, MAX_LEVEL_HISTORY_ENTRIES } from '../utils/StorageManager';
-import { pairKey } from '../utils/playerUtils';
+import { pairKey, shuffleArray } from '../utils/playerUtils';
 
 import { levelTracker } from './LevelTracker';
 
@@ -394,17 +394,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lastUpdatedMap.set(key, CourtAssignmentTracker.globalCounter);
   }
 
-  /**
-   * Shuffles an array in place (Fisher-Yates).
-   */
   protected shuffleArray<T>(array: T[]): T[] {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = array[i];
-      array[i] = array[j];
-      array[j] = temp;
-    }
-    return array;
+    return shuffleArray(array);
   }
 
   /**

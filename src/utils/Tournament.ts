@@ -10,6 +10,8 @@ import type {
   TournamentType,
 } from '../types/tournament';
 
+import { shuffleArray } from './playerUtils';
+
 export default class Tournament {
   private readonly state: TournamentState;
 
@@ -316,7 +318,8 @@ export default class Tournament {
     numberOfCourts: number,
   ): { matches: TournamentMatch[]; seBracket: SEBracket } {
     const size = Tournament._nextPowerOfTwo(teams.length);
-    const seeding = Tournament._buildSESeeding(teams, size);
+    const shuffledTeams = shuffleArray(teams);
+    const seeding = Tournament._buildSESeeding(shuffledTeams, size);
     const teamMap = new Map(teams.map(t => [t.id, t]));
     const matches: TournamentMatch[] = [];
     let matchIndex = 0;

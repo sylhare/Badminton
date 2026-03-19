@@ -14,3 +14,15 @@ export function createPlayersFromNames(names: string[], idPrefix = 'player'): Pl
 export function validatePlayerNames(names: string[]): string[] {
   return names.map(name => name.trim()).filter(name => name.length > 0);
 }
+
+/**
+ * Shuffles an array in place (Fisher-Yates).
+ */
+export function shuffleArray<T>(array: T[]): T[] {
+  const a = [...array];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}

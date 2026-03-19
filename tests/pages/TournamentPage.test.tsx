@@ -12,6 +12,7 @@ const { mockLoadApp, mockLoadTournament, mockSaveTournament } = vi.hoisted(() =>
 }));
 
 vi.mock('../../src/utils/StorageManager', () => ({
+  MAX_LEVEL_HISTORY_ENTRIES: 50,
   storageManager: {
     loadApp: mockLoadApp,
     saveApp: vi.fn(),
@@ -30,6 +31,14 @@ const mockPlayers = [
   { id: 'p4', name: 'Dave', isPresent: true },
   { id: 'p5', name: 'Eve', isPresent: false },
 ];
+
+async function startTournament(user: ReturnType<typeof userEvent.setup>) {
+  render(<TournamentPage />);
+  await waitFor(() => {
+    expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
+  }, { timeout: 3000 });
+  await user.click(screen.getByTestId('start-tournament-button'));
+}
 
 describe('TournamentPage', () => {
   beforeEach(() => {
@@ -72,13 +81,7 @@ describe('TournamentPage', () => {
 
   it('transitions from setup to active phase after onStart fires', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
-    }, { timeout: 3000 });
-
-    await user.click(screen.getByTestId('start-tournament-button'));
+    await startTournament(user);
 
     expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
     expect(screen.getByTestId('tournament-standings')).toBeInTheDocument();
@@ -86,18 +89,10 @@ describe('TournamentPage', () => {
 
   it('clicking Start a New Tournament resets to setup', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    await startTournament(user);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
-    }, { timeout: 3000 });
-
-    await user.click(screen.getByTestId('start-tournament-button'));
-
-    const aliceEl = screen.getAllByText('Alice')[0];
-    await user.click(aliceEl);
+    await user.click(screen.getAllByText('Alice')[0]);
     await user.click(screen.getByTestId('score-modal-confirm'));
-
     await user.click(screen.getByTestId('new-tournament-button'));
 
     expect(screen.getByTestId('start-tournament-button')).toBeInTheDocument();
@@ -132,38 +127,24 @@ describe('TournamentPage', () => {
 
   it('calls saveTournament after starting a tournament', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    await startTournament(user);
 
     await waitFor(() => {
-      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
-    }, { timeout: 3000 });
-
-    await user.click(screen.getByTestId('start-tournament-button'));
-
-    await waitFor(() => {
-      const calls = mockSaveTournament.mock.calls;
-      const activeCall = calls.find(([s]) => s?.phase === 'active');
+      const activeCall = mockSaveTournament.mock.calls.find(([s]) => s?.phase === 'active');
       expect(activeCall).toBeDefined();
     });
   });
 
   it('calls saveTournament(null) after reset', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    await startTournament(user);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
-    }, { timeout: 3000 });
-
-    await user.click(screen.getByTestId('start-tournament-button'));
-    const aliceEl = screen.getAllByText('Alice')[0];
-    await user.click(aliceEl);
+    await user.click(screen.getAllByText('Alice')[0]);
     await user.click(screen.getByTestId('score-modal-confirm'));
     await user.click(screen.getByTestId('new-tournament-button'));
 
     await waitFor(() => {
-      const lastCall = mockSaveTournament.mock.calls.at(-1);
-      expect(lastCall?.[0]).toBeNull();
+      expect(mockSaveTournament.mock.calls.at(-1)?.[0]).toBeNull();
     });
   });
 
@@ -181,17 +162,9 @@ describe('TournamentPage', () => {
 
   it('match result update propagates to standings (score diff updates)', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    await startTournament(user);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
-    }, { timeout: 3000 });
-
-    await user.click(screen.getByTestId('start-tournament-button'));
-
-    const aliceEl = screen.getAllByText('Alice')[0];
-    await user.click(aliceEl);
-
+    await user.click(screen.getAllByText('Alice')[0]);
     await user.clear(screen.getByTestId('score-input-team1'));
     await user.type(screen.getByTestId('score-input-team1'), '21');
     await user.clear(screen.getByTestId('score-input-team2'));

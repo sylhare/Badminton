@@ -336,6 +336,9 @@ describe('Tournament SE walkthrough — 4 teams', () => {
     const r1 = t.toState().matches;
     expect(r1).toHaveLength(2);
 
+    const r1Winner0 = r1[0].team1.id;
+    const r1Winner1 = r1[1].team1.id;
+
     t = t.recordResult(r1[0].id, 1);
     t = t.recordResult(r1[1].id, 1);
 
@@ -344,8 +347,8 @@ describe('Tournament SE walkthrough — 4 teams', () => {
     expect(r2).toHaveLength(1);
 
     const r2Teams = [r2[0].team1.id, r2[0].team2.id].sort();
-    expect(r2Teams).toContain('a');
-    expect(r2Teams).toContain('c');
+    expect(r2Teams).toContain(r1Winner0);
+    expect(r2Teams).toContain(r1Winner1);
   });
 
   it('isComplete after consolation final (4-team walkthrough)', () => {
