@@ -4,8 +4,8 @@ import { usePlayers } from '../../../hooks/usePlayers';
 import type { TournamentMatch } from '../../../types/tournament';
 import Tournament from '../../../utils/Tournament';
 
-import { CW, MH } from './types';
 import type { BracketNode } from './types';
+import { CW, MH } from './types';
 
 interface NodeCardProps {
   node: BracketNode;

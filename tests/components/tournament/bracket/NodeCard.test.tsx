@@ -7,7 +7,7 @@ import { NodeCard } from '../../../../src/components/tournament/bracket/NodeCard
 import { PlayersProvider } from '../../../../src/hooks/usePlayers';
 import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
 import type { Player } from '../../../../src/types';
-import { makeTeam, makeTeamPlayers, makeMatch } from '../../../data/tournamentFactories';
+import { makeMatch, makeTeam, makeTeamPlayers } from '../../../data/tournamentFactories';
 
 const tA = makeTeam('a', 'Alice');
 const tB = makeTeam('b', 'Bob');

@@ -16,9 +16,9 @@ function extractPlayerNamesSimple(text: string): string[] {
   if (!text || typeof text !== 'string') return [];
 
   const lines = text
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 
   const names: string[] = [];
   for (const line of lines) {
@@ -77,10 +77,10 @@ async function run() {
     ];
 
     const matches = expected.filter((name) =>
-        extracted.some((e) =>
-            e.toLowerCase().includes(name.toLowerCase()) ||
-            name.toLowerCase().includes(e.toLowerCase()),
-        ),
+      extracted.some((e) =>
+        e.toLowerCase().includes(name.toLowerCase()) ||
+        name.toLowerCase().includes(e.toLowerCase()),
+      ),
     );
 
     console.log(`✅  Matched ${matches.length}/${expected.length} expected names`);

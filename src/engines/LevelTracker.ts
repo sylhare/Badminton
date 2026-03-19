@@ -23,7 +23,7 @@ export class LevelTracker {
     if (!score || !winner) return LevelTrackerConfig.K_DEFAULT * this.teamBalanceFactor(teamPlayers);
 
     const winnerScore = winner === 1 ? score.team1 : score.team2;
-    const loserScore  = winner === 1 ? score.team2 : score.team1;
+    const loserScore = winner === 1 ? score.team2 : score.team1;
 
     let rawK = LevelTrackerConfig.K_MAX;
     if (winnerScore !== 21) {
@@ -31,18 +31,14 @@ export class LevelTracker {
     } else {
       const diff = 21 - loserScore;
       for (const band of LevelTrackerConfig.K_SCALE) {
-        if (diff <= band.maxDiff) { rawK = band.k; break; }
+        if (diff <= band.maxDiff) {
+          rawK = band.k;
+          break;
+        }
       }
     }
 
     return rawK * this.teamBalanceFactor(teamPlayers);
-  }
-
-  private teamBalanceFactor(players?: Player[]): number {
-    if (!players || players.length <= 1) return 1;
-    const avg = players.reduce((s, p) => s + (p.level ?? 50), 0) / players.length;
-    const variance = players.reduce((s, p) => s + Math.pow((p.level ?? 50) - avg, 2), 0) / players.length;
-    return 1 - LevelTrackerConfig.BALANCE_FACTOR_FLOOR * Math.min(1, Math.sqrt(variance) / LevelTrackerConfig.BALANCE_FACTOR_NORMALIZER);
   }
 
   /**
@@ -133,6 +129,13 @@ export class LevelTracker {
     }
 
     return players.map(p => updatedPlayers.get(p.id) ?? p);
+  }
+
+  private teamBalanceFactor(players?: Player[]): number {
+    if (!players || players.length <= 1) return 1;
+    const avg = players.reduce((s, p) => s + (p.level ?? 50), 0) / players.length;
+    const variance = players.reduce((s, p) => s + Math.pow((p.level ?? 50) - avg, 2), 0) / players.length;
+    return 1 - LevelTrackerConfig.BALANCE_FACTOR_FLOOR * Math.min(1, Math.sqrt(variance) / LevelTrackerConfig.BALANCE_FACTOR_NORMALIZER);
   }
 }
 

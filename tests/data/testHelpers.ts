@@ -1,4 +1,4 @@
-import { expect, vi } from 'vitest';
+import { expect } from 'vitest';
 import { screen } from '@testing-library/react';
 
 import type { Player } from '../../src/types';

@@ -75,6 +75,14 @@ export default class Tournament {
     return team.playerIds.map(id => players.find(p => p.id === id)?.name ?? id).join(' & ');
   }
 
+  static isWB(m: TournamentMatch): boolean {
+    return (m.bracket ?? 'wb') === 'wb';
+  }
+
+  static isLB(m: TournamentMatch): boolean {
+    return m.bracket === 'lb';
+  }
+
   /** Build a round→matches map and sorted round number list in one O(n) pass. */
   private static _buildRoundMap(
     matches: TournamentMatch[],
@@ -99,7 +107,7 @@ export default class Tournament {
         Tournament.isWB(m) &&
         m.round === round &&
         ((m.team1.id === t1Id && m.team2.id === t2Id) ||
-         (m.team1.id === t2Id && m.team2.id === t1Id)),
+          (m.team1.id === t2Id && m.team2.id === t1Id)),
     );
   }
 
@@ -116,134 +124,11 @@ export default class Tournament {
       if (match?.winner !== undefined) {
         pairs.push({
           winnerId: match.winner === 1 ? match.team1.id : match.team2.id,
-          loserId:  match.winner === 1 ? match.team2.id : match.team1.id,
+          loserId: match.winner === 1 ? match.team2.id : match.team1.id,
         });
       }
     }
     return pairs;
-  }
-
-  /** Serialize this instance for storage. */
-  toState(): TournamentState {
-    return this.state;
-  }
-
-  /**
-   * Standings sorted appropriately for the tournament type.
-   * Round-robin: descending by points → scoreDiff → name.
-   * Elimination: ascending by losses → descending by wins → name.
-   */
-  getStandings(players: Player[]): TournamentStandingRow[] {
-    const standings = Tournament._calculateStandings(this.state.teams, this.state.matches, players);
-    if (this.state.type === 'elimination') {
-      return [...standings].sort((a, b) => {
-        if (a.lost !== b.lost) return a.lost - b.lost;
-        if (b.won !== a.won) return b.won - a.won;
-        return Tournament._compareTeamsByName(a, b, players);
-      });
-    }
-    return standings;
-  }
-
-  /** Current active round and sorted round list derived from match state. */
-  roundInfo(): { currentRound: number; roundNums: number[] } {
-    const { roundMap, roundNums } = Tournament._buildRoundMap(this.state.matches);
-    for (const r of roundNums) {
-      if (roundMap.get(r)!.some(m => m.winner === undefined)) {
-        return { currentRound: r, roundNums };
-      }
-    }
-    return { currentRound: roundNums[roundNums.length - 1] ?? 1, roundNums };
-  }
-
-  /** Number of fully completed rounds (every match in the round has a winner). */
-  getCompletedRounds(): number {
-    const { matches } = this.state;
-    if (matches.length === 0) return 0;
-    const { roundMap, roundNums } = Tournament._buildRoundMap(matches);
-    let completed = 0;
-    for (const round of roundNums) {
-      if (roundMap.get(round)!.every(m => m.winner !== undefined)) {
-        completed = round;
-      } else {
-        break;
-      }
-    }
-    return completed;
-  }
-
-  /** Total rounds: for SE returns log2(size) from start; for RR returns max round in match list. */
-  getTotalRounds(): number {
-    const { type, matches, seBracket } = this.state;
-    if (type === 'elimination' && seBracket) {
-      return Math.log2(seBracket.size);
-    }
-    if (matches.length === 0) return 0;
-    return Math.max(...matches.map(m => m.round));
-  }
-
-  /**
-   * True when the tournament has ended.
-   * Elimination: all generated matches (WB + consolation) have results.
-   * Round robin: all rounds are complete.
-   */
-  isComplete(): boolean {
-    const { type, matches } = this.state;
-    if (type === 'elimination') {
-      return matches.length > 0 && matches.every(m => m.winner !== undefined);
-    }
-    const total = this.getTotalRounds();
-    return total > 0 && this.getCompletedRounds() === total;
-  }
-
-  /**
-   * Record a match result and return a new Tournament instance.
-   * For elimination, automatically generates the next WB round, LB rounds, and GF
-   * as prerequisites are met.
-   */
-  recordResult(
-    matchId: string,
-    winner: 1 | 2,
-    score?: { team1: number; team2: number },
-  ): Tournament {
-    let updatedMatches = this.state.matches.map(m =>
-      m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
-    );
-
-    if (this.state.type === 'elimination' && this.state.seBracket) {
-      const { seBracket, teams, numberOfCourts } = this.state;
-      const wbRounds = Math.log2(seBracket.size);
-
-      const wbMatches = updatedMatches.filter(m => Tournament.isWB(m));
-      if (wbMatches.length > 0) {
-        const maxWBRound = Math.max(...wbMatches.map(m => m.round));
-        if (maxWBRound < wbRounds) {
-          const currentWBRound = wbMatches.filter(m => m.round === maxWBRound);
-          if (currentWBRound.every(m => m.winner !== undefined)) {
-            const newWBMatches = Tournament._generateNextWBRound(
-              seBracket, teams, updatedMatches, numberOfCourts,
-            );
-            updatedMatches = [...updatedMatches, ...newWBMatches];
-          }
-        }
-      }
-
-      let newDE = Tournament._computeNewDEMatches(seBracket, teams, numberOfCourts, updatedMatches);
-      while (newDE.length > 0) {
-        updatedMatches = [...updatedMatches, ...newDE];
-        newDE = Tournament._computeNewDEMatches(seBracket, teams, numberOfCourts, updatedMatches);
-      }
-    }
-
-    return new Tournament({ ...this.state, matches: updatedMatches });
-  }
-
-  static isWB(m: TournamentMatch): boolean {
-    return (m.bracket ?? 'wb') === 'wb';
-  }
-
-  static isLB(m: TournamentMatch): boolean {
-    return m.bracket === 'lb';
   }
 
   private static _makeTeamId(index: number): string {
@@ -566,5 +451,120 @@ export default class Tournament {
     }
 
     return newMatches;
+  }
+
+  /** Serialize this instance for storage. */
+  toState(): TournamentState {
+    return this.state;
+  }
+
+  /**
+   * Standings sorted appropriately for the tournament type.
+   * Round-robin: descending by points → scoreDiff → name.
+   * Elimination: ascending by losses → descending by wins → name.
+   */
+  getStandings(players: Player[]): TournamentStandingRow[] {
+    const standings = Tournament._calculateStandings(this.state.teams, this.state.matches, players);
+    if (this.state.type === 'elimination') {
+      return [...standings].sort((a, b) => {
+        if (a.lost !== b.lost) return a.lost - b.lost;
+        if (b.won !== a.won) return b.won - a.won;
+        return Tournament._compareTeamsByName(a, b, players);
+      });
+    }
+    return standings;
+  }
+
+  /** Current active round and sorted round list derived from match state. */
+  roundInfo(): { currentRound: number; roundNums: number[] } {
+    const { roundMap, roundNums } = Tournament._buildRoundMap(this.state.matches);
+    for (const r of roundNums) {
+      if (roundMap.get(r)!.some(m => m.winner === undefined)) {
+        return { currentRound: r, roundNums };
+      }
+    }
+    return { currentRound: roundNums[roundNums.length - 1] ?? 1, roundNums };
+  }
+
+  /** Number of fully completed rounds (every match in the round has a winner). */
+  getCompletedRounds(): number {
+    const { matches } = this.state;
+    if (matches.length === 0) return 0;
+    const { roundMap, roundNums } = Tournament._buildRoundMap(matches);
+    let completed = 0;
+    for (const round of roundNums) {
+      if (roundMap.get(round)!.every(m => m.winner !== undefined)) {
+        completed = round;
+      } else {
+        break;
+      }
+    }
+    return completed;
+  }
+
+  /** Total rounds: for SE returns log2(size) from start; for RR returns max round in match list. */
+  getTotalRounds(): number {
+    const { type, matches, seBracket } = this.state;
+    if (type === 'elimination' && seBracket) {
+      return Math.log2(seBracket.size);
+    }
+    if (matches.length === 0) return 0;
+    return Math.max(...matches.map(m => m.round));
+  }
+
+  /**
+   * True when the tournament has ended.
+   * Elimination: all generated matches (WB + consolation) have results.
+   * Round robin: all rounds are complete.
+   */
+  isComplete(): boolean {
+    const { type, matches } = this.state;
+    if (type === 'elimination') {
+      return matches.length > 0 && matches.every(m => m.winner !== undefined);
+    }
+    const total = this.getTotalRounds();
+    return total > 0 && this.getCompletedRounds() === total;
+  }
+
+  /**
+   * Record a match result and return a new Tournament instance.
+   * For elimination, automatically generates the next WB round, LB rounds, and GF
+   * as prerequisites are met.
+   */
+  recordResult(
+    matchId: string,
+    winner: 1 | 2,
+    score?: { team1: number; team2: number },
+  ): Tournament {
+    let updatedMatches = this.state.matches.map(m =>
+      m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
+    );
+
+    if (this.state.type === 'elimination' && this.state.seBracket) {
+      const { seBracket, teams, numberOfCourts } = this.state;
+      const wbRounds = Math.log2(seBracket.size);
+
+      const wbMatches = updatedMatches.filter(m => Tournament.isWB(m));
+      if (wbMatches.length > 0) {
+        const maxWBRound = Math.max(...wbMatches.map(m => m.round));
+        if (maxWBRound < wbRounds) {
+          const currentWBRound = wbMatches.filter(m => m.round === maxWBRound);
+          if (currentWBRound.every(m => m.winner !== undefined)) {
+            const newWBMatches = Tournament._generateNextWBRound(
+              seBracket, teams, updatedMatches, numberOfCourts,
+            );
+            updatedMatches = [...updatedMatches, ...newWBMatches];
+          }
+        }
+      }
+
+      let newDE = Tournament._computeNewDEMatches(seBracket, teams, numberOfCourts, updatedMatches);
+      while (newDE.length > 0) {
+        updatedMatches = [...updatedMatches, ...newDE];
+        newDE = Tournament._computeNewDEMatches(seBracket, teams, numberOfCourts, updatedMatches);
+      }
+    }
+
+    return new Tournament({ ...this.state, matches: updatedMatches });
   }
 }

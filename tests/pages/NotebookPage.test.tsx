@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 import NotebookPage from '../../src/pages/NotebookPage';

@@ -1,12 +1,12 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import TournamentMatches from '../../../src/components/tournament/TournamentMatches';
 import { PlayersProvider } from '../../../src/hooks/usePlayers';
 import type { TournamentMatch } from '../../../src/types/tournament';
 import type { Player } from '../../../src/types';
-import { makeTeam, makeTeamPlayers, makeMatch } from '../../data/tournamentFactories';
+import { makeMatch, makeTeam, makeTeamPlayers } from '../../data/tournamentFactories';
 
 const teamA = makeTeam('a', ['Alice']);
 const teamB = makeTeam('b', ['Bob']);

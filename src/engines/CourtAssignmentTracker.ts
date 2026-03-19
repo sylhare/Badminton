@@ -1,5 +1,13 @@
-import type { Court, CourtEngineState, EngineType, ICourtAssignmentTracker, Player, TrackerStats, UpdateWinnerParams } from '../types';
-import { storageManager, MAX_LEVEL_HISTORY_ENTRIES } from '../utils/StorageManager';
+import type {
+  Court,
+  CourtEngineState,
+  EngineType,
+  ICourtAssignmentTracker,
+  Player,
+  TrackerStats,
+  UpdateWinnerParams,
+} from '../types';
+import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
 import { pairKey, shuffleArray } from '../utils/playerUtils';
 
 import { levelTracker } from './LevelTracker';
@@ -39,15 +47,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Level history per player - tracks level after each round snapshot */
   protected static levelHistoryMap: Map<string, number[]> = new Map();
-
-  private static readonly MAX_LEVEL_HISTORY = MAX_LEVEL_HISTORY_ENTRIES;
-
   /** Timestamps for pruning stale pairings - tracks last update time */
   protected static lastUpdatedMap: Map<string, number> = new Map();
-
   /** Monotonic counter for generating timestamps */
   protected static globalCounter = 0;
-
+  private static readonly MAX_LEVEL_HISTORY = MAX_LEVEL_HISTORY_ENTRIES;
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
 
@@ -293,17 +297,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /**
-   * Reverses a previously recorded win for a specific court.
-   */
-  private reverseWinForCourt(courtNumber: number): void {
-    const previousRecord = CourtAssignmentTracker.recordedWinsMap.get(courtNumber);
-    if (previousRecord) {
-      this.reversePreviousWinRecord(previousRecord);
-      CourtAssignmentTracker.recordedWinsMap.delete(courtNumber);
-    }
-  }
-
-  /**
    * Updates the winner of a match and records the result.
    * If rotatedCourt is provided, applies the rotation and updates team pairing stats.
    */
@@ -425,6 +418,17 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
 
     return court;
+  }
+
+  /**
+   * Reverses a previously recorded win for a specific court.
+   */
+  private reverseWinForCourt(courtNumber: number): void {
+    const previousRecord = CourtAssignmentTracker.recordedWinsMap.get(courtNumber);
+    if (previousRecord) {
+      this.reversePreviousWinRecord(previousRecord);
+      CourtAssignmentTracker.recordedWinsMap.delete(courtNumber);
+    }
   }
 
   /** Prunes historical pairings and counts based on recency. */

@@ -1,15 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import type { Player, Court, ICourtAssignmentEngine } from '../../src/types';
+import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { pairKey } from '../../src/utils/playerUtils';
 
-import type {
-  MatchEvent,
-  MatchPairEvent,
-  PairEvent,
-  RoundResult,
-  SimulationConfig,
-} from './types';
+import type { MatchEvent, MatchPairEvent, PairEvent, RoundResult, SimulationConfig } from './types';
 
 export const loadConfig = (configPath: string): SimulationConfig => {
   if (!existsSync(configPath)) {

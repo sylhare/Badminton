@@ -8,7 +8,7 @@ import ScoreInputModal from '../../modals/ScoreInputModal';
 import './EliminationBracket.css';
 import { BracketConnectors } from './BracketConnectors';
 import { LBBracket } from './LBBracket';
-import { CW, CN, MH, SH, wbTop } from './types';
+import { CN, CW, MH, SH, wbTop } from './types';
 import { computeBracketTree } from './computeBracketTree';
 import { computeConsolationTree } from './computeConsolationTree';
 import { NodeCard } from './NodeCard';

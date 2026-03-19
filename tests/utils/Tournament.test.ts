@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { TournamentMatch, TournamentTeam } from '../../src/types/tournament';
 import Tournament from '../../src/utils/Tournament';
 import { createMockPlayer } from '../data/testFactories';
-import { makeTeam, makeTeamPlayers, makeMatch } from '../data/tournamentFactories';
+import { makeMatch, makeTeam, makeTeamPlayers } from '../data/tournamentFactories';
 
 describe('Tournament RR match generation', () => {
   it('produces 1 match for 2 teams', () => {
@@ -341,7 +341,7 @@ describe('Tournament SE first stage', () => {
   });
 
   it('6 teams → size=8, seeding has 2 nulls (null-null pair), 3 R1 matches', () => {
-    const teams = ['a','b','c','d','e','f'].map(id => makeTeam(id, [id.toUpperCase()]));
+    const teams = ['a', 'b', 'c', 'd', 'e', 'f'].map(id => makeTeam(id, [id.toUpperCase()]));
     const { matches, seBracket } = Tournament.start(teams, 4, 'singles', 'elimination').toState();
     expect(seBracket!.size).toBe(8);
     expect(seBracket!.seeding).toHaveLength(8);
@@ -362,7 +362,7 @@ describe('Tournament SE first stage', () => {
   });
 
   it('cycles court numbers', () => {
-    const teams = ['a','b','c','d'].map(id => makeTeam(id, [id]));
+    const teams = ['a', 'b', 'c', 'd'].map(id => makeTeam(id, [id]));
     const { matches } = Tournament.start(teams, 1, 'singles', 'elimination').toState();
     expect(matches.every(m => m.courtNumber === 1)).toBe(true);
   });
@@ -422,7 +422,7 @@ describe('Tournament SE walkthrough — 4 teams', () => {
 });
 
 describe('Tournament SE walkthrough — 6 teams', () => {
-  const teams = ['a','b','c','d','e','f'].map(id => makeTeam(id, [id.toUpperCase()]));
+  const teams = ['a', 'b', 'c', 'd', 'e', 'f'].map(id => makeTeam(id, [id.toUpperCase()]));
 
   it('R1 has 3 matches (all 6 teams play)', () => {
     const { matches } = Tournament.start(teams, 4, 'singles', 'elimination').toState();
@@ -545,7 +545,7 @@ describe('Consolation Bracket', () => {
   });
 
   it('8 teams: consolation R2 (challenge) appears after LB R1 + WB R2 complete', () => {
-    const teams = makeTeams(['A','B','C','D','E','F','G','H']);
+    const teams = makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
     const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
@@ -567,7 +567,7 @@ describe('Consolation Bracket', () => {
   });
 
   it('8 teams: consolation R3 (final) appears after LB R2 complete', () => {
-    const teams = makeTeams(['A','B','C','D','E','F','G','H']);
+    const teams = makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
     const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
@@ -584,7 +584,7 @@ describe('Consolation Bracket', () => {
   });
 
   it('8 teams: WBF loser does not appear in consolation bracket', () => {
-    const teams = makeTeams(['A','B','C','D','E','F','G','H']);
+    const teams = makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
     const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);

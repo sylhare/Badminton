@@ -1,5 +1,4 @@
-import { createContext, useContext, useMemo } from 'react';
-import React from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 
 import type { Player } from '../types';
 

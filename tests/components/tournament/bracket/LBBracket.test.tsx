@@ -1,13 +1,13 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { LBBracket } from '../../../../src/components/tournament/bracket/LBBracket';
 import { PlayersProvider } from '../../../../src/hooks/usePlayers';
 import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
 import type { Player } from '../../../../src/types';
-import { makeTeam, makeTeamPlayers, makeMatch } from '../../../data/tournamentFactories';
+import { makeMatch, makeTeam, makeTeamPlayers } from '../../../data/tournamentFactories';
 
 describe('LBBracket', () => {
   it('renders nothing when nodes is empty', () => {

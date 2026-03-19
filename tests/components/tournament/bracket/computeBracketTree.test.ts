@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { computeBracketTree } from '../../../../src/components/tournament/bracket/computeBracketTree';
 import type { SEBracket } from '../../../../src/types/tournament';
-import { makeTeam, makeMatch } from '../../../data/tournamentFactories';
+import { makeMatch, makeTeam } from '../../../data/tournamentFactories';
 
 const tA = makeTeam('a', 'Alice');
 const tB = makeTeam('b', 'Bob');

@@ -31,7 +31,7 @@ export function computeBracketTree(
         m => Tournament.isWB(m) &&
           m.round === 1 &&
           ((m.team1.id === t1Id && m.team2.id === t2Id) ||
-           (m.team1.id === t2Id && m.team2.id === t1Id)),
+            (m.team1.id === t2Id && m.team2.id === t1Id)),
       );
       r1Nodes.push(
         match
@@ -77,7 +77,7 @@ export function computeBracketTree(
           m => Tournament.isWB(m) &&
             m.round === r + 1 &&
             ((m.team1.id === t1.id && m.team2.id === t2.id) ||
-             (m.team1.id === t2.id && m.team2.id === t1.id)),
+              (m.team1.id === t2.id && m.team2.id === t1.id)),
         );
         curNodes.push(
           match

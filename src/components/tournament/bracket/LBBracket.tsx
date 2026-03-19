@@ -3,7 +3,7 @@ import React from 'react';
 import type { TournamentMatch } from '../../../types/tournament';
 
 import type { BracketNode } from './types';
-import { CW, CN, MH, MG } from './types';
+import { CN, CW, MG, MH } from './types';
 import { NodeCard } from './NodeCard';
 
 interface LBBracketProps {

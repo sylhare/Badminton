@@ -2,7 +2,7 @@
 /// <reference types="node" />
 
 import { readFileSync } from 'node:fs';
-import { resolve, join, basename } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';

@@ -1,16 +1,15 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+import TournamentSetup from '../../../src/components/tournament/TournamentSetup';
+import type { TournamentState } from '../../../src/types/tournament';
+import { createMockPlayer } from '../../data/testFactories';
 
 vi.mock('../../../src/components/modals/ImageUploadModal', () => ({
   default: () => null,
 }));
-
-import TournamentSetup from '../../../src/components/tournament/TournamentSetup';
-import type { TournamentState } from '../../../src/types/tournament';
-import Tournament from '../../../src/utils/Tournament';
-import { createMockPlayer } from '../../data/testFactories';
 
 const presentPlayers = [
   createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true }),
