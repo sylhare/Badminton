@@ -3,23 +3,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useMatchScoring } from '../../hooks/useMatchScoring';
 import { usePlayers } from '../../hooks/usePlayers';
 import type { TournamentMatch } from '../../types/tournament';
-import Tournament from '../../utils/Tournament';
 import { DoublesMatch, SinglesMatch } from '../court/display';
 import ScoreInputModal from '../modals/ScoreInputModal';
 
 interface TournamentMatchesProps {
   matches: TournamentMatch[];
+  currentRound: number;
+  roundNums: number[];
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
-}
-
-function getCurrentRoundInfo(matches: TournamentMatch[]): { currentRound: number; roundNums: number[] } {
-  const roundNums = Tournament.getSortedRoundNums(matches);
-  for (const r of roundNums) {
-    if (matches.filter(m => m.round === r).some(m => m.winner === undefined)) {
-      return { currentRound: r, roundNums };
-    }
-  }
-  return { currentRound: roundNums[roundNums.length - 1] ?? 1, roundNums };
 }
 
 function getRoundLabel(round: number): string {
@@ -28,17 +19,14 @@ function getRoundLabel(round: number): string {
 
 const TournamentMatches: React.FC<TournamentMatchesProps> = ({
   matches,
+  currentRound,
+  roundNums,
   onMatchResult,
 }) => {
   const { playersFrom } = usePlayers();
   const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } =
     useMatchScoring(onMatchResult);
-  const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() => {
-    const { currentRound: cur } = getCurrentRoundInfo(matches);
-    return new Set([cur]);
-  });
-
-  const { currentRound, roundNums } = getCurrentRoundInfo(matches);
+  const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() => new Set([currentRound]));
 
   const allComplete = matches.every(m => m.winner !== undefined);
 

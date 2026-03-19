@@ -102,6 +102,7 @@ function TournamentPage(): React.ReactElement {
     const totalRounds = tournament.getTotalRounds();
     const isFinal = tournament.isComplete();
     const { type: tournamentType, matches } = tournament.toState();
+    const { currentRound, roundNums } = tournament.roundInfo();
 
     content = (
       <PlayersProvider value={players}>
@@ -116,6 +117,8 @@ function TournamentPage(): React.ReactElement {
           ) : (
             <TournamentMatches
               matches={matches}
+              currentRound={currentRound}
+              roundNums={roundNums}
               onMatchResult={handleMatchResult}
             />
           )}

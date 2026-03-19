@@ -143,6 +143,45 @@ describe('Tournament.getStandings (round-robin)', () => {
   });
 });
 
+describe('Tournament.roundInfo', () => {
+  const teamA = makeTeam('a', ['A']);
+  const teamB = makeTeam('b', ['B']);
+  const teamC = makeTeam('c', ['C']);
+
+  function roundInfo(matches: TournamentMatch[]) {
+    return Tournament.from({
+      phase: 'active', format: 'singles', type: 'round-robin',
+      numberOfCourts: 2, teams: [teamA, teamB, teamC], matches,
+    }).roundInfo();
+  }
+
+  it('returns round 1 and empty roundNums when no matches', () => {
+    expect(roundInfo([])).toEqual({ currentRound: 1, roundNums: [] });
+  });
+
+  it('returns the first round with an unfinished match as currentRound', () => {
+    expect(roundInfo([
+      makeMatch('m1', 1, teamA, teamB),
+      makeMatch('m2', 2, teamA, teamC),
+    ])).toEqual({ currentRound: 1, roundNums: [1, 2] });
+  });
+
+  it('advances to next round once previous round is complete', () => {
+    expect(roundInfo([
+      makeMatch('m1', 1, teamA, teamB, 1),
+      makeMatch('m2', 2, teamA, teamC),
+    ])).toEqual({ currentRound: 2, roundNums: [1, 2] });
+  });
+
+  it('returns last round as currentRound when all matches are complete', () => {
+    expect(roundInfo([
+      makeMatch('m1', 1, teamA, teamB, 1),
+      makeMatch('m2', 2, teamA, teamC, 2),
+      makeMatch('m3', 3, teamB, teamC, 1),
+    ])).toEqual({ currentRound: 3, roundNums: [1, 2, 3] });
+  });
+});
+
 describe('Tournament.getCompletedRounds', () => {
   const teamA = makeTeam('a', ['A']);
   const teamB = makeTeam('b', ['B']);

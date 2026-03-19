@@ -76,7 +76,7 @@ export default class Tournament {
   }
 
   /** Sorted unique round numbers from a match list. */
-  static getSortedRoundNums(matches: TournamentMatch[]): number[] {
+  private static _getSortedRoundNums(matches: TournamentMatch[]): number[] {
     return Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
   }
 
@@ -102,6 +102,17 @@ export default class Tournament {
     return standings;
   }
 
+  /** Current active round and sorted round list derived from match state. */
+  roundInfo(): { currentRound: number; roundNums: number[] } {
+    const roundNums = Tournament._getSortedRoundNums(this.state.matches);
+    for (const r of roundNums) {
+      if (this.state.matches.filter(m => m.round === r).some(m => m.winner === undefined)) {
+        return { currentRound: r, roundNums };
+      }
+    }
+    return { currentRound: roundNums[roundNums.length - 1] ?? 1, roundNums };
+  }
+
   /** Number of fully completed rounds (every match in the round has a winner). */
   getCompletedRounds(): number {
     const { matches } = this.state;
@@ -114,7 +125,7 @@ export default class Tournament {
     }
 
     let completed = 0;
-    for (const round of Tournament.getSortedRoundNums(matches)) {
+    for (const round of Tournament._getSortedRoundNums(matches)) {
       if (roundMap.get(round)!.every(m => m.winner !== undefined)) {
         completed = round;
       } else {

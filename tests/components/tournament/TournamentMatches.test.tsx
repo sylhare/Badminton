@@ -39,6 +39,8 @@ describe('TournamentMatches', () => {
       <PlayersProvider value={players}>
         <TournamentMatches
           matches={threeMatchSingles}
+          currentRound={1}
+          roundNums={[1, 2, 3]}
           onMatchResult={onMatchResult}
         />
       </PlayersProvider>,
@@ -54,6 +56,8 @@ describe('TournamentMatches', () => {
       <PlayersProvider value={players}>
         <TournamentMatches
           matches={threeMatchSingles}
+          currentRound={1}
+          roundNums={[1, 2, 3]}
           onMatchResult={onMatchResult}
         />
       </PlayersProvider>,
@@ -69,6 +73,8 @@ describe('TournamentMatches', () => {
       <PlayersProvider value={players}>
         <TournamentMatches
           matches={[completedMatch]}
+          currentRound={1}
+          roundNums={[1]}
           onMatchResult={onMatchResult}
         />
       </PlayersProvider>,
