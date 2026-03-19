@@ -433,6 +433,71 @@ describe('StorageManager', () => {
     });
   });
 
+  describe('saveTournament and loadTournament', () => {
+    const mockTournamentState = {
+      phase: 'active' as const,
+      format: 'singles' as const,
+      type: 'round-robin' as const,
+      numberOfCourts: 2,
+      teams: [{ id: 't1', players: [{ id: 'p1', name: 'Alice', isPresent: true }] }],
+      matches: [],
+    };
+
+    it('should round-trip tournament state', async () => {
+      await storageManager.saveTournament(mockTournamentState);
+      const loaded = await storageManager.loadTournament();
+      expect(loaded).toEqual(mockTournamentState);
+    });
+
+    it('should store tournament under the tournament key', async () => {
+      await storageManager.saveTournament(mockTournamentState);
+      const parsed = await readDecompressed() as { tournament: { phase: string } };
+      expect(parsed.tournament.phase).toBe('active');
+    });
+
+    it('should return null when no tournament state exists', async () => {
+      const loaded = await storageManager.loadTournament();
+      expect(loaded).toBeNull();
+    });
+
+    it('should return null when tournament data is missing', async () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({}));
+      expect(await storageManager.loadTournament()).toBeNull();
+    });
+
+    it('should return null when localStorage is corrupted', async () => {
+      localStorage.setItem(STORAGE_KEY, 'not-valid-base64-or-json!!!');
+      expect(await storageManager.loadTournament()).toBeNull();
+    });
+
+    it('should fill missing fields with defaults when data is partial', async () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ tournament: { phase: 'active' } }));
+      const loaded = await storageManager.loadTournament();
+      expect(loaded?.phase).toBe('active');
+      expect(loaded?.format).toBe('doubles');
+      expect(loaded?.teams).toEqual([]);
+      expect(loaded?.matches).toEqual([]);
+    });
+
+    it('should remove the tournament key when saveTournament(null) is called', async () => {
+      await storageManager.saveTournament(mockTournamentState);
+      await storageManager.saveTournament(null);
+      const parsed = await readDecompressed() as { tournament?: unknown };
+      expect(parsed.tournament).toBeUndefined();
+    });
+
+    it('should not lose app data when saveApp and saveTournament are called concurrently', async () => {
+      await Promise.all([
+        storageManager.saveApp({ numberOfCourts: 3 }),
+        storageManager.saveTournament(mockTournamentState),
+      ]);
+      const app = await storageManager.loadApp();
+      const tournament = await storageManager.loadTournament();
+      expect(app.numberOfCourts).toBe(3);
+      expect(tournament?.phase).toBe('active');
+    });
+  });
+
   describe('write queue correctness', () => {
     const minimalEngineState: CourtEngineState = {
       benchCountMap: {},

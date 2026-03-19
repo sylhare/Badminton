@@ -1,8 +1,11 @@
 import type { AppState, CourtEngineState, EngineType } from '../types';
+import { DEFAULT_TOURNAMENT_STATE } from '../types/tournament';
+import type { TournamentState } from '../types/tournament';
 
 interface StorageData {
   app: AppState;
   engine: CourtEngineState;
+  tournament?: TournamentState;
 }
 
 const OLD_KEYS = {
@@ -86,6 +89,14 @@ async function decompress(data: string): Promise<string> {
  *     "assignments":    [...],
  *     "lastGeneratedAt": 1710000000000,
  *     "isSmartEngineEnabled": false
+ *   },
+ *   "tournament": {
+ *     "phase": "active",
+ *     "format": "singles",
+ *     "type": "round-robin",
+ *     "numberOfCourts": 2,
+ *     "teams": [...],
+ *     "matches": [...]
  *   },
  *   "engine": {
  *     "v":  3,
@@ -185,6 +196,28 @@ class StorageManager {
     } catch (_error) {
       localStorage.removeItem(StorageManager.KEY);
       return {};
+    }
+  }
+
+  async saveTournament(state: TournamentState | null): Promise<void> {
+    return this.save(current => {
+      const next = { ...current };
+      if (state === null) {
+        delete next.tournament;
+      } else {
+        next.tournament = state;
+      }
+      return next;
+    });
+  }
+
+  async loadTournament(): Promise<TournamentState | null> {
+    try {
+      const data = await this.read();
+      if (!data.tournament) return null;
+      return { ...DEFAULT_TOURNAMENT_STATE, ...data.tournament };
+    } catch {
+      return null;
     }
   }
 
