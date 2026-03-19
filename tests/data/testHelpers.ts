@@ -55,7 +55,7 @@ export const fileAssertions = {
   },
 };
 
-type MockFunction = ReturnType<typeof vi.fn>;
+type MockFunction = (...args: unknown[]) => unknown;
 
 export const mockAssertions = {
   expectCalled: (mockFn: MockFunction): void => {

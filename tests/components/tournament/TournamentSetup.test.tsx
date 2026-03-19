@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -9,6 +9,7 @@ vi.mock('../../../src/components/modals/ImageUploadModal', () => ({
 
 import TournamentSetup from '../../../src/components/tournament/TournamentSetup';
 import type { TournamentState } from '../../../src/types/tournament';
+import Tournament from '../../../src/utils/Tournament';
 import { createMockPlayer } from '../../data/testFactories';
 
 const presentPlayers = [
@@ -19,10 +20,10 @@ const presentPlayers = [
 ];
 
 describe('TournamentSetup', () => {
-  let onStart: ReturnType<typeof vi.fn>;
+  let onStart: MockedFunction<React.ComponentProps<typeof TournamentSetup>['onStart']>;
 
   beforeEach(() => {
-    onStart = vi.fn();
+    onStart = vi.fn() as typeof onStart;
   });
 
   afterEach(() => {

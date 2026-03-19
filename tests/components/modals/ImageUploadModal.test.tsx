@@ -154,7 +154,7 @@ describe('ImageUploadModal', () => {
 
   describe('Extracted players list', () => {
     it('should display count of extracted players', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
+      let extractionCallback: (players: string[]) => void = () => {};
 
       vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
         extractionCallback = onPlayersExtracted;
@@ -185,7 +185,7 @@ describe('ImageUploadModal', () => {
     });
 
     it('should have select all and deselect all buttons', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
+      let extractionCallback: (players: string[]) => void = () => {};
 
       vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
         extractionCallback = onPlayersExtracted;
@@ -217,7 +217,7 @@ describe('ImageUploadModal', () => {
     });
 
     it('should have a try another image button when players are extracted', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
+      let extractionCallback: (players: string[]) => void = () => {};
 
       vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
         extractionCallback = onPlayersExtracted;
@@ -250,7 +250,7 @@ describe('ImageUploadModal', () => {
 
   describe('Add players functionality', () => {
     it('should have an add players button when players are extracted', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
+      let extractionCallback: (players: string[]) => void = () => {};
 
       vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
         extractionCallback = onPlayersExtracted;
@@ -281,7 +281,7 @@ describe('ImageUploadModal', () => {
     });
 
     it('should call onPlayersAdded when clicking add button with selected players', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
+      let extractionCallback: (players: string[]) => void = () => {};
 
       vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
         extractionCallback = onPlayersExtracted;
@@ -317,7 +317,7 @@ describe('ImageUploadModal', () => {
     });
 
     it('should have cancel button in footer', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
+      let extractionCallback: (players: string[]) => void = () => {};
 
       vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
         extractionCallback = onPlayersExtracted;

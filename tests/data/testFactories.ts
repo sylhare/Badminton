@@ -20,9 +20,9 @@ export const GRAPH_PLAYER_NAMES: Record<string, string> = {
  * @param customNames - Optional custom name mapping to override defaults
  * @returns A vi.fn() that resolves player IDs to names
  */
-export function createMockGetPlayerName(customNames?: Record<string, string>): ReturnType<typeof vi.fn<[string], string>> {
+export function createMockGetPlayerName(customNames?: Record<string, string>): ReturnType<typeof vi.fn> & ((id: string) => string) {
   const names = customNames || GRAPH_PLAYER_NAMES;
-  return vi.fn((id: string) => names[id] || id);
+  return vi.fn((id: string) => names[id] || id) as ReturnType<typeof vi.fn> & ((id: string) => string);
 }
 
 /**

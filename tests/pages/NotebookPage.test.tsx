@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 import NotebookPage from '../../src/pages/NotebookPage';
@@ -7,11 +7,11 @@ import NotebookPage from '../../src/pages/NotebookPage';
 describe('NotebookPage Component', () => {
   const mockNotebookUrlAvailable = `/analysis/engine_analysis.html`;
   const mockNotebookUrlUnavailable = `/analysis/nonexistent_notebook.html`;
-  let fetchSpy: vi.SpyInstance;
+  let fetchSpy: MockInstance;
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    fetchSpy = vi.spyOn(global, 'fetch');
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
   });
 
   afterEach(() => {

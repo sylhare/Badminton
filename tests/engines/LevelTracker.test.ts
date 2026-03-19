@@ -14,7 +14,7 @@ function makeCourt(
   winner: 1 | 2,
   score?: { team1: number; team2: number },
 ): Court {
-  return { courtNumber: 1, teams: { team1, team2 }, winner, score };
+  return { courtNumber: 1, players: [...team1, ...team2], teams: { team1, team2 }, winner, score };
 }
 
 describe('LevelTracker', () => {

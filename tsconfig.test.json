@@ -2,6 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noUnusedParameters": false,
+    "lib": ["ES2021", "ES2022.Array", "DOM", "DOM.Iterable"],
     "types": ["vitest/globals"]
   },
   "include": ["src", "tests"]

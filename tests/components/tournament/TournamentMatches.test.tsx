@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockedFunction } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import TournamentMatches from '../../../src/components/tournament/TournamentMatches';
@@ -18,10 +18,10 @@ const players: Player[] = [
 ];
 
 describe('TournamentMatches', () => {
-  let onMatchResult: ReturnType<typeof vi.fn>;
+  let onMatchResult: MockedFunction<React.ComponentProps<typeof TournamentMatches>['onMatchResult']>;
 
   beforeEach(() => {
-    onMatchResult = vi.fn();
+    onMatchResult = vi.fn() as typeof onMatchResult;
   });
 
   afterEach(() => {

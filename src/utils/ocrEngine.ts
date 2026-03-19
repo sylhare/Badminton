@@ -9,7 +9,7 @@ interface OcrOptions {
 }
 
 export async function recognizePlayerNames(
-  image: File | Blob | Buffer,
+  image: File | Blob | Uint8Array,
   { workerPath, onProgress, preprocess }: OcrOptions = {},
 ): Promise<string[]> {
   const pushProgress = (progress: number) => {

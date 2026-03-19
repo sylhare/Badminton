@@ -676,7 +676,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 1);
 
-      const state = engine.prepareStateForSaving();
+      const state = engine.prepareStateForSaving('sa');
       expect(state).toHaveProperty('singleCountMap');
       expect(typeof state.singleCountMap).toBe('object');
     });
@@ -686,7 +686,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 1);
 
-      const state = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const state = engine.prepareStateForSaving('sa') as { singleCountMap: Record<string, number> };
       const singlesPlayed = Object.values(state.singleCountMap).filter(v => v > 0).length;
       expect(singlesPlayed).toBe(2);
     });
@@ -696,7 +696,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 1);
 
-      const state = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const state = engine.prepareStateForSaving('sa') as { singleCountMap: Record<string, number> };
       const singlesPlayed = Object.values(state.singleCountMap).filter(v => v > 0).length;
       expect(singlesPlayed).toBe(0);
     });
@@ -707,7 +707,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const twoPlayers = players.slice(0, 2);
       engine.generate(twoPlayers, 1);
 
-      const stateAfterFirst = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const stateAfterFirst = engine.prepareStateForSaving('sa') as { singleCountMap: Record<string, number> };
       expect(stateAfterFirst.singleCountMap['P0']).toBe(1);
       expect(stateAfterFirst.singleCountMap['P1']).toBe(1);
       expect(stateAfterFirst.singleCountMap['P2'] ?? 0).toBe(0);
@@ -716,7 +716,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const anotherTwoPlayers = players.slice(2, 4);
       engine.generate(anotherTwoPlayers, 1);
 
-      const stateAfterSecond = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const stateAfterSecond = engine.prepareStateForSaving('sa') as { singleCountMap: Record<string, number> };
       expect(stateAfterSecond.singleCountMap['P2']).toBe(1);
       expect(stateAfterSecond.singleCountMap['P3']).toBe(1);
     });
@@ -726,12 +726,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 1);
 
-      const stateBefore = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const stateBefore = engine.prepareStateForSaving('sa') as { singleCountMap: Record<string, number> };
       expect(Object.values(stateBefore.singleCountMap).some(v => v > 0)).toBe(true);
 
       engine.resetHistory();
 
-      const stateAfter = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const stateAfter = engine.prepareStateForSaving('sa') as { singleCountMap: Record<string, number> };
       expect(Object.values(stateAfter.singleCountMap).every(v => v === 0)).toBe(true);
     });
   });
