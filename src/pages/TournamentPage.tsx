@@ -5,12 +5,13 @@ import TournamentMatches from '../components/tournament/TournamentMatches';
 import TournamentSetup from '../components/tournament/TournamentSetup';
 import TournamentStandings from '../components/tournament/TournamentStandings';
 import type { Player } from '../types';
+import { engine } from '../engines/engineSelector';
 import Tournament from '../utils/Tournament';
 import { storageManager } from '../utils/StorageManager';
 import './TournamentPage.css';
 
 function TournamentPage(): React.ReactElement {
-  const [initialPlayers, setInitialPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -18,7 +19,7 @@ function TournamentPage(): React.ReactElement {
   useEffect(() => {
     Promise.all([storageManager.loadApp(), storageManager.loadTournament()]).then(
       ([appState, savedTournament]) => {
-        if (appState.players) setInitialPlayers(appState.players);
+        if (appState.players) setPlayers(appState.players);
         if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
         if (savedTournament) {
           setTournament(Tournament.from(savedTournament));
@@ -37,12 +38,32 @@ function TournamentPage(): React.ReactElement {
     setTournament(t);
   };
 
+  const handlePlayersAdded = (newPlayers: Player[]) => {
+    setPlayers(prev => {
+      const merged = [...prev, ...newPlayers];
+      storageManager.loadApp().then(appState =>
+        storageManager.saveApp({ ...appState, players: merged }),
+      );
+      return merged;
+    });
+  };
+
   const handleMatchResult = (
     matchId: string,
     winner: 1 | 2,
     score?: { team1: number; team2: number },
   ) => {
-    setTournament(prev => prev?.recordResult(matchId, winner, score) ?? prev);
+    if (!tournament) return;
+
+    const { tournament: newTournament, players: updatedPlayers } =
+      tournament.recordResult(matchId, winner, score, players);
+
+    engine().recordLevelSnapshot(updatedPlayers);
+    setTournament(newTournament);
+    setPlayers(updatedPlayers);
+    storageManager.loadApp().then(appState =>
+      storageManager.saveApp({ ...appState, players: updatedPlayers }),
+    );
   };
 
   const handleReset = () => {
@@ -54,9 +75,10 @@ function TournamentPage(): React.ReactElement {
   if (!tournament) {
     content = (
       <TournamentSetup
-        initialPlayers={initialPlayers}
+        initialPlayers={players}
         initialNumberOfCourts={initialNumberOfCourts}
         onStart={handleStart}
+        onPlayersAdded={handlePlayersAdded}
       />
     );
   } else {

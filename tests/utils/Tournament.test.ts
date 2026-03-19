@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Player } from '../../src/types';
 import type { TournamentMatch, TournamentTeam } from '../../src/types/tournament';
 import Tournament from '../../src/utils/Tournament';
 import { createMockPlayer } from '../data/testFactories';
@@ -625,5 +626,55 @@ describe('Tournament SE isComplete', () => {
       matches: [makeMatch('m1', 1, teamA, teamB, 1)],
     });
     expect(t.isComplete()).toBe(true);
+  });
+});
+
+describe('Tournament recordResult with players (level update)', () => {
+  const p1: Player = createMockPlayer({ id: 'p1', name: 'Alice', level: 50 });
+  const p2: Player = createMockPlayer({ id: 'p2', name: 'Bob', level: 50 });
+  const teamA = makeTeam('a', ['Alice']);
+  const teamB = makeTeam('b', ['Bob']);
+
+  function makeSinglesRR() {
+    return Tournament.from({
+      phase: 'active', format: 'singles', type: 'round-robin',
+      numberOfCourts: 1, teams: [teamA, teamB],
+      matches: [{ ...makeMatch('m1', 1, teamA, teamB), team1: { id: teamA.id, players: [p1] }, team2: { id: teamB.id, players: [p2] } }],
+    });
+  }
+
+  it('returns { tournament, players } when players argument is provided', () => {
+    const t = makeSinglesRR();
+    const result = t.recordResult('m1', 1, undefined, [p1, p2]);
+    expect(result).toHaveProperty('tournament');
+    expect(result).toHaveProperty('players');
+  });
+
+  it('records the winner on the returned tournament', () => {
+    const t = makeSinglesRR();
+    const { tournament } = t.recordResult('m1', 1, undefined, [p1, p2]);
+    const match = tournament.toState().matches.find(m => m.id === 'm1')!;
+    expect(match.winner).toBe(1);
+  });
+
+  it('updates player levels based on the match result', () => {
+    const t = makeSinglesRR();
+    const { players } = t.recordResult('m1', 1, undefined, [p1, p2]);
+    const winner = players.find(p => p.id === p1.id)!;
+    const loser = players.find(p => p.id === p2.id)!;
+    expect(winner.level).not.toBe(p1.level);
+    expect(loser.level).not.toBe(p2.level);
+  });
+
+  it('returns players unchanged when matchId is not found', () => {
+    const t = makeSinglesRR();
+    const { players } = t.recordResult('no-such-match', 1, undefined, [p1, p2]);
+    expect(players).toEqual([p1, p2]);
+  });
+
+  it('without players argument still returns Tournament directly (backward-compat)', () => {
+    const t = makeSinglesRR();
+    const result = t.recordResult('m1', 1);
+    expect(result).toBeInstanceOf(Tournament);
   });
 });

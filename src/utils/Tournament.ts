@@ -1,4 +1,5 @@
-import type { Player } from '../types';
+import type { Court, Player } from '../types';
+import { levelTracker } from '../engines/LevelTracker';
 import type {
   MatchBracket,
   SEBracket,
@@ -152,12 +153,18 @@ export default class Tournament {
    * Record a match result and return a new Tournament instance.
    * For elimination, automatically generates the next WB round, LB rounds, and GF
    * as prerequisites are met.
+   *
+   * Overload with `players`: also updates player levels via LevelTracker and returns
+   * `{ tournament, players }` with the updated player list.
    */
+  recordResult(matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }): Tournament;
+  recordResult(matchId: string, winner: 1 | 2, score: { team1: number; team2: number } | undefined, players: Player[]): { tournament: Tournament; players: Player[] };
   recordResult(
     matchId: string,
     winner: 1 | 2,
     score?: { team1: number; team2: number },
-  ): Tournament {
+    players?: Player[],
+  ): Tournament | { tournament: Tournament; players: Player[] } {
     let updatedMatches = this.state.matches.map(m =>
       m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
     );
@@ -187,7 +194,35 @@ export default class Tournament {
       }
     }
 
-    return new Tournament({ ...this.state, matches: updatedMatches });
+    const newTournament = new Tournament({ ...this.state, matches: updatedMatches });
+
+    if (players !== undefined) {
+      return this._applyLevelUpdate(matchId, winner, score, players, newTournament);
+    }
+
+    return newTournament;
+  }
+
+  private _applyLevelUpdate(
+    matchId: string,
+    winner: 1 | 2,
+    score: { team1: number; team2: number } | undefined,
+    players: Player[],
+    newTournament: Tournament,
+  ): { tournament: Tournament; players: Player[] } {
+    const match = this.state.matches.find(m => m.id === matchId);
+    if (match) {
+      const court: Court = {
+        courtNumber: match.courtNumber,
+        players: [...match.team1.players, ...match.team2.players],
+        teams: { team1: match.team1.players, team2: match.team2.players },
+        winner,
+        score,
+      };
+      const updatedPlayers = levelTracker.updatePlayersLevels([court], players);
+      return { tournament: newTournament, players: updatedPlayers };
+    }
+    return { tournament: newTournament, players };
   }
 
   static isWB(m: TournamentMatch): boolean {
