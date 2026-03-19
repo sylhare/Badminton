@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useMatchScoring } from '../../hooks/useMatchScoring';
+import { usePlayers } from '../../hooks/usePlayers';
 import type { TournamentMatch } from '../../types/tournament';
 import Tournament from '../../utils/Tournament';
 import { DoublesMatch, SinglesMatch } from '../court/display';
@@ -29,6 +30,7 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
   matches,
   onMatchResult,
 }) => {
+  const { playersFrom } = usePlayers();
   const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } =
     useMatchScoring(onMatchResult);
   const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() => {
@@ -74,7 +76,7 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
     });
   };
 
-  const isSingles = (match: TournamentMatch) => match.team1.players.length === 1;
+  const isSingles = (match: TournamentMatch) => match.team1.playerIds.length === 1;
 
   const formatScore = (match: TournamentMatch) => {
     if (!match.score) return null;
@@ -120,16 +122,16 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
                       <div className="match-display">
                         {isSingles(match) ? (
                           <SinglesMatch
-                            team1Player={match.team1.players[0]}
-                            team2Player={match.team2.players[0]}
+                            team1Player={playersFrom(match.team1.playerIds)[0]}
+                            team2Player={playersFrom(match.team2.playerIds)[0]}
                             winner={match.winner}
                             isClickable={true}
                             onPlayerClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
                           />
                         ) : (
                           <DoublesMatch
-                            team1Players={match.team1.players}
-                            team2Players={match.team2.players}
+                            team1Players={playersFrom(match.team1.playerIds)}
+                            team2Players={playersFrom(match.team2.playerIds)}
                             winner={match.winner}
                             isClickable={true}
                             onTeamClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
@@ -153,8 +155,8 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
       <ScoreInputModal
         isOpen={modalMatch !== null && pendingWinner !== null}
         winnerTeam={pendingWinner ?? 1}
-        team1Players={modalMatch?.team1.players ?? []}
-        team2Players={modalMatch?.team2.players ?? []}
+        team1Players={playersFrom(modalMatch?.team1.playerIds)}
+        team2Players={playersFrom(modalMatch?.team2.playerIds)}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
       />

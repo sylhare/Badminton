@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { usePlayers } from '../../hooks/usePlayers';
 import type { TournamentStandingRow, TournamentType } from '../../types/tournament';
 import Tournament from '../../utils/Tournament';
 
@@ -35,6 +36,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   isFinal,
   tournamentType,
 }) => {
+  const { players } = usePlayers();
   const isSE = tournamentType === 'elimination';
 
   let subtitle: string;
@@ -68,7 +70,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
               data-testid={`standing-row-${index}`}
             >
               <td>{isFinal && !isSE && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
-              <td>{Tournament.formatTeamName(row.team)}</td>
+              <td>{Tournament.formatTeamName(row.team, players)}</td>
               <td>{row.won}</td>
               <td>{row.lost}</td>
               {isSE ? (

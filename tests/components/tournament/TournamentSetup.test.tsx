@@ -187,7 +187,7 @@ describe('TournamentSetup', () => {
     expect(state.numberOfCourts).toBe(2);
     expect(state.teams).toHaveLength(2);
     expect(state.matches).toHaveLength(1);
-    expect(state.teams[0].players).toHaveLength(2);
+    expect(state.teams[0].playerIds).toHaveLength(2);
   });
 
   it('removing a player does not reset other team assignments', async () => {

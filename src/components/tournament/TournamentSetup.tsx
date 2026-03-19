@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
-import type { TournamentFormat, TournamentTeam, TournamentType } from '../../types/tournament';
+import type { TournamentFormat, TournamentType } from '../../types/tournament';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 import Tournament from '../../utils/Tournament';
+
+interface SetupTeam {
+  id: string;
+  players: Player[];
+}
 
 interface TournamentSetupProps {
   initialPlayers: Player[];
@@ -17,9 +22,13 @@ interface SwapSelection {
   playerIdx: number;
 }
 
-function deriveTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
-  if (format === 'singles') return Tournament.createSingleTeams(players);
-  return Tournament.createDoubleTeams(players);
+function deriveTeams(players: Player[], format: TournamentFormat): SetupTeam[] {
+  if (format === 'singles') return players.map((p, i) => ({ id: makeTeamId(i), players: [p] }));
+  const teams: SetupTeam[] = [];
+  for (let i = 0; i < players.length; i += 2) {
+    teams.push({ id: makeTeamId(i), players: players.slice(i, i + 2) });
+  }
+  return teams;
 }
 
 function makeTeamId(index: number): string {
@@ -30,7 +39,7 @@ function makePlayerId(): string {
   return `tournament-player-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function insertPlayer(teams: TournamentTeam[], player: Player, format: TournamentFormat): TournamentTeam[] {
+function insertPlayer(teams: SetupTeam[], player: Player, format: TournamentFormat): SetupTeam[] {
   const next = teams.map(t => ({ ...t, players: [...t.players] }));
   if (format === 'singles') {
     next.push({ id: makeTeamId(next.length), players: [player] });
@@ -57,7 +66,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const [tournamentType, setTournamentType] = useState<TournamentType>('round-robin');
   const [format, setFormat] = useState<TournamentFormat>('doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
-  const [teams, setTeams] = useState<TournamentTeam[]>(() =>
+  const [teams, setTeams] = useState<SetupTeam[]>(() =>
     deriveTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
   const [swapSelection, setSwapSelection] = useState<SwapSelection | null>(null);
@@ -165,7 +174,8 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
     setSwapSelection(null);
   };
 
-  const validationError = Tournament.validate(teams, format);
+  const tournamentTeams = teams.map(t => ({ id: t.id, playerIds: t.players.map(p => p.id) }));
+  const validationError = Tournament.validate(tournamentTeams, format);
   const matchesPerRound = Math.floor(teams.length / 2);
   const courtWarning =
     !validationError && matchesPerRound > numberOfCourts
@@ -174,7 +184,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handleStart = () => {
     if (validationError) return;
-    onStart(Tournament.start(teams, numberOfCourts, format, tournamentType));
+    onStart(Tournament.start(tournamentTeams, numberOfCourts, format, tournamentType));
   };
 
   return (
@@ -274,7 +284,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
                 ) : (
                   <div className="team-players-slots">
                     <div className="player-slot" data-testid={`player-slot-${teamIdx}-0`}>
-                      {Tournament.formatTeamName(team)}
+                      {team.players.map(p => p.name).join(' & ')}
                     </div>
                   </div>
                 )}

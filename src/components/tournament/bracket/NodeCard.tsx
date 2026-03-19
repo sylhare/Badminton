@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { usePlayers } from '../../../hooks/usePlayers';
 import type { TournamentMatch } from '../../../types/tournament';
 import Tournament from '../../../utils/Tournament';
 
@@ -14,6 +15,7 @@ interface NodeCardProps {
 }
 
 export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
+  const { players } = usePlayers();
   const style = { position: 'absolute' as const, top, left, width: CW, height: MH };
 
   if (node.type === 'empty') {
@@ -24,7 +26,7 @@ export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
     return (
       <div className="bracket-match bracket-match-bye" style={style}>
         <div className="bracket-team bracket-team-bye">
-          {node.team1 ? Tournament.formatTeamName(node.team1) : 'TBD'}
+          {node.team1 ? Tournament.formatTeamName(node.team1, players) : 'TBD'}
         </div>
         <div className="bracket-team bracket-team-tbd">BYE</div>
       </div>
@@ -59,7 +61,7 @@ export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
         data-testid={`bracket-team-1-${match.id}`}
         onClick={() => (!w || w === 1) ? onTeamClick(match, 1) : undefined}
       >
-        {Tournament.formatTeamName(match.team1)}
+        {Tournament.formatTeamName(match.team1, players)}
         {match.score && w === 1 && <span className="bracket-score">{match.score.team1}–{match.score.team2}</span>}
       </div>
       <div
@@ -67,7 +69,7 @@ export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
         data-testid={`bracket-team-2-${match.id}`}
         onClick={() => (!w || w === 2) ? onTeamClick(match, 2) : undefined}
       >
-        {Tournament.formatTeamName(match.team2)}
+        {Tournament.formatTeamName(match.team2, players)}
         {match.score && w === 2 && <span className="bracket-score">{match.score.team2}–{match.score.team1}</span>}
       </div>
     </div>

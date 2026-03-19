@@ -4,17 +4,25 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { NodeCard } from '../../../../src/components/tournament/bracket/NodeCard';
+import { PlayersProvider } from '../../../../src/hooks/usePlayers';
 import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
-import { makeTeam, makeMatch } from '../../../data/tournamentFactories';
+import type { Player } from '../../../../src/types';
+import { makeTeam, makeTeamPlayers, makeMatch } from '../../../data/tournamentFactories';
 
 const tA = makeTeam('a', 'Alice');
 const tB = makeTeam('b', 'Bob');
+const players: Player[] = [
+  ...makeTeamPlayers('a', 'Alice'),
+  ...makeTeamPlayers('b', 'Bob'),
+];
 
 function renderNode(node: BracketNode, onTeamClick = vi.fn()) {
   return render(
-    <div style={{ position: 'relative' }}>
-      <NodeCard node={node} top={0} left={0} onTeamClick={onTeamClick} />
-    </div>,
+    <PlayersProvider value={players}>
+      <div style={{ position: 'relative' }}>
+        <NodeCard node={node} top={0} left={0} onTeamClick={onTeamClick} />
+      </div>
+    </PlayersProvider>,
   );
 }
 

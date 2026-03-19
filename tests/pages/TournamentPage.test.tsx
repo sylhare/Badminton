@@ -105,14 +105,14 @@ describe('TournamentPage', () => {
       type: 'round-robin' as const,
       numberOfCourts: 2,
       teams: [
-        { id: 't1', players: [mockPlayers[0]] },
-        { id: 't2', players: [mockPlayers[1]] },
+        { id: 't1', playerIds: ['p1'] },
+        { id: 't2', playerIds: ['p2'] },
       ],
       matches: [
         {
           id: 'm1', round: 1, courtNumber: 1,
-          team1: { id: 't1', players: [mockPlayers[0]] },
-          team2: { id: 't2', players: [mockPlayers[1]] },
+          team1: { id: 't1', playerIds: ['p1'] },
+          team2: { id: 't2', playerIds: ['p2'] },
         },
       ],
     };
@@ -167,14 +167,14 @@ describe('TournamentPage', () => {
       type: 'round-robin' as const,
       numberOfCourts: 2,
       teams: [
-        { id: 't1', players: [mockPlayers[0]] },
-        { id: 't2', players: [mockPlayers[1]] },
+        { id: 't1', playerIds: ['p1'] },
+        { id: 't2', playerIds: ['p2'] },
       ],
       matches: [
         {
           id: 'm1', round: 1, courtNumber: 1,
-          team1: { id: 't1', players: [mockPlayers[0]] },
-          team2: { id: 't2', players: [mockPlayers[1]] },
+          team1: { id: 't1', playerIds: ['p1'] },
+          team2: { id: 't2', playerIds: ['p2'] },
         },
       ],
     };

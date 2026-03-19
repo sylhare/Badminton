@@ -4,8 +4,10 @@ import EliminationBracket from '../components/tournament/bracket/EliminationBrac
 import TournamentMatches from '../components/tournament/TournamentMatches';
 import TournamentSetup from '../components/tournament/TournamentSetup';
 import TournamentStandings from '../components/tournament/TournamentStandings';
-import type { Player } from '../types';
+import type { Court, Player } from '../types';
 import { engine } from '../engines/engineSelector';
+import { PlayersProvider } from '../hooks/usePlayers';
+import { levelTracker } from '../engines/LevelTracker';
 import Tournament from '../utils/Tournament';
 import { storageManager } from '../utils/StorageManager';
 import './TournamentPage.css';
@@ -55,15 +57,28 @@ function TournamentPage(): React.ReactElement {
   ) => {
     if (!tournament) return;
 
-    const { tournament: newTournament, players: updatedPlayers } =
-      tournament.recordResult(matchId, winner, score, players);
+    const newTournament = tournament.recordResult(matchId, winner, score);
 
-    engine().recordLevelSnapshot(updatedPlayers);
-    setTournament(newTournament);
-    setPlayers(updatedPlayers);
-    storageManager.loadApp().then(appState =>
-      storageManager.saveApp({ ...appState, players: updatedPlayers }),
-    );
+    const match = tournament.toState().matches.find(m => m.id === matchId);
+    if (match) {
+      const getPlayers = (ids: string[]) => ids.map(id => players.find(p => p.id === id)!).filter(Boolean);
+      const court: Court = {
+        courtNumber: match.courtNumber,
+        players: [...getPlayers(match.team1.playerIds), ...getPlayers(match.team2.playerIds)],
+        teams: { team1: getPlayers(match.team1.playerIds), team2: getPlayers(match.team2.playerIds) },
+        winner,
+        score,
+      };
+      const updatedPlayers = levelTracker.updatePlayersLevels([court], players);
+      engine().recordLevelSnapshot(updatedPlayers);
+      setTournament(newTournament);
+      setPlayers(updatedPlayers);
+      storageManager.loadApp().then(appState =>
+        storageManager.saveApp({ ...appState, players: updatedPlayers }),
+      );
+    } else {
+      setTournament(newTournament);
+    }
   };
 
   const handleReset = () => {
@@ -82,42 +97,44 @@ function TournamentPage(): React.ReactElement {
       />
     );
   } else {
-    const standings = tournament.getStandings();
+    const standings = tournament.getStandings(players);
     const completedRounds = tournament.getCompletedRounds();
     const totalRounds = tournament.getTotalRounds();
     const isFinal = tournament.isComplete();
     const { type: tournamentType, matches } = tournament.toState();
 
     content = (
-      <div className="tournament-active-layout">
-        {tournamentType === 'elimination' ? (
-          <EliminationBracket
-            matches={matches}
-            teams={tournament.toState().teams}
-            seBracket={tournament.toState().seBracket!}
-            onMatchResult={handleMatchResult}
+      <PlayersProvider value={players}>
+        <div className="tournament-active-layout">
+          {tournamentType === 'elimination' ? (
+            <EliminationBracket
+              matches={matches}
+              teams={tournament.toState().teams}
+              seBracket={tournament.toState().seBracket!}
+              onMatchResult={handleMatchResult}
+            />
+          ) : (
+            <TournamentMatches
+              matches={matches}
+              onMatchResult={handleMatchResult}
+            />
+          )}
+          <TournamentStandings
+            standings={standings}
+            currentRound={completedRounds}
+            totalRounds={totalRounds}
+            isFinal={isFinal}
+            tournamentType={tournamentType}
           />
-        ) : (
-          <TournamentMatches
-            matches={matches}
-            onMatchResult={handleMatchResult}
-          />
-        )}
-        <TournamentStandings
-          standings={standings}
-          currentRound={completedRounds}
-          totalRounds={totalRounds}
-          isFinal={isFinal}
-          tournamentType={tournamentType}
-        />
-        <button
-          className="button button-primary"
-          onClick={handleReset}
-          data-testid="new-tournament-button"
-        >
-          Start a New Tournament
-        </button>
-      </div>
+          <button
+            className="button button-primary"
+            onClick={handleReset}
+            data-testid="new-tournament-button"
+          >
+            Start a New Tournament
+          </button>
+        </div>
+      </PlayersProvider>
     );
   }
 

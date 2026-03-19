@@ -1,5 +1,4 @@
-import type { Court, Player } from '../types';
-import { levelTracker } from '../engines/LevelTracker';
+import type { Player } from '../types';
 import type {
   MatchBracket,
   SEBracket,
@@ -47,14 +46,14 @@ export default class Tournament {
   static createDoubleTeams(players: Player[]): TournamentTeam[] {
     const teams: TournamentTeam[] = [];
     for (let i = 0; i < players.length; i += 2) {
-      teams.push({ id: Tournament._makeTeamId(i), players: players.slice(i, i + 2) });
+      teams.push({ id: Tournament._makeTeamId(i), playerIds: players.slice(i, i + 2).map(p => p.id) });
     }
     return teams;
   }
 
   /** Create singles teams by wrapping each player in their own team. */
   static createSingleTeams(players: Player[]): TournamentTeam[] {
-    return players.map((p, i) => ({ id: Tournament._makeTeamId(i), players: [p] }));
+    return players.map((p, i) => ({ id: Tournament._makeTeamId(i), playerIds: [p.id] }));
   }
 
   /**
@@ -65,15 +64,15 @@ export default class Tournament {
     if (teams.length < 2) return 'Need at least 2 teams to start';
     if (format === 'doubles') {
       for (const team of teams) {
-        if (team.players.length !== 2) return 'Each doubles team must have exactly 2 players';
+        if (team.playerIds.length !== 2) return 'Each doubles team must have exactly 2 players';
       }
     }
     return null;
   }
 
   /** Format a team's display name as "Player1 & Player2" (or just the single player name). */
-  static formatTeamName(team: TournamentTeam): string {
-    return team.players.map(p => p.name).join(' & ');
+  static formatTeamName(team: TournamentTeam, players: Player[]): string {
+    return team.playerIds.map(id => players.find(p => p.id === id)?.name ?? id).join(' & ');
   }
 
   /** Sorted unique round numbers from a match list. */
@@ -91,13 +90,13 @@ export default class Tournament {
    * Round-robin: descending by points → scoreDiff → name.
    * Elimination: ascending by losses → descending by wins → name.
    */
-  getStandings(): TournamentStandingRow[] {
-    const standings = Tournament._calculateStandings(this.state.teams, this.state.matches);
+  getStandings(players: Player[]): TournamentStandingRow[] {
+    const standings = Tournament._calculateStandings(this.state.teams, this.state.matches, players);
     if (this.state.type === 'elimination') {
       return [...standings].sort((a, b) => {
         if (a.lost !== b.lost) return a.lost - b.lost;
         if (b.won !== a.won) return b.won - a.won;
-        return Tournament._compareTeamsByName(a, b);
+        return Tournament._compareTeamsByName(a, b, players);
       });
     }
     return standings;
@@ -153,18 +152,12 @@ export default class Tournament {
    * Record a match result and return a new Tournament instance.
    * For elimination, automatically generates the next WB round, LB rounds, and GF
    * as prerequisites are met.
-   *
-   * Overload with `players`: also updates player levels via LevelTracker and returns
-   * `{ tournament, players }` with the updated player list.
    */
-  recordResult(matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }): Tournament;
-  recordResult(matchId: string, winner: 1 | 2, score: { team1: number; team2: number } | undefined, players: Player[]): { tournament: Tournament; players: Player[] };
   recordResult(
     matchId: string,
     winner: 1 | 2,
     score?: { team1: number; team2: number },
-    players?: Player[],
-  ): Tournament | { tournament: Tournament; players: Player[] } {
+  ): Tournament {
     let updatedMatches = this.state.matches.map(m =>
       m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
     );
@@ -194,35 +187,7 @@ export default class Tournament {
       }
     }
 
-    const newTournament = new Tournament({ ...this.state, matches: updatedMatches });
-
-    if (players !== undefined) {
-      return this._applyLevelUpdate(matchId, winner, score, players, newTournament);
-    }
-
-    return newTournament;
-  }
-
-  private _applyLevelUpdate(
-    matchId: string,
-    winner: 1 | 2,
-    score: { team1: number; team2: number } | undefined,
-    players: Player[],
-    newTournament: Tournament,
-  ): { tournament: Tournament; players: Player[] } {
-    const match = this.state.matches.find(m => m.id === matchId);
-    if (match) {
-      const court: Court = {
-        courtNumber: match.courtNumber,
-        players: [...match.team1.players, ...match.team2.players],
-        teams: { team1: match.team1.players, team2: match.team2.players },
-        winner,
-        score,
-      };
-      const updatedPlayers = levelTracker.updatePlayersLevels([court], players);
-      return { tournament: newTournament, players: updatedPlayers };
-    }
-    return { tournament: newTournament, players };
+    return new Tournament({ ...this.state, matches: updatedMatches });
   }
 
   static isWB(m: TournamentMatch): boolean {
@@ -244,15 +209,17 @@ export default class Tournament {
   private static _compareTeamsByName(
     a: TournamentStandingRow,
     b: TournamentStandingRow,
+    players: Player[],
   ): number {
-    const nameA = a.team.players[0]?.name ?? '';
-    const nameB = b.team.players[0]?.name ?? '';
+    const nameA = players.find(p => p.id === a.team.playerIds[0])?.name ?? a.team.playerIds[0] ?? '';
+    const nameB = players.find(p => p.id === b.team.playerIds[0])?.name ?? b.team.playerIds[0] ?? '';
     return nameA.localeCompare(nameB);
   }
 
   private static _calculateStandings(
     teams: TournamentTeam[],
     matches: TournamentMatch[],
+    players: Player[],
   ): TournamentStandingRow[] {
     const standings = new Map<string, TournamentStandingRow>();
     for (const team of teams) {
@@ -288,7 +255,7 @@ export default class Tournament {
     return Array.from(standings.values()).sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       if (b.scoreDiff !== a.scoreDiff) return b.scoreDiff - a.scoreDiff;
-      return Tournament._compareTeamsByName(a, b);
+      return Tournament._compareTeamsByName(a, b, players);
     });
   }
 

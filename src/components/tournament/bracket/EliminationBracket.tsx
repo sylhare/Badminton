@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useMatchScoring } from '../../../hooks/useMatchScoring';
+import { usePlayers } from '../../../hooks/usePlayers';
 import type { SEBracket, TournamentMatch, TournamentTeam } from '../../../types/tournament';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 
@@ -20,6 +21,7 @@ interface Props {
 }
 
 const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatchResult }) => {
+  const { playersFrom } = usePlayers();
   const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } =
     useMatchScoring(onMatchResult);
 
@@ -84,8 +86,8 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
       <ScoreInputModal
         isOpen={modalMatch !== null && pendingWinner !== null}
         winnerTeam={pendingWinner ?? 1}
-        team1Players={modalMatch?.team1.players ?? []}
-        team2Players={modalMatch?.team2.players ?? []}
+        team1Players={playersFrom(modalMatch?.team1.playerIds)}
+        team2Players={playersFrom(modalMatch?.team2.playerIds)}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
       />

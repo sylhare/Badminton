@@ -1,5 +1,3 @@
-import type { Player } from './index';
-
 export type TournamentFormat = 'singles' | 'doubles';
 export type TournamentType = 'round-robin' | 'elimination';
 export type TournamentPhase = 'setup' | 'active' | 'completed';
@@ -19,7 +17,7 @@ export type MatchBracket = 'wb' | 'lb';
 
 export interface TournamentTeam {
   id: string;
-  players: Player[];
+  playerIds: string[];
 }
 
 export interface TournamentMatch {

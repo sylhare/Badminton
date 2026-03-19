@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Player } from '../../src/types';
 import type { TournamentMatch, TournamentTeam } from '../../src/types/tournament';
 import Tournament from '../../src/utils/Tournament';
 import { createMockPlayer } from '../data/testFactories';
-import { makeTeam, makeMatch } from '../data/tournamentFactories';
+import { makeTeam, makeTeamPlayers, makeMatch } from '../data/tournamentFactories';
 
 describe('Tournament RR match generation', () => {
   it('produces 1 match for 2 teams', () => {
@@ -72,6 +71,11 @@ describe('Tournament.getStandings (round-robin)', () => {
   const teamA = makeTeam('a', ['Alice']);
   const teamB = makeTeam('b', ['Bob']);
   const teamC = makeTeam('c', ['Charlie']);
+  const players = [
+    ...makeTeamPlayers('a', ['Alice']),
+    ...makeTeamPlayers('b', ['Bob']),
+    ...makeTeamPlayers('c', ['Charlie']),
+  ];
 
   function standings(
     teams: TournamentTeam[],
@@ -80,7 +84,7 @@ describe('Tournament.getStandings (round-robin)', () => {
     return Tournament.from({
       phase: 'active', format: 'singles', type: 'round-robin',
       numberOfCourts: 2, teams, matches,
-    }).getStandings();
+    }).getStandings(players);
   }
 
   it('returns all zeros when no results', () => {
@@ -133,7 +137,7 @@ describe('Tournament.getStandings (round-robin)', () => {
       [teamA, teamB, teamC],
       [makeMatch('m1', 1, teamA, teamB, 1), makeMatch('m2', 1, teamC, teamB, 2)],
     );
-    const names = rows.map(r => r.team.players[0].name);
+    const names = rows.map(r => players.find(p => p.id === r.team.playerIds[0])?.name);
     expect(names[0]).toBe('Alice');
     expect(names[1]).toBe('Bob');
   });
@@ -248,41 +252,41 @@ describe('Tournament.validate', () => {
 
 describe('Tournament.createDoubleTeams', () => {
   it('creates correct pairs for even count', () => {
-    const players = [
+    const testPlayers = [
       createMockPlayer({ id: 'p1', name: 'Alice' }),
       createMockPlayer({ id: 'p2', name: 'Bob' }),
       createMockPlayer({ id: 'p3', name: 'Carol' }),
       createMockPlayer({ id: 'p4', name: 'Dave' }),
     ];
-    const teams = Tournament.createDoubleTeams(players);
+    const teams = Tournament.createDoubleTeams(testPlayers);
     expect(teams).toHaveLength(2);
-    expect(teams[0].players.map(p => p.name)).toEqual(['Alice', 'Bob']);
-    expect(teams[1].players.map(p => p.name)).toEqual(['Carol', 'Dave']);
+    expect(teams[0].playerIds).toEqual(['p1', 'p2']);
+    expect(teams[1].playerIds).toEqual(['p3', 'p4']);
   });
 
   it('creates incomplete last team for odd count', () => {
-    const players = [
+    const testPlayers = [
       createMockPlayer({ id: 'p1', name: 'Alice' }),
       createMockPlayer({ id: 'p2', name: 'Bob' }),
       createMockPlayer({ id: 'p3', name: 'Carol' }),
     ];
-    const teams = Tournament.createDoubleTeams(players);
+    const teams = Tournament.createDoubleTeams(testPlayers);
     expect(teams).toHaveLength(2);
-    expect(teams[0].players).toHaveLength(2);
-    expect(teams[1].players).toHaveLength(1);
+    expect(teams[0].playerIds).toHaveLength(2);
+    expect(teams[1].playerIds).toHaveLength(1);
   });
 });
 
 describe('Tournament.createSingleTeams', () => {
   it('wraps each player in their own team', () => {
-    const players = [
+    const testPlayers = [
       createMockPlayer({ id: 'p1', name: 'Alice' }),
       createMockPlayer({ id: 'p2', name: 'Bob' }),
     ];
-    const teams = Tournament.createSingleTeams(players);
+    const teams = Tournament.createSingleTeams(testPlayers);
     expect(teams).toHaveLength(2);
-    expect(teams[0].players[0].name).toBe('Alice');
-    expect(teams[1].players[0].name).toBe('Bob');
+    expect(teams[0].playerIds).toEqual(['p1']);
+    expect(teams[1].playerIds).toEqual(['p2']);
   });
 });
 
@@ -629,9 +633,7 @@ describe('Tournament SE isComplete', () => {
   });
 });
 
-describe('Tournament recordResult with players (level update)', () => {
-  const p1: Player = createMockPlayer({ id: 'p1', name: 'Alice', level: 50 });
-  const p2: Player = createMockPlayer({ id: 'p2', name: 'Bob', level: 50 });
+describe('Tournament recordResult', () => {
   const teamA = makeTeam('a', ['Alice']);
   const teamB = makeTeam('b', ['Bob']);
 
@@ -639,42 +641,33 @@ describe('Tournament recordResult with players (level update)', () => {
     return Tournament.from({
       phase: 'active', format: 'singles', type: 'round-robin',
       numberOfCourts: 1, teams: [teamA, teamB],
-      matches: [{ ...makeMatch('m1', 1, teamA, teamB), team1: { id: teamA.id, players: [p1] }, team2: { id: teamB.id, players: [p2] } }],
+      matches: [makeMatch('m1', 1, teamA, teamB)],
     });
   }
 
-  it('returns { tournament, players } when players argument is provided', () => {
+  it('returns a Tournament instance', () => {
     const t = makeSinglesRR();
-    const result = t.recordResult('m1', 1, undefined, [p1, p2]);
-    expect(result).toHaveProperty('tournament');
-    expect(result).toHaveProperty('players');
+    const result = t.recordResult('m1', 1);
+    expect(result).toBeInstanceOf(Tournament);
   });
 
   it('records the winner on the returned tournament', () => {
     const t = makeSinglesRR();
-    const { tournament } = t.recordResult('m1', 1, undefined, [p1, p2]);
-    const match = tournament.toState().matches.find(m => m.id === 'm1')!;
+    const next = t.recordResult('m1', 1);
+    const match = next.toState().matches.find(m => m.id === 'm1')!;
     expect(match.winner).toBe(1);
   });
 
-  it('updates player levels based on the match result', () => {
+  it('records the score on the returned tournament', () => {
     const t = makeSinglesRR();
-    const { players } = t.recordResult('m1', 1, undefined, [p1, p2]);
-    const winner = players.find(p => p.id === p1.id)!;
-    const loser = players.find(p => p.id === p2.id)!;
-    expect(winner.level).not.toBe(p1.level);
-    expect(loser.level).not.toBe(p2.level);
+    const next = t.recordResult('m1', 1, { team1: 21, team2: 15 });
+    const match = next.toState().matches.find(m => m.id === 'm1')!;
+    expect(match.score).toEqual({ team1: 21, team2: 15 });
   });
 
-  it('returns players unchanged when matchId is not found', () => {
+  it('unknown matchId leaves all matches unchanged', () => {
     const t = makeSinglesRR();
-    const { players } = t.recordResult('no-such-match', 1, undefined, [p1, p2]);
-    expect(players).toEqual([p1, p2]);
-  });
-
-  it('without players argument still returns Tournament directly (backward-compat)', () => {
-    const t = makeSinglesRR();
-    const result = t.recordResult('m1', 1);
-    expect(result).toBeInstanceOf(Tournament);
+    const next = t.recordResult('no-such-match', 1);
+    expect(next.toState().matches.every(m => m.winner === undefined)).toBe(true);
   });
 });

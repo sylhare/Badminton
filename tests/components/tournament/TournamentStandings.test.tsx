@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import TournamentStandings from '../../../src/components/tournament/TournamentStandings';
+import { PlayersProvider } from '../../../src/hooks/usePlayers';
 import type { TournamentStandingRow, TournamentTeam } from '../../../src/types/tournament';
-import { makeTeam } from '../../data/tournamentFactories';
+import { makeTeam, makeTeamPlayers } from '../../data/tournamentFactories';
 
 function makeRow(team: TournamentTeam, won: number, lost: number, scoreDiff: number): TournamentStandingRow {
   const points = won * 2;
@@ -19,6 +20,11 @@ describe('TournamentStandings', () => {
   const teamA = makeTeam('a', 'Alice');
   const teamB = makeTeam('b', 'Bob');
   const teamC = makeTeam('c', 'Carol');
+  const players = [
+    ...makeTeamPlayers('a', 'Alice'),
+    ...makeTeamPlayers('b', 'Bob'),
+    ...makeTeamPlayers('c', 'Carol'),
+  ];
 
   const standings: TournamentStandingRow[] = [
     makeRow(teamA, 2, 0, 10),
@@ -28,11 +34,13 @@ describe('TournamentStandings', () => {
 
   it('renders teams in correct rank order', () => {
     render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={2}
-        totalRounds={3}
-      />,
+      <PlayersProvider value={players}>
+        <TournamentStandings
+          standings={standings}
+          currentRound={2}
+          totalRounds={3}
+        />
+      </PlayersProvider>,
     );
 
     const rows = screen.getAllByTestId(/^standing-row-/);
@@ -43,11 +51,13 @@ describe('TournamentStandings', () => {
 
   it('shows score diff column with correct values', () => {
     render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={2}
-        totalRounds={3}
-      />,
+      <PlayersProvider value={players}>
+        <TournamentStandings
+          standings={standings}
+          currentRound={2}
+          totalRounds={3}
+        />
+      </PlayersProvider>,
     );
 
     expect(screen.getByTestId('score-diff-0')).toHaveTextContent('+10');
@@ -57,11 +67,13 @@ describe('TournamentStandings', () => {
 
   it('shows After Round N / M label', () => {
     render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={2}
-        totalRounds={3}
-      />,
+      <PlayersProvider value={players}>
+        <TournamentStandings
+          standings={standings}
+          currentRound={2}
+          totalRounds={3}
+        />
+      </PlayersProvider>,
     );
 
     expect(screen.getByTestId('standings-subtitle')).toHaveTextContent('After Round 2 / 3');
@@ -69,11 +81,13 @@ describe('TournamentStandings', () => {
 
   it('applies top class to first row', () => {
     render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={3}
-        totalRounds={3}
-      />,
+      <PlayersProvider value={players}>
+        <TournamentStandings
+          standings={standings}
+          currentRound={3}
+          totalRounds={3}
+        />
+      </PlayersProvider>,
     );
 
     expect(screen.getByTestId('standing-row-0')).toHaveClass('top');
@@ -82,11 +96,13 @@ describe('TournamentStandings', () => {
 
   it('shows rank numbers', () => {
     render(
-      <TournamentStandings
-        standings={standings}
-        currentRound={2}
-        totalRounds={3}
-      />,
+      <PlayersProvider value={players}>
+        <TournamentStandings
+          standings={standings}
+          currentRound={2}
+          totalRounds={3}
+        />
+      </PlayersProvider>,
     );
 
     const rows = screen.getAllByTestId(/^standing-row-/);

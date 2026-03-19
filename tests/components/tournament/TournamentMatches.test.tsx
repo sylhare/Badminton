@@ -3,11 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import TournamentMatches from '../../../src/components/tournament/TournamentMatches';
-import { makeTeam, makeMatch } from '../../data/tournamentFactories';
+import { PlayersProvider } from '../../../src/hooks/usePlayers';
+import type { TournamentMatch } from '../../../src/types/tournament';
+import type { Player } from '../../../src/types';
+import { makeTeam, makeTeamPlayers, makeMatch } from '../../data/tournamentFactories';
 
 const teamA = makeTeam('a', ['Alice']);
 const teamB = makeTeam('b', ['Bob']);
 const teamC = makeTeam('c', ['Carol']);
+const players: Player[] = [
+  ...makeTeamPlayers('a', ['Alice']),
+  ...makeTeamPlayers('b', ['Bob']),
+  ...makeTeamPlayers('c', ['Carol']),
+];
 
 describe('TournamentMatches', () => {
   let onMatchResult: ReturnType<typeof vi.fn>;
@@ -28,10 +36,12 @@ describe('TournamentMatches', () => {
 
   it('renders all rounds', () => {
     render(
-      <TournamentMatches
-        matches={threeMatchSingles}
-        onMatchResult={onMatchResult}
-      />,
+      <PlayersProvider value={players}>
+        <TournamentMatches
+          matches={threeMatchSingles}
+          onMatchResult={onMatchResult}
+        />
+      </PlayersProvider>,
     );
 
     expect(screen.getByTestId('round-1')).toBeInTheDocument();
@@ -41,10 +51,12 @@ describe('TournamentMatches', () => {
 
   it('current round (round 1) is expanded by default', () => {
     render(
-      <TournamentMatches
-        matches={threeMatchSingles}
-        onMatchResult={onMatchResult}
-      />,
+      <PlayersProvider value={players}>
+        <TournamentMatches
+          matches={threeMatchSingles}
+          onMatchResult={onMatchResult}
+        />
+      </PlayersProvider>,
     );
 
     expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -54,10 +66,12 @@ describe('TournamentMatches', () => {
   it('completed round shows score inline', () => {
     const completedMatch = makeMatch('m1', 1, teamA, teamB, 1, { team1: 21, team2: 14 });
     render(
-      <TournamentMatches
-        matches={[completedMatch]}
-        onMatchResult={onMatchResult}
-      />,
+      <PlayersProvider value={players}>
+        <TournamentMatches
+          matches={[completedMatch]}
+          onMatchResult={onMatchResult}
+        />
+      </PlayersProvider>,
     );
 
     expect(screen.getByTestId(`match-result-m1`)).toBeInTheDocument();
