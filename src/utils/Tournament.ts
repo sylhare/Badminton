@@ -208,6 +208,7 @@ export default class Tournament {
 
     for (let round = 0; round < m - 1; round++) {
       const roundTeams = [paddedTeams[0], ...rotating];
+      let roundMatchIndex = 0;
       for (let i = 0; i < m / 2; i++) {
         const t1 = roundTeams[i];
         const t2 = roundTeams[m - 1 - i];
@@ -215,11 +216,12 @@ export default class Tournament {
         matches.push({
           id: Tournament._makeMatchId(matchIndex),
           round: round + 1,
-          courtNumber: (matchIndex % numberOfCourts) + 1,
+          courtNumber: (roundMatchIndex % numberOfCourts) + 1,
           team1: t1,
           team2: t2,
         });
         matchIndex++;
+        roundMatchIndex++;
       }
       const last = rotating.pop()!;
       rotating.unshift(last);
@@ -387,7 +389,7 @@ export default class Tournament {
   }
 
   /**
-   * Computes any new LB / GF matches that can be generated given the current match list.
+   * Computes any new LB matches that can be generated given the current match list.
    * Returns an empty array when no new matches can be triggered.
    */
   private static _computeNewDEMatches(
@@ -528,7 +530,7 @@ export default class Tournament {
 
   /**
    * Record a match result and return a new Tournament instance.
-   * For elimination, automatically generates the next WB round, LB rounds, and GF
+   * For elimination, automatically generates the next WB round and LB rounds
    * as prerequisites are met.
    */
   recordResult(

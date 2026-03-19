@@ -35,6 +35,15 @@ describe('Tournament RR match generation', () => {
     expect(new Set(pairings).size).toBe(6);
   });
 
+  it('resets court numbers per round (5 teams, 4 courts)', () => {
+    const teams = ['a', 'b', 'c', 'd', 'e'].map(id => makeTeam(id, [id]));
+    const { matches } = Tournament.start(teams, 4, 'singles', 'round-robin').toState();
+    const courtsByRound = [1, 2, 3, 4, 5].map(r =>
+      matches.filter(m => m.round === r).map(m => m.courtNumber),
+    );
+    courtsByRound.forEach(courts => expect(courts).toEqual([1, 2]));
+  });
+
   it('cycles court numbers wrapping at numberOfCourts', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C']), makeTeam('d', ['D'])];
     const { matches } = Tournament.start(teams, 2, 'singles', 'round-robin').toState();
