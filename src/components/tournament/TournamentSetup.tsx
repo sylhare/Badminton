@@ -29,6 +29,21 @@ function makePlayerId(): string {
   return `tournament-player-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function insertPlayer(teams: TournamentTeam[], player: Player, format: TournamentFormat): TournamentTeam[] {
+  const next = teams.map(t => ({ ...t, players: [...t.players] }));
+  if (format === 'singles') {
+    next.push({ id: makeTeamId(next.length), players: [player] });
+  } else {
+    const incomplete = next.find(t => t.players.length < 2);
+    if (incomplete) {
+      incomplete.players.push(player);
+    } else {
+      next.push({ id: makeTeamId(next.length), players: [player] });
+    }
+  }
+  return next;
+}
+
 const TournamentSetup: React.FC<TournamentSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
@@ -81,22 +96,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
     const newPlayers: Player[] = names.map(name => ({ id: makePlayerId(), name, isPresent: true }));
     setExtraPlayers(prev => [...prev, ...newPlayers]);
     setSelectedPlayerIds(prev => new Set([...prev, ...newPlayers.map(p => p.id)]));
-    setTeams(prev => {
-      let next = prev.map(t => ({ ...t, players: [...t.players] }));
-      for (const player of newPlayers) {
-        if (format === 'singles') {
-          next.push({ id: makeTeamId(next.length), players: [player] });
-        } else {
-          const incomplete = next.find(t => t.players.length < 2);
-          if (incomplete) {
-            incomplete.players.push(player);
-          } else {
-            next.push({ id: makeTeamId(next.length), players: [player] });
-          }
-        }
-      }
-      return next;
-    });
+    setTeams(prev => newPlayers.reduce((acc, p) => insertPlayer(acc, p, format), prev));
   };
 
   const handlePlayerToggle = (id: string) => {
@@ -136,20 +136,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
         return next;
       });
     } else {
-      setTeams(prev => {
-        const next = prev.map(t => ({ ...t, players: [...t.players] }));
-        if (format === 'singles') {
-          next.push({ id: makeTeamId(next.length), players: [player] });
-        } else {
-          const incomplete = next.find(t => t.players.length < 2);
-          if (incomplete) {
-            incomplete.players.push(player);
-          } else {
-            next.push({ id: makeTeamId(next.length), players: [player] });
-          }
-        }
-        return next;
-      });
+      setTeams(prev => insertPlayer(prev, player, format));
     }
   };
 

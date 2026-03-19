@@ -188,11 +188,11 @@ export default class Tournament {
     return new Tournament({ ...this.state, matches: updatedMatches });
   }
 
-  private static isWB(m: TournamentMatch): boolean {
+  static isWB(m: TournamentMatch): boolean {
     return (m.bracket ?? 'wb') === 'wb';
   }
 
-  private static isLB(m: TournamentMatch): boolean {
+  static isLB(m: TournamentMatch): boolean {
     return m.bracket === 'lb';
   }
 

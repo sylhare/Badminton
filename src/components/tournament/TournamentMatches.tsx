@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import { useMatchScoring } from '../../hooks/useMatchScoring';
 import type { TournamentMatch } from '../../types/tournament';
 import Tournament from '../../utils/Tournament';
 import { DoublesMatch, SinglesMatch } from '../court/display';
@@ -10,14 +11,14 @@ interface TournamentMatchesProps {
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
 }
 
-function getCurrentRound(matches: TournamentMatch[]): number {
+function getCurrentRoundInfo(matches: TournamentMatch[]): { currentRound: number; roundNums: number[] } {
   const roundNums = Tournament.getSortedRoundNums(matches);
   for (const r of roundNums) {
     if (matches.filter(m => m.round === r).some(m => m.winner === undefined)) {
-      return r;
+      return { currentRound: r, roundNums };
     }
   }
-  return roundNums[roundNums.length - 1] ?? 1;
+  return { currentRound: roundNums[roundNums.length - 1] ?? 1, roundNums };
 }
 
 function getRoundLabel(round: number): string {
@@ -28,15 +29,14 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
   matches,
   onMatchResult,
 }) => {
-  const [modalMatch, setModalMatch] = useState<TournamentMatch | null>(null);
-  const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
+  const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } =
+    useMatchScoring(onMatchResult);
   const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() => {
-    const cur = getCurrentRound(matches);
+    const { currentRound: cur } = getCurrentRoundInfo(matches);
     return new Set([cur]);
   });
 
-  const currentRound = getCurrentRound(matches);
-  const roundNums = Tournament.getSortedRoundNums(matches);
+  const { currentRound, roundNums } = getCurrentRoundInfo(matches);
 
   const allComplete = matches.every(m => m.winner !== undefined);
 
@@ -72,27 +72,6 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
       }
       return next;
     });
-  };
-
-  const handleTeamClick = (match: TournamentMatch, teamNumber: 1 | 2) => {
-    if (match.winner === teamNumber) {
-      onMatchResult(match.id, teamNumber);
-      return;
-    }
-    setModalMatch(match);
-    setPendingWinner(teamNumber);
-  };
-
-  const handleModalConfirm = (score: { team1: number; team2: number }) => {
-    if (!modalMatch || pendingWinner === null) return;
-    onMatchResult(modalMatch.id, pendingWinner, score);
-    setModalMatch(null);
-    setPendingWinner(null);
-  };
-
-  const handleModalCancel = () => {
-    setModalMatch(null);
-    setPendingWinner(null);
   };
 
   const isSingles = (match: TournamentMatch) => match.team1.players.length === 1;

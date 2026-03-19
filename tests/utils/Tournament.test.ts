@@ -352,20 +352,20 @@ describe('Tournament SE walkthrough — 4 teams', () => {
     let t = Tournament.start(teams, 2, 'singles', 'elimination');
     expect(t.isComplete()).toBe(false);
 
-    const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     t = t.recordResult(wb1[0].id, 1);
     t = t.recordResult(wb1[1].id, 1);
     expect(t.isComplete()).toBe(false);
 
-    const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const wb2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     t = t.recordResult(wb2[0].id, 1);
     expect(t.isComplete()).toBe(false);
 
-    const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     t = t.recordResult(lb1[0].id, 1);
 
     expect(t.isComplete()).toBe(true);
-    expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb')).toHaveLength(1);
+    expect(t.toState().matches.filter(m => Tournament.isLB(m))).toHaveLength(1);
   });
 
   it('getTotalRounds returns 2 (log2(4)) from the start', () => {
@@ -390,7 +390,7 @@ describe('Tournament SE walkthrough — 6 teams', () => {
     t = t.recordResult(r1[1].id, 1);
     t = t.recordResult(r1[2].id, 1);
 
-    const r2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const r2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     expect(r2).toHaveLength(1);
   });
 
@@ -401,10 +401,10 @@ describe('Tournament SE walkthrough — 6 teams', () => {
     t = t.recordResult(r1[1].id, 1);
     t = t.recordResult(r1[2].id, 1);
 
-    const r2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const r2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     t = t.recordResult(r2[0].id, 1);
 
-    const r3 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 3);
+    const r3 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 3);
     expect(r3).toHaveLength(1);
     expect(t.isComplete()).toBe(false);
   });
@@ -413,35 +413,35 @@ describe('Tournament SE walkthrough — 6 teams', () => {
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
     // WB R1: 3 matches
-    const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     expect(wb1).toHaveLength(3);
     t = t.recordResult(wb1[0].id, 1);
     t = t.recordResult(wb1[1].id, 1);
     t = t.recordResult(wb1[2].id, 1);
 
     // WB R2: 1 match (W0 vs W1); W2 gets bye
-    const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const wb2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     expect(wb2).toHaveLength(1);
     t = t.recordResult(wb2[0].id, 1);
 
     // LB R1: 1 match (L(R1m0) vs L(R1m1)); L(R1m2) exits
-    const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     expect(lb1).toHaveLength(1);
     t = t.recordResult(lb1[0].id, 1);
 
     // LB R2: 1 match triggered (LB-R1 survivor vs WB-R2 loser)
-    const lb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2);
+    const lb2 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 2);
     expect(lb2).toHaveLength(1);
 
     // WB R3 (WBF): W(R2) vs W2-bye
-    const wb3 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 3);
+    const wb3 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 3);
     expect(wb3).toHaveLength(1);
     t = t.recordResult(wb3[0].id, 1);
     expect(t.isComplete()).toBe(false);
 
     t = t.recordResult(lb2[0].id, 1);
     expect(t.isComplete()).toBe(true);
-    expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb')).toHaveLength(2);
+    expect(t.toState().matches.filter(m => Tournament.isLB(m))).toHaveLength(2);
   });
 
   it('getTotalRounds returns 3 (log2(8)) from the start', () => {
@@ -458,11 +458,11 @@ describe('Consolation Bracket', () => {
   it('4 teams: WB R1 losers appear in consolation R1', () => {
     const teams = makeTeams(['Alice', 'Bob', 'Carol', 'Dana']);
     let t = Tournament.start(teams, 2, 'singles', 'elimination');
-    const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     t = t.recordResult(wb1[0].id, 1);
     t = t.recordResult(wb1[1].id, 1);
 
-    const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     expect(lb1).toHaveLength(1);
     const loser1 = wb1[0].team2.id;
     const loser2 = wb1[1].team2.id;
@@ -473,15 +473,15 @@ describe('Consolation Bracket', () => {
   it('4 teams: no consolation R2 (lbRounds=1)', () => {
     const teams = makeTeams(['Alice', 'Bob', 'Carol', 'Dana']);
     let t = Tournament.start(teams, 2, 'singles', 'elimination');
-    const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     t = t.recordResult(wb1[0].id, 1);
     t = t.recordResult(wb1[1].id, 1);
-    const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     t = t.recordResult(lb1[0].id, 1);
-    const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const wb2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     t = t.recordResult(wb2[0].id, 1);
 
-    const lb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2);
+    const lb2 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 2);
     expect(lb2).toHaveLength(0);
     expect(t.isComplete()).toBe(true);
   });
@@ -489,15 +489,15 @@ describe('Consolation Bracket', () => {
   it('4 teams: isComplete false until consolation final decided', () => {
     const teams = makeTeams(['Alice', 'Bob', 'Carol', 'Dana']);
     let t = Tournament.start(teams, 2, 'singles', 'elimination');
-    const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     t = t.recordResult(wb1[0].id, 1);
     t = t.recordResult(wb1[1].id, 1);
-    const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const wb2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     t = t.recordResult(wb2[0].id, 1);
 
     expect(t.isComplete()).toBe(false);
 
-    const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     t = t.recordResult(lb1[0].id, 1);
     expect(t.isComplete()).toBe(true);
   });
@@ -506,38 +506,38 @@ describe('Consolation Bracket', () => {
     const teams = makeTeams(['A','B','C','D','E','F','G','H']);
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
-    const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     expect(wb1).toHaveLength(4);
     for (const m of wb1) t = t.recordResult(m.id, 1);
 
-    expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1)).toHaveLength(2);
-    expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2)).toHaveLength(0);
+    expect(t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1)).toHaveLength(2);
+    expect(t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 2)).toHaveLength(0);
 
-    const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     for (const m of lb1) t = t.recordResult(m.id, 1);
 
-    expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2)).toHaveLength(0);
+    expect(t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 2)).toHaveLength(0);
 
-    const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const wb2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     for (const m of wb2) t = t.recordResult(m.id, 1);
 
-    expect(t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2)).toHaveLength(2);
+    expect(t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 2)).toHaveLength(2);
   });
 
   it('8 teams: consolation R3 (final) appears after LB R2 complete', () => {
     const teams = makeTeams(['A','B','C','D','E','F','G','H']);
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
-    const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     for (const m of wb1) t = t.recordResult(m.id, 1);
-    const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     for (const m of lb1) t = t.recordResult(m.id, 1);
-    const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const wb2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     for (const m of wb2) t = t.recordResult(m.id, 1);
-    const lb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2);
+    const lb2 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 2);
     for (const m of lb2) t = t.recordResult(m.id, 1);
 
-    const lb3 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 3);
+    const lb3 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 3);
     expect(lb3).toHaveLength(1);
   });
 
@@ -545,19 +545,19 @@ describe('Consolation Bracket', () => {
     const teams = makeTeams(['A','B','C','D','E','F','G','H']);
     let t = Tournament.start(teams, 4, 'singles', 'elimination');
 
-    const wb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 1);
+    const wb1 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 1);
     for (const m of wb1) t = t.recordResult(m.id, 1);
-    const lb1 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 1);
+    const lb1 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 1);
     for (const m of lb1) t = t.recordResult(m.id, 1);
-    const wb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 2);
+    const wb2 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 2);
     for (const m of wb2) t = t.recordResult(m.id, 1);
-    const lb2 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb' && m.round === 2);
+    const lb2 = t.toState().matches.filter(m => Tournament.isLB(m) && m.round === 2);
     for (const m of lb2) t = t.recordResult(m.id, 1);
-    const wb3 = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'wb' && m.round === 3);
+    const wb3 = t.toState().matches.filter(m => Tournament.isWB(m) && m.round === 3);
     t = t.recordResult(wb3[0].id, 1);
     const wbfLoserId = wb3[0].team2.id;
 
-    const allLB = t.toState().matches.filter(m => (m.bracket ?? 'wb') === 'lb');
+    const allLB = t.toState().matches.filter(m => Tournament.isLB(m));
     const lbTeamIds = new Set(allLB.flatMap(m => [m.team1.id, m.team2.id]));
     expect(lbTeamIds.has(wbfLoserId)).toBe(false);
   });
@@ -566,7 +566,7 @@ describe('Consolation Bracket', () => {
     const teams = makeTeams(['Alice', 'Bob']);
     let t = Tournament.start(teams, 2, 'singles', 'elimination');
     const matches = t.toState().matches;
-    expect(matches.filter(m => (m.bracket ?? 'wb') === 'lb')).toHaveLength(0);
+    expect(matches.filter(m => Tournament.isLB(m))).toHaveLength(0);
     t = t.recordResult(matches[0].id, 1);
     expect(t.isComplete()).toBe(true);
   });

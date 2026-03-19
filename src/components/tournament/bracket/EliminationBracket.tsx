@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 
+import { useMatchScoring } from '../../../hooks/useMatchScoring';
 import type { SEBracket, TournamentMatch, TournamentTeam } from '../../../types/tournament';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 
@@ -19,29 +20,8 @@ interface Props {
 }
 
 const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatchResult }) => {
-  const [modalMatch, setModalMatch] = useState<TournamentMatch | null>(null);
-  const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
-
-  const handleTeamClick = (match: TournamentMatch, team: 1 | 2) => {
-    if (match.winner === team) {
-      onMatchResult(match.id, team);
-      return;
-    }
-    setModalMatch(match);
-    setPendingWinner(team);
-  };
-
-  const handleModalConfirm = (score: { team1: number; team2: number }) => {
-    if (!modalMatch || pendingWinner === null) return;
-    onMatchResult(modalMatch.id, pendingWinner, score);
-    setModalMatch(null);
-    setPendingWinner(null);
-  };
-
-  const handleModalCancel = () => {
-    setModalMatch(null);
-    setPendingWinner(null);
-  };
+  const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } =
+    useMatchScoring(onMatchResult);
 
   const wbMatches = matches.filter(m => (m.bracket ?? 'wb') === 'wb');
 
