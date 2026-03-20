@@ -1,7 +1,7 @@
 import type { Player } from '../types';
 import type {
+  EliminationSetup,
   MatchBracket,
-  SEBracket,
   TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
@@ -9,6 +9,7 @@ import type {
   TournamentTeam,
   TournamentType,
 } from '../types/tournament';
+import type { BracketConfig } from '../components/tournament/bracket/types';
 
 import { shuffleArray } from './playerUtils';
 
@@ -75,11 +76,11 @@ export default class Tournament {
     return team.playerIds.map(id => players.find(p => p.id === id)?.name ?? id).join(' & ');
   }
 
-  static isWB(m: TournamentMatch): boolean {
+  static isWinners(m: TournamentMatch): boolean {
     return (m.bracket ?? 'wb') === 'wb';
   }
 
-  static isLB(m: TournamentMatch): boolean {
+  static isConsolation(m: TournamentMatch): boolean {
     return m.bracket === 'lb';
   }
 
@@ -96,7 +97,7 @@ export default class Tournament {
     return { roundMap, roundNums };
   }
 
-  private static _findWBMatch(
+  private static _findWinnersMatch(
     matches: TournamentMatch[],
     round: number,
     t1Id: string,
@@ -104,23 +105,23 @@ export default class Tournament {
   ): TournamentMatch | undefined {
     return matches.find(
       m =>
-        Tournament.isWB(m) &&
+        Tournament.isWinners(m) &&
         m.round === round &&
         ((m.team1.id === t1Id && m.team2.id === t2Id) ||
           (m.team1.id === t2Id && m.team2.id === t1Id)),
     );
   }
 
-  private static _pairWBRound(
+  private static _pairWinnersRound(
     matches: TournamentMatch[],
-    wbRound: number,
+    round: number,
     prevSurvivors: string[],
   ): { winnerId: string; loserId: string }[] {
     const pairs: { winnerId: string; loserId: string }[] = [];
     for (let i = 0; i < Math.floor(prevSurvivors.length / 2); i++) {
       const t1Id = prevSurvivors[2 * i];
       const t2Id = prevSurvivors[2 * i + 1];
-      const match = Tournament._findWBMatch(matches, wbRound, t1Id, t2Id);
+      const match = Tournament._findWinnersMatch(matches, round, t1Id, t2Id);
       if (match?.winner !== undefined) {
         pairs.push({
           winnerId: match.winner === 1 ? match.team1.id : match.team2.id,
@@ -236,11 +237,6 @@ export default class Tournament {
     return p;
   }
 
-  /**
-   * Build the seeding array for a bracket of `size` slots with `teams.length` teams.
-   * Fills consecutive slots with teams, leaving remaining slots as null.
-   * Pairs: [A,B], [C,D], ... are real matches; [X,null] are byes; [null,null] produce no match/survivor.
-   */
   private static _buildSESeeding(teams: TournamentTeam[], size: number): (string | null)[] {
     const n = teams.length;
     const seeding: (string | null)[] = new Array(size).fill(null);
@@ -253,7 +249,7 @@ export default class Tournament {
   private static _generateSEFirstStage(
     teams: TournamentTeam[],
     numberOfCourts: number,
-  ): { matches: TournamentMatch[]; seBracket: SEBracket } {
+  ): { matches: TournamentMatch[]; seBracket: EliminationSetup } {
     const size = Tournament._nextPowerOfTwo(teams.length);
     const shuffledTeams = shuffleArray(teams);
     const seeding = Tournament._buildSESeeding(shuffledTeams, size);
@@ -281,16 +277,24 @@ export default class Tournament {
   }
 
   /**
-   * Returns the ordered list of WB team IDs that advanced after `round` rounds.
-   * Size of result: size / 2^round.
-   * Bye slots advance automatically; real match slots use match winner.
+   * Returns the ordered list of survivors after `round` rounds for the given bracket.
+   *
+   * - side='winners': WB tree traversal using seeding
+   * - side='consolation': filter consolation matches for this round, return winners
    */
   private static _resolveSurvivors(
-    seBracket: SEBracket,
+    bracket: BracketConfig,
     matches: TournamentMatch[],
     round: number,
   ): string[] {
-    const { size, seeding } = seBracket;
+    if (bracket.side === 'consolation') {
+      return matches
+        .filter(m => Tournament.isConsolation(m) && m.round === round && m.winner !== undefined)
+        .map(m => (m.winner === 1 ? m.team1.id : m.team2.id));
+    }
+
+    // Winners bracket
+    const { size, seeding } = bracket.setup;
 
     if (round === 1) {
       const survivors: string[] = [];
@@ -298,33 +302,74 @@ export default class Tournament {
         const t1Id = seeding[2 * i];
         const t2Id = seeding[2 * i + 1];
         if (t1Id === null && t2Id === null) {
+          // empty pair
         } else if (t1Id === null) {
           survivors.push(t2Id!);
         } else if (t2Id === null) {
           survivors.push(t1Id);
         } else {
-          const match = Tournament._findWBMatch(matches, 1, t1Id, t2Id);
+          const match = Tournament._findWinnersMatch(matches, 1, t1Id, t2Id);
           survivors.push(match!.winner === 1 ? match!.team1.id : match!.team2.id);
         }
       }
       return survivors;
     }
 
-    const prevSurvivors = Tournament._resolveSurvivors(seBracket, matches, round - 1);
-    const survivors = Tournament._pairWBRound(matches, round, prevSurvivors).map(p => p.winnerId);
+    const prevSurvivors = Tournament._resolveSurvivors(bracket, matches, round - 1);
+    const survivors = Tournament._pairWinnersRound(matches, round, prevSurvivors).map(p => p.winnerId);
     if (prevSurvivors.length % 2 === 1) survivors.push(prevSurvivors[prevSurvivors.length - 1]);
     return survivors;
   }
 
-  private static _generateNextWBRound(
-    seBracket: SEBracket,
+  /**
+   * Returns ordered loser IDs for the given bracket and round.
+   *
+   * - side='winners': WB losers (seeding walk for R1, prev survivors for R2+)
+   * - side='consolation': losers of consolation matches in that round
+   */
+  private static _resolveLosers(
+    bracket: BracketConfig,
+    matches: TournamentMatch[],
+    round: number,
+  ): string[] {
+    if (bracket.side === 'consolation') {
+      return matches
+        .filter(m => Tournament.isConsolation(m) && m.round === round && m.winner !== undefined)
+        .map(m => (m.winner === 1 ? m.team2.id : m.team1.id));
+    }
+
+    // Winners bracket
+    const { size, seeding } = bracket.setup;
+
+    if (round === 1) {
+      const losers: string[] = [];
+      for (let i = 0; i < size / 2; i++) {
+        const t1Id = seeding[2 * i];
+        const t2Id = seeding[2 * i + 1];
+        if (t1Id !== null && t2Id !== null) {
+          const match = Tournament._findWinnersMatch(matches, 1, t1Id, t2Id);
+          if (match?.winner !== undefined) {
+            losers.push(match.winner === 1 ? match.team2.id : match.team1.id);
+          }
+        }
+      }
+      return losers;
+    }
+
+    const prevSurvivors = Tournament._resolveSurvivors(bracket, matches, round - 1);
+    return Tournament._pairWinnersRound(matches, round, prevSurvivors).map(p => p.loserId);
+  }
+
+  private static _generateNextRound(
+    setup: EliminationSetup,
     teams: TournamentTeam[],
     completedMatches: TournamentMatch[],
     numberOfCourts: number,
   ): TournamentMatch[] {
-    const wbMatches = completedMatches.filter(m => Tournament.isWB(m));
-    const maxRound = Math.max(...wbMatches.map(m => m.round));
-    const survivors = Tournament._resolveSurvivors(seBracket, completedMatches, maxRound);
+    const winnersBracket: BracketConfig = { side: 'winners', setup };
+    const winnersMatches = completedMatches.filter(m => Tournament.isWinners(m));
+    const maxRound = Math.max(...winnersMatches.map(m => m.round));
+    const survivors = Tournament._resolveSurvivors(winnersBracket, completedMatches, maxRound);
     const nextRound = maxRound + 1;
     const teamMap = new Map(teams.map(t => [t.id, t]));
     const newMatches: TournamentMatch[] = [];
@@ -345,70 +390,29 @@ export default class Tournament {
   }
 
   /**
-   * Returns ordered loser IDs from WB round `wbRound`.
-   * Order preserved from seeding walk (R1) or previous survivors (R2+).
-   */
-  private static _resolveWBLosers(
-    seBracket: SEBracket,
-    matches: TournamentMatch[],
-    wbRound: number,
-  ): string[] {
-    const { size, seeding } = seBracket;
-
-    if (wbRound === 1) {
-      const losers: string[] = [];
-      for (let i = 0; i < size / 2; i++) {
-        const t1Id = seeding[2 * i];
-        const t2Id = seeding[2 * i + 1];
-        if (t1Id !== null && t2Id !== null) {
-          const match = Tournament._findWBMatch(matches, 1, t1Id, t2Id);
-          if (match?.winner !== undefined) {
-            losers.push(match.winner === 1 ? match.team2.id : match.team1.id);
-          }
-        }
-
-      }
-      return losers;
-    }
-
-    const prevSurvivors = Tournament._resolveSurvivors(seBracket, matches, wbRound - 1);
-    return Tournament._pairWBRound(matches, wbRound, prevSurvivors).map(p => p.loserId);
-  }
-
-  /**
-   * Returns ordered LB survivor IDs after `lbRound` LB rounds.
-   * Order follows match creation order (insertion order in the matches array).
-   */
-  private static _resolveLBSurvivors(
-    matches: TournamentMatch[],
-    lbRound: number,
-  ): string[] {
-    return matches
-      .filter(m => Tournament.isLB(m) && m.round === lbRound && m.winner !== undefined)
-      .map(m => (m.winner === 1 ? m.team1.id : m.team2.id));
-  }
-
-  /**
-   * Computes any new LB matches that can be generated given the current match list.
+   * Computes any new consolation matches that can be generated given the current match list.
    * Returns an empty array when no new matches can be triggered.
    */
-  private static _computeNewDEMatches(
-    seBracket: SEBracket,
+  private static _computeNewMatches(
+    setup: EliminationSetup,
     teams: TournamentTeam[],
     numberOfCourts: number,
     currentMatches: TournamentMatch[],
   ): TournamentMatch[] {
-    const wbRounds = Math.log2(seBracket.size);
-    const lbRounds = 2 * (wbRounds - 1) - 1;
+    const wbRounds = Math.log2(setup.size);
+    const consolationRounds = 2 * (wbRounds - 1) - 1;
 
-    if (lbRounds <= 0) return [];
+    if (consolationRounds <= 0) return [];
+
+    const winnersBracket: BracketConfig = { side: 'winners', setup };
+    const consolationBracket: BracketConfig = { side: 'consolation', setup };
 
     const teamMap = new Map(teams.map(t => [t.id, t]));
     const newMatches: TournamentMatch[] = [];
 
     const all = () => [...currentMatches, ...newMatches];
-    const getWBRound = (r: number) => all().filter(m => Tournament.isWB(m) && m.round === r);
-    const getLBRound = (r: number) => all().filter(m => Tournament.isLB(m) && m.round === r);
+    const getWinnersRound = (r: number) => all().filter(m => Tournament.isWinners(m) && m.round === r);
+    const getConsolationRound = (r: number) => all().filter(m => Tournament.isConsolation(m) && m.round === r);
 
     const makeMatch = (t1Id: string, t2Id: string, round: number, bracket: MatchBracket): TournamentMatch => {
       const idx = all().length;
@@ -422,32 +426,45 @@ export default class Tournament {
       };
     };
 
-    for (let lbRound = 1; lbRound <= lbRounds; lbRound++) {
-      if (getLBRound(lbRound).length > 0) continue;
-      if (lbRound === 1) {
-        const wbR1 = getWBRound(1);
+    for (let consolationRound = 1; consolationRound <= consolationRounds; consolationRound++) {
+      if (getConsolationRound(consolationRound).length > 0) continue;
+
+      if (consolationRound === 1) {
+        // First consolation round: WB R1 losers play each other
+        const wbR1 = getWinnersRound(1);
         if (!wbR1.length || !wbR1.every(m => m.winner !== undefined)) continue;
-        const losers = Tournament._resolveWBLosers(seBracket, all(), 1);
+        const losers = Tournament._resolveLosers(winnersBracket, all(), 1);
         for (let i = 0; i < Math.floor(losers.length / 2); i++) {
           newMatches.push(makeMatch(losers[2 * i], losers[2 * i + 1], 1, 'lb'));
         }
-      } else if (lbRound % 2 === 1) {
-        const prevLB = getLBRound(lbRound - 1);
-        if (!prevLB.length || !prevLB.every(m => m.winner !== undefined)) continue;
-        const survivors = Tournament._resolveLBSurvivors(all(), lbRound - 1);
+      } else if (consolationRound % 2 === 1) {
+        // Odd reduction rounds (3, 5, ...): consolation survivors pair up
+        const prevRound = getConsolationRound(consolationRound - 1);
+        if (!prevRound.length || !prevRound.every(m => m.winner !== undefined)) continue;
+        let survivors = Tournament._resolveSurvivors(consolationBracket, all(), consolationRound - 1);
+
+        // Fold in any WB R1 losers that had no consolation R1 match (odd loser count)
+        const allConsolationIds = new Set(
+          all().filter(m => Tournament.isConsolation(m)).flatMap(m => [m.team1.id, m.team2.id]),
+        );
+        const unusedLosers = Tournament._resolveLosers(winnersBracket, all(), 1)
+          .filter(id => !allConsolationIds.has(id));
+        survivors = [...survivors, ...unusedLosers];
+
         for (let i = 0; i < Math.floor(survivors.length / 2); i++) {
-          newMatches.push(makeMatch(survivors[2 * i], survivors[2 * i + 1], lbRound, 'lb'));
+          newMatches.push(makeMatch(survivors[2 * i], survivors[2 * i + 1], consolationRound, 'lb'));
         }
       } else {
-        const wbR = lbRound / 2 + 1;
-        const prevLB = getLBRound(lbRound - 1);
-        const wbRMatches = getWBRound(wbR);
-        if (!prevLB.length || !prevLB.every(m => m.winner !== undefined)) continue;
+        // Even challenge rounds (2, 4, ...): consolation survivors vs WB losers
+        const wbR = consolationRound / 2 + 1;
+        const prevConsolation = getConsolationRound(consolationRound - 1);
+        const wbRMatches = getWinnersRound(wbR);
+        if (!prevConsolation.length || !prevConsolation.every(m => m.winner !== undefined)) continue;
         if (!wbRMatches.length || !wbRMatches.every(m => m.winner !== undefined)) continue;
-        const lbSurvivors = Tournament._resolveLBSurvivors(all(), lbRound - 1);
-        const wbLosers = Tournament._resolveWBLosers(seBracket, all(), wbR);
-        for (let i = 0; i < lbSurvivors.length; i++) {
-          newMatches.push(makeMatch(lbSurvivors[i], wbLosers[i], lbRound, 'lb'));
+        const consolationSurvivors = Tournament._resolveSurvivors(consolationBracket, all(), consolationRound - 1);
+        const wbLosers = Tournament._resolveLosers(winnersBracket, all(), wbR);
+        for (let i = 0; i < consolationSurvivors.length; i++) {
+          newMatches.push(makeMatch(consolationSurvivors[i], wbLosers[i], consolationRound, 'lb'));
         }
       }
     }
@@ -530,7 +547,7 @@ export default class Tournament {
 
   /**
    * Record a match result and return a new Tournament instance.
-   * For elimination, automatically generates the next WB round and LB rounds
+   * For elimination, automatically generates the next WB round and consolation rounds
    * as prerequisites are met.
    */
   recordResult(
@@ -546,13 +563,13 @@ export default class Tournament {
       const { seBracket, teams, numberOfCourts } = this.state;
       const wbRounds = Math.log2(seBracket.size);
 
-      const wbMatches = updatedMatches.filter(m => Tournament.isWB(m));
-      if (wbMatches.length > 0) {
-        const maxWBRound = Math.max(...wbMatches.map(m => m.round));
+      const winnersMatches = updatedMatches.filter(m => Tournament.isWinners(m));
+      if (winnersMatches.length > 0) {
+        const maxWBRound = Math.max(...winnersMatches.map(m => m.round));
         if (maxWBRound < wbRounds) {
-          const currentWBRound = wbMatches.filter(m => m.round === maxWBRound);
+          const currentWBRound = winnersMatches.filter(m => m.round === maxWBRound);
           if (currentWBRound.every(m => m.winner !== undefined)) {
-            const newWBMatches = Tournament._generateNextWBRound(
+            const newWBMatches = Tournament._generateNextRound(
               seBracket, teams, updatedMatches, numberOfCourts,
             );
             updatedMatches = [...updatedMatches, ...newWBMatches];
@@ -560,10 +577,10 @@ export default class Tournament {
         }
       }
 
-      let newDE = Tournament._computeNewDEMatches(seBracket, teams, numberOfCourts, updatedMatches);
-      while (newDE.length > 0) {
-        updatedMatches = [...updatedMatches, ...newDE];
-        newDE = Tournament._computeNewDEMatches(seBracket, teams, numberOfCourts, updatedMatches);
+      let newMatches = Tournament._computeNewMatches(seBracket, teams, numberOfCourts, updatedMatches);
+      while (newMatches.length > 0) {
+        updatedMatches = [...updatedMatches, ...newMatches];
+        newMatches = Tournament._computeNewMatches(seBracket, teams, numberOfCourts, updatedMatches);
       }
     }
 

@@ -16,7 +16,7 @@ import { NodeCard } from './NodeCard';
 interface Props {
   matches: TournamentMatch[];
   teams: TournamentTeam[];
-  seBracket: SEBracket;
+  seBracket: EliminationSetup;
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
 }
 
@@ -44,42 +44,12 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
       {isDe && (
         <h3 className="bracket-section-label">Winners Bracket</h3>
       )}
-      <div className="bracket-section">
-        <div className="bracket-section-scroll">
-          <div style={{ position: 'relative', width: totalW, height: totalH }}>
-            {nodes.map((roundNodes, rIdx) => {
-              const colLeft = rIdx * (CW + CN);
-              const isLast = rIdx === nodes.length - 1;
-              return (
-                <React.Fragment key={rIdx}>
-                  {roundNodes.map((node, nIdx) => (
-                    <NodeCard
-                      key={nIdx}
-                      node={node}
-                      top={tops[rIdx][nIdx]}
-                      left={colLeft}
-                      onTeamClick={handleTeamClick}
-                    />
-                  ))}
-                  {!isLast && (
-                    <BracketConnectors
-                      fromTops={tops[rIdx]}
-                      toTops={tops[rIdx + 1]}
-                      height={totalH}
-                      left={colLeft + CW}
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <BracketSection {...winners} onTeamClick={handleTeamClick} />
 
-      {isDe && (
+      {hasConsolationBracket && consolation.nodes.length > 0 && (
         <>
           <h3 className="bracket-section-label">Consolation Bracket</h3>
-          <LBBracket nodes={consolationNodes} onTeamClick={handleTeamClick} />
+          <BracketSection {...consolation} onTeamClick={handleTeamClick} />
         </>
       )}
 

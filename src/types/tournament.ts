@@ -41,7 +41,7 @@ export interface TournamentStandingRow {
   scoreDiff: number;
 }
 
-export interface SEBracket {
+export interface EliminationSetup {
   size: number;
   seeding: (string | null)[];
 }
@@ -53,7 +53,7 @@ export interface TournamentState {
   numberOfCourts: number;
   teams: TournamentTeam[];
   matches: TournamentMatch[];
-  seBracket?: SEBracket;
+  seBracket?: EliminationSetup;
 }
 
 export const DEFAULT_TOURNAMENT_STATE: TournamentState = {
