@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CONNECTOR_WIDTH, COLUMN_WIDTH, MATCH_GAP, MATCH_HEIGHT, SLOT_HEIGHT, winnersTop } from '../../../src/tournament/types';
+import { CONNECTOR_WIDTH, COLUMN_WIDTH, MATCH_GAP, MATCH_HEIGHT, SLOT_HEIGHT, winnersTop } from '../../src/tournament/types.ts';
 
 describe('bracket/types constants', () => {
   it('has expected numeric values', () => {

@@ -4,10 +4,13 @@ import {
   computeBracketNodes,
   computeWinnersSeeding,
   computeConsolationSeeding,
-} from '../../../src/tournament/BracketNodes.ts';
-import { SEED_ABSENT, SEED_TBD } from '../../../src/tournament/types';
-import type { SeedSlot } from '../../../src/tournament/types';
-import { makeMatch, makeTeam } from '../../data/tournamentFactories';
+  findMatch,
+  makePairNode,
+  makeSlotNode,
+} from '../../src/tournament/BracketNodes.ts';
+import { SEED_ABSENT, SEED_TBD } from '../../src/tournament/types';
+import type { SeedSlot } from '../../src/tournament/types';
+import { makeMatch, makeTeam } from '../data/tournamentFactories';
 
 const tA = makeTeam('a', 'Alice');
 const tB = makeTeam('b', 'Bob');
@@ -214,6 +217,83 @@ describe('bracketNodes — consolation bracket (6 teams)', () => {
   it('connectorTypes are all bracket', () => {
     const { connectorTypes } = computeBracketNodes(consolSeedingBefore, [], teams);
     expect(connectorTypes).toEqual(['bracket']);
+  });
+});
+
+describe('findMatch', () => {
+  const m = makeMatch('m1', 1, tA, tB);
+
+  it('returns match in canonical team order', () => {
+    expect(findMatch([m], 1, 'a', 'b')).toBe(m);
+  });
+
+  it('returns match in reversed team order', () => {
+    expect(findMatch([m], 1, 'b', 'a')).toBe(m);
+  });
+
+  it('returns undefined for wrong round', () => {
+    expect(findMatch([m], 2, 'a', 'b')).toBeUndefined();
+  });
+
+  it('returns undefined when matches array is empty', () => {
+    expect(findMatch([], 1, 'a', 'b')).toBeUndefined();
+  });
+});
+
+describe('makePairNode', () => {
+  const m = makeMatch('m1', 1, tA, tB);
+
+  it('t1 null, t2 present → tbd', () => {
+    expect(makePairNode(null, tB, 1, [])).toEqual({ type: 'tbd', team1: null, team2: tB });
+  });
+
+  it('t1 present, t2 null → tbd', () => {
+    expect(makePairNode(tA, null, 1, [])).toEqual({ type: 'tbd', team1: tA, team2: null });
+  });
+
+  it('both null → tbd', () => {
+    expect(makePairNode(null, null, 1, [])).toEqual({ type: 'tbd', team1: null, team2: null });
+  });
+
+  it('both present, no match → tbd with teams', () => {
+    expect(makePairNode(tA, tB, 1, [])).toEqual({ type: 'tbd', team1: tA, team2: tB });
+  });
+
+  it('both present, match found (no winner) → match node', () => {
+    expect(makePairNode(tA, tB, 1, [m])).toMatchObject({ type: 'match', match: m, team1: tA, team2: tB });
+  });
+
+  it('both present, match found with winner → match node', () => {
+    const mWithWinner = makeMatch('m2', 1, tA, tB, 1);
+    expect(makePairNode(tA, tB, 1, [mWithWinner])).toMatchObject({ type: 'match', match: mWithWinner });
+  });
+});
+
+describe('makeSlotNode', () => {
+  const m = makeMatch('m1', 1, tA, tB);
+
+  it('both absent → empty', () => {
+    expect(makeSlotNode(null, null, true, true, 1, [])).toEqual({ type: 'empty', team1: null, team2: null });
+  });
+
+  it('absent2 only → bye-advance with t1', () => {
+    expect(makeSlotNode(tA, null, false, true, 1, [])).toEqual({ type: 'bye-advance', team1: tA, team2: null });
+  });
+
+  it('absent1 only → bye-advance with t2', () => {
+    expect(makeSlotNode(null, tB, true, false, 1, [])).toEqual({ type: 'bye-advance', team1: tB, team2: null });
+  });
+
+  it('neither absent, no match → tbd with teams', () => {
+    expect(makeSlotNode(tA, tB, false, false, 1, [])).toEqual({ type: 'tbd', team1: tA, team2: tB });
+  });
+
+  it('neither absent, match found → match node', () => {
+    expect(makeSlotNode(tA, tB, false, false, 1, [m])).toMatchObject({ type: 'match', match: m });
+  });
+
+  it('neither absent, both t1/t2 null → tbd (null, null)', () => {
+    expect(makeSlotNode(null, null, false, false, 1, [])).toEqual({ type: 'tbd', team1: null, team2: null });
   });
 });
 

@@ -3,12 +3,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { BracketSection } from '../../../src/components/tournament/bracket/BracketSection';
-import { PlayersProvider } from '../../../src/hooks/usePlayers';
-import type { BracketNode } from '../../../src/tournament/types';
-import { winnersTop } from '../../../src/tournament/types';
-import type { Player } from '../../../src/types';
-import { makeMatch, makeTeam, makeTeamPlayers } from '../../data/tournamentFactories';
+import { BracketSection } from '../../../../src/components/tournament/bracket/BracketSection.tsx';
+import { PlayersProvider } from '../../../../src/hooks/usePlayers.tsx';
+import type { BracketNode } from '../../../../src/tournament/types.ts';
+import { winnersTop } from '../../../../src/tournament/types.ts';
+import type { Player } from '../../../../src/types';
+import { makeMatch, makeTeam, makeTeamPlayers } from '../../../data/tournamentFactories.ts';
 
 const emptyLayout = { nodes: [], tops: [], connectorTypes: [] as Array<'bracket' | 'none'>, totalH: 0, totalW: 0 };
 
