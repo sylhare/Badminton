@@ -399,8 +399,11 @@ export default class Tournament {
     numberOfCourts: number,
     currentMatches: TournamentMatch[],
   ): TournamentMatch[] {
-    const wbRounds = Math.log2(setup.size);
-    const consolationRounds = 2 * (wbRounds - 1) - 1;
+    let numLosers = 0;
+    for (let i = 0; i < setup.seeding.length / 2; i++) {
+      if (setup.seeding[2 * i] !== null && setup.seeding[2 * i + 1] !== null) numLosers++;
+    }
+    const consolationRounds = numLosers <= 1 ? 0 : Math.ceil(Math.log2(numLosers));
 
     if (consolationRounds <= 0) return [];
 
@@ -430,41 +433,29 @@ export default class Tournament {
       if (getConsolationRound(consolationRound).length > 0) continue;
 
       if (consolationRound === 1) {
-        // First consolation round: WB R1 losers play each other
+        // Prerequisite: all WB R1 matches done
         const wbR1 = getWinnersRound(1);
         if (!wbR1.length || !wbR1.every(m => m.winner !== undefined)) continue;
         const losers = Tournament._resolveLosers(winnersBracket, all(), 1);
         for (let i = 0; i < Math.floor(losers.length / 2); i++) {
           newMatches.push(makeMatch(losers[2 * i], losers[2 * i + 1], 1, 'lb'));
         }
-      } else if (consolationRound % 2 === 1) {
-        // Odd reduction rounds (3, 5, ...): consolation survivors pair up
+      } else {
+        // Prerequisite: previous consolation round done
         const prevRound = getConsolationRound(consolationRound - 1);
         if (!prevRound.length || !prevRound.every(m => m.winner !== undefined)) continue;
         let survivors = Tournament._resolveSurvivors(consolationBracket, all(), consolationRound - 1);
 
-        // Fold in any WB R1 losers that had no consolation R1 match (odd loser count)
-        const allConsolationIds = new Set(
+        // Fold in any WB R1 losers that had no consolation R1 match (handles odd loser counts)
+        const allConsolIds = new Set(
           all().filter(m => Tournament.isConsolation(m)).flatMap(m => [m.team1.id, m.team2.id]),
         );
         const unusedLosers = Tournament._resolveLosers(winnersBracket, all(), 1)
-          .filter(id => !allConsolationIds.has(id));
+          .filter(id => !allConsolIds.has(id));
         survivors = [...survivors, ...unusedLosers];
 
         for (let i = 0; i < Math.floor(survivors.length / 2); i++) {
           newMatches.push(makeMatch(survivors[2 * i], survivors[2 * i + 1], consolationRound, 'lb'));
-        }
-      } else {
-        // Even challenge rounds (2, 4, ...): consolation survivors vs WB losers
-        const wbR = consolationRound / 2 + 1;
-        const prevConsolation = getConsolationRound(consolationRound - 1);
-        const wbRMatches = getWinnersRound(wbR);
-        if (!prevConsolation.length || !prevConsolation.every(m => m.winner !== undefined)) continue;
-        if (!wbRMatches.length || !wbRMatches.every(m => m.winner !== undefined)) continue;
-        const consolationSurvivors = Tournament._resolveSurvivors(consolationBracket, all(), consolationRound - 1);
-        const wbLosers = Tournament._resolveLosers(winnersBracket, all(), wbR);
-        for (let i = 0; i < consolationSurvivors.length; i++) {
-          newMatches.push(makeMatch(consolationSurvivors[i], wbLosers[i], consolationRound, 'lb'));
         }
       }
     }

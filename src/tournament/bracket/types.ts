@@ -28,19 +28,6 @@ export function winnersTop(roundIdx: number, matchIdx: number): number {
   return matchIdx * slots * SLOT_HEIGHT + ((slots - 1) * SLOT_HEIGHT) / 2;
 }
 
-/**
- * Returns the top position (px) of a match card within the Consolation Bracket.
- *
- * Columns 0+1 share the same tier as winners round 0, columns 2+3 share tier 1, etc.
- * This produces correct binary-tree spacing across both reduction and challenge columns.
- *
- * @param colIdx  - Zero-based column index within the consolation bracket.
- * @param matchIdx - Zero-based match index within the column.
- */
-export function consolationTop(colIdx: number, matchIdx: number): number {
-  return winnersTop(Math.floor(colIdx / 2), matchIdx);
-}
-
 /** Named sentinel: real team is coming, not yet known. */
 export const SEED_TBD = Symbol('SEED_TBD');
 
