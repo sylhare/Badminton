@@ -50,7 +50,12 @@ export function computeConsolationSeeding(
   return seeding;
 }
 
-export function findMatch(matches: TournamentMatch[], round: number, t1Id: string, t2Id: string): TournamentMatch | undefined {
+export function findMatch(
+  matches: TournamentMatch[],
+  round: number,
+  t1Id: string | undefined,
+  t2Id: string | undefined,
+): TournamentMatch | undefined {
   return matches.find(m => m.round === round &&
     ((m.team1.id === t1Id && m.team2.id === t2Id) || (m.team1.id === t2Id && m.team2.id === t1Id)),
   );
@@ -62,8 +67,7 @@ export function makePairNode(
   round: number,
   matches: TournamentMatch[],
 ): BracketNode {
-  if (!t1 || !t2) return { type: 'tbd', team1: t1, team2: t2 };
-  const match = findMatch(matches, round, t1.id, t2.id);
+  const match = findMatch(matches, round, t1?.id, t2?.id);
   return match
     ? { type: 'match', match, team1: match.team1, team2: match.team2 }
     : { type: 'tbd', team1: t1, team2: t2 };
