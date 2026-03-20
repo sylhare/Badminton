@@ -1,9 +1,10 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TournamentPage from '../../src/pages/TournamentPage';
+import { renderWithAppState } from '../shared';
 
 const { mockLoadApp, mockLoadTournament, mockSaveTournament } = vi.hoisted(() => ({
   mockLoadApp: vi.fn(),
@@ -16,7 +17,7 @@ vi.mock('../../src/utils/StorageManager', () => ({
   storageManager: {
     loadApp: mockLoadApp,
     saveApp: vi.fn(),
-    loadEngine: vi.fn(),
+    loadEngine: vi.fn().mockResolvedValue({}),
     saveEngine: vi.fn(),
     clearAll: vi.fn(),
     loadTournament: mockLoadTournament,
@@ -33,7 +34,7 @@ const mockPlayers = [
 ];
 
 async function startTournament(user: ReturnType<typeof userEvent.setup>) {
-  render(<TournamentPage />);
+  renderWithAppState(<TournamentPage />);
   await waitFor(() => {
     expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
   }, { timeout: 3000 });
@@ -52,12 +53,12 @@ describe('TournamentPage', () => {
   });
 
   it('renders the tournament page heading', () => {
-    render(<TournamentPage />);
+    renderWithAppState(<TournamentPage />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tournament');
   });
 
   it('calls storageManager.loadApp and loadTournament on mount', async () => {
-    render(<TournamentPage />);
+    renderWithAppState(<TournamentPage />);
     await waitFor(() => {
       expect(mockLoadApp).toHaveBeenCalledOnce();
       expect(mockLoadTournament).toHaveBeenCalledOnce();
@@ -65,7 +66,7 @@ describe('TournamentPage', () => {
   });
 
   it('shows TournamentSetup with present players pre-selected', async () => {
-    render(<TournamentPage />);
+    renderWithAppState(<TournamentPage />);
     await waitFor(() => {
       expect(screen.getByTestId('player-checkbox-p1')).toBeChecked();
       expect(screen.getByTestId('player-checkbox-p2')).toBeChecked();
@@ -73,7 +74,7 @@ describe('TournamentPage', () => {
   });
 
   it('absent players are shown but not pre-selected', async () => {
-    render(<TournamentPage />);
+    renderWithAppState(<TournamentPage />);
     await waitFor(() => {
       expect(screen.getByTestId('player-checkbox-p5')).not.toBeChecked();
     });
@@ -118,7 +119,7 @@ describe('TournamentPage', () => {
     };
     mockLoadTournament.mockResolvedValue(savedState);
 
-    render(<TournamentPage />);
+    renderWithAppState(<TournamentPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
@@ -153,7 +154,7 @@ describe('TournamentPage', () => {
     mockLoadApp.mockReturnValue(new Promise(r => { resolveLoad = r; }));
     mockLoadTournament.mockReturnValue(new Promise(() => {}));
 
-    render(<TournamentPage />);
+    renderWithAppState(<TournamentPage />);
 
     expect(mockSaveTournament).not.toHaveBeenCalled();
 
@@ -187,7 +188,7 @@ describe('TournamentPage', () => {
       mockLoadApp.mockResolvedValue({ players: playersWithEvePresent, numberOfCourts: 2 });
       mockLoadTournament.mockResolvedValue(activeTournamentState);
 
-      render(<TournamentPage />);
+      renderWithAppState(<TournamentPage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
@@ -206,7 +207,7 @@ describe('TournamentPage', () => {
       mockLoadTournament.mockResolvedValue(activeTournamentState);
 
       const user = userEvent.setup();
-      render(<TournamentPage />);
+      renderWithAppState(<TournamentPage />);
 
       await waitFor(() => {
         expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();

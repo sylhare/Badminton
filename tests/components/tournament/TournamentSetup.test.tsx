@@ -35,6 +35,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -50,6 +52,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -66,6 +70,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -83,6 +89,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -99,6 +107,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -125,6 +135,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -144,6 +156,8 @@ describe('TournamentSetup', () => {
         initialPlayers={threePlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -158,6 +172,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -174,6 +190,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -197,6 +215,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -220,6 +240,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -237,6 +259,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -257,6 +281,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -275,6 +301,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={1}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -294,6 +322,8 @@ describe('TournamentSetup', () => {
         initialPlayers={eightPlayers}
         initialNumberOfCourts={1}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -307,6 +337,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 
@@ -320,6 +352,8 @@ describe('TournamentSetup', () => {
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onTogglePlayer={vi.fn()}
+        onAddPlayers={vi.fn()}
       />,
     );
 

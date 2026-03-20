@@ -1,8 +1,10 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
 import { engineSA } from '../src/engines/SimulatedAnnealingEngine';
+import { AppStateProvider } from '../src/hooks/usePlayers';
 import { storageManager } from '../src/utils/StorageManager';
 
 /** Common test data used across multiple test files */
@@ -92,3 +94,8 @@ export const generateAndWaitForAssignments = async (
 
   await waitFor(() => expect(localStorage.getItem('badminton-state')).toBeTruthy());
 };
+
+/** Render a component wrapped in AppStateProvider */
+export function renderWithAppState(ui: React.ReactElement): ReturnType<typeof render> {
+  return render(<AppStateProvider>{ui}</AppStateProvider>);
+}

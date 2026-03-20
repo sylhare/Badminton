@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentType } from '../../tournament/types.ts';
@@ -14,7 +14,8 @@ interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   onStart: (tournament: Tournament) => void;
-  onPlayersAdded?: (players: Player[]) => void;
+  onTogglePlayer: (id: string) => void;
+  onAddPlayers: (players: Player[]) => void;
 }
 
 interface SwapSelection {
@@ -58,7 +59,8 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
   onStart,
-  onPlayersAdded,
+  onTogglePlayer,
+  onAddPlayers,
 }) => {
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(
     () => new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id)),
@@ -70,22 +72,17 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
     deriveTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
   const [swapSelection, setSwapSelection] = useState<SwapSelection | null>(null);
+  const hasInitializedRef = useRef(false);
 
   const selectedPlayers = initialPlayers.filter(p => selectedPlayerIds.has(p.id));
 
   useEffect(() => {
-    if (initialPlayers.length > 0) {
-      const presentIds = new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id));
-      setSelectedPlayerIds(prev => {
-        const next = new Set(presentIds);
-        for (const id of prev) {
-          if (!initialPlayers.some(p => p.id === id)) next.add(id);
-        }
-        return next;
-      });
-      setTeams(deriveTeams(initialPlayers.filter(p => p.isPresent), format));
-      setSwapSelection(null);
-    }
+    if (hasInitializedRef.current || initialPlayers.length === 0) return;
+    hasInitializedRef.current = true;
+    const presentIds = new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id));
+    setSelectedPlayerIds(presentIds);
+    setTeams(deriveTeams(initialPlayers.filter(p => p.isPresent), format));
+    setSwapSelection(null);
   }, [initialPlayers]);
 
   useEffect(() => {
@@ -101,7 +98,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
     const newPlayers: Player[] = names.map(name => ({ id: makePlayerId(), name, isPresent: true }));
     setSelectedPlayerIds(prev => new Set([...prev, ...newPlayers.map(p => p.id)]));
     setTeams(prev => newPlayers.reduce((acc, p) => insertPlayer(acc, p, format), prev));
-    onPlayersAdded?.(newPlayers);
+    onAddPlayers(newPlayers);
   };
 
   const handlePlayerToggle = (id: string) => {
@@ -143,6 +140,8 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
     } else {
       setTeams(prev => insertPlayer(prev, player, format));
     }
+
+    onTogglePlayer(id);
   };
 
   const handlePlayerSlotClick = (teamIdx: number, playerIdx: number) => {

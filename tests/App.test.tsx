@@ -1,11 +1,11 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
 
-import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
+import { addPlayers, clearTestState, generateAndWaitForAssignments, renderWithAppState } from './shared';
 
 describe('App', () => {
   beforeEach(async () => await clearTestState());
@@ -15,21 +15,21 @@ describe('App', () => {
     const user = userEvent.setup();
 
     it('renders Manage Players section', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
       await waitFor(() => {
         expect(screen.getByText('Manage Players')).toBeInTheDocument();
       });
     });
 
     it('renders Court Assignments section', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
       await waitFor(() => {
         expect(screen.getByText('Court Assignments')).toBeInTheDocument();
       });
     });
 
     it('shows player list after adding players', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
       await addPlayers(user, 'Alice');
 
       expect(screen.getByText('Alice')).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe('App', () => {
     });
 
     it('enables generate button after adding players', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
 
       expect(screen.getByTestId('generate-assignments-button')).toBeDisabled();
 
@@ -47,7 +47,7 @@ describe('App', () => {
     });
 
     it('renders court assignments after generation', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
       await act(async () => {
@@ -60,7 +60,7 @@ describe('App', () => {
     });
 
     it('can generate multiple new assignments in succession', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Henry');
 
       await generateAndWaitForAssignments(user);
@@ -79,7 +79,7 @@ describe('App', () => {
     });
 
     it('preserves player present/absent status across regenerations', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve,Frank');
 
       const toggleButtons = screen.getAllByTestId(/^toggle-presence-/);
@@ -101,7 +101,7 @@ describe('App', () => {
     });
 
     it('properly benches single remaining players instead of assigning them to courts', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Henry,Ivy');
 
       await generateAndWaitForAssignments(user);
@@ -113,7 +113,7 @@ describe('App', () => {
     });
 
     it('collapses Manage Players section after first assignment', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
       const managePlayersSection = screen.getByTestId('manage-players-section');
@@ -130,7 +130,7 @@ describe('App', () => {
 
     describe('Player Toggle Functionality', () => {
       beforeEach(async () => {
-        render(<App />);
+        renderWithAppState(<App />);
         await addPlayers(user, 'Alice,Bob,Charlie');
       });
 
@@ -201,7 +201,7 @@ describe('App', () => {
 
     describe('Generate Button State', () => {
       beforeEach(async () => {
-        render(<App />);
+        renderWithAppState(<App />);
         await addPlayers(user, 'Alice,Bob');
       });
 
@@ -231,7 +231,7 @@ describe('App', () => {
 
     describe('Remove vs Toggle Functionality', () => {
       beforeEach(async () => {
-        render(<App />);
+        renderWithAppState(<App />);
         await addPlayers(user, 'Alice,Bob,Charlie');
       });
 

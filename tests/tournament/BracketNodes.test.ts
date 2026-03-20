@@ -103,7 +103,6 @@ describe('BracketNode', () => {
     });
 
     it('7 teams (size 8): after round 1, contains 3 loser IDs + SEED_ABSENT', () => {
-      const tG = makeTeam('g', 'Gus');
       const seBracket = { size: 8, seeding: ['a', 'b', 'c', 'd', 'e', 'f', 'g', null] };
       const m1 = makeMatch('m1', 1, tA, tB, 1, undefined, 'wb');
       const m2 = makeMatch('m2', 1, tC, tD, 1, undefined, 'wb');

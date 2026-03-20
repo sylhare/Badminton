@@ -1,11 +1,11 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
 
-import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
+import { addPlayers, clearTestState, generateAndWaitForAssignments, renderWithAppState } from './shared';
 
 describe('App Persistence Integration', () => {
   const user = userEvent.setup();
@@ -19,7 +19,7 @@ describe('App Persistence Integration', () => {
 
   describe('Clear all players functionality integration', () => {
     it('should not clear data when clear all is cancelled', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
 
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
@@ -39,7 +39,7 @@ describe('App Persistence Integration', () => {
     it('should handle localStorage load errors gracefully', async () => {
       localStorage.setItem('badminton-app-state', 'invalid-json');
 
-      render(<App />);
+      renderWithAppState(<App />);
 
       expect(screen.getByText('Manage Players')).toBeInTheDocument();
       expect(screen.getByText('Court Assignments')).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('App Persistence Integration', () => {
         throw new Error('Storage quota exceeded');
       });
 
-      render(<App />);
+      renderWithAppState(<App />);
 
       const input = screen.getByTestId('player-entry-input');
       await act(async () => {
@@ -66,7 +66,7 @@ describe('App Persistence Integration', () => {
     it('should debounce save operations when making multiple quick changes', async () => {
       const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
 
-      render(<App />);
+      renderWithAppState(<App />);
 
       const input = screen.getByTestId('player-entry-input');
       await act(async () => {
@@ -85,7 +85,7 @@ describe('App Persistence Integration', () => {
 
   describe('Reset Algorithm persistence', () => {
     it('should save algorithm reset state immediately when reset button is clicked', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
 
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
@@ -104,7 +104,7 @@ describe('App Persistence Integration', () => {
     });
 
     it('should handle reset algorithm when no algorithm state exists', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
 
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
@@ -115,7 +115,7 @@ describe('App Persistence Integration', () => {
     });
 
     it('should clear match assignments when reset algorithm is confirmed', async () => {
-      render(<App />);
+      renderWithAppState(<App />);
 
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
