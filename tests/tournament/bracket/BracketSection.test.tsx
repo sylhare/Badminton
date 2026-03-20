@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { BracketSection } from '../../../src/components/tournament/bracket/BracketSection';
 import { PlayersProvider } from '../../../src/hooks/usePlayers';
-import type { BracketNode } from '../../../src/tournament/bracket/types';
-import { winnersTop } from '../../../src/tournament/bracket/types';
+import type { BracketNode } from '../../../src/tournament/types';
+import { winnersTop } from '../../../src/tournament/types';
 import type { Player } from '../../../src/types';
 import { makeMatch, makeTeam, makeTeamPlayers } from '../../data/tournamentFactories';
 

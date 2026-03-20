@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TournamentSetup from '../../../src/components/tournament/TournamentSetup';
-import type { TournamentState } from '../../../src/types/tournament';
+import type { TournamentState } from '../../../src/tournament/types.ts';
 import { createMockPlayer } from '../../data/testFactories';
 
 vi.mock('../../../src/components/modals/ImageUploadModal', () => ({

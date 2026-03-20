@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 
 import TournamentStandings from '../../../src/components/tournament/TournamentStandings';
 import { PlayersProvider } from '../../../src/hooks/usePlayers';
-import type { TournamentStandingRow, TournamentTeam } from '../../../src/types/tournament';
+import type { TournamentStandingRow, TournamentTeam } from '../../../src/tournament/types.ts';
 import { makeTeam, makeTeamPlayers } from '../../data/tournamentFactories';
 
 function makeRow(team: TournamentTeam, won: number, lost: number, scoreDiff: number): TournamentStandingRow {

@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 
 import TournamentMatches from '../../../src/components/tournament/TournamentMatches';
 import { PlayersProvider } from '../../../src/hooks/usePlayers';
-import type { TournamentMatch } from '../../../src/types/tournament';
+import type { TournamentMatch } from '../../../src/tournament/types.ts';
 import type { Player } from '../../../src/types';
 import { makeMatch, makeTeam, makeTeamPlayers } from '../../data/tournamentFactories';
 

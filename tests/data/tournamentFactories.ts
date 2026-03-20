@@ -1,4 +1,4 @@
-import type { MatchBracket, TournamentMatch, TournamentTeam } from '../../src/types/tournament';
+import type { MatchBracket, TournamentMatch, TournamentTeam } from '../../src/tournament/types.ts';
 
 export function makeTeam(id: string, playerNames: string | string[]): TournamentTeam {
   const names = Array.isArray(playerNames) ? playerNames : [playerNames];

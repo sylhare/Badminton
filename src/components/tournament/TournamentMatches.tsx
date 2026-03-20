@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { useMatchScoring } from '../../hooks/useMatchScoring';
 import { usePlayers } from '../../hooks/usePlayers';
-import type { TournamentMatch } from '../../types/tournament';
+import type { TournamentMatch } from '../../tournament/types.ts';
 import { DoublesMatch, SinglesMatch } from '../court/display';
 import ScoreInputModal from '../modals/ScoreInputModal';
 

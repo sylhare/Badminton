@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { TournamentMatch, TournamentTeam } from '../../src/types/tournament';
+import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types.ts';
 import Tournament from '../../src/tournament/Tournament';
 import { createMockPlayer } from '../data/testFactories';
 import { makeMatch, makeTeam, makeTeamPlayers } from '../data/tournamentFactories';

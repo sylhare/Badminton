@@ -1,10 +1,10 @@
 import React from 'react';
 
 import { usePlayers } from '../../../hooks/usePlayers';
-import type { TournamentMatch } from '../../../types/tournament';
+import type { TournamentMatch } from '../../../tournament/types.ts';
 import Tournament from '../../../tournament/Tournament';
-import type { BracketNode } from '../../../tournament/bracket/types';
-import { COLUMN_WIDTH, MATCH_HEIGHT } from '../../../tournament/bracket/types';
+import type { BracketNode } from '../../../tournament/types';
+import { COLUMN_WIDTH, MATCH_HEIGHT } from '../../../tournament/types';
 
 interface NodeCardProps {
   node: BracketNode;

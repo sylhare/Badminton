@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { usePlayers } from '../../hooks/usePlayers';
-import type { TournamentStandingRow, TournamentType } from '../../types/tournament';
+import type { TournamentStandingRow, TournamentType } from '../../tournament/types.ts';
 import Tournament from '../../tournament/Tournament';
 
 interface TournamentStandingsProps {

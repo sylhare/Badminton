@@ -1,8 +1,8 @@
 import React from 'react';
 
-import type { TournamentMatch } from '../../../types/tournament';
-import type { BracketLayout } from '../../../tournament/bracket/computeBracketNodes';
-import { CONNECTOR_WIDTH, COLUMN_WIDTH } from '../../../tournament/bracket/types';
+import type { TournamentMatch } from '../../../tournament/types.ts';
+import type { BracketLayout } from '../../../tournament/BracketNodes.ts';
+import { CONNECTOR_WIDTH, COLUMN_WIDTH } from '../../../tournament/types';
 
 import { BracketConnectors } from './BracketConnectors';
 import { NodeCard } from './NodeCard';
@@ -11,14 +11,14 @@ interface BracketSectionProps extends BracketLayout {
   onTeamClick: (match: TournamentMatch, team: 1 | 2) => void;
 }
 
-export function BracketSection({
+export const BracketSection: React.FC<BracketSectionProps> = ({
   nodes,
   tops,
   connectorTypes,
   totalH,
   totalW,
   onTeamClick,
-}: BracketSectionProps) {
+}) => {
   if (nodes.length === 0) return null;
 
   return (
@@ -54,4 +54,4 @@ export function BracketSection({
       </div>
     </div>
   );
-}
+};

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
-import type { TournamentFormat, TournamentType } from '../../types/tournament';
+import type { TournamentFormat, TournamentType } from '../../tournament/types.ts';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 import Tournament from '../../tournament/Tournament';
 

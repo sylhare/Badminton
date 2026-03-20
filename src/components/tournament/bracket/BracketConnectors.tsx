@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { CONNECTOR_WIDTH, MATCH_HEIGHT } from '../../../tournament/bracket/types';
+import { CONNECTOR_WIDTH, MATCH_HEIGHT } from '../../../tournament/types';
 
 interface ConnectorsProps {
   fromTops: number[];

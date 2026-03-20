@@ -2,13 +2,13 @@ import React from 'react';
 
 import { useMatchScoring } from '../../../hooks/useMatchScoring';
 import { usePlayers } from '../../../hooks/usePlayers';
-import type { EliminationSetup, TournamentMatch, TournamentTeam } from '../../../types/tournament';
+import type { EliminationSetup, TournamentMatch, TournamentTeam } from '../../../tournament/types';
 import Tournament from '../../../tournament/Tournament';
 import {
   computeBracketNodes,
   computeWinnersSeeding,
   computeConsolationSeeding,
-} from '../../../tournament/bracket/computeBracketNodes';
+} from '../../../tournament/BracketNodes';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 
 import './EliminationBracket.css';

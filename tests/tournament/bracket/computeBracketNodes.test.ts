@@ -4,9 +4,9 @@ import {
   computeBracketNodes,
   computeWinnersSeeding,
   computeConsolationSeeding,
-} from '../../../src/tournament/bracket/computeBracketNodes';
-import { SEED_ABSENT, SEED_TBD } from '../../../src/tournament/bracket/types';
-import type { SeedSlot } from '../../../src/tournament/bracket/types';
+} from '../../../src/tournament/BracketNodes.ts';
+import { SEED_ABSENT, SEED_TBD } from '../../../src/tournament/types';
+import type { SeedSlot } from '../../../src/tournament/types';
 import { makeMatch, makeTeam } from '../../data/tournamentFactories';
 
 const tA = makeTeam('a', 'Alice');
@@ -79,7 +79,7 @@ describe('computeConsolationSeeding', () => {
   });
 });
 
-describe('computeBracketNodes — winners bracket', () => {
+describe('bracketNodes — winners bracket', () => {
   it('2 teams: 1 round, 1 match node', () => {
     const match = makeMatch('m1', 1, tA, tB, undefined, undefined, 'wb');
     const { nodes } = computeBracketNodes(['a', 'b'], [match], [tA, tB]);
@@ -161,14 +161,14 @@ describe('computeBracketNodes — winners bracket', () => {
   });
 });
 
-describe('computeBracketNodes — winners bracket geometry', () => {
+describe('bracketNodes — winners bracket geometry', () => {
   it('connectorTypes are all bracket', () => {
     const { connectorTypes } = computeBracketNodes(['a', 'b', 'c', 'd'], [], [tA, tB, tC, tD]);
     expect(connectorTypes).toEqual(['bracket']);
   });
 });
 
-describe('computeBracketNodes — consolation bracket (8 teams, before R1)', () => {
+describe('bracketNodes — consolation bracket (8 teams, before R1)', () => {
   it('returns 2 cols [2, 1] all tbd before round 1', () => {
     const tG = makeTeam('g', 'Gus');
     const tH = makeTeam('h', 'Hana');
@@ -183,7 +183,7 @@ describe('computeBracketNodes — consolation bracket (8 teams, before R1)', () 
   });
 });
 
-describe('computeBracketNodes — consolation bracket (6 teams)', () => {
+describe('bracketNodes — consolation bracket (6 teams)', () => {
   const teams = [tA, tB, tC, tD, tE, tF];
   const consolSeedingBefore: SeedSlot[] = [SEED_TBD, SEED_TBD, SEED_TBD, SEED_ABSENT];
 
@@ -217,7 +217,7 @@ describe('computeBracketNodes — consolation bracket (6 teams)', () => {
   });
 });
 
-describe('computeBracketNodes — consolation bracket (4 teams)', () => {
+describe('bracketNodes — consolation bracket (4 teams)', () => {
   it('returns 1 col with 1 tbd node before R1', () => {
     const consolSeeding: SeedSlot[] = [SEED_TBD, SEED_TBD];
     const { nodes } = computeBracketNodes(consolSeeding, [], [tA, tB, tC, tD]);

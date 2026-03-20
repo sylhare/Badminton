@@ -1,5 +1,4 @@
-import type { EliminationSetup, TournamentMatch, TournamentTeam } from '../../types/tournament';
-
+import type { EliminationSetup, TournamentMatch, TournamentTeam } from './types.ts';
 import type { BracketNode, SeedSlot } from './types';
 import {
   CONNECTOR_WIDTH,

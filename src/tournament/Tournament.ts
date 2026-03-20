@@ -1,4 +1,6 @@
 import type { Player } from '../types';
+import { shuffleArray } from '../utils/playerUtils';
+
 import type {
   EliminationSetup,
   MatchBracket,
@@ -8,10 +10,8 @@ import type {
   TournamentState,
   TournamentTeam,
   TournamentType,
-} from '../types/tournament';
-import { shuffleArray } from '../utils/playerUtils';
-
-import type { BracketConfig } from './bracket/types';
+} from './types.ts';
+import type { BracketConfig } from './types';
 
 export default class Tournament {
   private readonly state: TournamentState;

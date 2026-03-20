@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { TournamentMatch } from '../types/tournament';
+import type { TournamentMatch } from '../tournament/types.ts';
 
 export function useMatchScoring(
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void,
