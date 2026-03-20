@@ -3,17 +3,20 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { LBBracket } from '../../../../src/components/tournament/bracket/LBBracket';
+import { BracketSection } from '../../../../src/components/tournament/bracket/BracketSection';
 import { PlayersProvider } from '../../../../src/hooks/usePlayers';
 import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
+import { winnersTop } from '../../../../src/components/tournament/bracket/types';
 import type { Player } from '../../../../src/types';
 import { makeMatch, makeTeam, makeTeamPlayers } from '../../../data/tournamentFactories';
 
-describe('LBBracket', () => {
+const emptyLayout = { nodes: [], tops: [], connectorTypes: [] as Array<'bracket' | 'straight'>, totalH: 0, totalW: 0 };
+
+describe('BracketSection', () => {
   it('renders nothing when nodes is empty', () => {
     const { container } = render(
       <PlayersProvider value={[]}>
-        <LBBracket nodes={[]} onTeamClick={vi.fn()} />
+        <BracketSection {...emptyLayout} onTeamClick={vi.fn()} />
       </PlayersProvider>,
     );
     expect(container.firstChild).toBeNull();
@@ -23,15 +26,23 @@ describe('LBBracket', () => {
     const tbdNodes: BracketNode[][] = [
       [{ type: 'tbd', team1: null, team2: null }],
     ];
+    const tops = [[winnersTop(0, 0)]];
     render(
       <PlayersProvider value={[]}>
-        <LBBracket nodes={tbdNodes} onTeamClick={vi.fn()} />
+        <BracketSection
+          nodes={tbdNodes}
+          tops={tops}
+          connectorTypes={[]}
+          totalH={200}
+          totalW={176}
+          onTeamClick={vi.fn()}
+        />
       </PlayersProvider>,
     );
     expect(screen.getAllByText('TBD').length).toBeGreaterThan(0);
   });
 
-  it('renders LB matches from nodes', () => {
+  it('renders matches from nodes', () => {
     const alice = makeTeam('a', 'Alice');
     const bob = makeTeam('b', 'Bob');
     const carol = makeTeam('c', 'Carol');
@@ -50,10 +61,21 @@ describe('LBBracket', () => {
       [{ type: 'match', match: match1, team1: alice, team2: bob }],
       [{ type: 'match', match: match2, team1: carol, team2: dana }],
     ];
+    const tops = [
+      [winnersTop(0, 0)],
+      [winnersTop(0, 0)],
+    ];
 
     render(
       <PlayersProvider value={players}>
-        <LBBracket nodes={nodes} onTeamClick={vi.fn()} />
+        <BracketSection
+          nodes={nodes}
+          tops={tops}
+          connectorTypes={['straight']}
+          totalH={200}
+          totalW={400}
+          onTeamClick={vi.fn()}
+        />
       </PlayersProvider>,
     );
 
@@ -77,10 +99,18 @@ describe('LBBracket', () => {
     const nodes: BracketNode[][] = [
       [{ type: 'match', match, team1: alice, team2: bob }],
     ];
+    const tops = [[winnersTop(0, 0)]];
 
     render(
       <PlayersProvider value={players}>
-        <LBBracket nodes={nodes} onTeamClick={onTeamClick} />
+        <BracketSection
+          nodes={nodes}
+          tops={tops}
+          connectorTypes={[]}
+          totalH={200}
+          totalW={176}
+          onTeamClick={onTeamClick}
+        />
       </PlayersProvider>,
     );
 

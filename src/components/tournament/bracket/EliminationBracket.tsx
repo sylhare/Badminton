@@ -2,16 +2,12 @@ import React from 'react';
 
 import { useMatchScoring } from '../../../hooks/useMatchScoring';
 import { usePlayers } from '../../../hooks/usePlayers';
-import type { SEBracket, TournamentMatch, TournamentTeam } from '../../../types/tournament';
+import type { EliminationSetup, TournamentMatch, TournamentTeam } from '../../../types/tournament';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 
 import './EliminationBracket.css';
-import { BracketConnectors } from './BracketConnectors';
-import { LBBracket } from './LBBracket';
-import { CN, CW, MH, SH, wbTop } from './types';
-import { computeBracketTree } from './computeBracketTree';
-import { computeConsolationTree } from './computeConsolationTree';
-import { NodeCard } from './NodeCard';
+import { BracketSection } from './BracketSection';
+import { computeBracketNodes } from './computeBracketNodes';
 
 interface Props {
   matches: TournamentMatch[];
@@ -25,23 +21,13 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
   const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } =
     useMatchScoring(onMatchResult);
 
-  const wbMatches = matches.filter(m => (m.bracket ?? 'wb') === 'wb');
-
-  const nodes = computeBracketTree(seBracket, teams, wbMatches);
-  const consolationNodes = computeConsolationTree(seBracket, matches);
-  const r1Count = seBracket.size / 2;
-  const totalH = Math.max(r1Count, 1) * SH + MH;
-  const totalW = nodes.length * CW + Math.max(nodes.length - 1, 0) * CN;
-
-  const tops = nodes.map((roundNodes, rIdx) =>
-    roundNodes.map((_, mIdx) => wbTop(rIdx, mIdx)),
-  );
-
-  const isDe = Math.log2(seBracket.size) > 1;
+  const winners = computeBracketNodes({ side: 'winners', setup: seBracket }, teams, matches);
+  const consolation = computeBracketNodes({ side: 'consolation', setup: seBracket }, teams, matches);
+  const hasConsolationBracket = Math.log2(seBracket.size) > 1;
 
   return (
     <div className="elimination-bracket" data-testid="elimination-bracket">
-      {isDe && (
+      {hasConsolationBracket && (
         <h3 className="bracket-section-label">Winners Bracket</h3>
       )}
       <BracketSection {...winners} onTeamClick={handleTeamClick} />
