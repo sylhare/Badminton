@@ -474,19 +474,16 @@ describe('Tournament SE walkthrough — 6 teams', () => {
     t = t.recordResult(wb1[1].id, 1);
     t = t.recordResult(wb1[2].id, 1);
 
-    // WB R1 done → WB R2 (1 match) + LB R1 (1 match) generated
     const wb2 = t.toState().matches.filter(m => Tournament.isWinners(m) && m.round === 2);
     expect(wb2).toHaveLength(1);
     const lb1 = t.toState().matches.filter(m => Tournament.isConsolation(m) && m.round === 1);
     expect(lb1).toHaveLength(1);
 
     t = t.recordResult(wb2[0].id, 1);
-    // WB R2 done → WB R3 (final) generated
     const wb3 = t.toState().matches.filter(m => Tournament.isWinners(m) && m.round === 3);
     expect(wb3).toHaveLength(1);
 
     t = t.recordResult(lb1[0].id, 1);
-    // LB R1 done → LB R2 (final) generated
     const lb2 = t.toState().matches.filter(m => Tournament.isConsolation(m) && m.round === 2);
     expect(lb2).toHaveLength(1);
 

@@ -3,7 +3,6 @@ import React from 'react';
 import { usePlayers } from '../../../hooks/usePlayers';
 import type { TournamentMatch } from '../../../types/tournament';
 import Tournament from '../../../tournament/Tournament';
-
 import type { BracketNode } from '../../../tournament/bracket/types';
 import { COLUMN_WIDTH, MATCH_HEIGHT } from '../../../tournament/bracket/types';
 

@@ -3,11 +3,16 @@ import React from 'react';
 import { useMatchScoring } from '../../../hooks/useMatchScoring';
 import { usePlayers } from '../../../hooks/usePlayers';
 import type { EliminationSetup, TournamentMatch, TournamentTeam } from '../../../types/tournament';
+import Tournament from '../../../tournament/Tournament';
+import {
+  computeBracketNodes,
+  computeWinnersSeeding,
+  computeConsolationSeeding,
+} from '../../../tournament/bracket/computeBracketNodes';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 
 import './EliminationBracket.css';
 import { BracketSection } from './BracketSection';
-import { computeBracketNodes } from '../../../tournament/bracket/computeBracketNodes';
 
 interface Props {
   matches: TournamentMatch[];
@@ -21,8 +26,16 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
   const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } =
     useMatchScoring(onMatchResult);
 
-  const winners = computeBracketNodes({ side: 'winners', setup: seBracket }, teams, matches);
-  const consolation = computeBracketNodes({ side: 'consolation', setup: seBracket }, teams, matches);
+  const wbMatches = matches.filter(m => Tournament.isWinners(m));
+  const winners = computeBracketNodes(computeWinnersSeeding(seBracket), wbMatches, teams);
+
+  const consolSeeding = computeConsolationSeeding(seBracket, wbMatches);
+  const lbMatches = matches.filter(m => Tournament.isConsolation(m));
+  const consolation =
+    consolSeeding.length > 0
+      ? computeBracketNodes(consolSeeding, lbMatches, teams)
+      : { nodes: [], tops: [], connectorTypes: [], totalH: 0, totalW: 0 };
+
   const hasConsolationBracket = Math.log2(seBracket.size) > 1;
 
   return (

@@ -1,9 +1,9 @@
 import React from 'react';
 
 import type { TournamentMatch } from '../../../types/tournament';
-
 import type { BracketLayout } from '../../../tournament/bracket/computeBracketNodes';
 import { CONNECTOR_WIDTH, COLUMN_WIDTH } from '../../../tournament/bracket/types';
+
 import { BracketConnectors } from './BracketConnectors';
 import { NodeCard } from './NodeCard';
 

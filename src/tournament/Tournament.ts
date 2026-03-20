@@ -9,9 +9,9 @@ import type {
   TournamentTeam,
   TournamentType,
 } from '../types/tournament';
-import type { BracketConfig } from './bracket/types';
-
 import { shuffleArray } from '../utils/playerUtils';
+
+import type { BracketConfig } from './bracket/types';
 
 export default class Tournament {
   private readonly state: TournamentState;
@@ -293,7 +293,6 @@ export default class Tournament {
         .map(m => (m.winner === 1 ? m.team1.id : m.team2.id));
     }
 
-    // Winners bracket
     const { size, seeding } = bracket.setup;
 
     if (round === 1) {
@@ -302,7 +301,6 @@ export default class Tournament {
         const t1Id = seeding[2 * i];
         const t2Id = seeding[2 * i + 1];
         if (t1Id === null && t2Id === null) {
-          // empty pair
         } else if (t1Id === null) {
           survivors.push(t2Id!);
         } else if (t2Id === null) {
@@ -338,7 +336,6 @@ export default class Tournament {
         .map(m => (m.winner === 1 ? m.team2.id : m.team1.id));
     }
 
-    // Winners bracket
     const { size, seeding } = bracket.setup;
 
     if (round === 1) {
@@ -433,7 +430,6 @@ export default class Tournament {
       if (getConsolationRound(consolationRound).length > 0) continue;
 
       if (consolationRound === 1) {
-        // Prerequisite: all WB R1 matches done
         const wbR1 = getWinnersRound(1);
         if (!wbR1.length || !wbR1.every(m => m.winner !== undefined)) continue;
         const losers = Tournament._resolveLosers(winnersBracket, all(), 1);
@@ -441,12 +437,10 @@ export default class Tournament {
           newMatches.push(makeMatch(losers[2 * i], losers[2 * i + 1], 1, 'lb'));
         }
       } else {
-        // Prerequisite: previous consolation round done
         const prevRound = getConsolationRound(consolationRound - 1);
         if (!prevRound.length || !prevRound.every(m => m.winner !== undefined)) continue;
         let survivors = Tournament._resolveSurvivors(consolationBracket, all(), consolationRound - 1);
 
-        // Fold in any WB R1 losers that had no consolation R1 match (handles odd loser counts)
         const allConsolIds = new Set(
           all().filter(m => Tournament.isConsolation(m)).flatMap(m => [m.team1.id, m.team2.id]),
         );

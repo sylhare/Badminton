@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeBracketNodes } from '../../../src/tournament/bracket/computeBracketNodes';
+import {
+  computeBracketNodes,
+  computeWinnersSeeding,
+  computeConsolationSeeding,
+} from '../../../src/tournament/bracket/computeBracketNodes';
 import { SEED_ABSENT, SEED_TBD } from '../../../src/tournament/bracket/types';
 import type { SeedSlot } from '../../../src/tournament/bracket/types';
 import { makeMatch, makeTeam } from '../../data/tournamentFactories';
@@ -12,9 +16,68 @@ const tD = makeTeam('d', 'Dana');
 const tE = makeTeam('e', 'Eve');
 const tF = makeTeam('f', 'Frank');
 
-// ---------------------------------------------------------------------------
-// Winners bracket — call with pre-mapped seeding (null → SEED_ABSENT)
-// ---------------------------------------------------------------------------
+describe('computeWinnersSeeding', () => {
+  it('passes string IDs through unchanged', () => {
+    const result = computeWinnersSeeding({ size: 4, seeding: ['a', 'b', 'c', 'd'] });
+    expect(result).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('maps null → SEED_ABSENT', () => {
+    const result = computeWinnersSeeding({ size: 4, seeding: ['a', null, 'b', 'c'] });
+    expect(result).toEqual(['a', SEED_ABSENT, 'b', 'c']);
+  });
+
+  it('handles all-real seeding with no nulls', () => {
+    const result = computeWinnersSeeding({ size: 2, seeding: ['x', 'y'] });
+    expect(result).toEqual(['x', 'y']);
+  });
+});
+
+describe('computeConsolationSeeding', () => {
+  it('before R1: all real pairs produce SEED_TBD entries', () => {
+    const seBracket = { size: 4, seeding: ['a', 'b', 'c', 'd'] };
+    const result = computeConsolationSeeding(seBracket, []);
+    expect(result).toEqual([SEED_TBD, SEED_TBD]);
+  });
+
+  it('bye pairs (one null) are skipped', () => {
+
+    const seBracket = { size: 4, seeding: ['a', 'b', 'c', null] };
+    const result = computeConsolationSeeding(seBracket, []);
+
+    expect(result).toEqual([SEED_TBD, SEED_ABSENT]);
+  });
+
+  it('null-null pairs are skipped', () => {
+    const seBracket = { size: 4, seeding: ['a', 'b', null, null] };
+    const result = computeConsolationSeeding(seBracket, []);
+
+    expect(result).toEqual([SEED_TBD, SEED_ABSENT]);
+  });
+
+  it('after R1 results: loser IDs appear in output', () => {
+    const seBracket = { size: 4, seeding: ['a', 'b', 'c', 'd'] };
+    const m1 = makeMatch('m1', 1, tA, tB, 1, undefined, 'wb');
+    const m2 = makeMatch('m2', 1, tC, tD, 2, undefined, 'wb');
+    const result = computeConsolationSeeding(seBracket, [m1, m2]);
+    expect(result).toEqual(['b', 'c']);
+  });
+
+  it('odd loser count: pads with SEED_ABSENT to make even', () => {
+
+    const seBracket = { size: 6, seeding: ['a', 'b', 'c', 'd', 'e', 'f'] };
+    const result = computeConsolationSeeding(seBracket, []);
+    expect(result.length % 2).toBe(0);
+    expect(result[3]).toBe(SEED_ABSENT);
+  });
+
+  it('result length is always a power of 2', () => {
+    const isPow2 = (n: number) => n > 0 && (n & (n - 1)) === 0;
+    const seBracket = { size: 6, seeding: ['a', 'b', 'c', 'd', 'e', 'f'] };
+    const result = computeConsolationSeeding(seBracket, []);
+    expect(isPow2(result.length)).toBe(true);
+  });
+});
 
 describe('computeBracketNodes — winners bracket', () => {
   it('2 teams: 1 round, 1 match node', () => {
@@ -98,10 +161,6 @@ describe('computeBracketNodes — winners bracket', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Winners bracket geometry
-// ---------------------------------------------------------------------------
-
 describe('computeBracketNodes — winners bracket geometry', () => {
   it('connectorTypes are all bracket', () => {
     const { connectorTypes } = computeBracketNodes(['a', 'b', 'c', 'd'], [], [tA, tB, tC, tD]);
@@ -109,16 +168,11 @@ describe('computeBracketNodes — winners bracket geometry', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Consolation bracket structure
-// ---------------------------------------------------------------------------
-
 describe('computeBracketNodes — consolation bracket (8 teams, before R1)', () => {
   it('returns 2 cols [2, 1] all tbd before round 1', () => {
     const tG = makeTeam('g', 'Gus');
     const tH = makeTeam('h', 'Hana');
     const teams = [tA, tB, tC, tD, tE, tF, tG, tH];
-    // 8 teams → 4 real pairs → 4 losers TBD
     const consolSeeding: SeedSlot[] = [SEED_TBD, SEED_TBD, SEED_TBD, SEED_TBD];
     const { nodes } = computeBracketNodes(consolSeeding, [], teams);
 
@@ -131,7 +185,6 @@ describe('computeBracketNodes — consolation bracket (8 teams, before R1)', () 
 
 describe('computeBracketNodes — consolation bracket (6 teams)', () => {
   const teams = [tA, tB, tC, tD, tE, tF];
-  // 6 teams: 3 real pairs → 3 losers TBD, pad to power of 2 → [TBD, TBD, TBD, ABSENT]
   const consolSeedingBefore: SeedSlot[] = [SEED_TBD, SEED_TBD, SEED_TBD, SEED_ABSENT];
 
   it('returns 2 cols [2, 1] before round 1', () => {
@@ -148,8 +201,6 @@ describe('computeBracketNodes — consolation bracket (6 teams)', () => {
   });
 
   it('after R1: col 0 has [match, bye-advance]', () => {
-    // WB R1 complete: a beats b (loser=b), c beats d (loser=d), e beats f (loser=f)
-    // consolSeeding after R1: [b, d, f, ABSENT] — f gets a bye
     const consolSeeding: SeedSlot[] = ['b', 'd', 'f', SEED_ABSENT];
     const lb1 = makeMatch('lb1', 1, tB, tD, undefined, undefined, 'lb');
     const { nodes } = computeBracketNodes(consolSeeding, [lb1], teams);
@@ -166,13 +217,8 @@ describe('computeBracketNodes — consolation bracket (6 teams)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Consolation bracket (4 teams)
-// ---------------------------------------------------------------------------
-
 describe('computeBracketNodes — consolation bracket (4 teams)', () => {
   it('returns 1 col with 1 tbd node before R1', () => {
-    // 4 teams → 2 real pairs → 2 losers TBD
     const consolSeeding: SeedSlot[] = [SEED_TBD, SEED_TBD];
     const { nodes } = computeBracketNodes(consolSeeding, [], [tA, tB, tC, tD]);
     expect(nodes).toHaveLength(1);
