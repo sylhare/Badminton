@@ -5,7 +5,7 @@ import type { TournamentMatch } from '../../../types/tournament';
 import Tournament from '../../../tournament/Tournament';
 
 import type { BracketNode } from '../../../tournament/bracket/types';
-import { CW, MH } from '../../../tournament/bracket/types';
+import { COLUMN_WIDTH, MATCH_HEIGHT } from '../../../tournament/bracket/types';
 
 interface NodeCardProps {
   node: BracketNode;
@@ -16,7 +16,7 @@ interface NodeCardProps {
 
 export function NodeCard({ node, top, left, onTeamClick }: NodeCardProps) {
   const { players } = usePlayers();
-  const style = { position: 'absolute' as const, top, left, width: CW, height: MH };
+  const style = { position: 'absolute' as const, top, left, width: COLUMN_WIDTH, height: MATCH_HEIGHT };
 
   if (node.type === 'empty') {
     return <div style={style} />;

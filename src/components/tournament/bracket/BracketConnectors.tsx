@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { CN, MH } from '../../../tournament/bracket/types';
+import { CONNECTOR_WIDTH, MATCH_HEIGHT } from '../../../tournament/bracket/types';
 
 interface ConnectorsProps {
   fromTops: number[];
@@ -11,18 +11,18 @@ interface ConnectorsProps {
 
 export function BracketConnectors({ fromTops, toTops, height, left }: ConnectorsProps) {
   const lines: React.ReactNode[] = [];
-  const xMid = CN / 2;
+  const xMid = CONNECTOR_WIDTH / 2;
 
   toTops.forEach((destY, i) => {
-    const y1 = fromTops[2 * i] + MH / 2;
-    const y2 = (fromTops[2 * i + 1] ?? fromTops[2 * i]) + MH / 2;
-    const ym = destY + MH / 2;
+    const y1 = fromTops[2 * i] + MATCH_HEIGHT / 2;
+    const y2 = (fromTops[2 * i + 1] ?? fromTops[2 * i]) + MATCH_HEIGHT / 2;
+    const ym = destY + MATCH_HEIGHT / 2;
     lines.push(
       <g key={i}>
         <line x1={0} y1={y1} x2={xMid} y2={y1} />
         <line x1={0} y1={y2} x2={xMid} y2={y2} />
         <line x1={xMid} y1={y1} x2={xMid} y2={y2} />
-        <line x1={xMid} y1={ym} x2={CN} y2={ym} />
+        <line x1={xMid} y1={ym} x2={CONNECTOR_WIDTH} y2={ym} />
       </g>,
     );
   });
@@ -30,7 +30,7 @@ export function BracketConnectors({ fromTops, toTops, height, left }: Connectors
   return (
     <svg
       className="bracket-connectors"
-      style={{ position: 'absolute', left, top: 0, width: CN, height }}
+      style={{ position: 'absolute', left, top: 0, width: CONNECTOR_WIDTH, height }}
     >
       {lines}
     </svg>

@@ -3,7 +3,7 @@ import React from 'react';
 import type { TournamentMatch } from '../../../types/tournament';
 
 import type { BracketLayout } from '../../../tournament/bracket/computeBracketNodes';
-import { CN, CW } from '../../../tournament/bracket/types';
+import { CONNECTOR_WIDTH, COLUMN_WIDTH } from '../../../tournament/bracket/types';
 import { BracketConnectors } from './BracketConnectors';
 import { NodeCard } from './NodeCard';
 
@@ -26,7 +26,7 @@ export function BracketSection({
       <div className="bracket-section-scroll">
         <div style={{ position: 'relative', width: totalW, height: totalH }}>
           {nodes.map((colNodes, colIdx) => {
-            const colLeft = colIdx * (CW + CN);
+            const colLeft = colIdx * (COLUMN_WIDTH + CONNECTOR_WIDTH);
             const isLast = colIdx === nodes.length - 1;
             return (
               <React.Fragment key={colIdx}>
@@ -44,7 +44,7 @@ export function BracketSection({
                     fromTops={tops[colIdx]}
                     toTops={tops[colIdx + 1]}
                     height={totalH}
-                    left={colLeft + CW}
+                    left={colLeft + COLUMN_WIDTH}
                   />
                 )}
               </React.Fragment>

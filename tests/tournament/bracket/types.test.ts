@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { CN, CW, MG, MH, SH, consolationTop, winnersTop } from '../../../src/tournament/bracket/types';
+import { CONNECTOR_WIDTH, COLUMN_WIDTH, MATCH_GAP, MATCH_HEIGHT, SLOT_HEIGHT, consolationTop, winnersTop } from '../../../src/tournament/bracket/types';
 
 describe('bracket/types constants', () => {
   it('has expected numeric values', () => {
-    expect(MH).toBe(64);
-    expect(MG).toBe(12);
-    expect(SH).toBe(76);
-    expect(CW).toBe(176);
-    expect(CN).toBe(36);
+    expect(MATCH_HEIGHT).toBe(64);
+    expect(MATCH_GAP).toBe(12);
+    expect(SLOT_HEIGHT).toBe(76);
+    expect(COLUMN_WIDTH).toBe(176);
+    expect(CONNECTOR_WIDTH).toBe(36);
   });
 
-  it('SH = MH + MG', () => {
-    expect(SH).toBe(MH + MG);
+  it('SLOT_HEIGHT = MATCH_HEIGHT + MATCH_GAP', () => {
+    expect(SLOT_HEIGHT).toBe(MATCH_HEIGHT + MATCH_GAP);
   });
 });
 
@@ -21,20 +21,20 @@ describe('winnersTop', () => {
     expect(winnersTop(0, 0)).toBe(0);
   });
 
-  it('winnersTop(0, 1) = SH', () => {
-    expect(winnersTop(0, 1)).toBe(SH);
+  it('winnersTop(0, 1) = SLOT_HEIGHT', () => {
+    expect(winnersTop(0, 1)).toBe(SLOT_HEIGHT);
   });
 
-  it('winnersTop(0, 2) = 2 * SH', () => {
-    expect(winnersTop(0, 2)).toBe(2 * SH);
+  it('winnersTop(0, 2) = 2 * SLOT_HEIGHT', () => {
+    expect(winnersTop(0, 2)).toBe(2 * SLOT_HEIGHT);
   });
 
-  it('winnersTop(1, 0) = SH/2 (centered between two R1 slots)', () => {
-    expect(winnersTop(1, 0)).toBe(SH / 2);
+  it('winnersTop(1, 0) = SLOT_HEIGHT/2 (centered between two R1 slots)', () => {
+    expect(winnersTop(1, 0)).toBe(SLOT_HEIGHT / 2);
   });
 
-  it('winnersTop(2, 0) = 3*SH/2 (centered between two R2 slots)', () => {
-    expect(winnersTop(2, 0)).toBe(3 * SH / 2);
+  it('winnersTop(2, 0) = 3*SLOT_HEIGHT/2 (centered between two R2 slots)', () => {
+    expect(winnersTop(2, 0)).toBe(3 * SLOT_HEIGHT / 2);
   });
 });
 

@@ -1,19 +1,19 @@
 import type { EliminationSetup, TournamentMatch, TournamentTeam } from '../../types/tournament';
 
 /** Height of a single match card in pixels. */
-export const MH = 64;
+export const MATCH_HEIGHT = 64;
 
 /** Vertical gap between adjacent match cards in pixels. */
-export const MG = 12;
+export const MATCH_GAP = 12;
 
-/** Slot height: one unit of the bracket grid (MH + MG). */
-export const SH = MH + MG;
+/** Slot height: one unit of the bracket grid (MATCH_HEIGHT + MATCH_GAP). */
+export const SLOT_HEIGHT = MATCH_HEIGHT + MATCH_GAP;
 
 /** Width of a match card column in pixels. */
-export const CW = 176;
+export const COLUMN_WIDTH = 176;
 
 /** Width of the SVG connector strip between columns in pixels. */
-export const CN = 36;
+export const CONNECTOR_WIDTH = 36;
 
 /**
  * Returns the top position (px) of a match card within the Winners Bracket.
@@ -25,7 +25,7 @@ export const CN = 36;
  */
 export function winnersTop(roundIdx: number, matchIdx: number): number {
   const slots = 1 << roundIdx;
-  return matchIdx * slots * SH + ((slots - 1) * SH) / 2;
+  return matchIdx * slots * SLOT_HEIGHT + ((slots - 1) * SLOT_HEIGHT) / 2;
 }
 
 /**

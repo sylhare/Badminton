@@ -3,10 +3,10 @@ import Tournament from '../Tournament';
 
 import type { BracketConfig, BracketNode, SeedSlot } from './types';
 import {
-  CN,
-  CW,
-  MH,
-  SH,
+  CONNECTOR_WIDTH,
+  COLUMN_WIDTH,
+  MATCH_HEIGHT,
+  SLOT_HEIGHT,
   SEED_ABSENT,
   SEED_TBD,
   consolationTop,
@@ -120,8 +120,8 @@ export function computeBracketNodes(
     const tops = nodes.map((round, rIdx) => round.map((_, mIdx) => winnersTop(rIdx, mIdx)));
     const connectorTypes: Array<'bracket'> = nodes.slice(0, -1).map(() => 'bracket');
     const r1Count = size / 2;
-    const totalH = Math.max(r1Count, 1) * SH + MH;
-    const totalW = nodes.length * CW + Math.max(nodes.length - 1, 0) * CN;
+    const totalH = Math.max(r1Count, 1) * SLOT_HEIGHT + MATCH_HEIGHT;
+    const totalW = nodes.length * COLUMN_WIDTH + Math.max(nodes.length - 1, 0) * CONNECTOR_WIDTH;
 
     return { nodes, tops, connectorTypes, totalH, totalW };
   }
@@ -261,8 +261,8 @@ export function computeBracketNodes(
     .map((_, i) => (i % 2 === 0 ? 'none' : 'bracket'));
 
   const firstColCount = nodes[0].length;
-  const totalH = Math.max(firstColCount, 1) * SH + MH;
-  const totalW = nodes.length * CW + Math.max(nodes.length - 1, 0) * CN;
+  const totalH = Math.max(firstColCount, 1) * SLOT_HEIGHT + MATCH_HEIGHT;
+  const totalW = nodes.length * COLUMN_WIDTH + Math.max(nodes.length - 1, 0) * CONNECTOR_WIDTH;
 
   return { nodes, tops, connectorTypes, totalH, totalW };
 }

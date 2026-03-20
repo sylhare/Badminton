@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 
 import { BracketConnectors } from '../../../../src/components/tournament/bracket/BracketConnectors';
-import { CN } from '../../../../src/tournament/bracket/types';
+import { CONNECTOR_WIDTH } from '../../../../src/tournament/bracket/types';
 
 describe('BracketConnectors', () => {
   it('renders one <g> group for 2 fromTops → 1 toTop', () => {
@@ -39,7 +39,7 @@ describe('BracketConnectors', () => {
     expect(groups).toHaveLength(2);
   });
 
-  it('SVG has CN as width in style', () => {
+  it('SVG has CONNECTOR_WIDTH as width in style', () => {
     const { container } = render(
       <svg>
         <BracketConnectors fromTops={[0, 76]} toTops={[38]} height={200} left={0} />
@@ -48,7 +48,7 @@ describe('BracketConnectors', () => {
 
     const innerSvg = container.querySelector('.bracket-connectors') as HTMLElement | null;
     expect(innerSvg).not.toBeNull();
-    expect(innerSvg?.style.width).toBe(`${CN}px`);
+    expect(innerSvg?.style.width).toBe(`${CONNECTOR_WIDTH}px`);
   });
 
   it('SVG height prop is applied via style', () => {
