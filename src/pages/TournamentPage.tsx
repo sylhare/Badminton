@@ -8,7 +8,7 @@ import type { Court, Player } from '../types';
 import { engine } from '../engines/engineSelector';
 import { PlayersProvider } from '../hooks/usePlayers';
 import { levelTracker } from '../engines/LevelTracker';
-import Tournament from '../utils/Tournament';
+import Tournament from '../tournament/Tournament';
 import { storageManager } from '../utils/StorageManager';
 import './TournamentPage.css';
 

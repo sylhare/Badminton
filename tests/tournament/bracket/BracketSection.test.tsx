@@ -3,14 +3,14 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { BracketSection } from '../../../../src/components/tournament/bracket/BracketSection';
-import { PlayersProvider } from '../../../../src/hooks/usePlayers';
-import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
-import { winnersTop } from '../../../../src/components/tournament/bracket/types';
-import type { Player } from '../../../../src/types';
-import { makeMatch, makeTeam, makeTeamPlayers } from '../../../data/tournamentFactories';
+import { BracketSection } from '../../../src/components/tournament/bracket/BracketSection';
+import { PlayersProvider } from '../../../src/hooks/usePlayers';
+import type { BracketNode } from '../../../src/tournament/bracket/types';
+import { winnersTop } from '../../../src/tournament/bracket/types';
+import type { Player } from '../../../src/types';
+import { makeMatch, makeTeam, makeTeamPlayers } from '../../data/tournamentFactories';
 
-const emptyLayout = { nodes: [], tops: [], connectorTypes: [] as Array<'bracket' | 'straight'>, totalH: 0, totalW: 0 };
+const emptyLayout = { nodes: [], tops: [], connectorTypes: [] as Array<'bracket' | 'none'>, totalH: 0, totalW: 0 };
 
 describe('BracketSection', () => {
   it('renders nothing when nodes is empty', () => {
@@ -71,7 +71,7 @@ describe('BracketSection', () => {
         <BracketSection
           nodes={nodes}
           tops={tops}
-          connectorTypes={['straight']}
+          connectorTypes={['none']}
           totalH={200}
           totalW={400}
           onTeamClick={vi.fn()}

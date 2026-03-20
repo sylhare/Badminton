@@ -1,4 +1,4 @@
-import type { EliminationSetup, TournamentMatch, TournamentTeam } from '../../../types/tournament';
+import type { EliminationSetup, TournamentMatch, TournamentTeam } from '../../types/tournament';
 
 /** Height of a single match card in pixels. */
 export const MH = 64;

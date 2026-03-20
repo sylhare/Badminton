@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 
 import { BracketConnectors } from '../../../../src/components/tournament/bracket/BracketConnectors';
-import { CN } from '../../../../src/components/tournament/bracket/types';
+import { CN } from '../../../../src/tournament/bracket/types';
 
 describe('BracketConnectors', () => {
   it('renders one <g> group for 2 fromTops → 1 toTop', () => {

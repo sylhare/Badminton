@@ -7,7 +7,7 @@ import ScoreInputModal from '../../modals/ScoreInputModal';
 
 import './EliminationBracket.css';
 import { BracketSection } from './BracketSection';
-import { computeBracketNodes } from './computeBracketNodes';
+import { computeBracketNodes } from '../../../tournament/bracket/computeBracketNodes';
 
 interface Props {
   matches: TournamentMatch[];
@@ -32,7 +32,7 @@ const EliminationBracket: React.FC<Props> = ({ matches, teams, seBracket, onMatc
       )}
       <BracketSection {...winners} onTeamClick={handleTeamClick} />
 
-      {hasConsolationBracket && consolation.nodes.length > 0 && (
+      {hasConsolationBracket && (
         <>
           <h3 className="bracket-section-label">Consolation Bracket</h3>
           <BracketSection {...consolation} onTeamClick={handleTeamClick} />

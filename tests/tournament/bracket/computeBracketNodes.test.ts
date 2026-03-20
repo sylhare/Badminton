@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeBracketNodes } from '../../../../src/components/tournament/bracket/computeBracketNodes';
-import type { EliminationSetup } from '../../../../src/types/tournament';
-import { makeMatch, makeTeam } from '../../../data/tournamentFactories';
+import { computeBracketNodes } from '../../../src/tournament/bracket/computeBracketNodes';
+import type { EliminationSetup } from '../../../src/types/tournament';
+import { makeMatch, makeTeam } from '../../data/tournamentFactories';
 
 const tA = makeTeam('a', 'Alice');
 const tB = makeTeam('b', 'Bob');
@@ -156,14 +156,14 @@ describe('computeBracketNodes — consolation bracket (6 teams)', () => {
     expect(nodes[2]).toHaveLength(1);
   });
 
-  it('col 0 node 1 is bye-advance (SEED_ABSENT partner) before R1', () => {
+  it('col 0 node 1 is empty (SEED_ABSENT partner) before R1', () => {
     const { nodes } = computeBracketNodes({ side: 'consolation', setup }, teams, []);
-    // node 0: tbd (both losers TBD), node 1: bye (odd loser gets structural bye)
+    // node 0: tbd (both losers TBD), node 1: empty (odd loser skips reduction round)
     expect(nodes[0][0].type).toBe('tbd');
-    expect(nodes[0][1].type).toBe('bye-advance');
+    expect(nodes[0][1].type).toBe('empty');
   });
 
-  it('after R1: col 0 has [match, bye-advance]', () => {
+  it('after R1: col 0 has [match, empty]', () => {
     // Simulate WB R1 complete: a beats b (loser=b), c beats d (loser=d), e beats f (loser=f)
     const wb1 = [
       makeMatch('w1', 1, tA, tB, 1, undefined, 'wb'),
@@ -175,13 +175,12 @@ describe('computeBracketNodes — consolation bracket (6 teams)', () => {
 
     expect(nodes[0][0].type).toBe('match');
     expect(nodes[0][0].match?.id).toBe('lb1');
-    expect(nodes[0][1].type).toBe('bye-advance');
-    expect(nodes[0][1].team1?.id).toBe('f');
+    expect(nodes[0][1].type).toBe('empty');
   });
 
-  it('connectorTypes alternate straight/bracket', () => {
+  it('connectorTypes alternate none/bracket', () => {
     const { connectorTypes } = computeBracketNodes({ side: 'consolation', setup }, teams, []);
-    expect(connectorTypes).toEqual(['straight', 'bracket']);
+    expect(connectorTypes).toEqual(['none', 'bracket']);
   });
 });
 

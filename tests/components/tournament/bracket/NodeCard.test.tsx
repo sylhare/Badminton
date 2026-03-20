@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import { NodeCard } from '../../../../src/components/tournament/bracket/NodeCard';
 import { PlayersProvider } from '../../../../src/hooks/usePlayers';
-import type { BracketNode } from '../../../../src/components/tournament/bracket/types';
+import type { BracketNode } from '../../../../src/tournament/bracket/types';
 import type { Player } from '../../../../src/types';
 import { makeMatch, makeTeam, makeTeamPlayers } from '../../../data/tournamentFactories';
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { TournamentMatch, TournamentTeam } from '../../src/types/tournament';
-import Tournament from '../../src/utils/Tournament';
+import Tournament from '../../src/tournament/Tournament';
 import { createMockPlayer } from '../data/testFactories';
 import { makeMatch, makeTeam, makeTeamPlayers } from '../data/tournamentFactories';
 

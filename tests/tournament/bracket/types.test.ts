@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CN, CW, MG, MH, SH, consolationTop, winnersTop } from '../../../../src/components/tournament/bracket/types';
+import { CN, CW, MG, MH, SH, consolationTop, winnersTop } from '../../../src/tournament/bracket/types';
 
 describe('bracket/types constants', () => {
   it('has expected numeric values', () => {

@@ -9,9 +9,9 @@ import type {
   TournamentTeam,
   TournamentType,
 } from '../types/tournament';
-import type { BracketConfig } from '../components/tournament/bracket/types';
+import type { BracketConfig } from './bracket/types';
 
-import { shuffleArray } from './playerUtils';
+import { shuffleArray } from '../utils/playerUtils';
 
 export default class Tournament {
   private readonly state: TournamentState;

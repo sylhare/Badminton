@@ -2,8 +2,8 @@ import React from 'react';
 
 import type { TournamentMatch } from '../../../types/tournament';
 
-import type { BracketLayout } from './computeBracketNodes';
-import { CN, CW } from './types';
+import type { BracketLayout } from '../../../tournament/bracket/computeBracketNodes';
+import { CN, CW } from '../../../tournament/bracket/types';
 import { BracketConnectors } from './BracketConnectors';
 import { NodeCard } from './NodeCard';
 
@@ -39,13 +39,12 @@ export function BracketSection({
                     onTeamClick={onTeamClick}
                   />
                 ))}
-                {!isLast && (
+                {!isLast && connectorTypes[colIdx] !== 'none' && (
                   <BracketConnectors
                     fromTops={tops[colIdx]}
                     toTops={tops[colIdx + 1]}
                     height={totalH}
                     left={colLeft + CW}
-                    straight={connectorTypes[colIdx] === 'straight'}
                   />
                 )}
               </React.Fragment>

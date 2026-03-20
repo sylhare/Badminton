@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentType } from '../../types/tournament';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
-import Tournament from '../../utils/Tournament';
+import Tournament from '../../tournament/Tournament';
 
 interface SetupTeam {
   id: string;

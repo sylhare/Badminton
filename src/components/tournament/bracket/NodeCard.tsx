@@ -2,10 +2,10 @@ import React from 'react';
 
 import { usePlayers } from '../../../hooks/usePlayers';
 import type { TournamentMatch } from '../../../types/tournament';
-import Tournament from '../../../utils/Tournament';
+import Tournament from '../../../tournament/Tournament';
 
-import type { BracketNode } from './types';
-import { CW, MH } from './types';
+import type { BracketNode } from '../../../tournament/bracket/types';
+import { CW, MH } from '../../../tournament/bracket/types';
 
 interface NodeCardProps {
   node: BracketNode;
