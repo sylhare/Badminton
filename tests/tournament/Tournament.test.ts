@@ -5,36 +5,6 @@ import { createMockPlayer } from '../data/testFactories';
 import { makeMatch, makeTeam } from '../data/tournamentFactories';
 
 describe('tournament', () => {
-  describe('getTotalRounds', () => {
-    const teamA = makeTeam('a', ['A']);
-    const teamB = makeTeam('b', ['B']);
-
-    it('returns 0 for a RR tournament with no matches', () => {
-      expect(Tournament.from({
-        phase: 'active', format: 'singles', type: 'round-robin',
-        numberOfCourts: 2, teams: [], matches: [],
-      }).getTotalRounds()).toBe(0);
-    });
-
-    it('returns max round number for RR', () => {
-      expect(Tournament.from({
-        phase: 'active', format: 'singles', type: 'round-robin',
-        numberOfCourts: 2, teams: [teamA, teamB],
-        matches: [
-          makeMatch('m1', 1, teamA, teamB),
-          makeMatch('m2', 2, teamA, teamB),
-          makeMatch('m3', 3, teamA, teamB),
-        ],
-      }).getTotalRounds()).toBe(3);
-    });
-
-    it('returns log2(size) for SE regardless of matches generated', () => {
-      const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C']), makeTeam('d', ['D'])];
-      const t = Tournament.start(teams, 2, 'singles', 'elimination');
-      expect(t.getTotalRounds()).toBe(2);
-    });
-  });
-
   describe('validate', () => {
     it('returns error for fewer than 2 teams', () => {
       expect(Tournament.validate([], 'singles')).not.toBeNull();
@@ -99,59 +69,6 @@ describe('tournament', () => {
       expect(teams).toHaveLength(2);
       expect(teams[0].playerIds).toEqual(['p1']);
       expect(teams[1].playerIds).toEqual(['p2']);
-    });
-  });
-
-  describe('isComplete', () => {
-    const teamA = makeTeam('a', ['A']);
-    const teamB = makeTeam('b', ['B']);
-
-    it('SE: returns false when no matches', () => {
-      const t = Tournament.from({
-        phase: 'active', format: 'singles', type: 'elimination',
-        numberOfCourts: 2, teams: [teamA, teamB],
-        matches: [],
-        seBracket: { size: 2, seeding: ['a', 'b'] },
-      });
-      expect(t.isComplete()).toBe(false);
-    });
-
-    it('SE: returns false when final match has no winner yet', () => {
-      const t = Tournament.from({
-        phase: 'active', format: 'singles', type: 'elimination',
-        numberOfCourts: 2, teams: [teamA, teamB],
-        matches: [makeMatch('m1', 1, teamA, teamB)],
-        seBracket: { size: 2, seeding: ['a', 'b'] },
-      });
-      expect(t.isComplete()).toBe(false);
-    });
-
-    it('SE: returns true when final match has a winner', () => {
-      const t = Tournament.from({
-        phase: 'active', format: 'singles', type: 'elimination',
-        numberOfCourts: 2, teams: [teamA, teamB],
-        matches: [makeMatch('m1', 1, teamA, teamB, 1)],
-        seBracket: { size: 2, seeding: ['a', 'b'] },
-      });
-      expect(t.isComplete()).toBe(true);
-    });
-
-    it('RR: returns false when not all rounds complete', () => {
-      const t = Tournament.from({
-        phase: 'active', format: 'singles', type: 'round-robin',
-        numberOfCourts: 2, teams: [teamA, teamB],
-        matches: [makeMatch('m1', 1, teamA, teamB)],
-      });
-      expect(t.isComplete()).toBe(false);
-    });
-
-    it('RR: returns true when all rounds complete', () => {
-      const t = Tournament.from({
-        phase: 'active', format: 'singles', type: 'round-robin',
-        numberOfCourts: 2, teams: [teamA, teamB],
-        matches: [makeMatch('m1', 1, teamA, teamB, 1)],
-      });
-      expect(t.isComplete()).toBe(true);
     });
   });
 

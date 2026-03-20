@@ -188,6 +188,53 @@ describe('round-robin', () => {
     });
   });
 
+  describe('isComplete', () => {
+    const teamA = makeTeam('a', ['A']);
+    const teamB = makeTeam('b', ['B']);
+
+    it('returns false when not all rounds complete', () => {
+      const t = Tournament.from({
+        phase: 'active', format: 'singles', type: 'round-robin',
+        numberOfCourts: 2, teams: [teamA, teamB],
+        matches: [makeMatch('m1', 1, teamA, teamB)],
+      });
+      expect(t.isComplete()).toBe(false);
+    });
+
+    it('returns true when all rounds complete', () => {
+      const t = Tournament.from({
+        phase: 'active', format: 'singles', type: 'round-robin',
+        numberOfCourts: 2, teams: [teamA, teamB],
+        matches: [makeMatch('m1', 1, teamA, teamB, 1)],
+      });
+      expect(t.isComplete()).toBe(true);
+    });
+  });
+
+  describe('getTotalRounds', () => {
+    const teamA = makeTeam('a', ['A']);
+    const teamB = makeTeam('b', ['B']);
+
+    it('returns 0 when no matches', () => {
+      expect(Tournament.from({
+        phase: 'active', format: 'singles', type: 'round-robin',
+        numberOfCourts: 2, teams: [], matches: [],
+      }).getTotalRounds()).toBe(0);
+    });
+
+    it('returns max round number', () => {
+      expect(Tournament.from({
+        phase: 'active', format: 'singles', type: 'round-robin',
+        numberOfCourts: 2, teams: [teamA, teamB],
+        matches: [
+          makeMatch('m1', 1, teamA, teamB),
+          makeMatch('m2', 2, teamA, teamB),
+          makeMatch('m3', 3, teamA, teamB),
+        ],
+      }).getTotalRounds()).toBe(3);
+    });
+  });
+
   describe('getCompletedRounds', () => {
     const teamA = makeTeam('a', ['A']);
     const teamB = makeTeam('b', ['B']);

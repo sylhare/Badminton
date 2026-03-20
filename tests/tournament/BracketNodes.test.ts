@@ -38,7 +38,7 @@ describe('BracketNode', () => {
   });
 
   describe('computeConsolationSeeding', () => {
-    it('before R1: all real pairs produce SEED_TBD entries', () => {
+    it('before round 1: all real pairs produce TBD entries', () => {
       const seBracket = { size: 4, seeding: ['a', 'b', 'c', 'd'] };
       const result = computeConsolationSeeding(seBracket, []);
       expect(result).toEqual([SEED_TBD, SEED_TBD]);
@@ -59,7 +59,7 @@ describe('BracketNode', () => {
       expect(result).toEqual([SEED_TBD, SEED_ABSENT]);
     });
 
-    it('after R1 results: loser IDs appear in output', () => {
+    it('after round 1: loser IDs appear in output', () => {
       const seBracket = { size: 4, seeding: ['a', 'b', 'c', 'd'] };
       const m1 = makeMatch('m1', 1, tA, tB, 1, undefined, 'wb');
       const m2 = makeMatch('m2', 1, tC, tD, 2, undefined, 'wb');
@@ -81,6 +81,36 @@ describe('BracketNode', () => {
       const result = computeConsolationSeeding(seBracket, []);
       expect(isPow2(result.length)).toBe(true);
     });
+
+    it('5 teams (size 8): 2 real pairs + bye/empty pairs → [TBD, TBD] before round 1', () => {
+      const seBracket = { size: 8, seeding: ['a', 'b', 'c', 'd', 'e', null, null, null] };
+      const result = computeConsolationSeeding(seBracket, []);
+      expect(result).toEqual([SEED_TBD, SEED_TBD]);
+    });
+
+    it('5 teams (size 8): after round 1, contains both loser IDs with no SEED_ABSENT', () => {
+      const seBracket = { size: 8, seeding: ['a', 'b', 'c', 'd', 'e', null, null, null] };
+      const m1 = makeMatch('m1', 1, tA, tB, 1, undefined, 'wb');
+      const m2 = makeMatch('m2', 1, tC, tD, 1, undefined, 'wb');
+      const result = computeConsolationSeeding(seBracket, [m1, m2]);
+      expect(result).toEqual(['b', 'd']);
+    });
+
+    it('7 teams (size 8): 3 real pairs + 1 bye pair → [TBD, TBD, TBD, SEED_ABSENT] before round 1', () => {
+      const seBracket = { size: 8, seeding: ['a', 'b', 'c', 'd', 'e', 'f', 'g', null] };
+      const result = computeConsolationSeeding(seBracket, []);
+      expect(result).toEqual([SEED_TBD, SEED_TBD, SEED_TBD, SEED_ABSENT]);
+    });
+
+    it('7 teams (size 8): after round 1, contains 3 loser IDs + SEED_ABSENT', () => {
+      const tG = makeTeam('g', 'Gus');
+      const seBracket = { size: 8, seeding: ['a', 'b', 'c', 'd', 'e', 'f', 'g', null] };
+      const m1 = makeMatch('m1', 1, tA, tB, 1, undefined, 'wb');
+      const m2 = makeMatch('m2', 1, tC, tD, 1, undefined, 'wb');
+      const m3 = makeMatch('m3', 1, tE, tF, 1, undefined, 'wb');
+      const result = computeConsolationSeeding(seBracket, [m1, m2, m3]);
+      expect(result).toEqual(['b', 'd', 'f', SEED_ABSENT]);
+    });
   });
 
   describe('winners bracket', () => {
@@ -101,7 +131,7 @@ describe('BracketNode', () => {
       expect(nodes[0][0].match?.id).toBe('m1');
     });
 
-    it('4 teams, no results: 2 rounds; R1 has 2 match nodes; R2 has 1 tbd node', () => {
+    it('4 teams, no results: 2 rounds; round 1 has 2 match nodes; round 2 has 1 tbd node', () => {
       const m1 = makeMatch('m1', 1, tA, tB, undefined, undefined, 'wb');
       const m2 = makeMatch('m2', 1, tC, tD, undefined, undefined, 'wb');
       const { nodes } = computeBracketNodes(['a', 'b', 'c', 'd'], [m1, m2], [tA, tB, tC, tD]);
@@ -116,7 +146,7 @@ describe('BracketNode', () => {
       expect(nodes[1][0].team2).toBeNull();
     });
 
-    it('4 teams, R1 complete: R2 node becomes match type after both R1 winners determined', () => {
+    it('4 teams, round 1 complete: round 2 node becomes match type after both winners determined', () => {
       const m1 = makeMatch('m1', 1, tA, tB, 1, undefined, 'wb');
       const m2 = makeMatch('m2', 1, tC, tD, 2, undefined, 'wb');
       const final = makeMatch('mf', 2, tA, tD, undefined, undefined, 'wb');
@@ -128,7 +158,7 @@ describe('BracketNode', () => {
       expect(nodes[1][0].team2?.id).toBe('d');
     });
 
-    it('3 teams (1 bye): R1 has 1 match + 1 bye-advance', () => {
+    it('3 teams (1 bye): round 1 has 1 match and 1 bye-advance', () => {
       const m1 = makeMatch('m1', 1, tB, tC, undefined, undefined, 'wb');
       const seeding: SeedSlot[] = ['a', SEED_ABSENT, 'b', 'c'];
       const { nodes } = computeBracketNodes(seeding, [m1], [tA, tB, tC]);
@@ -149,7 +179,7 @@ describe('BracketNode', () => {
       expect(byeNode.team2).toBeNull();
     });
 
-    it('6 teams (2 byes): R1 has 4 nodes (2 match + 2 bye-advance)', () => {
+    it('6 teams (2 byes): round 1 has 4 nodes (2 match and 2 bye-advance)', () => {
       const m1 = makeMatch('m1', 1, tB, tC, undefined, undefined, 'wb');
       const m2 = makeMatch('m2', 1, tE, tF, undefined, undefined, 'wb');
       const seeding: SeedSlot[] = ['a', SEED_ABSENT, 'b', 'c', 'd', SEED_ABSENT, 'e', 'f'];
@@ -161,7 +191,7 @@ describe('BracketNode', () => {
       expect(types.filter(t => t === 'match')).toHaveLength(2);
     });
 
-    it('advancer resolution: after R1 winner set, R2 picks up correct teams', () => {
+    it('advancer resolution: after round 1 winner set, round 2 picks up correct teams', () => {
       const m1 = makeMatch('m1', 1, tA, tB, 2, undefined, 'wb');
       const m2 = makeMatch('m2', 1, tC, tD, 1, undefined, 'wb');
       const { nodes } = computeBracketNodes(['a', 'b', 'c', 'd'], [m1, m2], [tA, tB, tC, tD]);
@@ -172,8 +202,8 @@ describe('BracketNode', () => {
     });
   });
 
-  describe('consolidation bracket', () => {
-    describe('8 teams, before R1', () => {
+  describe('consolation bracket', () => {
+    describe('8 teams, before round 1', () => {
       it('returns 2 cols [2, 1] all tbd before round 1', () => {
         const tG = makeTeam('g', 'Gus');
         const tH = makeTeam('h', 'Hana');
@@ -199,13 +229,13 @@ describe('BracketNode', () => {
         expect(nodes[1]).toHaveLength(1);
       });
 
-      it('col 0: both nodes are tbd before R1 (TBD+TBD and TBD+ABSENT pairs)', () => {
+      it('col 0: both nodes are tbd before round 1 (TBD+TBD and TBD+ABSENT pairs)', () => {
         const { nodes } = computeBracketNodes(consolSeedingBefore, [], teams);
         expect(nodes[0][0].type).toBe('tbd');
         expect(nodes[0][1].type).toBe('tbd');
       });
 
-      it('after R1: col 0 has [match, bye-advance]', () => {
+      it('after round 1: col 0 has [match, bye-advance]', () => {
         const consolSeeding: SeedSlot[] = ['b', 'd', 'f', SEED_ABSENT];
         const lb1 = makeMatch('lb1', 1, tB, tD, undefined, undefined, 'lb');
         const { nodes } = computeBracketNodes(consolSeeding, [lb1], teams);
@@ -223,7 +253,7 @@ describe('BracketNode', () => {
     });
 
     describe('4 teams', () => {
-      it('returns 1 col with 1 tbd node before R1', () => {
+      it('returns 1 col with 1 tbd node before round 1', () => {
         const consolSeeding: SeedSlot[] = [SEED_TBD, SEED_TBD];
         const { nodes } = computeBracketNodes(consolSeeding, [], [tA, tB, tC, tD]);
         expect(nodes).toHaveLength(1);
