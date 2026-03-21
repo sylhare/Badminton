@@ -10,7 +10,12 @@
 import fs from 'fs';
 import path from 'path';
 
-function removeComments(content: string): string {
+export function removeComments(content: string): string {
+    const strings: string[] = [];
+    content = content.replace(/`(?:[^`\\]|\\[\s\S])*`|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'/g, (match) => {
+        return `\x00S${strings.push(match) - 1}\x00`;
+    });
+
     content = content.replace(/(\/\*\*[\s\S]*?\*\/|\{\/\*[\s\S]*?\*\/\}?)|(\/\*(?!\*)[\s\S]*?\*\/)/g, (_match, preserve) => {
         return preserve ? preserve : '';
     });
@@ -19,7 +24,9 @@ function removeComments(content: string): string {
         return preserve ? preserve : '';
     });
 
+    content = content.replace(/^[ \t]+\n/gm, '');
     content = content.replace(/\n\s*\n\s*\n/g, '\n\n');
+    content = content.replace(/\x00S(\d+)\x00/g, (_, i) => strings[parseInt(i)]);
     return content;
 }
 
