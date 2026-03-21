@@ -74,6 +74,31 @@ test.describe('Stats Page', () => {
     });
   });
 
+  test('notebook pages - all three are accessible from stats', async ({ page }) => {
+    await statsPage.goto();
+
+    await test.step('algorithm documentation page loads', async () => {
+      await page.getByTestId('algorithm-link').click();
+      await expect(page).toHaveURL(/\/algorithm/);
+      await expect(page.locator('h1')).toContainText('Algorithm Documentation');
+      await page.goBack();
+    });
+
+    await test.step('engine comparison page loads', async () => {
+      await page.getByTestId('engine-link').click();
+      await expect(page).toHaveURL(/\/engine/);
+      await expect(page.locator('h1')).toContainText('Engine Comparison');
+      await page.goBack();
+    });
+
+    await test.step('level tracker analysis page loads', async () => {
+      await page.getByTestId('level-tracker-link').click();
+      await expect(page).toHaveURL(/\/level-tracker/);
+      await expect(page.locator('h1')).toContainText('Level Tracker Analysis');
+      await page.goBack();
+    });
+  });
+
   test('session diagnostics - all sections visible after playing', async ({ page }) => {
     await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
     await mainPage.playRound();

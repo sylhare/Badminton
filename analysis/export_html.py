@@ -9,6 +9,7 @@ from pathlib import Path
 NOTEBOOKS = [
     "algorithm_docs.py",
     "engine_analysis.py",
+    "level_tracker_analysis.py",
 ]
 
 

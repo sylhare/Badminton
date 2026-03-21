@@ -19,7 +19,7 @@ const INPUT_DIR = path.resolve(__dirname, '../analysis/html');
 const OUTPUT_DIR = path.resolve(__dirname, '../public/analysis');
 
 // Only these notebooks are included in the app
-const NOTEBOOKS_TO_PRERENDER = ['algorithm_docs.html', 'engine_analysis.html'];
+const NOTEBOOKS_TO_PRERENDER = ['algorithm_docs.html', 'engine_analysis.html', 'level_tracker_analysis.html'];
 
 async function prerenderNotebook(inputPath: string, outputPath: string): Promise<void> {
   const browser = await chromium.launch({ headless: true });
@@ -29,7 +29,7 @@ async function prerenderNotebook(inputPath: string, outputPath: string): Promise
     const fileUrl = `file://${inputPath}`;
     console.log(`  Loading: ${path.basename(inputPath)}`);
 
-    await page.goto(fileUrl, { waitUntil: 'networkidle' });
+    await page.goto(fileUrl, { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForTimeout(2000);
 
     const html = await page.content();
