@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TournamentSetup from '../../../src/components/tournament/TournamentSetup';
 import type { TournamentState } from '../../../src/types/tournament';
+import type { Player } from '../../../src/types';
 import { createMockPlayer } from '../../data/testFactories';
 
 vi.mock('../../../src/components/modals/ImageUploadModal', () => ({
@@ -17,6 +18,23 @@ const presentPlayers = [
   createMockPlayer({ id: 'p3', name: 'Carol', isPresent: true }),
   createMockPlayer({ id: 'p4', name: 'Dave', isPresent: true }),
 ];
+
+/**
+ * Controlled wrapper that mirrors TournamentPage: onTogglePlayer flips isPresent
+ * in local state, which flows back as initialPlayers.
+ */
+function ControlledSetup(props: React.ComponentProps<typeof TournamentSetup>) {
+  const [players, setPlayers] = useState<Player[]>(props.initialPlayers);
+  return (
+    <TournamentSetup
+      {...props}
+      initialPlayers={players}
+      onTogglePlayer={id =>
+        setPlayers(prev => prev.map(p => p.id === id ? { ...p, isPresent: !p.isPresent } : p))
+      }
+    />
+  );
+}
 
 describe('TournamentSetup', () => {
   let onStart: ReturnType<typeof vi.fn>;
@@ -190,33 +208,29 @@ describe('TournamentSetup', () => {
     expect(state.teams[0].players).toHaveLength(2);
   });
 
-  it('removing a player does not reset other team assignments', async () => {
+  it('unchecking a player removes them from teams', async () => {
     const user = userEvent.setup();
     render(
-      <TournamentSetup
+      <ControlledSetup
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
       />,
     );
 
-    await user.click(screen.getByTestId('player-slot-0-0'));
-    await user.click(screen.getByTestId('player-slot-1-0'));
-
-    expect(screen.getByTestId('player-slot-0-0')).toHaveTextContent('Carol');
-    expect(screen.getByTestId('player-slot-1-0')).toHaveTextContent('Alice');
+    expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(2);
 
     await user.click(screen.getByTestId('player-checkbox-p4'));
 
-    expect(screen.getByTestId('player-slot-0-0')).toHaveTextContent('Carol');
-    expect(screen.getByTestId('player-slot-0-1')).toHaveTextContent('Bob');
-    expect(screen.getByTestId('player-slot-1-0')).toHaveTextContent('Alice');
+    expect(screen.getByTestId('player-checkbox-p4')).not.toBeChecked();
+    expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(2);
+    expect(screen.queryByTestId('player-slot-1-1')).not.toBeInTheDocument();
   });
 
-  it('adding a player fills the first incomplete team slot in doubles', async () => {
+  it('unchecking then rechecking a player re-adds them to teams', async () => {
     const user = userEvent.setup();
     render(
-      <TournamentSetup
+      <ControlledSetup
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
@@ -230,10 +244,10 @@ describe('TournamentSetup', () => {
     expect(screen.getByTestId('player-slot-1-1')).toHaveTextContent('Dave');
   });
 
-  it('two solo-player teams merge when removing a player in doubles', async () => {
+  it('two unchecked players reduce to one team in doubles', async () => {
     const user = userEvent.setup();
     render(
-      <TournamentSetup
+      <ControlledSetup
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
@@ -241,8 +255,6 @@ describe('TournamentSetup', () => {
     );
 
     await user.click(screen.getByTestId('player-checkbox-p2'));
-    expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(2);
-
     await user.click(screen.getByTestId('player-checkbox-p4'));
 
     expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(1);
@@ -250,13 +262,16 @@ describe('TournamentSetup', () => {
     expect(screen.getByTestId('player-slot-0-1')).toHaveTextContent('Carol');
   });
 
-  it('adding a new player via the form selects them and adds to teams', async () => {
+  it('adding a new player via the form calls onAddPlayers and shows them when initialPlayers updates', async () => {
     const user = userEvent.setup();
-    render(
+    const onAddPlayers = vi.fn();
+    const zaraMock = createMockPlayer({ id: 'zara-1', name: 'Zara', isPresent: true });
+    const { rerender } = render(
       <TournamentSetup
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
+        onAddPlayers={onAddPlayers}
       />,
     );
 
@@ -264,9 +279,19 @@ describe('TournamentSetup', () => {
     await user.type(input, 'Zara');
     await user.click(screen.getByTestId('add-player-button'));
 
-    expect(screen.getAllByText('Zara').length).toBeGreaterThan(0);
-
+    expect(onAddPlayers).toHaveBeenCalledWith(['Zara']);
     expect(input).toHaveValue('');
+
+    rerender(
+      <TournamentSetup
+        initialPlayers={[...presentPlayers, zaraMock]}
+        initialNumberOfCourts={2}
+        onStart={onStart}
+        onAddPlayers={onAddPlayers}
+      />,
+    );
+
+    expect(screen.getAllByText('Zara').length).toBeGreaterThan(0);
   });
 
   it('shows court warning when matches per round exceed courts', () => {
