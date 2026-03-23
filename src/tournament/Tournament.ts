@@ -400,7 +400,26 @@ export default class Tournament {
     for (let i = 0; i < setup.seeding.length / 2; i++) {
       if (setup.seeding[2 * i] !== null && setup.seeding[2 * i + 1] !== null) numLosers++;
     }
-    const consolationRounds = numLosers <= 1 ? 0 : Math.ceil(Math.log2(numLosers));
+
+    const hasByes = setup.seeding.some(s => s === null);
+    const totalWinnersRounds = Math.log2(setup.size);
+
+    let winnersRound2LoserCount = 0;
+    if (hasByes && totalWinnersRounds > 2) {
+      let numRound1Survivors = 0;
+      for (let i = 0; i < setup.seeding.length / 2; i++) {
+        const t1 = setup.seeding[2 * i];
+        const t2 = setup.seeding[2 * i + 1];
+        if (t1 !== null || t2 !== null) numRound1Survivors++;
+      }
+      winnersRound2LoserCount = Math.floor(numRound1Survivors / 2);
+    }
+
+    const round1ConsolRounds = numLosers <= 1 ? 0 : Math.ceil(Math.log2(numLosers));
+    const extraRounds = winnersRound2LoserCount > 0
+      ? Math.ceil(Math.log2(winnersRound2LoserCount + 1))
+      : 0;
+    const consolationRounds = round1ConsolRounds + extraRounds;
 
     if (consolationRounds <= 0) return [];
 
@@ -447,6 +466,14 @@ export default class Tournament {
         const unusedLosers = Tournament._resolveLosers(winnersBracket, all(), 1)
           .filter(id => !allConsolIds.has(id));
         survivors = [...survivors, ...unusedLosers];
+
+        if (winnersRound2LoserCount > 0 && consolationRound > round1ConsolRounds) {
+          const winnersRound2 = getWinnersRound(2);
+          if (!winnersRound2.length || !winnersRound2.every(m => m.winner !== undefined)) continue;
+          const unusedRound2Losers = Tournament._resolveLosers(winnersBracket, all(), 2)
+            .filter(id => !allConsolIds.has(id));
+          survivors = [...survivors, ...unusedRound2Losers];
+        }
 
         for (let i = 0; i < Math.floor(survivors.length / 2); i++) {
           newMatches.push(makeMatch(survivors[2 * i], survivors[2 * i + 1], consolationRound, 'lb'));
