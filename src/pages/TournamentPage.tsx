@@ -64,7 +64,7 @@ function TournamentPage(): React.ReactElement {
 
   let content: React.ReactNode;
 
-  if (!tournament) {
+  if (!tournament && isLoaded && isTournamentLoaded) {
     content = (
       <TournamentSetup
         initialPlayers={players}
@@ -74,6 +74,8 @@ function TournamentPage(): React.ReactElement {
         onAddPlayers={handleAddPlayers}
       />
     );
+  } else if (!tournament) {
+    content = null;
   } else {
     const standings = tournament.getStandings(players);
     const completedRounds = tournament.getCompletedRounds();

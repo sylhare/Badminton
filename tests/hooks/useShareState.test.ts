@@ -10,6 +10,7 @@ vi.mock('../../src/utils/StorageManager', () => ({
     isValidState: vi.fn(),
     importRawState: vi.fn(),
     getImportTimestamps: vi.fn().mockResolvedValue({}),
+    waitForQueue: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -25,20 +26,20 @@ describe('useShareState', () => {
   });
 
   describe('handleShare', () => {
-    it('does not set shareUrl when storage is empty', () => {
+    it('does not set shareUrl when storage is empty', async () => {
       vi.mocked(storageManager.getRawState).mockReturnValue(null);
       const { result } = renderHook(() => useShareState());
 
-      act(() => { result.current.handleShare(); });
+      await act(async () => { await result.current.handleShare(); });
 
       expect(result.current.shareUrl).toBeNull();
     });
 
-    it('sets shareUrl containing ?state= when storage has data', () => {
+    it('sets shareUrl containing ?state= when storage has data', async () => {
       vi.mocked(storageManager.getRawState).mockReturnValue('abc123');
       const { result } = renderHook(() => useShareState());
 
-      act(() => { result.current.handleShare(); });
+      await act(async () => { await result.current.handleShare(); });
 
       expect(result.current.shareUrl).toContain('?state=abc123');
     });

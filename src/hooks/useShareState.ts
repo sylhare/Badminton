@@ -35,7 +35,8 @@ export function useShareState() {
     detectImportState();
   }, []);
 
-  const handleShare = () => {
+  const handleShare = async () => {
+    await storageManager.waitForQueue();
     const rawState = storageManager.getRawState();
     if (!rawState) return;
     setShareUrl(buildStateUrl(rawState));

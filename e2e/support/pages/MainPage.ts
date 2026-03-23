@@ -25,12 +25,19 @@ export class MainPage {
     await this.page.goto(this.baseUrl);
     await expect(this.page).toHaveTitle(/Badminton/);
     await expect(this.page.locator('h1')).toContainText('🏸 Badminton Court Manager');
+    await this.waitForLoaded();
+  }
+
+  /** Wait for the app to finish loading state from storage. */
+  async waitForLoaded(): Promise<void> {
+    await this.page.locator('.app[data-loaded="true"]').waitFor({ timeout: 5000 });
   }
 
   /** Clear localStorage and reload — call in beforeEach to start with a clean slate. */
   async reset(): Promise<void> {
     await this.page.evaluate(() => localStorage.clear());
     await this.page.reload();
+    await this.waitForLoaded();
   }
 
   /** Add multiple players at once via the comma-separated input. */

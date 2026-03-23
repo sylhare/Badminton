@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentType } from '../../tournament/types.ts';
@@ -72,18 +72,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
     deriveTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
   const [swapSelection, setSwapSelection] = useState<SwapSelection | null>(null);
-  const hasInitializedRef = useRef(false);
-
   const selectedPlayers = initialPlayers.filter(p => selectedPlayerIds.has(p.id));
-
-  useEffect(() => {
-    if (hasInitializedRef.current || initialPlayers.length === 0) return;
-    hasInitializedRef.current = true;
-    const presentIds = new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id));
-    setSelectedPlayerIds(presentIds);
-    setTeams(deriveTeams(initialPlayers.filter(p => p.isPresent), format));
-    setSwapSelection(null);
-  }, [initialPlayers]);
 
   useEffect(() => {
     setTeams(deriveTeams(selectedPlayers, format));

@@ -16,6 +16,7 @@ test.describe('State Persistence', () => {
     await page.locator('[data-testid^="toggle-presence-"]').nth(1).click();
     await page.waitForTimeout(300);
     await page.reload();
+    await mainPage.waitForLoaded();
 
     await mainPage.expandPlayersSection();
     await expect(page.getByText('Alice')).toBeVisible();
@@ -37,6 +38,7 @@ test.describe('State Persistence', () => {
 
     await page.waitForTimeout(300);
     await page.reload();
+    await mainPage.waitForLoaded();
 
     await expect(page.getByTestId('court-count-input')).toHaveValue('6');
   });
@@ -50,6 +52,7 @@ test.describe('State Persistence', () => {
 
     await page.waitForTimeout(300);
     await page.reload();
+    await mainPage.waitForLoaded();
 
     await expect(page.getByTestId('court-1')).toBeVisible({ timeout: 3000 });
     await expect(page.getByTestId('court-2')).toBeVisible({ timeout: 3000 });
@@ -59,6 +62,7 @@ test.describe('State Persistence', () => {
     await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
     await page.waitForTimeout(200);
     await page.reload();
+    await mainPage.waitForLoaded();
     await expect(page.getByTestId('manage-players-section')).toHaveClass(/collapsed/);
   });
 
@@ -78,6 +82,7 @@ test.describe('State Persistence', () => {
 
     await page.waitForTimeout(300);
     await page.reload();
+    await mainPage.waitForLoaded();
 
     await expect(page.getByText('Alice')).not.toBeVisible();
   });
@@ -92,6 +97,7 @@ test.describe('State Persistence', () => {
 
     await page.waitForTimeout(300);
     await page.reload();
+    await mainPage.waitForLoaded();
 
     await mainPage.expandPlayersSection();
     await expect(page.getByText('Alice')).toBeVisible();
@@ -110,6 +116,7 @@ test.describe('State Persistence', () => {
 
     await page.evaluate(() => localStorage.clear());
     await page.reload();
+    await mainPage.waitForLoaded();
 
     await expect(page).toHaveTitle(/Badminton/);
     await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
@@ -144,6 +151,7 @@ test.describe('Leaderboard Persistence', () => {
 
     await page.waitForTimeout(300);
     await page.reload();
+    await mainPage.waitForLoaded();
 
     await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible({ timeout: 3000 });
   });

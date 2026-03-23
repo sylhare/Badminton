@@ -15,6 +15,7 @@ export class TournamentPage {
   /** Navigate directly to the tournament page. */
   async goto(): Promise<void> {
     await this.page.goto(this.url);
+    await this.mainPage.waitForLoaded();
   }
 
   /** Add players via MainPage, then navigate to the tournament page. */
