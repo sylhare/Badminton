@@ -31,8 +31,8 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
       <p className="standings-subtitle" data-testid="standings-subtitle">{subtitle}</p>
 
       <div className="standings-table-wrapper">
-      <table className="leaderboard-table standings-table">
-        <thead>
+        <table className="leaderboard-table standings-table">
+          <thead>
           <tr>
             <th>Rank</th>
             <th>Team</th>
@@ -41,8 +41,8 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
             <th>Pts</th>
             <th>Score Diff</th>
           </tr>
-        </thead>
-        <tbody>
+          </thead>
+          <tbody>
           {standings.map((row, index) => (
             <tr
               key={row.team.id}
@@ -59,8 +59,8 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
       </div>
 
     </div>

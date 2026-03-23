@@ -1,10 +1,5 @@
 import type { Player } from '../types';
-import type {
-  TournamentFormat,
-  TournamentMatch,
-  TournamentStandingRow,
-  TournamentTeam,
-} from '../types/tournament';
+import type { TournamentFormat, TournamentMatch, TournamentStandingRow, TournamentTeam } from '../types/tournament';
 
 function makeTeamId(index: number): string {
   return `team-${Date.now()}-${index}`;

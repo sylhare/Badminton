@@ -8,8 +8,8 @@ import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignment
  * with the lowest heuristic cost.
  */
 export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICourtAssignmentEngine {
-  private costCache: Map<string, number> = new Map();
   MAX_ATTEMPTS = 300;
+  private costCache: Map<string, number> = new Map();
 
   configure(params: Record<string, unknown>): void {
     if (typeof params.samplesPerRound === 'number') this.MAX_ATTEMPTS = params.samplesPerRound;

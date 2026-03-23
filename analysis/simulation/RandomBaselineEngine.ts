@@ -1,4 +1,4 @@
-import type { Player, Court } from '../../src/types';
+import type { Court, Player } from '../../src/types';
 
 export class RandomBaselineEngine {
   private static winCountMap: Map<string, number> = new Map();

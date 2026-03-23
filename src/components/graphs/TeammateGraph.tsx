@@ -185,28 +185,28 @@ export function TeammateGraph({
             const gender = playerGender?.[node.id];
             const nodeFill = gender ? GENDER_NODE_COLORS[gender] : GRAPH_COLORS.nodeFill;
             return (
-            <g key={node.id}>
-              <circle
-                cx={node.x}
-                cy={node.y}
-                r={NODE_RADIUS}
-                fill={nodeFill}
-                stroke={nodeStrokeColor}
-                strokeWidth={2}
-              />
-              <text
-                x={node.x}
-                y={node.y}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#c9d1d9"
-                fontSize={FONT_SIZE}
-                fontWeight={500}
-                style={{ pointerEvents: 'none' }}
-              >
-                {node.name.length > MAX_NAME_LENGTH ? node.name.slice(0, MAX_NAME_LENGTH - 1) + '…' : node.name}
-              </text>
-            </g>
+              <g key={node.id}>
+                <circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={NODE_RADIUS}
+                  fill={nodeFill}
+                  stroke={nodeStrokeColor}
+                  strokeWidth={2}
+                />
+                <text
+                  x={node.x}
+                  y={node.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="#c9d1d9"
+                  fontSize={FONT_SIZE}
+                  fontWeight={500}
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {node.name.length > MAX_NAME_LENGTH ? node.name.slice(0, MAX_NAME_LENGTH - 1) + '…' : node.name}
+                </text>
+              </g>
             );
           })}
         </svg>

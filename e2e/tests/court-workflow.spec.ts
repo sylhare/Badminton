@@ -1,10 +1,10 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 import { MainPage } from '../support/pages/MainPage';
-import { BULK_PLAYERS, SINGLE_PLAYERS, completeWorkflow } from '../support/helpers';
+import { BULK_PLAYERS, completeWorkflow, SINGLE_PLAYERS } from '../support/helpers';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

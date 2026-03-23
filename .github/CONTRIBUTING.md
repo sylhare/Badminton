@@ -82,7 +82,7 @@ type EngineType = 'sa' | 'mc' | 'cg' | 'sl';
 
 Before adding a helper, check whether it already exists:
 
-- **Unit test utilities** → `tests/shared.ts`, `tests/data/testData.ts`, `tests/data/testFactories.ts`
+- **Unit test utilities** → `tests/shared.ts`, `tests/setup.ts`, `tests/data/*`,
 - **E2E utilities** → `e2e/helpers.ts`
 
 Extend those files rather than copy-pasting setup logic across test files.
@@ -121,10 +121,10 @@ Add rotation button
 Fix bench fairness bug
 ```
 
-### Prefer rebase over merge commits
+### Prefer rebase to merge commits
 
-Keep the history linear. Rebase your branch on `main` before marking a PR ready for review instead of merging `main`
-into your branch.
+Keep the history linear. 
+Rebase your branch on `main` before marking a PR ready for review instead of merging `main`into your branch.
 
 ```bash
 git fetch origin
