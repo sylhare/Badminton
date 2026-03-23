@@ -80,4 +80,10 @@ export default [
       'react/jsx-tag-spacing': ['error', { 'beforeSelfClosing': 'always' }],
     },
   },
+  {
+    files: ['tests/**/*.ts', 'tests/**/*.tsx'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ];
