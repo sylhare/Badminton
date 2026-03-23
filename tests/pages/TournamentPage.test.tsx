@@ -1,26 +1,11 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TournamentPage from '../../src/pages/TournamentPage';
-
-const { mockLoadTournament, mockSaveTournament } = vi.hoisted(() => ({
-  mockLoadTournament: vi.fn(),
-  mockSaveTournament: vi.fn(),
-}));
-
-vi.mock('../../src/utils/StorageManager', () => ({
-  storageManager: {
-    loadApp: vi.fn().mockResolvedValue({ numberOfCourts: 2 }),
-    saveApp: vi.fn(),
-    loadEngine: vi.fn(),
-    saveEngine: vi.fn(),
-    clearAll: vi.fn(),
-    loadTournament: mockLoadTournament,
-    saveTournament: mockSaveTournament,
-  },
-}));
+import { storageManager } from '../../src/utils/StorageManager';
+import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 
 const mockPlayers = [
   { id: 'p1', name: 'Alice', isPresent: true },
@@ -30,48 +15,26 @@ const mockPlayers = [
   { id: 'p5', name: 'Eve', isPresent: false },
 ];
 
-vi.mock('../../src/providers/AppStateProvider', () => ({
-  useAppState: vi.fn(() => ({
-    players: mockPlayers,
-    isLoaded: true,
-    handlePlayerToggle: vi.fn(),
-    handleAddPlayers: vi.fn(),
-    handleRemovePlayer: vi.fn(),
-    handleUpdatePlayer: vi.fn(),
-    clearPlayers: vi.fn(),
-    setPlayers: vi.fn(),
-    isSmartEngineEnabled: false,
-    handleToggleSmartEngine: vi.fn(),
-    applyCourtResults: vi.fn(),
-    winCounts: new Map(),
-    lossCounts: new Map(),
-  })),
-}));
-
 describe('TournamentPage', () => {
-  beforeEach(() => {
-    mockLoadTournament.mockResolvedValue(null);
-    mockSaveTournament.mockResolvedValue(undefined);
+  beforeEach(async () => {
+    await clearTestState();
+    await storageManager.saveApp({ players: mockPlayers, numberOfCourts: 2 });
+    await storageManager.saveTournament(null);
+    await flushPendingSaves();
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await clearTestState();
   });
 
   it('renders the tournament page heading', () => {
-    render(<TournamentPage />);
+    renderWithProvider(<TournamentPage />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tournament');
   });
 
-  it('calls storageManager.loadTournament on mount', async () => {
-    render(<TournamentPage />);
-    await waitFor(() => {
-      expect(mockLoadTournament).toHaveBeenCalledOnce();
-    });
-  });
-
   it('shows TournamentSetup with present players pre-selected', async () => {
-    render(<TournamentPage />);
+    renderWithProvider(<TournamentPage />);
     await waitFor(() => {
       expect(screen.getByTestId('player-checkbox-p1')).toBeChecked();
       expect(screen.getByTestId('player-checkbox-p2')).toBeChecked();
@@ -79,7 +42,7 @@ describe('TournamentPage', () => {
   });
 
   it('absent players are shown but not pre-selected', async () => {
-    render(<TournamentPage />);
+    renderWithProvider(<TournamentPage />);
     await waitFor(() => {
       expect(screen.getByTestId('player-checkbox-p5')).not.toBeChecked();
     });
@@ -87,7 +50,7 @@ describe('TournamentPage', () => {
 
   it('transitions from setup to active phase after onStart fires', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    renderWithProvider(<TournamentPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
@@ -101,7 +64,7 @@ describe('TournamentPage', () => {
 
   it('clicking Start a New Tournament resets to setup', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    renderWithProvider(<TournamentPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
@@ -136,18 +99,20 @@ describe('TournamentPage', () => {
         },
       ],
     };
-    mockLoadTournament.mockResolvedValue(savedState);
+    await storageManager.saveTournament(savedState);
+    await flushPendingSaves();
 
-    render(<TournamentPage />);
+    renderWithProvider(<TournamentPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
     });
   });
 
-  it('calls saveTournament after starting a tournament', async () => {
+  it('saves tournament state after starting', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    const saveSpy = vi.spyOn(storageManager, 'saveTournament');
+    renderWithProvider(<TournamentPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
@@ -156,15 +121,15 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('start-tournament-button'));
 
     await waitFor(() => {
-      const calls = mockSaveTournament.mock.calls;
-      const activeCall = calls.find(([s]) => s?.phase === 'active');
+      const activeCall = saveSpy.mock.calls.find(([s]) => s?.phase === 'active');
       expect(activeCall).toBeDefined();
     });
   });
 
-  it('calls saveTournament(null) after reset', async () => {
+  it('saves null tournament state after reset', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    const saveSpy = vi.spyOn(storageManager, 'saveTournament');
+    renderWithProvider(<TournamentPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
@@ -177,22 +142,22 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('new-tournament-button'));
 
     await waitFor(() => {
-      const lastCall = mockSaveTournament.mock.calls.at(-1);
-      expect(lastCall?.[0]).toBeNull();
+      expect(saveSpy.mock.calls.at(-1)?.[0]).toBeNull();
     });
   });
 
-  it('does not call saveTournament before tournament data is loaded', async () => {
-    mockLoadTournament.mockReturnValue(new Promise(() => {}));
+  it('does not save tournament before tournament data is loaded', async () => {
+    vi.spyOn(storageManager, 'loadTournament').mockReturnValue(new Promise(() => {}));
+    const saveSpy = vi.spyOn(storageManager, 'saveTournament');
 
-    render(<TournamentPage />);
+    renderWithProvider(<TournamentPage />);
 
-    expect(mockSaveTournament).not.toHaveBeenCalled();
+    expect(saveSpy).not.toHaveBeenCalled();
   });
 
   it('match result update propagates to standings (score diff updates)', async () => {
     const user = userEvent.setup();
-    render(<TournamentPage />);
+    renderWithProvider(<TournamentPage />);
 
     await waitFor(() => {
       expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
