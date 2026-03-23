@@ -61,7 +61,7 @@ async function compress(data: string): Promise<string> {
   return btoa(binary);
 }
 
-async function decompress(data: string): Promise<string> {
+export async function decompress(data: string): Promise<string> {
   try {
     const binary = atob(data);
     const bytes = new Uint8Array(binary.length);

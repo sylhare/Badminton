@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readAllChunks, storageManager } from '../../src/utils/StorageManager';
+import { decompress, storageManager } from '../../src/utils/StorageManager';
 import type { Court, CourtEngineState, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
@@ -10,19 +10,7 @@ const OLD_ENGINE_KEY = 'badminton-court-engine-state';
 async function readDecompressed(): Promise<unknown> {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
-  try {
-    const binary = atob(raw);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const stream = new DecompressionStream('gzip');
-    const writer = stream.writable.getWriter();
-    writer.write(bytes);
-    writer.close();
-    const result = await readAllChunks(stream.readable.getReader());
-    return JSON.parse(new TextDecoder().decode(result));
-  } catch {
-    return JSON.parse(raw);
-  }
+  return JSON.parse(await decompress(raw));
 }
 
 describe('StorageManager', () => {
