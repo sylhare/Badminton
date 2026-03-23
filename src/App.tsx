@@ -8,11 +8,10 @@ import ImportStateModal from './components/modals/ImportStateModal';
 import { CourtAssignments } from './components/court';
 import { useShareState } from './hooks/useShareState';
 import Leaderboard from './components/players/Leaderboard';
-import { engine, getEngineType, setEngine } from './engines/engineSelector';
-import { createPlayersFromNames } from './utils/playerUtils';
+import { engine, getEngineType } from './engines/engineSelector';
 import { storageManager } from './utils/StorageManager';
-import { levelTracker } from './engines/LevelTracker';
-import type { Court, ManualCourtSelection, Player, WinnerSelection } from './types';
+import { useAppState } from './providers/AppStateProvider';
+import type { Court, ManualCourtSelection, WinnerSelection } from './types';
 
 export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
@@ -35,95 +34,59 @@ export function rotateCourtTeams(court: Court): Court {
 }
 
 function App(): React.ReactElement {
-  const [players, setPlayers] = useState<Player[]>([]);
+  const {
+    players,
+    isLoaded,
+    handlePlayerToggle,
+    handleAddPlayers,
+    handleRemovePlayer,
+    handleUpdatePlayer,
+    clearPlayers,
+    isSmartEngineEnabled,
+    handleToggleSmartEngine,
+    applyCourtResults,
+    winCounts,
+    lossCounts,
+  } = useAppState();
+
   const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
   const [assignments, setAssignments] = useState<Court[]>([]);
   const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(false);
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(null);
   const [lastGeneratedAt, setLastGeneratedAt] = useState<number | undefined>();
-  const [_engineStateVersion, setEngineStateVersion] = useState<number>(0);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
-  const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState<boolean>(false);
 
   const { shareUrl, setShareUrl, importState, handleShare, handleImportAccept, handleImportDecline } = useShareState();
 
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const hasLoadedRef = useRef(false);
+  const hasLocalLoadedRef = useRef(false);
   const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const load = async () => {
       const loadedState = await storageManager.loadApp();
       if (loadedState.players?.length) {
-        setPlayers(loadedState.players);
         setIsManagePlayersCollapsed(true);
       }
       if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
       if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
       if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
-      const smart = loadedState.isSmartEngineEnabled ?? false;
-      if (smart) setIsSmartEngineEnabled(true);
-      const engineType = smart ? 'sl' : 'sa';
-      setEngine(engineType);
-      await engine().loadState(engineType);
-      setEngineStateVersion(prev => prev + 1);
-      hasLoadedRef.current = true;
-      setIsInitialLoad(false);
+      hasLocalLoadedRef.current = true;
     };
     load();
-    return engine().onStateChange(() => setEngineStateVersion(prev => prev + 1));
   }, []);
 
   useEffect(() => {
-    if (!hasLoadedRef.current) return;
-
-    storageManager.saveApp({
-      players,
-      numberOfCourts,
-      assignments,
-      lastGeneratedAt,
-      isSmartEngineEnabled,
-    });
+    if (!hasLocalLoadedRef.current) return;
+    storageManager.saveApp({ numberOfCourts, assignments, lastGeneratedAt });
     engine().saveState(getEngineType());
-  }, [players, numberOfCourts, assignments, lastGeneratedAt, isSmartEngineEnabled]);
-
-  const handlePlayersAdded = (newNames: string[]) => {
-    const newPlayers = createPlayersFromNames(newNames, 'manual');
-    setPlayers(prev => [...prev, ...newPlayers]);
-  };
-
-  const handlePlayerToggle = (playerId: string) => {
-    setPlayers(prev =>
-      prev.map(player =>
-        player.id === playerId
-          ? { ...player, isPresent: !player.isPresent }
-          : player,
-      ),
-    );
-  };
-
-  const handleRemovePlayer = (playerId: string) => {
-    engine().removePlayerHistory(playerId);
-    setPlayers(prev => prev.filter(p => p.id !== playerId));
-  };
-
-  const recordCurrentWins = () => {
-    if (assignments.length > 0) {
-      const assignmentsWithWinners = assignments.filter(court => court.winner);
-      if (assignmentsWithWinners.length > 0) {
-        engine().recordWins(assignmentsWithWinners);
-      }
-    }
-  };
+  }, [numberOfCourts, assignments, lastGeneratedAt]);
 
   const handleClearAllPlayers = () => {
-    setPlayers([]);
+    clearPlayers();
     setAssignments([]);
     setLastGeneratedAt(undefined);
     setIsManagePlayersCollapsed(false);
     setManualCourtSelection(null);
-    engine().resetHistory();
-    storageManager.clearAll();
   };
 
   const handleResetAlgorithm = () => {
@@ -142,22 +105,13 @@ function App(): React.ReactElement {
   };
 
   const generateAssignments = () => {
-    recordCurrentWins();
-
-    const assignmentsWithWinners = assignments.filter(c => c.winner);
-    const nextPlayers = assignmentsWithWinners.length > 0
-      ? levelTracker.updatePlayersLevels(assignmentsWithWinners, players)
-      : players;
-    if (assignmentsWithWinners.length > 0) {
-      setPlayers(nextPlayers);
-    }
-    engine().recordLevelSnapshot(nextPlayers);
+    applyCourtResults(assignments);
 
     setLastGeneratedAt(Date.now());
     engine().clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
     const courts = engine().generate(
-      nextPlayers,
+      players,
       numberOfCourts,
       manualCourtSelection || undefined,
       forceBenchPlayerIds,
@@ -182,20 +136,6 @@ function App(): React.ReactElement {
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
     setAssignments(prevAssignments =>
       engine().updateWinner({ courtNumber, winner, currentAssignments: prevAssignments }),
-    );
-  };
-
-  const handleToggleSmartEngine = () => {
-    const next = !isSmartEngineEnabled;
-    setIsSmartEngineEnabled(next);
-    setEngine(next ? 'sl' : 'sa');
-  };
-
-  const handleUpdatePlayer = (id: string, gender: Player['gender'], level: number) => {
-    setPlayers(prev =>
-      prev.map(player =>
-        player.id === id ? { ...player, gender, level } : player,
-      ),
     );
   };
 
@@ -240,7 +180,7 @@ function App(): React.ReactElement {
   const hasPlayers = players.length > 0;
 
   return (
-    <div className={`app${isSmartEngineEnabled ? ' night-theme' : ''}`} data-loaded={!isInitialLoad}>
+    <div className={`app${isSmartEngineEnabled ? ' night-theme' : ''}`} data-loaded={isLoaded}>
       <div className="container main-container">
         <h1><span className="title-emoji">🏸 </span>Badminton Court Manager</h1>
 
@@ -260,7 +200,7 @@ function App(): React.ReactElement {
 
           {!isManagePlayersCollapsed && (
             <div className="section-content">
-              <ManualPlayerEntry onPlayersAdded={handlePlayersAdded} />
+              <ManualPlayerEntry onPlayersAdded={handleAddPlayers} />
 
               {hasPlayers && (
                 <PlayerList
@@ -297,7 +237,7 @@ function App(): React.ReactElement {
               onGenerateAssignments={generateAssignments}
               onWinnerChange={handleWinnerChange}
               onScoreChange={handleScoreChange}
-              hasHistoricalWinners={engine().getWinCounts().size > 0}
+              hasHistoricalWinners={winCounts.size > 0}
               onRotateTeams={handleRotateTeams}
               hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
               onViewBenchCounts={handleViewBenchCounts}
@@ -310,8 +250,8 @@ function App(): React.ReactElement {
 
         <Leaderboard
           players={players}
-          winCounts={engine().getWinCounts()}
-          lossCounts={engine().getStats().lossCountMap}
+          winCounts={winCounts}
+          lossCounts={lossCounts}
         />
       </div>
 

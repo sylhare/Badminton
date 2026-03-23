@@ -5,15 +5,14 @@ import userEvent from '@testing-library/user-event';
 
 import TournamentPage from '../../src/pages/TournamentPage';
 
-const { mockLoadApp, mockLoadTournament, mockSaveTournament } = vi.hoisted(() => ({
-  mockLoadApp: vi.fn(),
+const { mockLoadTournament, mockSaveTournament } = vi.hoisted(() => ({
   mockLoadTournament: vi.fn(),
   mockSaveTournament: vi.fn(),
 }));
 
 vi.mock('../../src/utils/StorageManager', () => ({
   storageManager: {
-    loadApp: mockLoadApp,
+    loadApp: vi.fn().mockResolvedValue({ numberOfCourts: 2 }),
     saveApp: vi.fn(),
     loadEngine: vi.fn(),
     saveEngine: vi.fn(),
@@ -31,9 +30,26 @@ const mockPlayers = [
   { id: 'p5', name: 'Eve', isPresent: false },
 ];
 
+vi.mock('../../src/providers/AppStateProvider', () => ({
+  useAppState: vi.fn(() => ({
+    players: mockPlayers,
+    isLoaded: true,
+    handlePlayerToggle: vi.fn(),
+    handleAddPlayers: vi.fn(),
+    handleRemovePlayer: vi.fn(),
+    handleUpdatePlayer: vi.fn(),
+    clearPlayers: vi.fn(),
+    setPlayers: vi.fn(),
+    isSmartEngineEnabled: false,
+    handleToggleSmartEngine: vi.fn(),
+    applyCourtResults: vi.fn(),
+    winCounts: new Map(),
+    lossCounts: new Map(),
+  })),
+}));
+
 describe('TournamentPage', () => {
   beforeEach(() => {
-    mockLoadApp.mockResolvedValue({ players: mockPlayers, numberOfCourts: 2 });
     mockLoadTournament.mockResolvedValue(null);
     mockSaveTournament.mockResolvedValue(undefined);
   });
@@ -47,10 +63,9 @@ describe('TournamentPage', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tournament');
   });
 
-  it('calls storageManager.loadApp and loadTournament on mount', async () => {
+  it('calls storageManager.loadTournament on mount', async () => {
     render(<TournamentPage />);
     await waitFor(() => {
-      expect(mockLoadApp).toHaveBeenCalledOnce();
       expect(mockLoadTournament).toHaveBeenCalledOnce();
     });
   });
@@ -167,16 +182,12 @@ describe('TournamentPage', () => {
     });
   });
 
-  it('does not call saveTournament before isLoaded', async () => {
-    let resolveLoad!: (v: unknown) => void;
-    mockLoadApp.mockReturnValue(new Promise(r => { resolveLoad = r; }));
+  it('does not call saveTournament before tournament data is loaded', async () => {
     mockLoadTournament.mockReturnValue(new Promise(() => {}));
 
     render(<TournamentPage />);
 
     expect(mockSaveTournament).not.toHaveBeenCalled();
-
-    resolveLoad({ players: mockPlayers, numberOfCourts: 2 });
   });
 
   it('match result update propagates to standings (score diff updates)', async () => {

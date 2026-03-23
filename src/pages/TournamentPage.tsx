@@ -3,33 +3,32 @@ import React, { useEffect, useState } from 'react';
 import TournamentMatches from '../components/tournament/TournamentMatches';
 import TournamentSetup from '../components/tournament/TournamentSetup';
 import TournamentStandings from '../components/tournament/TournamentStandings';
-import type { Player } from '../types';
 import type { TournamentState } from '../types/tournament';
 import { calculateStandings, getCompletedRounds, getTotalRounds } from '../utils/tournamentUtils';
 import { storageManager } from '../utils/StorageManager';
+import { useAppState } from '../providers/AppStateProvider';
 import './TournamentPage.css';
 
 function TournamentPage(): React.ReactElement {
-  const [initialPlayers, setInitialPlayers] = useState<Player[]>([]);
+  const { players, isLoaded } = useAppState();
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
   const [tournamentState, setTournamentState] = useState<TournamentState | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
 
   useEffect(() => {
     Promise.all([storageManager.loadApp(), storageManager.loadTournament()]).then(
       ([appState, savedTournament]) => {
-        if (appState.players) setInitialPlayers(appState.players);
         if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
         if (savedTournament) setTournamentState(savedTournament);
-        setIsLoaded(true);
+        setIsTournamentLoaded(true);
       },
     );
   }, []);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isTournamentLoaded) return;
     storageManager.saveTournament(tournamentState);
-  }, [tournamentState, isLoaded]);
+  }, [tournamentState, isTournamentLoaded]);
 
   const handleStart = (state: TournamentState) => {
     setTournamentState(state);
@@ -60,7 +59,7 @@ function TournamentPage(): React.ReactElement {
   if (!tournamentState || tournamentState.phase === 'setup') {
     content = (
       <TournamentSetup
-        initialPlayers={initialPlayers}
+        initialPlayers={players}
         initialNumberOfCourts={initialNumberOfCourts}
         onStart={handleStart}
       />

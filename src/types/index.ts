@@ -1,3 +1,5 @@
+import type React from 'react';
+
 export interface Player {
   id: string;
   name: string;
@@ -89,4 +91,20 @@ export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
   getName(): string;
   getDescription(): string;
   supportsScoreTracking(): boolean;
+}
+
+export interface AppStateContextType {
+  players: Player[];
+  isLoaded: boolean;
+  handlePlayerToggle: (id: string) => void;
+  handleAddPlayers: (names: string[]) => void;
+  handleRemovePlayer: (id: string) => void;
+  handleUpdatePlayer: (id: string, gender: Player['gender'], level: number) => void;
+  clearPlayers: () => void;
+  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
+  isSmartEngineEnabled: boolean;
+  handleToggleSmartEngine: () => void;
+  applyCourtResults: (courts: Court[]) => void;
+  winCounts: Map<string, number>;
+  lossCounts: Map<string, number>;
 }

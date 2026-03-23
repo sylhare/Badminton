@@ -1,9 +1,11 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
 import { engineSA } from '../src/engines/SimulatedAnnealingEngine';
 import { storageManager } from '../src/utils/StorageManager';
+import { AppStateProvider } from '../src/providers/AppStateProvider';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {
@@ -29,6 +31,11 @@ export const flushPendingSaves = async (): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 0));
   await storageManager.waitForQueue();
 };
+
+/** Render a component wrapped in AppStateProvider */
+export function renderWithProvider(ui: React.ReactElement) {
+  return render(React.createElement(AppStateProvider, null, ui));
+}
 
 /** Helper to add players via the input field */
 export const addPlayers = async (
