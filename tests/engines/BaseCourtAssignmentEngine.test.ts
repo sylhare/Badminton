@@ -474,7 +474,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const team2Ids = result.teams!.team2.map(p => p.id);
 
       const isP0P1Together = (team1Ids.includes('P0') && team1Ids.includes('P1')) ||
-                             (team2Ids.includes('P0') && team2Ids.includes('P1'));
+        (team2Ids.includes('P0') && team2Ids.includes('P1'));
 
       expect(isP0P1Together).toBe(false);
     });

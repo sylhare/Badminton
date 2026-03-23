@@ -23,7 +23,7 @@ export class LevelTracker {
     if (!score || !winner) return LevelTrackerConfig.K_DEFAULT * this.teamBalanceFactor(teamPlayers);
 
     const winnerScore = winner === 1 ? score.team1 : score.team2;
-    const loserScore  = winner === 1 ? score.team2 : score.team1;
+    const loserScore = winner === 1 ? score.team2 : score.team1;
 
     let rawK = LevelTrackerConfig.K_MAX;
     if (winnerScore !== 21) {

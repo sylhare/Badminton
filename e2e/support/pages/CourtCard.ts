@@ -1,4 +1,4 @@
-import { Locator, Page, expect } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 
 /**
  * Page object for a single court card element.

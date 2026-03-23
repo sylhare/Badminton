@@ -61,7 +61,7 @@ async function compress(data: string): Promise<string> {
   return btoa(binary);
 }
 
-async function decompress(data: string): Promise<string> {
+export async function decompress(data: string): Promise<string> {
   try {
     const binary = atob(data);
     const bytes = new Uint8Array(binary.length);
@@ -303,8 +303,8 @@ class StorageManager {
     const ps: Array<[number, number, number, number]> = pi.map(id => [
       state.benchCountMap[id] ?? 0,
       state.singleCountMap[id] ?? 0,
-      state.winCountMap[id]   ?? 0,
-      state.lossCountMap[id]  ?? 0,
+      state.winCountMap[id] ?? 0,
+      state.lossCountMap[id] ?? 0,
     ]);
 
     const pc: Record<string, [number, number]> = {};
@@ -341,10 +341,10 @@ class StorageManager {
       const entry = ps[i];
       if (!entry) continue;
       const [b, s, w, l] = entry;
-      if (b) benchCountMap[id]  = b;
+      if (b) benchCountMap[id] = b;
       if (s) singleCountMap[id] = s;
-      if (w) winCountMap[id]    = w;
-      if (l) lossCountMap[id]   = l;
+      if (w) winCountMap[id] = w;
+      if (l) lossCountMap[id] = l;
     }
 
     for (const [key, [t, o]] of Object.entries(c.pc ?? {})) {

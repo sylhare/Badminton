@@ -14,8 +14,8 @@ export class LevelTrackerConfig {
    * Evaluated in order; first match wins.
    */
   static readonly K_SCALE = [
-    { maxDiff: 3,  k: 0.8 },
-    { maxDiff: 6,  k: 1.6 },
+    { maxDiff: 3, k: 0.8 },
+    { maxDiff: 6, k: 1.6 },
     { maxDiff: 10, k: 2.0 },
     { maxDiff: 15, k: 2.4 },
   ] as const;

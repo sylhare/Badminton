@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useShareState } from '../../src/hooks/useShareState';
@@ -47,8 +47,6 @@ describe('useShareState', () => {
   describe('URL detection on mount', () => {
     it('does nothing when no ?state= param in URL', async () => {
       const { result } = renderHook(() => useShareState());
-
-      await act(async () => {});
 
       expect(result.current.importState).toBeNull();
       expect(storageManager.isValidState).not.toHaveBeenCalled();

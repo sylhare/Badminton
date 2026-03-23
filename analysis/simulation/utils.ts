@@ -1,15 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import type { Player, Court, ICourtAssignmentEngine } from '../../src/types';
+import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { pairKey } from '../../src/utils/playerUtils';
 
-import type {
-  MatchEvent,
-  MatchPairEvent,
-  PairEvent,
-  RoundResult,
-  SimulationConfig,
-} from './types';
+import type { MatchEvent, MatchPairEvent, PairEvent, RoundResult, SimulationConfig } from './types';
 
 export const loadConfig = (configPath: string): SimulationConfig => {
   if (!existsSync(configPath)) {
@@ -186,7 +180,12 @@ export const extractRoundPairs = (
 export const evaluateRepeats = (
   rounds: RoundResult[],
   simulationId: number,
-): { repeatPairCount: number; repeatPairDifferentOpponentsCount: number; repeatPairSameOpponentsCount: number; events: PairEvent[] } => {
+): {
+  repeatPairCount: number;
+  repeatPairDifferentOpponentsCount: number;
+  repeatPairSameOpponentsCount: number;
+  events: PairEvent[]
+} => {
   let repeatPairCount = 0;
   let repeatPairDifferentOpponentsCount = 0;
   let repeatPairSameOpponentsCount = 0;

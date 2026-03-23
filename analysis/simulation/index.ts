@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
@@ -9,21 +9,14 @@ import { engineCG as ConflictGraphEngine } from './ConflictGraphEngine.ts';
 import { RandomBaselineEngine } from './RandomBaselineEngine.ts';
 import type {
   MatchEvent,
-  PlayerStats,
-  SessionBenchStats,
   MatchPairEvent,
-  SimulationSummary,
   PairEvent,
+  PlayerStats,
   RoundResult,
+  SessionBenchStats,
+  SimulationSummary,
 } from './types';
-import {
-  loadConfig,
-  generatePlayerLevels,
-  toPlayerList,
-  toCsv,
-  extractRoundPairs,
-  evaluateRepeats,
-} from './utils';
+import { evaluateRepeats, extractRoundPairs, generatePlayerLevels, loadConfig, toCsv, toPlayerList } from './utils';
 
 const SCRIPT_DIR = import.meta.dirname;
 const DATA_DIR = resolve(SCRIPT_DIR, '..', 'data');

@@ -6,7 +6,7 @@
  *
  * This script tests the real OCR functionality using the actual names.png image
  * and the real Tesseract.js library (not mocked).
-*/
+ */
 
 import fs from 'fs';
 import path from 'path';
@@ -19,8 +19,8 @@ function extractPlayerNamesSimple(text: string): string[] {
   }
 
   const lines = text.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
 
   const playerNames: string[] = [];
 
@@ -83,10 +83,10 @@ async function testRealOCR() {
       const expectedNames = ['Tinley', 'Ella', 'Avrella', 'Yvette', 'Gabriela', 'Noella'];
 
       const foundNames = expectedNames.filter(name =>
-          extractedNames.some(extracted =>
-              extracted.toLowerCase().includes(name.toLowerCase()) ||
-              name.toLowerCase().includes(extracted.toLowerCase()),
-          ),
+        extractedNames.some(extracted =>
+          extracted.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(extracted.toLowerCase()),
+        ),
       );
 
       console.log('🎯 Results:');
