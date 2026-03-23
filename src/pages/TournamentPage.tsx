@@ -10,7 +10,7 @@ import { useAppState } from '../providers/AppStateProvider';
 import './TournamentPage.css';
 
 function TournamentPage(): React.ReactElement {
-  const { players, isLoaded } = useAppState();
+  const { players, isLoaded, handleAddPlayers } = useAppState();
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
   const [tournamentState, setTournamentState] = useState<TournamentState | null>(null);
   const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
@@ -62,6 +62,7 @@ function TournamentPage(): React.ReactElement {
         initialPlayers={players}
         initialNumberOfCourts={initialNumberOfCourts}
         onStart={handleStart}
+        onAddPlayers={handleAddPlayers}
       />
     );
   } else {

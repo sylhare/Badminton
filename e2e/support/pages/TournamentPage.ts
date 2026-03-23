@@ -28,4 +28,13 @@ export class TournamentPage {
     await this.page.getByTestId('start-tournament-button').click();
     await expect(this.page.getByTestId('tournament-matches')).toBeVisible();
   }
+
+  /** Add players directly via the tournament page's ManualPlayerEntry. */
+  async addPlayers(players: string[]): Promise<void> {
+    const input = this.page.getByTestId('player-entry-input');
+    await expect(input).toBeVisible();
+    await input.fill(players.join(','));
+    await this.page.getByTestId('add-player-button').click();
+    await this.page.waitForTimeout(100);
+  }
 }

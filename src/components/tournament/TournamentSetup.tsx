@@ -14,6 +14,7 @@ interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   onStart: (state: TournamentState) => void;
+  onAddPlayers?: (names: string[]) => void;
 }
 
 interface SwapSelection {
@@ -38,6 +39,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
   onStart,
+  onAddPlayers,
 }) => {
   const [extraPlayers, setExtraPlayers] = useState<Player[]>([]);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(
@@ -83,6 +85,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handlePlayersAdded = (names: string[]) => {
     const newPlayers: Player[] = names.map(name => ({ id: makePlayerId(), name, isPresent: true }));
+    onAddPlayers?.(names);
     setExtraPlayers(prev => [...prev, ...newPlayers]);
     setSelectedPlayerIds(prev => new Set([...prev, ...newPlayers.map(p => p.id)]));
     setTeams(prev => {

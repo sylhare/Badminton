@@ -135,6 +135,29 @@ test.describe('Tournament Page', () => {
     await expect(page.getByTestId('score-diff-0')).toBeVisible();
   });
 
+  test('player added on tournament page persists after starting a new tournament', async ({ page }) => {
+    await tournamentPage.goto();
+    await tournamentPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Eve']);
+
+    await page.getByTestId('format-pill-singles').click();
+    await expect(page.getByTestId('start-tournament-button')).not.toBeDisabled();
+    await tournamentPage.start();
+
+    await page.getByTestId('new-tournament-button').click();
+
+    await expect(page.getByTestId('player-selection')).toContainText('Eve');
+  });
+
+  test('player added on tournament page appears on main page', async ({ page }) => {
+    await tournamentPage.goto();
+    await tournamentPage.addPlayers(['Eve']);
+
+    await mainPage.goto();
+    await mainPage.expandPlayersSection();
+
+    await expect(page.getByTestId('manage-players-section')).toContainText('Eve');
+  });
+
   test('doubles tournament: start, record match, start new tournament', async ({ page }) => {
     await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
     await tournamentPage.start();
