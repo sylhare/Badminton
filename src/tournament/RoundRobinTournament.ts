@@ -84,9 +84,13 @@ export class RoundRobinTournament extends Tournament {
     return teams;
   }
 
+  static matchesPerRound(teams: TournamentTeam[]): number {
+    return Math.floor(teams.length / 2);
+  }
+
   start(teams: TournamentTeam[], numberOfCourts: number): RoundRobinTournament {
     return new RoundRobinTournament({
-      ...this.state,
+      ...this._state,
       phase: 'active',
       teams,
       numberOfCourts,
@@ -107,7 +111,7 @@ export class RoundRobinTournament extends Tournament {
   }
 
   calculateStandings(): TournamentStandingRow[] {
-    const { teams, matches } = this.state;
+    const { teams, matches } = this._state;
     const standings = new Map<string, TournamentStandingRow>();
 
     for (const team of teams) {
@@ -150,8 +154,8 @@ export class RoundRobinTournament extends Tournament {
     });
   }
 
-  getCompletedRounds(): number {
-    const { matches } = this.state;
+  completedRounds(): number {
+    const { matches } = this._state;
     if (matches.length === 0) return 0;
 
     const roundMap = new Map<number, TournamentMatch[]>();
@@ -175,9 +179,33 @@ export class RoundRobinTournament extends Tournament {
     return completed;
   }
 
-  getTotalRounds(): number {
-    const { matches } = this.state;
+  totalRounds(): number {
+    const { matches } = this._state;
     if (matches.length === 0) return 0;
     return Math.max(...matches.map(m => m.round));
+  }
+
+  roundNumbers(): number[] {
+    return Array.from(new Set(this._state.matches.map(m => m.round))).sort((a, b) => a - b);
+  }
+
+  matchesForRound(round: number): TournamentMatch[] {
+    return this._state.matches.filter(m => m.round === round);
+  }
+
+  isRoundComplete(round: number): boolean {
+    return this.matchesForRound(round).every(m => m.winner !== undefined);
+  }
+
+  isComplete(): boolean {
+    return this._state.matches.length > 0 && this._state.matches.every(m => m.winner !== undefined);
+  }
+
+  currentRound(): number {
+    const rounds = this.roundNumbers();
+    for (const r of rounds) {
+      if (this.matchesForRound(r).some(m => m.winner === undefined)) return r;
+    }
+    return rounds[rounds.length - 1] ?? 1;
   }
 }

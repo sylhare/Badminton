@@ -68,7 +68,7 @@ const RoundRobinSetup: React.FC<RoundRobinSetupProps> = ({
 
   const tournament = RoundRobinTournament.create(format, numberOfCourts);
   const validationError = tournament.validate(teams, format);
-  const matchesPerRound = Math.floor(teams.length / 2);
+  const matchesPerRound = RoundRobinTournament.matchesPerRound(teams);
   const courtWarning =
     !validationError && matchesPerRound > numberOfCourts
       ? `${matchesPerRound} matches per round but only ${numberOfCourts} court${numberOfCourts > 1 ? 's' : ''} — some matches will need to wait.`

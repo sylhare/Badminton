@@ -26,13 +26,13 @@ describe('RoundRobinTournament.start (generateRoundRobinMatches)', () => {
   it('produces 1 match for 2 teams', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B'])];
     const tournament = RoundRobinTournament.create().start(teams, 2);
-    expect(tournament.getMatches()).toHaveLength(1);
-    expect(tournament.getMatches()[0].round).toBe(1);
+    expect(tournament.matches()).toHaveLength(1);
+    expect(tournament.matches()[0].round).toBe(1);
   });
 
   it('produces 3 matches for 3 teams with no duplicate pairings', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C'])];
-    const matches = RoundRobinTournament.create().start(teams, 2).getMatches();
+    const matches = RoundRobinTournament.create().start(teams, 2).matches();
     expect(matches).toHaveLength(3);
 
     const pairings = matches.map(m => [m.team1.id, m.team2.id].sort().join('|'));
@@ -47,7 +47,7 @@ describe('RoundRobinTournament.start (generateRoundRobinMatches)', () => {
       makeTeam('c', ['C']),
       makeTeam('d', ['D']),
     ];
-    const matches = RoundRobinTournament.create().start(teams, 2).getMatches();
+    const matches = RoundRobinTournament.create().start(teams, 2).matches();
     expect(matches).toHaveLength(6);
   });
 
@@ -58,7 +58,7 @@ describe('RoundRobinTournament.start (generateRoundRobinMatches)', () => {
       makeTeam('c', ['C']),
       makeTeam('d', ['D']),
     ];
-    const matches = RoundRobinTournament.create().start(teams, 4).getMatches();
+    const matches = RoundRobinTournament.create().start(teams, 4).matches();
     const pairings = matches.map(m => [m.team1.id, m.team2.id].sort().join('|'));
     expect(new Set(pairings).size).toBe(6);
   });
@@ -70,7 +70,7 @@ describe('RoundRobinTournament.start (generateRoundRobinMatches)', () => {
       makeTeam('c', ['C']),
       makeTeam('d', ['D']),
     ];
-    const matches = RoundRobinTournament.create().start(teams, 2).getMatches();
+    const matches = RoundRobinTournament.create().start(teams, 2).matches();
     const courts = matches.map(m => m.courtNumber);
     expect(courts).toEqual([1, 2, 1, 2, 1, 2]);
   });
@@ -82,7 +82,7 @@ describe('RoundRobinTournament.start (generateRoundRobinMatches)', () => {
       makeTeam('c', ['C']),
       makeTeam('d', ['D']),
     ];
-    const matches = RoundRobinTournament.create().start(teams, 4).getMatches();
+    const matches = RoundRobinTournament.create().start(teams, 4).matches();
     const rounds = matches.map(m => m.round);
     expect(rounds.filter(r => r === 1)).toHaveLength(2);
     expect(rounds.filter(r => r === 2)).toHaveLength(2);
@@ -91,7 +91,7 @@ describe('RoundRobinTournament.start (generateRoundRobinMatches)', () => {
 
   it('handles 3 teams with bye correctly (3 rounds, 1 match each)', () => {
     const teams = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C'])];
-    const matches = RoundRobinTournament.create().start(teams, 1).getMatches();
+    const matches = RoundRobinTournament.create().start(teams, 1).matches();
     expect(matches).toHaveLength(3);
     for (const m of matches) {
       expect(m.team1.id).not.toBe('bye');
@@ -100,8 +100,8 @@ describe('RoundRobinTournament.start (generateRoundRobinMatches)', () => {
   });
 
   it('returns empty matches for fewer than 2 teams', () => {
-    expect(RoundRobinTournament.create().start([], 2).getMatches()).toHaveLength(0);
-    expect(RoundRobinTournament.create().start([makeTeam('a', ['A'])], 2).getMatches()).toHaveLength(0);
+    expect(RoundRobinTournament.create().start([], 2).matches()).toHaveLength(0);
+    expect(RoundRobinTournament.create().start([makeTeam('a', ['A'])], 2).matches()).toHaveLength(0);
   });
 });
 
@@ -178,7 +178,7 @@ describe('RoundRobinTournament.calculateStandings', () => {
   });
 });
 
-describe('RoundRobinTournament.getCompletedRounds', () => {
+describe('RoundRobinTournament.completedRounds', () => {
   const teamA = makeTeam('a', ['A']);
   const teamB = makeTeam('b', ['B']);
   const teamC = makeTeam('c', ['C']);
@@ -195,12 +195,12 @@ describe('RoundRobinTournament.getCompletedRounds', () => {
   }
 
   it('returns 0 when no matches', () => {
-    expect(makeTournamentWithMatches([]).getCompletedRounds()).toBe(0);
+    expect(makeTournamentWithMatches([]).completedRounds()).toBe(0);
   });
 
   it('returns 0 when no winners set', () => {
     const matches = [makeMatch('m1', 1, teamA, teamB)];
-    expect(makeTournamentWithMatches(matches).getCompletedRounds()).toBe(0);
+    expect(makeTournamentWithMatches(matches).completedRounds()).toBe(0);
   });
 
   it('returns 1 when round 1 is fully done but round 2 has unfinished matches', () => {
@@ -208,7 +208,7 @@ describe('RoundRobinTournament.getCompletedRounds', () => {
       makeMatch('m1', 1, teamA, teamB, 1),
       makeMatch('m2', 2, teamA, teamC),
     ];
-    expect(makeTournamentWithMatches(matches).getCompletedRounds()).toBe(1);
+    expect(makeTournamentWithMatches(matches).completedRounds()).toBe(1);
   });
 
   it('does not advance past a partial round', () => {
@@ -217,7 +217,7 @@ describe('RoundRobinTournament.getCompletedRounds', () => {
       makeMatch('m2', 1, teamA, teamC),
       makeMatch('m3', 2, teamB, teamC, 2),
     ];
-    expect(makeTournamentWithMatches(matches).getCompletedRounds()).toBe(0);
+    expect(makeTournamentWithMatches(matches).completedRounds()).toBe(0);
   });
 
   it('returns total rounds when all complete', () => {
@@ -226,11 +226,11 @@ describe('RoundRobinTournament.getCompletedRounds', () => {
       makeMatch('m2', 2, teamA, teamC, 2),
       makeMatch('m3', 3, teamB, teamC, 1),
     ];
-    expect(makeTournamentWithMatches(matches).getCompletedRounds()).toBe(3);
+    expect(makeTournamentWithMatches(matches).completedRounds()).toBe(3);
   });
 });
 
-describe('RoundRobinTournament.getTotalRounds', () => {
+describe('RoundRobinTournament.totalRounds', () => {
   it('returns 0 for empty matches', () => {
     expect(RoundRobinTournament.fromState({
       phase: 'active',
@@ -239,7 +239,7 @@ describe('RoundRobinTournament.getTotalRounds', () => {
       numberOfCourts: 1,
       teams: [],
       matches: [],
-    }).getTotalRounds()).toBe(0);
+    }).totalRounds()).toBe(0);
   });
 
   it('returns max round number', () => {
@@ -257,7 +257,7 @@ describe('RoundRobinTournament.getTotalRounds', () => {
       numberOfCourts: 1,
       teams: [teamA, teamB],
       matches,
-    }).getTotalRounds()).toBe(3);
+    }).totalRounds()).toBe(3);
   });
 });
 
@@ -353,8 +353,104 @@ describe('RoundRobinTournament.withMatchResult', () => {
     const updated = tournament.withMatchResult('m1', 1, { team1: 21, team2: 15 });
     expect(updated).not.toBe(tournament);
     expect(updated).toBeInstanceOf(RoundRobinTournament);
-    expect(updated.getMatches()[0].winner).toBe(1);
-    expect(updated.getMatches()[0].score).toEqual({ team1: 21, team2: 15 });
-    expect(tournament.getMatches()[0].winner).toBeUndefined();
+    expect(updated.matches()[0].winner).toBe(1);
+    expect(updated.matches()[0].score).toEqual({ team1: 21, team2: 15 });
+    expect(tournament.matches()[0].winner).toBeUndefined();
+  });
+});
+
+describe('RoundRobinTournament.roundNumbers / matchesForRound / isRoundComplete / isComplete / currentRound', () => {
+  const teamA = makeTeam('a', ['A']);
+  const teamB = makeTeam('b', ['B']);
+  const teamC = makeTeam('c', ['C']);
+
+  function makeTournament(matches: TournamentMatch[]) {
+    return RoundRobinTournament.fromState({
+      phase: 'active',
+      format: 'singles',
+      type: 'round-robin',
+      numberOfCourts: 1,
+      teams: [teamA, teamB, teamC],
+      matches,
+    });
+  }
+
+  it('roundNumbers returns sorted unique round numbers', () => {
+    const t = makeTournament([
+      makeMatch('m1', 1, teamA, teamB),
+      makeMatch('m2', 3, teamA, teamC),
+      makeMatch('m3', 2, teamB, teamC),
+    ]);
+    expect(t.roundNumbers()).toEqual([1, 2, 3]);
+  });
+
+  it('matchesForRound filters by round', () => {
+    const t = makeTournament([
+      makeMatch('m1', 1, teamA, teamB),
+      makeMatch('m2', 1, teamA, teamC),
+      makeMatch('m3', 2, teamB, teamC),
+    ]);
+    expect(t.matchesForRound(1)).toHaveLength(2);
+    expect(t.matchesForRound(2)).toHaveLength(1);
+    expect(t.matchesForRound(99)).toHaveLength(0);
+  });
+
+  it('isRoundComplete returns true when all matches in round have a winner', () => {
+    const t = makeTournament([
+      makeMatch('m1', 1, teamA, teamB, 1),
+      makeMatch('m2', 2, teamA, teamC),
+    ]);
+    expect(t.isRoundComplete(1)).toBe(true);
+    expect(t.isRoundComplete(2)).toBe(false);
+  });
+
+  it('isComplete returns false when some matches have no winner', () => {
+    const t = makeTournament([
+      makeMatch('m1', 1, teamA, teamB, 1),
+      makeMatch('m2', 2, teamA, teamC),
+    ]);
+    expect(t.isComplete()).toBe(false);
+  });
+
+  it('isComplete returns true when all matches have a winner', () => {
+    const t = makeTournament([
+      makeMatch('m1', 1, teamA, teamB, 1),
+      makeMatch('m2', 2, teamA, teamC, 2),
+      makeMatch('m3', 3, teamB, teamC, 1),
+    ]);
+    expect(t.isComplete()).toBe(true);
+  });
+
+  it('isComplete returns false for empty matches', () => {
+    expect(makeTournament([]).isComplete()).toBe(false);
+  });
+
+  it('currentRound returns first round with unfinished matches', () => {
+    const t = makeTournament([
+      makeMatch('m1', 1, teamA, teamB, 1),
+      makeMatch('m2', 2, teamA, teamC),
+      makeMatch('m3', 3, teamB, teamC),
+    ]);
+    expect(t.currentRound()).toBe(2);
+  });
+
+  it('currentRound returns last round when all complete', () => {
+    const t = makeTournament([
+      makeMatch('m1', 1, teamA, teamB, 1),
+      makeMatch('m2', 2, teamA, teamC, 2),
+      makeMatch('m3', 3, teamB, teamC, 1),
+    ]);
+    expect(t.currentRound()).toBe(3);
+  });
+});
+
+describe('RoundRobinTournament.matchesPerRound', () => {
+  it('returns floor of teams / 2', () => {
+    const teams2 = [makeTeam('a', ['A']), makeTeam('b', ['B'])];
+    const teams3 = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C'])];
+    const teams4 = [makeTeam('a', ['A']), makeTeam('b', ['B']), makeTeam('c', ['C']), makeTeam('d', ['D'])];
+    expect(RoundRobinTournament.matchesPerRound(teams2)).toBe(1);
+    expect(RoundRobinTournament.matchesPerRound(teams3)).toBe(1);
+    expect(RoundRobinTournament.matchesPerRound(teams4)).toBe(2);
   });
 });

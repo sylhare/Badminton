@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import RoundRobinMatches from '../../../../src/components/tournament/round-robin/RoundRobinMatches';
+import { RoundRobinTournament } from '../../../../src/tournament/RoundRobinTournament';
 import type { TournamentMatch, TournamentTeam } from '../../../../src/tournament/types';
 import { createMockPlayer } from '../../../data/testFactories';
 
@@ -25,6 +26,17 @@ function makeMatch(
   return { id, round, courtNumber: 1, team1, team2, winner, score };
 }
 
+function makeTournament(matches: TournamentMatch[], teams: TournamentTeam[]) {
+  return RoundRobinTournament.fromState({
+    phase: 'active',
+    format: 'singles',
+    type: 'round-robin',
+    numberOfCourts: 1,
+    teams,
+    matches,
+  });
+}
+
 const teamA = makeTeam('a', ['Alice']);
 const teamB = makeTeam('b', ['Bob']);
 const teamC = makeTeam('c', ['Carol']);
@@ -40,16 +52,19 @@ describe('RoundRobinMatches', () => {
     vi.clearAllMocks();
   });
 
-  const threeMatchSingles: TournamentMatch[] = [
-    makeMatch('m1', 1, teamA, teamB),
-    makeMatch('m2', 2, teamA, teamC),
-    makeMatch('m3', 3, teamB, teamC),
-  ];
+  const threeMatchSingles = makeTournament(
+    [
+      makeMatch('m1', 1, teamA, teamB),
+      makeMatch('m2', 2, teamA, teamC),
+      makeMatch('m3', 3, teamB, teamC),
+    ],
+    [teamA, teamB, teamC],
+  );
 
   it('renders all rounds', () => {
     render(
       <RoundRobinMatches
-        matches={threeMatchSingles}
+        tournament={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
     );
@@ -62,7 +77,7 @@ describe('RoundRobinMatches', () => {
   it('current round (round 1) is expanded by default', () => {
     render(
       <RoundRobinMatches
-        matches={threeMatchSingles}
+        tournament={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
     );
@@ -75,7 +90,7 @@ describe('RoundRobinMatches', () => {
     const user = userEvent.setup();
     render(
       <RoundRobinMatches
-        matches={threeMatchSingles}
+        tournament={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
     );
@@ -91,7 +106,7 @@ describe('RoundRobinMatches', () => {
     const user = userEvent.setup();
     render(
       <RoundRobinMatches
-        matches={threeMatchSingles}
+        tournament={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
     );
@@ -111,7 +126,7 @@ describe('RoundRobinMatches', () => {
     const user = userEvent.setup();
     render(
       <RoundRobinMatches
-        matches={threeMatchSingles}
+        tournament={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
     );
@@ -127,7 +142,7 @@ describe('RoundRobinMatches', () => {
     const user = userEvent.setup();
     render(
       <RoundRobinMatches
-        matches={threeMatchSingles}
+        tournament={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
     );
@@ -142,10 +157,13 @@ describe('RoundRobinMatches', () => {
 
   it('clicking winner again on completed match clears winner', async () => {
     const user = userEvent.setup();
-    const matchWithWinner = makeMatch('m1', 1, teamA, teamB, 1);
+    const tournament = makeTournament(
+      [makeMatch('m1', 1, teamA, teamB, 1)],
+      [teamA, teamB],
+    );
     render(
       <RoundRobinMatches
-        matches={[matchWithWinner]}
+        tournament={tournament}
         onMatchResult={onMatchResult}
       />,
     );
@@ -157,10 +175,13 @@ describe('RoundRobinMatches', () => {
   });
 
   it('completed round shows score inline', () => {
-    const completedMatch = makeMatch('m1', 1, teamA, teamB, 1, { team1: 21, team2: 14 });
+    const tournament = makeTournament(
+      [makeMatch('m1', 1, teamA, teamB, 1, { team1: 21, team2: 14 })],
+      [teamA, teamB],
+    );
     render(
       <RoundRobinMatches
-        matches={[completedMatch]}
+        tournament={tournament}
         onMatchResult={onMatchResult}
       />,
     );

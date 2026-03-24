@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { storageManager } from '../utils/StorageManager';
 import { useAppState } from '../providers/AppStateProvider';
-
-import RoundRobinMatches from '../components/tournament/round-robin/RoundRobinMatches';
-import RoundRobinSetup from '../components/tournament/round-robin/RoundRobinSetup';
-import RoundRobinStandings from '../components/tournament/round-robin/RoundRobinStandings';
+import Tournament from '../components/tournament/Tournament';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 import type { TournamentFormat, TournamentTeam } from '../tournament/types';
 import './TournamentPage.css';
@@ -28,7 +25,7 @@ function TournamentPage(): React.ReactElement {
 
   useEffect(() => {
     if (!isTournamentLoaded) return;
-    storageManager.saveTournament(tournament?.getState() ?? null);
+    storageManager.saveTournament(tournament?.state() ?? null);
   }, [tournament, isTournamentLoaded]);
 
   const handleStart = (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat) => {
@@ -47,52 +44,20 @@ function TournamentPage(): React.ReactElement {
     setTournament(null);
   };
 
-  let content: React.ReactNode;
-
-  if (!tournament || tournament.getPhase() === 'setup') {
-    content = (
-      <RoundRobinSetup
-        initialPlayers={players}
-        initialNumberOfCourts={initialNumberOfCourts}
-        onStart={handleStart}
-        onAddPlayers={handleAddPlayers}
-        onTogglePlayer={handlePlayerToggle}
-      />
-    );
-  } else {
-    const standings = tournament.calculateStandings();
-    const completedRounds = tournament.getCompletedRounds();
-    const totalRounds = tournament.getTotalRounds();
-    const isFinal = totalRounds > 0 && completedRounds === totalRounds;
-
-    content = (
-      <div className="tournament-active-layout">
-        <RoundRobinMatches
-          matches={tournament.getMatches()}
-          onMatchResult={handleMatchResult}
-        />
-        <RoundRobinStandings
-          standings={standings}
-          currentRound={completedRounds}
-          totalRounds={totalRounds}
-          isFinal={isFinal}
-        />
-        <button
-          className="button button-primary"
-          onClick={handleReset}
-          data-testid="new-tournament-button"
-        >
-          Start a New Tournament
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="app tournament-page" data-loaded={isLoaded}>
       <div className="container main-container">
         <h1><span className="title-emoji">🏆 </span>Tournament</h1>
-        {content}
+        <Tournament
+          tournament={tournament}
+          initialPlayers={players}
+          initialNumberOfCourts={initialNumberOfCourts}
+          onStart={handleStart}
+          onMatchResult={handleMatchResult}
+          onReset={handleReset}
+          onAddPlayers={handleAddPlayers}
+          onTogglePlayer={handlePlayerToggle}
+        />
       </div>
     </div>
   );

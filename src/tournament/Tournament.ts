@@ -8,30 +8,30 @@ import type {
 } from './types';
 
 export abstract class Tournament {
-  protected readonly state: TournamentState;
+  protected readonly _state: TournamentState;
 
   constructor(state: TournamentState) {
-    this.state = state;
+    this._state = state;
   }
 
-  getState(): TournamentState {
-    return this.state;
+  state(): TournamentState {
+    return this._state;
   }
 
-  getPhase(): TournamentPhase {
-    return this.state.phase;
+  phase(): TournamentPhase {
+    return this._state.phase;
   }
 
-  getFormat(): TournamentFormat {
-    return this.state.format;
+  format(): TournamentFormat {
+    return this._state.format;
   }
 
-  getTeams(): TournamentTeam[] {
-    return this.state.teams;
+  teams(): TournamentTeam[] {
+    return this._state.teams;
   }
 
-  getMatches(): TournamentMatch[] {
-    return this.state.matches;
+  matches(): TournamentMatch[] {
+    return this._state.matches;
   }
 
   withMatchResult(
@@ -40,8 +40,8 @@ export abstract class Tournament {
     score?: { team1: number; team2: number },
   ): this {
     const newState: TournamentState = {
-      ...this.state,
-      matches: this.state.matches.map(m =>
+      ...this._state,
+      matches: this._state.matches.map(m =>
         m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
       ),
     };
@@ -50,7 +50,7 @@ export abstract class Tournament {
 
   abstract start(teams: TournamentTeam[], numberOfCourts: number): Tournament;
   abstract calculateStandings(): TournamentStandingRow[];
-  abstract getCompletedRounds(): number;
-  abstract getTotalRounds(): number;
+  abstract completedRounds(): number;
+  abstract totalRounds(): number;
   abstract validate(teams: TournamentTeam[], format: TournamentFormat): string | null;
 }

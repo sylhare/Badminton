@@ -1,39 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import type { TournamentMatch } from '../../../tournament/types';
+import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 
 interface RoundRobinMatchesProps {
-  matches: TournamentMatch[];
+  tournament: RoundRobinTournament;
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
 }
 
-function getCurrentRound(matches: TournamentMatch[]): number {
-  const roundNums = Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
-  for (const r of roundNums) {
-    if (matches.filter(m => m.round === r).some(m => m.winner === undefined)) {
-      return r;
-    }
-  }
-  return roundNums[roundNums.length - 1] ?? 1;
-}
-
 const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
-  matches,
+  tournament,
   onMatchResult,
 }) => {
   const [modalMatch, setModalMatch] = useState<TournamentMatch | null>(null);
   const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
-  const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() => {
-    const cur = getCurrentRound(matches);
-    return new Set([cur]);
-  });
+  const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() =>
+    new Set([tournament.currentRound()]),
+  );
 
-  const currentRound = getCurrentRound(matches);
-  const roundNums = Array.from(new Set(matches.map(m => m.round))).sort((a, b) => a - b);
-
-  const allComplete = matches.every(m => m.winner !== undefined);
+  const currentRound = tournament.currentRound();
+  const roundNums = tournament.roundNumbers();
+  const allComplete = tournament.isComplete();
 
   const prevCurrentRoundRef = useRef(currentRound);
   useEffect(() => {
@@ -100,9 +89,9 @@ const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   return (
     <div className="tournament-matches" data-testid="tournament-matches">
       {roundNums.map(round => {
-        const roundMatches = matches.filter(m => m.round === round);
+        const roundMatches = tournament.matchesForRound(round);
         const isExpanded = expandedRounds.has(round) || (!allComplete && round === currentRound);
-        const roundDone = roundMatches.every(m => m.winner !== undefined);
+        const roundDone = tournament.isRoundComplete(round);
 
         return (
           <div
