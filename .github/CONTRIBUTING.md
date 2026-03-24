@@ -105,6 +105,23 @@ src/engines/SimulatedAnnealingEngine.ts
 tests/engines/SimulatedAnnealingEngine.test.ts
 ```
 
+### Unit test structure for classes
+
+Wrap all tests for a class in a top-level `describe('ClassName')`. Inside it, use a nested `describe('methodName')` only when a method has more than one test. Single-test methods use a bare `it` directly inside the class describe.
+
+```ts
+describe('MyClass', () => {
+  // single test → bare it, no nested describe
+  it('someMethod returns the expected value', () => { ... });
+
+  // multiple tests → nested describe
+  describe('otherMethod', () => {
+    it('returns X when ...', () => { ... });
+    it('returns Y when ...', () => { ... });
+  });
+});
+```
+
 ## Pull Request Guidelines
 
 ### Commit messages
