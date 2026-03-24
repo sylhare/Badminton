@@ -1,12 +1,12 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
 import { engine } from '../src/engines/engineSelector';
 
-import { addPlayers, clearTestState, generateAndWaitForAssignments } from './shared';
+import { addPlayers, clearTestState, generateAndWaitForAssignments, renderWithProvider } from './shared';
 
 describe('App Leaderboard Persistence', () => {
   const user = userEvent.setup();
@@ -21,7 +21,7 @@ describe('App Leaderboard Persistence', () => {
 
   describe('Winner selection and recording', () => {
     it('should record wins immediately when winner is selected', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Hank');
 
       const initialWinCounts = engine().getWinCounts();
@@ -39,7 +39,7 @@ describe('App Leaderboard Persistence', () => {
     });
 
     it('should show leaderboard when players have wins', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
@@ -54,7 +54,7 @@ describe('App Leaderboard Persistence', () => {
     });
 
     it('should update leaderboard immediately when removing a winner', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       const team1Elements = screen.getAllByText('Team 1');
@@ -84,7 +84,7 @@ describe('App Leaderboard Persistence', () => {
 
   describe('Leaderboard persistence across app reload', () => {
     it('should maintain correct win counts for specific players', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
 
       await addPlayers(user, 'Alice,Bob');
       await addPlayers(user, 'Charlie,Diana');
@@ -109,7 +109,7 @@ describe('App Leaderboard Persistence', () => {
 
   describe('Edge cases', () => {
     it('should handle changing winners without duplicate counting', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       const team1Elements = screen.getAllByText('Team 1');
@@ -130,7 +130,7 @@ describe('App Leaderboard Persistence', () => {
     });
 
     it('should handle changing winner on same court without duplicate counting in session', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       const team1Elements = screen.getAllByText('Team 1');
@@ -151,7 +151,7 @@ describe('App Leaderboard Persistence', () => {
     });
 
     it('should not show leaderboard when no wins are recorded', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
@@ -167,7 +167,7 @@ describe('Smart engine — player update', () => {
   afterEach(async () => await clearTestState());
 
   it('updating a player\'s gender and level via the modal reflects in the badge', async () => {
-    render(<App />);
+    renderWithProvider(<App />);
     await addPlayers(user, 'Alice,Bob');
 
     await act(async () => {

@@ -14,6 +14,8 @@ interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   onStart: (state: TournamentState) => void;
+  onAddPlayers?: (names: string[]) => void;
+  onTogglePlayer?: (id: string) => void;
 }
 
 interface SwapSelection {
@@ -26,23 +28,13 @@ function deriveTeams(players: Player[], format: TournamentFormat): TournamentTea
   return autoCreateDoubleTeams(players);
 }
 
-function makeTeamId(index: number): string {
-  return `team-${Date.now()}-${index}`;
-}
-
-function makePlayerId(): string {
-  return `tournament-player-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 const TournamentSetup: React.FC<TournamentSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
   onStart,
+  onAddPlayers,
+  onTogglePlayer,
 }) => {
-  const [extraPlayers, setExtraPlayers] = useState<Player[]>([]);
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(
-    () => new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id)),
-  );
   const [format, setFormat] = useState<TournamentFormat>('doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
@@ -50,112 +42,10 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   );
   const [swapSelection, setSwapSelection] = useState<SwapSelection | null>(null);
 
-  const allPlayers = [...initialPlayers, ...extraPlayers];
-  const selectedPlayers = allPlayers.filter(p => selectedPlayerIds.has(p.id));
-
   useEffect(() => {
-    if (initialPlayers.length > 0) {
-      const presentIds = new Set(initialPlayers.filter(p => p.isPresent).map(p => p.id));
-      setSelectedPlayerIds(prev => {
-        const next = new Set(presentIds);
-        for (const id of prev) {
-          if (extraPlayers.some(p => p.id === id)) next.add(id);
-        }
-        return next;
-      });
-      const presentPlayers = [
-        ...initialPlayers.filter(p => p.isPresent),
-        ...extraPlayers.filter(p => selectedPlayerIds.has(p.id)),
-      ];
-      setTeams(deriveTeams(presentPlayers, format));
-      setSwapSelection(null);
-    }
-  }, [initialPlayers]);
-
-  useEffect(() => {
-    setTeams(deriveTeams(selectedPlayers, format));
+    setTeams(deriveTeams(initialPlayers.filter(p => p.isPresent), format));
     setSwapSelection(null);
-  }, [format]);
-
-  const handleFormatChange = (f: TournamentFormat) => {
-    setFormat(f);
-  };
-
-  const handlePlayersAdded = (names: string[]) => {
-    const newPlayers: Player[] = names.map(name => ({ id: makePlayerId(), name, isPresent: true }));
-    setExtraPlayers(prev => [...prev, ...newPlayers]);
-    setSelectedPlayerIds(prev => new Set([...prev, ...newPlayers.map(p => p.id)]));
-    setTeams(prev => {
-      let next = prev.map(t => ({ ...t, players: [...t.players] }));
-      for (const player of newPlayers) {
-        if (format === 'singles') {
-          next.push({ id: makeTeamId(next.length), players: [player] });
-        } else {
-          const incomplete = next.find(t => t.players.length < 2);
-          if (incomplete) {
-            incomplete.players.push(player);
-          } else {
-            next.push({ id: makeTeamId(next.length), players: [player] });
-          }
-        }
-      }
-      return next;
-    });
-  };
-
-  const handlePlayerToggle = (id: string) => {
-    const isRemoving = selectedPlayerIds.has(id);
-    const player = allPlayers.find(p => p.id === id);
-    if (!player) return;
-
-    setSelectedPlayerIds(prev => {
-      const next = new Set(prev);
-      if (isRemoving) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-    setSwapSelection(null);
-
-    if (isRemoving) {
-      setTeams(prev => {
-        let next = prev
-          .map(t => ({ ...t, players: t.players.filter(p => p.id !== id) }))
-          .filter(t => t.players.length > 0);
-
-        if (format === 'doubles') {
-          const soloIndices = next
-            .map((t, i) => (t.players.length === 1 ? i : -1))
-            .filter(i => i >= 0);
-          const toRemove = new Set<number>();
-          for (let i = 0; i + 1 < soloIndices.length; i += 2) {
-            const a = soloIndices[i];
-            const b = soloIndices[i + 1];
-            next[a] = { ...next[a], players: [...next[a].players, ...next[b].players] };
-            toRemove.add(b);
-          }
-          if (toRemove.size > 0) next = next.filter((_, i) => !toRemove.has(i));
-        }
-
-        return next;
-      });
-    } else {
-      setTeams(prev => {
-        const next = prev.map(t => ({ ...t, players: [...t.players] }));
-        if (format === 'singles') {
-          next.push({ id: makeTeamId(next.length), players: [player] });
-        } else {
-          const incomplete = next.find(t => t.players.length < 2);
-          if (incomplete) {
-            incomplete.players.push(player);
-          } else {
-            next.push({ id: makeTeamId(next.length), players: [player] });
-          }
-        }
-        return next;
-      });
-    }
-  };
+  }, [initialPlayers, format]);
 
   const handlePlayerSlotClick = (teamIdx: number, playerIdx: number) => {
     if (swapSelection === null) {
@@ -218,7 +108,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
             <button
               key={f}
               className={`format-pill${format === f ? ' format-pill-active' : ''}`}
-              onClick={() => handleFormatChange(f)}
+              onClick={() => setFormat(f)}
               data-testid={`format-pill-${f}`}
             >
               {f === 'singles' ? 'Singles (1v1)' : 'Doubles (2v2)'}
@@ -230,15 +120,15 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
       <div className="setup-section">
         <h3>Players</h3>
         <div className="tournament-player-entry">
-          <ManualPlayerEntry onPlayersAdded={handlePlayersAdded} />
+          <ManualPlayerEntry onPlayersAdded={names => onAddPlayers?.(names)} />
         </div>
         <div className="player-selection" data-testid="player-selection">
-          {allPlayers.map(player => (
+          {initialPlayers.map(player => (
             <label key={player.id} className="player-checkbox-label">
               <input
                 type="checkbox"
-                checked={selectedPlayerIds.has(player.id)}
-                onChange={() => handlePlayerToggle(player.id)}
+                checked={player.isPresent}
+                onChange={() => onTogglePlayer?.(player.id)}
                 data-testid={`player-checkbox-${player.id}`}
               />
               {player.name}

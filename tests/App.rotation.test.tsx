@@ -1,12 +1,12 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
 import { engine } from '../src/engines/engineSelector';
 
-import { addPlayers, clearTestState, clickTeam, clickTeamAndConfirm, generateAndWaitForAssignments } from './shared';
+import { addPlayers, clearTestState, clickTeam, clickTeamAndConfirm, generateAndWaitForAssignments, renderWithProvider } from './shared';
 
 describe('Team rotation', () => {
   const user = userEvent.setup();
@@ -16,7 +16,7 @@ describe('Team rotation', () => {
 
   describe('Rotate button visibility', () => {
     it('shows rotate button after generating assignments', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
 
@@ -26,7 +26,7 @@ describe('Team rotation', () => {
 
   describe('Winner cleared on rotation', () => {
     it('clears the winner crown when rotating teams', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
 
@@ -49,7 +49,7 @@ describe('Team rotation', () => {
 
   describe('Winner recorded for correct pair after rotation', () => {
     it('records wins for the rotated team after rotation', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
 
@@ -72,7 +72,7 @@ describe('Team rotation', () => {
     });
 
     it('records wins for the new team identity after set-winner → rotate → set-winner', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
 
@@ -102,7 +102,7 @@ describe('Team rotation', () => {
     });
 
     it('does not double-count wins when rotating after a winner was set', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
 
@@ -127,7 +127,7 @@ describe('Team rotation', () => {
 
   describe('Teammate stats updated on rotation', () => {
     it('replaces old teammate pairs with new ones after rotation', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
 
@@ -156,7 +156,7 @@ describe('Team rotation', () => {
     });
 
     it('replaces old opponent pairs with new ones after rotation', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
 
@@ -187,7 +187,7 @@ describe('Team rotation', () => {
 
   describe('Smart engine', () => {
     it('rotate button is available and clears winner when smart engine is enabled', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
       await act(async () => {
@@ -216,7 +216,7 @@ describe('Team rotation', () => {
     });
 
     it('records wins for the correct rotated pair under the smart engine', async () => {
-      render(<App />);
+      renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
 
       await act(async () => {
