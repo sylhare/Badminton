@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import TournamentMatches from '../../../src/components/tournament/TournamentMatches';
-import type { TournamentMatch, TournamentTeam } from '../../../src/types/tournament';
-import { createMockPlayer } from '../../data/testFactories';
+import RoundRobinMatches from '../../../../src/components/tournament/round-robin/RoundRobinMatches';
+import type { TournamentMatch, TournamentTeam } from '../../../../src/tournament/types';
+import { createMockPlayer } from '../../../data/testFactories';
 
 function makeTeam(id: string, playerNames: string[]): TournamentTeam {
   return {
@@ -29,7 +29,7 @@ const teamA = makeTeam('a', ['Alice']);
 const teamB = makeTeam('b', ['Bob']);
 const teamC = makeTeam('c', ['Carol']);
 
-describe('TournamentMatches', () => {
+describe('RoundRobinMatches', () => {
   let onMatchResult: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -48,7 +48,7 @@ describe('TournamentMatches', () => {
 
   it('renders all rounds', () => {
     render(
-      <TournamentMatches
+      <RoundRobinMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
@@ -61,7 +61,7 @@ describe('TournamentMatches', () => {
 
   it('current round (round 1) is expanded by default', () => {
     render(
-      <TournamentMatches
+      <RoundRobinMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
@@ -74,7 +74,7 @@ describe('TournamentMatches', () => {
   it('clicking team 1 opens ScoreInputModal with winnerTeam=1', async () => {
     const user = userEvent.setup();
     render(
-      <TournamentMatches
+      <RoundRobinMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
@@ -90,7 +90,7 @@ describe('TournamentMatches', () => {
   it('confirming modal with scores calls onMatchResult with correct args', async () => {
     const user = userEvent.setup();
     render(
-      <TournamentMatches
+      <RoundRobinMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
@@ -110,7 +110,7 @@ describe('TournamentMatches', () => {
   it('confirming modal without entering scores uses defaults', async () => {
     const user = userEvent.setup();
     render(
-      <TournamentMatches
+      <RoundRobinMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
@@ -126,7 +126,7 @@ describe('TournamentMatches', () => {
   it('cancelling modal does not call onMatchResult', async () => {
     const user = userEvent.setup();
     render(
-      <TournamentMatches
+      <RoundRobinMatches
         matches={threeMatchSingles}
         onMatchResult={onMatchResult}
       />,
@@ -144,7 +144,7 @@ describe('TournamentMatches', () => {
     const user = userEvent.setup();
     const matchWithWinner = makeMatch('m1', 1, teamA, teamB, 1);
     render(
-      <TournamentMatches
+      <RoundRobinMatches
         matches={[matchWithWinner]}
         onMatchResult={onMatchResult}
       />,
@@ -159,7 +159,7 @@ describe('TournamentMatches', () => {
   it('completed round shows score inline', () => {
     const completedMatch = makeMatch('m1', 1, teamA, teamB, 1, { team1: 21, team2: 14 });
     render(
-      <TournamentMatches
+      <RoundRobinMatches
         matches={[completedMatch]}
         onMatchResult={onMatchResult}
       />,

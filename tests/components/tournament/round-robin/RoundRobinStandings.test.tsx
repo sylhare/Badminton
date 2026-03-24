@@ -2,9 +2,9 @@ import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import TournamentStandings from '../../../src/components/tournament/TournamentStandings';
-import type { TournamentStandingRow, TournamentTeam } from '../../../src/types/tournament';
-import { createMockPlayer } from '../../data/testFactories';
+import RoundRobinStandings from '../../../../src/components/tournament/round-robin/RoundRobinStandings';
+import type { TournamentStandingRow, TournamentTeam } from '../../../../src/tournament/types';
+import { createMockPlayer } from '../../../data/testFactories';
 
 function makeTeam(id: string, name: string): TournamentTeam {
   return { id, players: [createMockPlayer({ id: `${id}-p`, name })] };
@@ -15,7 +15,7 @@ function makeRow(team: TournamentTeam, won: number, lost: number, scoreDiff: num
   return { team, played: won + lost, won, lost, points, scoreDiff };
 }
 
-describe('TournamentStandings', () => {
+describe('RoundRobinStandings', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -32,7 +32,7 @@ describe('TournamentStandings', () => {
 
   it('renders teams in correct rank order', () => {
     render(
-      <TournamentStandings
+      <RoundRobinStandings
         standings={standings}
         currentRound={2}
         totalRounds={3}
@@ -47,7 +47,7 @@ describe('TournamentStandings', () => {
 
   it('shows score diff column with correct values', () => {
     render(
-      <TournamentStandings
+      <RoundRobinStandings
         standings={standings}
         currentRound={2}
         totalRounds={3}
@@ -61,7 +61,7 @@ describe('TournamentStandings', () => {
 
   it('shows After Round N / M label', () => {
     render(
-      <TournamentStandings
+      <RoundRobinStandings
         standings={standings}
         currentRound={2}
         totalRounds={3}
@@ -73,7 +73,7 @@ describe('TournamentStandings', () => {
 
   it('applies top class to first row', () => {
     render(
-      <TournamentStandings
+      <RoundRobinStandings
         standings={standings}
         currentRound={3}
         totalRounds={3}
@@ -86,7 +86,7 @@ describe('TournamentStandings', () => {
 
   it('shows rank numbers', () => {
     render(
-      <TournamentStandings
+      <RoundRobinStandings
         standings={standings}
         currentRound={2}
         totalRounds={3}

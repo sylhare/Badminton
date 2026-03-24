@@ -1,6 +1,6 @@
 import type { AppState, CourtEngineState, EngineType } from '../types';
-import { DEFAULT_TOURNAMENT_STATE } from '../types/tournament';
-import type { TournamentState } from '../types/tournament';
+import { DEFAULT_TOURNAMENT_STATE } from '../tournament/types';
+import type { TournamentState } from '../tournament/types';
 
 interface StorageData {
   app: AppState;

@@ -1,19 +1,14 @@
 import React, { useEffect, useState } from 'react';
 
-import type { Player } from '../../types';
-import type { TournamentFormat, TournamentState, TournamentTeam } from '../../types/tournament';
-import ManualPlayerEntry from '../players/ManualPlayerEntry';
-import {
-  autoCreateDoubleTeams,
-  autoCreateSingleTeams,
-  generateRoundRobinMatches,
-  validateTeams,
-} from '../../utils/tournamentUtils';
+import type { Player } from '../../../types';
+import type { TournamentFormat, TournamentTeam } from '../../../tournament/types';
+import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
+import ManualPlayerEntry from '../../players/ManualPlayerEntry';
 
-interface TournamentSetupProps {
+interface RoundRobinSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
-  onStart: (state: TournamentState) => void;
+  onStart: (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat) => void;
   onAddPlayers?: (names: string[]) => void;
   onTogglePlayer?: (id: string) => void;
 }
@@ -23,12 +18,7 @@ interface SwapSelection {
   playerIdx: number;
 }
 
-function deriveTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
-  if (format === 'singles') return autoCreateSingleTeams(players);
-  return autoCreateDoubleTeams(players);
-}
-
-const TournamentSetup: React.FC<TournamentSetupProps> = ({
+const RoundRobinSetup: React.FC<RoundRobinSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
   onStart,
@@ -38,12 +28,12 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const [format, setFormat] = useState<TournamentFormat>('doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
-    deriveTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
+    RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
   const [swapSelection, setSwapSelection] = useState<SwapSelection | null>(null);
 
   useEffect(() => {
-    setTeams(deriveTeams(initialPlayers.filter(p => p.isPresent), format));
+    setTeams(RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), format));
     setSwapSelection(null);
   }, [initialPlayers, format]);
 
@@ -76,7 +66,8 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
     setSwapSelection(null);
   };
 
-  const validationError = validateTeams(teams, format);
+  const tournament = RoundRobinTournament.create(format, numberOfCourts);
+  const validationError = tournament.validate(teams, format);
   const matchesPerRound = Math.floor(teams.length / 2);
   const courtWarning =
     !validationError && matchesPerRound > numberOfCourts
@@ -85,15 +76,7 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handleStart = () => {
     if (validationError) return;
-    const matches = generateRoundRobinMatches(teams, numberOfCourts);
-    onStart({
-      phase: 'active',
-      format,
-      type: 'round-robin',
-      numberOfCourts,
-      teams,
-      matches,
-    });
+    onStart(teams, numberOfCourts, format);
   };
 
   const teamPlayerName = (team: TournamentTeam) =>
@@ -209,4 +192,4 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({
   );
 };
 
-export default TournamentSetup;
+export default RoundRobinSetup;

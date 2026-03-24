@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import type { TournamentMatch } from '../../types/tournament';
-import { DoublesMatch, SinglesMatch } from '../court/display';
-import ScoreInputModal from '../modals/ScoreInputModal';
+import type { TournamentMatch } from '../../../tournament/types';
+import { DoublesMatch, SinglesMatch } from '../../court/display';
+import ScoreInputModal from '../../modals/ScoreInputModal';
 
-interface TournamentMatchesProps {
+interface RoundRobinMatchesProps {
   matches: TournamentMatch[];
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
 }
@@ -19,7 +19,7 @@ function getCurrentRound(matches: TournamentMatch[]): number {
   return roundNums[roundNums.length - 1] ?? 1;
 }
 
-const TournamentMatches: React.FC<TournamentMatchesProps> = ({
+const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   matches,
   onMatchResult,
 }) => {
@@ -177,4 +177,4 @@ const TournamentMatches: React.FC<TournamentMatchesProps> = ({
   );
 };
 
-export default TournamentMatches;
+export default RoundRobinMatches;

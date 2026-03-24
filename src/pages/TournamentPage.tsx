@@ -1,25 +1,26 @@
 import React, { useEffect, useState } from 'react';
 
-import TournamentMatches from '../components/tournament/TournamentMatches';
-import TournamentSetup from '../components/tournament/TournamentSetup';
-import TournamentStandings from '../components/tournament/TournamentStandings';
-import type { TournamentState } from '../types/tournament';
-import { calculateStandings, getCompletedRounds, getTotalRounds } from '../utils/tournamentUtils';
 import { storageManager } from '../utils/StorageManager';
 import { useAppState } from '../providers/AppStateProvider';
+
+import RoundRobinMatches from '../components/tournament/round-robin/RoundRobinMatches';
+import RoundRobinSetup from '../components/tournament/round-robin/RoundRobinSetup';
+import RoundRobinStandings from '../components/tournament/round-robin/RoundRobinStandings';
+import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
+import type { TournamentFormat, TournamentTeam } from '../tournament/types';
 import './TournamentPage.css';
 
 function TournamentPage(): React.ReactElement {
   const { players, isLoaded, handleAddPlayers, handlePlayerToggle } = useAppState();
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
-  const [tournamentState, setTournamentState] = useState<TournamentState | null>(null);
+  const [tournament, setTournament] = useState<RoundRobinTournament | null>(null);
   const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
 
   useEffect(() => {
     Promise.all([storageManager.loadApp(), storageManager.loadTournament()]).then(
       ([appState, savedTournament]) => {
         if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
-        if (savedTournament) setTournamentState(savedTournament);
+        if (savedTournament) setTournament(RoundRobinTournament.fromState(savedTournament));
         setIsTournamentLoaded(true);
       },
     );
@@ -27,11 +28,11 @@ function TournamentPage(): React.ReactElement {
 
   useEffect(() => {
     if (!isTournamentLoaded) return;
-    storageManager.saveTournament(tournamentState);
-  }, [tournamentState, isTournamentLoaded]);
+    storageManager.saveTournament(tournament?.getState() ?? null);
+  }, [tournament, isTournamentLoaded]);
 
-  const handleStart = (state: TournamentState) => {
-    setTournamentState(state);
+  const handleStart = (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat) => {
+    setTournament(RoundRobinTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
   };
 
   const handleMatchResult = (
@@ -39,26 +40,18 @@ function TournamentPage(): React.ReactElement {
     winner: 1 | 2,
     score?: { team1: number; team2: number },
   ) => {
-    setTournamentState(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        matches: prev.matches.map(m =>
-          m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
-        ),
-      };
-    });
+    setTournament(prev => prev?.withMatchResult(matchId, winner, score) ?? null);
   };
 
   const handleReset = () => {
-    setTournamentState(null);
+    setTournament(null);
   };
 
   let content: React.ReactNode;
 
-  if (!tournamentState || tournamentState.phase === 'setup') {
+  if (!tournament || tournament.getPhase() === 'setup') {
     content = (
-      <TournamentSetup
+      <RoundRobinSetup
         initialPlayers={players}
         initialNumberOfCourts={initialNumberOfCourts}
         onStart={handleStart}
@@ -67,18 +60,18 @@ function TournamentPage(): React.ReactElement {
       />
     );
   } else {
-    const standings = calculateStandings(tournamentState.teams, tournamentState.matches);
-    const completedRounds = getCompletedRounds(tournamentState.matches);
-    const totalRounds = getTotalRounds(tournamentState.matches);
+    const standings = tournament.calculateStandings();
+    const completedRounds = tournament.getCompletedRounds();
+    const totalRounds = tournament.getTotalRounds();
     const isFinal = totalRounds > 0 && completedRounds === totalRounds;
 
     content = (
       <div className="tournament-active-layout">
-        <TournamentMatches
-          matches={tournamentState.matches}
+        <RoundRobinMatches
+          matches={tournament.getMatches()}
           onMatchResult={handleMatchResult}
         />
-        <TournamentStandings
+        <RoundRobinStandings
           standings={standings}
           currentRound={completedRounds}
           totalRounds={totalRounds}
