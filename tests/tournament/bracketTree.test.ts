@@ -1,0 +1,198 @@
+import { describe, expect, it } from 'vitest';
+
+import type { TournamentTeam } from '../../src/tournament/types';
+import { computeWBTree, computeCBTree, roundLabel } from '../../src/tournament/bracketTree';
+import { EliminationTournament } from '../../src/tournament/EliminationTournament';
+import { createMockPlayer } from '../data/testFactories';
+
+function makeTeam(id: string): TournamentTeam {
+  return { id, players: [createMockPlayer({ id: `${id}-p0`, name: id })] };
+}
+
+function makeTeams(ids: string[]): TournamentTeam[] {
+  return ids.map(makeTeam);
+}
+
+describe('roundLabel', () => {
+  it('last round is Final', () => {
+    expect(roundLabel(3, 3)).toBe('Final');
+    expect(roundLabel(1, 1)).toBe('Final');
+  });
+
+  it('second-to-last is Semi Final', () => {
+    expect(roundLabel(2, 3)).toBe('Semi Final');
+  });
+
+  it('third-to-last is 4th of Final', () => {
+    expect(roundLabel(1, 3)).toBe('4th of Final');
+  });
+
+  it('fourth-to-last is 8th of Final', () => {
+    expect(roundLabel(1, 4)).toBe('8th of Final');
+  });
+});
+
+describe('computeWBTree', () => {
+  describe('4 teams (bracketSize=4)', () => {
+    const [A, B, C, D] = makeTeams(['A', 'B', 'C', 'D']);
+    const teams = [A, B, C, D];
+    const bracketSize = 4;
+
+    it('produces 2 rounds', () => {
+      const tree = computeWBTree(teams, bracketSize, []);
+      expect(tree).toHaveLength(2);
+    });
+
+    it('round 1 has 2 match nodes (no results yet)', () => {
+      const tree = computeWBTree(teams, bracketSize, []);
+      expect(tree[0]).toHaveLength(2);
+      expect(tree[0][0].type).toBe('match');
+      expect(tree[0][1].type).toBe('match');
+    });
+
+    it('round 2 is tbd before any results', () => {
+      const tree = computeWBTree(teams, bracketSize, []);
+      expect(tree[1]).toHaveLength(1);
+      expect(tree[1][0].type).toBe('tbd');
+    });
+
+    it('round 2 becomes a match node after WB R1 is complete', () => {
+      let t = EliminationTournament.create().start(teams, 4);
+      const [m0, m1] = t.wbMatchesForRound(1);
+      t = t.withMatchResult(m0.id, 1);
+      t = t.withMatchResult(m1.id, 1);
+
+      const wbMatches = t.wbMatches();
+      const tree = computeWBTree(teams, bracketSize, wbMatches);
+      expect(tree[1][0].type).toBe('match');
+    });
+
+    it('slotIndex matches position in round', () => {
+      const tree = computeWBTree(teams, bracketSize, []);
+      expect(tree[0][0].slotIndex).toBe(0);
+      expect(tree[0][1].slotIndex).toBe(1);
+      expect(tree[1][0].slotIndex).toBe(0);
+    });
+  });
+
+  describe('8 teams (bracketSize=8)', () => {
+    const teams = makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+    const bracketSize = 8;
+
+    it('produces 3 rounds', () => {
+      expect(computeWBTree(teams, bracketSize, [])).toHaveLength(3);
+    });
+
+    it('round 1 has 4 nodes all of type match', () => {
+      const r1 = computeWBTree(teams, bracketSize, [])[0];
+      expect(r1).toHaveLength(4);
+      expect(r1.every(n => n.type === 'match')).toBe(true);
+    });
+
+    it('round 2 has 2 tbd nodes before results', () => {
+      const r2 = computeWBTree(teams, bracketSize, [])[1];
+      expect(r2).toHaveLength(2);
+      expect(r2.every(n => n.type === 'tbd')).toBe(true);
+    });
+
+    it('round 3 (final) has 1 tbd node before results', () => {
+      const r3 = computeWBTree(teams, bracketSize, [])[2];
+      expect(r3).toHaveLength(1);
+      expect(r3[0].type).toBe('tbd');
+    });
+  });
+
+  describe('5 teams (bracketSize=8) — byes at end', () => {
+    const teams = makeTeams(['A', 'B', 'C', 'D', 'E']);
+    const bracketSize = 8;
+
+    it('round 1 has 4 nodes: 2 match + 1 bye-advance + 1 empty', () => {
+      const r1 = computeWBTree(teams, bracketSize, [])[0];
+      expect(r1).toHaveLength(4);
+      const types = r1.map(n => n.type);
+      expect(types.filter(t => t === 'match')).toHaveLength(2);
+      expect(types.filter(t => t === 'bye-advance')).toHaveLength(1);
+      expect(types.filter(t => t === 'empty')).toHaveLength(1);
+    });
+
+    it('bye-advance node carries the right team (E at slot 4)', () => {
+      const r1 = computeWBTree(teams, bracketSize, [])[0];
+      const byeNode = r1.find(n => n.type === 'bye-advance');
+      expect(byeNode?.team?.id).toBe('E');
+    });
+
+    it('round 2 has 2 nodes: 1 tbd + 1 bye-advance (E auto-advancing)', () => {
+      const r2 = computeWBTree(teams, bracketSize, [])[1];
+      expect(r2).toHaveLength(2);
+      const types = r2.map(n => n.type);
+      expect(types).toContain('tbd');
+      expect(types).toContain('bye-advance');
+    });
+  });
+
+  describe('3 teams (bracketSize=4)', () => {
+    const [A, B, C] = makeTeams(['A', 'B', 'C']);
+    const teams = [A, B, C];
+    const bracketSize = 4;
+
+    it('round 1 has 2 nodes: 1 match (A vs B) + 1 bye-advance (C)', () => {
+      const r1 = computeWBTree(teams, bracketSize, [])[0];
+      expect(r1).toHaveLength(2);
+      expect(r1[0].type).toBe('match');
+      expect(r1[1].type).toBe('bye-advance');
+      expect(r1[1].team?.id).toBe(C.id);
+    });
+  });
+});
+
+describe('computeCBTree', () => {
+  it('returns empty when fewer than 2 seeds', () => {
+    expect(computeCBTree([], [])).toHaveLength(0);
+    expect(computeCBTree([makeTeam('X')], [])).toHaveLength(0);
+  });
+
+  describe('4 CB seeds (from 8-team WB R1)', () => {
+    const seeds = makeTeams(['L1', 'L2', 'L3', 'L4']);
+
+    it('produces 2 rounds', () => {
+      expect(computeCBTree(seeds, [])).toHaveLength(2);
+    });
+
+    it('round 1 has 2 match nodes', () => {
+      const r1 = computeCBTree(seeds, [])[0];
+      expect(r1).toHaveLength(2);
+      expect(r1.every(n => n.type === 'match')).toBe(true);
+    });
+
+    it('round 2 (CB final) is tbd before results', () => {
+      const r2 = computeCBTree(seeds, [])[1];
+      expect(r2).toHaveLength(1);
+      expect(r2[0].type).toBe('tbd');
+    });
+
+    it('round 2 becomes a match after CB R1 results', () => {
+      let t = EliminationTournament.create().start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4);
+      for (const m of t.wbMatchesForRound(1)) t = t.withMatchResult(m.id, 1);
+
+      const cbSeeds = t.wbR1Losers();
+      const cbR1 = t.cbMatchesForRound(1);
+      let tree = computeCBTree(cbSeeds, cbR1);
+      expect(tree[1][0].type).toBe('tbd');
+
+      for (const m of cbR1) t = t.withMatchResult(m.id, 1);
+      tree = computeCBTree(cbSeeds, t.cbMatches());
+      expect(tree[1][0].type).toBe('match');
+    });
+  });
+
+  describe('2 CB seeds (from 4-team WB R1)', () => {
+    const seeds = makeTeams(['L1', 'L2']);
+
+    it('produces 1 round (CB final only)', () => {
+      const tree = computeCBTree(seeds, []);
+      expect(tree).toHaveLength(1);
+      expect(tree[0]).toHaveLength(1);
+      expect(tree[0][0].type).toBe('match');
+    });
+  });
+});

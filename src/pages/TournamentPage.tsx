@@ -4,20 +4,29 @@ import { storageManager } from '../utils/StorageManager';
 import { useAppState } from '../providers/AppStateProvider';
 import Tournament from '../components/tournament/Tournament';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
-import type { TournamentFormat, TournamentTeam } from '../tournament/types';
+import { EliminationTournament } from '../tournament/EliminationTournament';
+import type { TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
 import './TournamentPage.css';
+
+type AnyTournament = RoundRobinTournament | EliminationTournament;
 
 function TournamentPage(): React.ReactElement {
   const { players, isLoaded, handleAddPlayers, handlePlayerToggle } = useAppState();
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
-  const [tournament, setTournament] = useState<RoundRobinTournament | null>(null);
+  const [tournament, setTournament] = useState<AnyTournament | null>(null);
   const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
 
   useEffect(() => {
     Promise.all([storageManager.loadApp(), storageManager.loadTournament()]).then(
       ([appState, savedTournament]) => {
         if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
-        if (savedTournament) setTournament(RoundRobinTournament.fromState(savedTournament));
+        if (savedTournament) {
+          if (savedTournament.type === 'elimination') {
+            setTournament(EliminationTournament.fromState(savedTournament));
+          } else {
+            setTournament(RoundRobinTournament.fromState(savedTournament));
+          }
+        }
         setIsTournamentLoaded(true);
       },
     );
@@ -28,8 +37,17 @@ function TournamentPage(): React.ReactElement {
     storageManager.saveTournament(tournament?.state() ?? null);
   }, [tournament, isTournamentLoaded]);
 
-  const handleStart = (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat) => {
-    setTournament(RoundRobinTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
+  const handleStart = (
+    teams: TournamentTeam[],
+    numberOfCourts: number,
+    format: TournamentFormat,
+    type: TournamentType,
+  ) => {
+    if (type === 'elimination') {
+      setTournament(EliminationTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
+    } else {
+      setTournament(RoundRobinTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
+    }
   };
 
   const handleMatchResult = (
