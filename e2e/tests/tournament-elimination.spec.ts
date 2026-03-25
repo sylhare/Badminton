@@ -122,4 +122,126 @@ test.describe('Tournament Page - Elimination', () => {
     // Round 2 (final) should show TBD before any results
     await expect(page.locator('[data-testid="bracket-node-tbd"]').first()).toBeVisible();
   });
+
+  test('consolation bracket — 6-player: CB Final shows players after single CB R1 match (odd seeds bug)', async ({ page }) => {
+    // 6 teams → 3 WB R1 matches → 3 losers → cbBracketSize=4 → CB R1 has 1 match + 1 bye-advance
+    // Bug: with odd CB seeds, the bye-advance team was not included when generating CB Final
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectType('elimination');
+    await tournamentPage.startElimination();
+
+    const wbSection = page.getByTestId('wb-section');
+    const cbSection = page.getByTestId('cb-section');
+
+    // Play all 3 WB R1 matches
+    for (let i = 0; i < 3; i++) {
+      await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(i).click();
+      await page.getByTestId('score-modal-confirm').click();
+    }
+
+    // CB section appears: 1 match node (L1 vs L2) + 1 bye-advance (L3)
+    await expect(cbSection).toBeVisible();
+    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(1);
+    await expect(cbSection.locator('[data-testid="bracket-node-bye"]')).toHaveCount(1);
+
+    // CB Final is TBD while CB R1 match hasn't been played
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
+
+    // Play the CB R1 match — CB Final should now show real players (L1 vs L3)
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // CB Final is now a match node, not TBD
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(0);
+    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(2);
+
+    // Play the CB Final
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await expect(page.getByTestId('tournament-standings')).toBeVisible();
+  });
+
+  test('consolation bracket — 8-player: CB Final shows players after CB R1 complete', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectType('elimination');
+    await tournamentPage.startElimination();
+
+    const wbSection = page.getByTestId('wb-section');
+    const cbSection = page.getByTestId('cb-section');
+
+    // Play all 4 WB R1 matches (CB R1 only generates after all WB R1 are done)
+    for (let i = 0; i < 4; i++) {
+      await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(i).click();
+      await page.getByTestId('score-modal-confirm').click();
+    }
+
+    // CB R1 should appear with 2 match nodes (player names, not TBD)
+    await expect(cbSection).toBeVisible();
+    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(2);
+
+    // Play CB R1 match 1 — after this, CB Final is still TBD (only one parent known)
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
+    await page.getByTestId('score-modal-confirm').click();
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
+
+    // Play CB R1 match 2 — CB Final should now show real players
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // CB section: 2 played R1 nodes + 1 CB Final match node (no longer TBD)
+    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(3);
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(0);
+
+    // Play the CB Final
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(2).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // Standings should be visible
+    await expect(page.getByTestId('tournament-standings')).toBeVisible();
+  });
+
+  test('consolation bracket — full play-through (4-player singles)', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectType('elimination');
+    await tournamentPage.startElimination();
+
+    // CB not visible before WB R1 is complete
+    await expect(page.getByTestId('cb-section')).not.toBeVisible();
+
+    const wbSection = page.getByTestId('wb-section');
+
+    // Play WB R1 match 1 — team 1 wins; WB Final still TBD after this
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // Play WB R1 match 2 — team 1 wins
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // Both WB R1 done: CB section should appear, WB Final match should be visible
+    await expect(page.getByTestId('cb-section')).toBeVisible();
+
+    // WB Final is the 3rd team-1 button in the WB section (after R1M1 and R1M2)
+    await expect(wbSection.locator('[data-testid^="bracket-team-1-"]')).toHaveCount(3);
+
+    // CB section contains exactly one match with clickable team buttons
+    const cbSection = page.getByTestId('cb-section');
+    await expect(cbSection.locator('[data-testid^="bracket-team-1-"]')).toHaveCount(1);
+
+    // Play CB Final — team 1 wins
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').first().click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // Play WB Final — team 1 wins
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(2).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // Tournament complete: standings show "Final Results" and medal emoji for 1st
+    await expect(page.getByTestId('standings-subtitle')).toHaveText('Final Results');
+    await expect(page.getByTestId('standing-row-0')).toContainText('🥇');
+  });
 });

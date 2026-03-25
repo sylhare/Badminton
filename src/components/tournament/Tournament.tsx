@@ -7,9 +7,8 @@ import { EliminationTournament } from '../../tournament/EliminationTournament';
 
 import RoundRobinMatches from './round-robin/RoundRobinMatches';
 import RoundRobinSetup from './round-robin/RoundRobinSetup';
-import RoundRobinStandings from './round-robin/RoundRobinStandings';
 import EliminationBracket from './elimination/EliminationBracket';
-import EliminationStandings from './elimination/EliminationStandings';
+import TournamentStandings from './TournamentStandings';
 
 interface TournamentProps {
   tournament: RoundRobinTournament | EliminationTournament | null;
@@ -80,7 +79,11 @@ const Tournament: React.FC<TournamentProps> = ({
     return (
       <div className="tournament-active-layout">
         <EliminationBracket tournament={elim} onMatchResult={onMatchResult} />
-        <EliminationStandings standings={standings} isComplete={isComplete} />
+        <TournamentStandings
+          standings={standings}
+          isComplete={isComplete}
+          subtitle={isComplete ? 'Final Results' : 'In Progress'}
+        />
         <button
           className="button button-primary"
           onClick={onReset}
@@ -102,11 +105,11 @@ const Tournament: React.FC<TournamentProps> = ({
   return (
     <div className="tournament-active-layout">
       <RoundRobinMatches tournament={rr} onMatchResult={onMatchResult} />
-      <RoundRobinStandings
+      <TournamentStandings
         standings={standings}
-        currentRound={completedRounds}
-        totalRounds={totalRounds}
-        isFinal={isFinal}
+        isComplete={isFinal}
+        subtitle={completedRounds > 0 ? `After Round ${completedRounds} / ${totalRounds}` : `Round 0 / ${totalRounds}`}
+        showPoints
       />
       <button
         className="button button-primary"

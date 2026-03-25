@@ -15,6 +15,8 @@ interface BracketConnectorsProps {
   toRound: number;
   /** Total height of the bracket in px */
   totalHeight: number;
+  /** Vertical offset from column top to card area (header height) */
+  headerOffset: number;
 }
 
 /**
@@ -30,6 +32,7 @@ const BracketConnectors: React.FC<BracketConnectorsProps> = ({
   fromRound,
   toRound,
   totalHeight,
+  headerOffset,
 }) => {
   const paths: string[] = [];
 
@@ -78,7 +81,7 @@ const BracketConnectors: React.FC<BracketConnectorsProps> = ({
       className="bracket-connectors"
       style={{
         position: 'absolute',
-        top: 0,
+        top: headerOffset,
         left: COLUMN_WIDTH,
         width: COLUMN_GAP,
         height: totalHeight,

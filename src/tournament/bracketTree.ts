@@ -1,4 +1,5 @@
 import type { TournamentMatch, TournamentTeam } from './types';
+import { nextPowerOf2 } from './EliminationTournament';
 
 export type BracketNodeType = 'match' | 'bye-advance' | 'tbd' | 'empty';
 
@@ -171,7 +172,7 @@ function buildWBNode(
         ((m.team1.id === team1.id && m.team2.id === team2.id) ||
           (m.team1.id === team2.id && m.team2.id === team1.id)),
     );
-    // match should always exist if both teams are real (created at start)
+    if (!match) return { type: 'tbd', slotIndex: position };
     return { type: 'match', match, slotIndex: position };
   }
 
@@ -215,9 +216,7 @@ export function computeCBTree(
 ): BracketNode[][] {
   if (cbSeeds.length < 2) return [];
 
-  // CB bracket size = next power of 2 >= cbSeeds.length
-  let cbBracketSize = 1;
-  while (cbBracketSize < cbSeeds.length) cbBracketSize *= 2;
+  const cbBracketSize = nextPowerOf2(cbSeeds.length);
 
   const totalCBRounds = Math.log2(cbBracketSize);
   const rounds: BracketNode[][] = [];
@@ -258,6 +257,7 @@ function buildCBNode(
         ((m.team1.id === team1.id && m.team2.id === team2.id) ||
           (m.team1.id === team2.id && m.team2.id === team1.id)),
     );
+    if (!match) return { type: 'tbd', slotIndex: position };
     return { type: 'match', match, slotIndex: position };
   }
 

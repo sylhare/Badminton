@@ -18,10 +18,8 @@ export function nextPowerOf2(n: number): number {
   return p;
 }
 
-let _matchCounter = 0;
-
-function makeMatchId(): string {
-  return `elim-match-${Date.now()}-${_matchCounter++}`;
+function makeMatchId(index: number): string {
+  return `elim-match-${Date.now()}-${index}`;
 }
 
 /**
@@ -112,7 +110,7 @@ function generateWBRound1(
     const team2 = teams[2 * pos + 1];
     if (team1 && team2) {
       matches.push({
-        id: makeMatchId(),
+        id: makeMatchId(courtIndex),
         round: 1,
         courtNumber: (courtIndex % numberOfCourts) + 1,
         team1,
@@ -132,7 +130,6 @@ function generateFollowUpMatches(
   numberOfCourts: number,
 ): TournamentMatch[] {
   const newMatches: TournamentMatch[] = [];
-  const existingIds = new Set(allMatches.map(m => m.id));
   const wbMatches = allMatches.filter(m => m.bracket === 'wb');
   const cbMatches = allMatches.filter(m => m.bracket === 'cb');
   const totalWBRounds = Math.log2(bracketSize);
@@ -161,22 +158,20 @@ function generateFollowUpMatches(
     // Generate WB round n+1
     const nextRoundPositions = bracketSize / Math.pow(2, n + 1);
     let courtIndex = allMatches.length + newMatches.length;
+    const wbMatchesSoFar = [...wbMatches, ...newMatches.filter(m => m.bracket === 'wb')];
     for (let pos = 0; pos < nextRoundPositions; pos++) {
-      const teamA = getWBPositionResult(n, 2 * pos, teams, [...wbMatches, ...newMatches.filter(m => m.bracket === 'wb')]);
-      const teamB = getWBPositionResult(n, 2 * pos + 1, teams, [...wbMatches, ...newMatches.filter(m => m.bracket === 'wb')]);
+      const teamA = getWBPositionResult(n, 2 * pos, teams, wbMatchesSoFar);
+      const teamB = getWBPositionResult(n, 2 * pos + 1, teams, wbMatchesSoFar);
       if (teamA !== 'bye' && teamA !== 'tbd' && teamB !== 'bye' && teamB !== 'tbd') {
-        const id = makeMatchId();
-        if (!existingIds.has(id)) {
-          newMatches.push({
-            id,
-            round: n + 1,
-            courtNumber: (courtIndex % numberOfCourts) + 1,
-            team1: teamA,
-            team2: teamB,
-            bracket: 'wb',
-          });
-          courtIndex++;
-        }
+        newMatches.push({
+          id: makeMatchId(courtIndex),
+          round: n + 1,
+          courtNumber: (courtIndex % numberOfCourts) + 1,
+          team1: teamA,
+          team2: teamB,
+          bracket: 'wb',
+        });
+        courtIndex++;
       }
     }
     break; // only generate one round at a time
@@ -193,10 +188,9 @@ function generateFollowUpMatches(
 
     if (losers.length >= 2) {
       let courtIndex = allMatches.length + newMatches.length;
-      // Adjacent pairing for CB R1
       for (let i = 0; i < Math.floor(losers.length / 2); i++) {
         newMatches.push({
-          id: makeMatchId(),
+          id: makeMatchId(courtIndex),
           round: 1,
           courtNumber: (courtIndex % numberOfCourts) + 1,
           team1: losers[2 * i],
@@ -217,25 +211,31 @@ function generateFollowUpMatches(
     if (!cbRoundComplete(n)) break;
     if (cbRoundExists(n + 1)) continue;
 
-    // Generate CB round n+1: winners of CB round n advance
-    const cbRoundNMatches = [...cbMatches, ...newMatches.filter(m => m.bracket === 'cb')]
+    const cbMatchesSoFar = [...cbMatches, ...newMatches.filter(m => m.bracket === 'cb')]
       .filter(m => m.round === n);
-    const winners: TournamentTeam[] = [];
-    for (const match of cbRoundNMatches) {
-      if (match.winner !== undefined) {
-        winners.push(match.winner === 1 ? match.team1 : match.team2);
+
+    const advancers: TournamentTeam[] = cbMatchesSoFar
+      .filter(m => m.winner !== undefined)
+      .map(m => m.winner === 1 ? m.team1 : m.team2);
+
+    // Include CB R1 bye-advance teams: WB R1 losers that had no CB R1 match partner
+    if (n === 1) {
+      const cbR1TeamIds = new Set(cbMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
+      for (let pos = 0; pos < bracketSize / 2; pos++) {
+        const loser = getWBR1Loser(pos, teams, wbMatches);
+        if (loser && !cbR1TeamIds.has(loser.id)) advancers.push(loser);
       }
     }
 
-    if (winners.length >= 2) {
+    if (advancers.length >= 2) {
       let courtIndex = allMatches.length + newMatches.length;
-      for (let i = 0; i < Math.floor(winners.length / 2); i++) {
+      for (let i = 0; i < Math.floor(advancers.length / 2); i++) {
         newMatches.push({
-          id: makeMatchId(),
+          id: makeMatchId(courtIndex),
           round: n + 1,
           courtNumber: (courtIndex % numberOfCourts) + 1,
-          team1: winners[2 * i],
-          team2: winners[2 * i + 1],
+          team1: advancers[2 * i],
+          team2: advancers[2 * i + 1],
           bracket: 'cb',
         });
         courtIndex++;
@@ -297,15 +297,10 @@ export class EliminationTournament extends Tournament {
       numberOfCourts,
     );
     const allMatches = [...updatedMatches, ...followUp];
-    const updated = new EliminationTournament({
-      ...this._state,
-      phase: this.isComplete() ? 'completed' : 'active',
-      matches: allMatches,
-    });
-    // Re-check completion on the updated instance (isComplete uses current matches)
+    const updated = new EliminationTournament({ ...this._state, matches: allMatches });
     return (updated.isComplete()
       ? new EliminationTournament({ ...updated._state, phase: 'completed' })
-      : updated) as unknown as this;
+      : new EliminationTournament({ ...updated._state, phase: 'active' })) as unknown as this;
   }
 
   validate(teams: TournamentTeam[], format: TournamentFormat): string | null {
@@ -408,10 +403,6 @@ export class EliminationTournament extends Tournament {
     const { matches } = this._state;
     if (matches.length === 0) return false;
     return matches.every(m => m.winner !== undefined);
-  }
-
-  wbTotalRounds(): number {
-    return this.totalRounds();
   }
 
   cbTotalRounds(): number {

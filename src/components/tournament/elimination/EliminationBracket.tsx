@@ -5,7 +5,7 @@ import { EliminationTournament } from '../../../tournament/EliminationTournament
 import { computeWBTree, computeCBTree, roundLabel } from '../../../tournament/bracketTree';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 
-import BracketColumn, { CARD_HEIGHT, COLUMN_GAP, COLUMN_WIDTH } from './BracketColumn';
+import BracketColumn, { CARD_HEIGHT, COLUMN_GAP, COLUMN_WIDTH, HEADER_HEIGHT } from './BracketColumn';
 import BracketConnectors from './BracketConnectors';
 
 import './EliminationBracket.css';
@@ -31,11 +31,9 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
   const totalWBRounds = wbTree.length;
   const totalCBRounds = cbTree.length;
 
-  // Height for WB bracket: bracketSize slots × CARD_HEIGHT
-  const wbHeight = bracketSize * CARD_HEIGHT + 40; // +40 for header
-  // Height for CB bracket
+  const wbHeight = (bracketSize / 2) * CARD_HEIGHT + HEADER_HEIGHT;
   const cbBracketSize = cbSeeds.length > 0 ? Math.pow(2, Math.ceil(Math.log2(cbSeeds.length))) : 0;
-  const cbHeight = cbBracketSize > 0 ? cbBracketSize * CARD_HEIGHT + 40 : 0;
+  const cbHeight = cbBracketSize > 0 ? (cbBracketSize / 2) * CARD_HEIGHT + HEADER_HEIGHT : 0;
 
   const handleTeamClick = (match: TournamentMatch, teamNumber: 1 | 2) => {
     if (match.winner === teamNumber) {
@@ -74,8 +72,6 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
           {wbTree.map((nodes, roundIdx) => {
             const round = roundIdx + 1;
             const label = roundLabel(round, totalWBRounds);
-            // Compute column top offset in the absolute container
-            const colTop = 40; // below header area
             return (
               <div
                 key={round}
@@ -89,7 +85,6 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
                 <BracketColumn
                   nodes={nodes}
                   round={round}
-                  totalRounds={totalWBRounds}
                   label={label}
                   onTeamClick={handleTeamClick}
                 />
@@ -99,7 +94,8 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
                     toNodes={wbTree[roundIdx + 1]}
                     fromRound={round}
                     toRound={round + 1}
-                    totalHeight={wbHeight - colTop}
+                    totalHeight={wbHeight - HEADER_HEIGHT}
+                    headerOffset={HEADER_HEIGHT}
                   />
                 )}
               </div>
@@ -136,7 +132,6 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
                   <BracketColumn
                     nodes={nodes}
                     round={round}
-                    totalRounds={totalCBRounds}
                     label={label}
                     onTeamClick={handleTeamClick}
                   />
@@ -146,7 +141,8 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
                       toNodes={cbTree[roundIdx + 1]}
                       fromRound={round}
                       toRound={round + 1}
-                      totalHeight={cbHeight - 40}
+                      totalHeight={cbHeight - HEADER_HEIGHT}
+                      headerOffset={HEADER_HEIGHT}
                     />
                   )}
                 </div>

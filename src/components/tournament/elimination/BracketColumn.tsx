@@ -5,8 +5,12 @@ import type { TournamentMatch } from '../../../tournament/types';
 
 import BracketMatchNode from './BracketMatchNode';
 
-/** Height of one card/slot in px */
+/** Slot height in px — used for spacing and connector math */
 export const CARD_HEIGHT = 72;
+/** Visual card height in px — smaller than CARD_HEIGHT to create gaps between cards */
+const CARD_RENDER_HEIGHT = 64;
+/** Height of the round label header in px */
+export const HEADER_HEIGHT = 40;
 /** Gap between columns in px */
 export const COLUMN_GAP = 48;
 /** Width of one column in px */
@@ -16,8 +20,6 @@ interface BracketColumnProps {
   nodes: BracketNode[];
   /** 1-based round number */
   round: number;
-  /** Total rounds in this bracket */
-  totalRounds: number;
   /** Round header label (e.g. "Semi Final") */
   label: string;
   onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
@@ -44,7 +46,6 @@ export function columnHeight(bracketSize: number): number {
 const BracketColumn: React.FC<BracketColumnProps> = ({
   nodes,
   round,
-  totalRounds: _totalRounds,
   label,
   onTeamClick,
 }) => {
@@ -59,13 +60,13 @@ const BracketColumn: React.FC<BracketColumnProps> = ({
             key={node.slotIndex}
             style={{
               position: 'absolute',
-              top: nodeTop(node.slotIndex, round),
+              top: nodeTop(node.slotIndex, round) + (CARD_HEIGHT - CARD_RENDER_HEIGHT) / 2,
               width: COLUMN_WIDTH,
             }}
           >
             <BracketMatchNode
               node={node}
-              cardHeight={CARD_HEIGHT}
+              cardHeight={CARD_RENDER_HEIGHT}
               onTeamClick={onTeamClick}
             />
           </div>
