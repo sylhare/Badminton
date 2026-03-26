@@ -165,5 +165,17 @@ test.describe('Tournament Page - Elimination', () => {
     await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(1);
     await expect(cbSection.locator('[data-testid="bracket-node-bye"]')).toHaveCount(1);
 
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
+
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(0);
+    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(2);
+
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await expect(page.getByTestId('tournament-standings')).toBeVisible();
   });
 });

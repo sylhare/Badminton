@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { BracketNode } from '../../../tournament/bracketTree';
-import type { TournamentMatch } from '../../../tournament/types';
+import type { TournamentMatch, TournamentTeam } from '../../../tournament/types';
 
 interface BracketMatchNodeProps {
   node: BracketNode;
@@ -10,9 +10,14 @@ interface BracketMatchNodeProps {
   onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
 }
 
-function teamName(match: TournamentMatch, side: 1 | 2): string {
-  const team = side === 1 ? match.team1 : match.team2;
+function formatTeamName(team: TournamentTeam): string {
   return team.players.map(p => p.name).join(' & ');
+}
+
+function teamClass(winner: 1 | 2 | undefined, teamNumber: 1 | 2): string {
+  if (winner === teamNumber) return 'bracket-team bracket-team-winner';
+  if (winner !== undefined) return 'bracket-team bracket-team-loser';
+  return 'bracket-team';
 }
 
 const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHeight, onTeamClick }) => {
@@ -32,7 +37,7 @@ const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHeight, o
   }
 
   if (node.type === 'bye-advance') {
-    const name = node.team ? node.team.players.map(p => p.name).join(' & ') : 'BYE';
+    const name = node.team ? formatTeamName(node.team) : 'BYE';
     return (
       <div className="bracket-node bracket-node-bye" style={{ height: cardHeight }} data-testid="bracket-node-bye">
         <div className="bracket-team bracket-team-winner" style={{ height: halfH }}>{name}</div>
@@ -44,32 +49,20 @@ const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHeight, o
   const match = node.match!;
   const w = match.winner;
 
-  function teamClass(teamNumber: 1 | 2): string {
-    if (w === teamNumber) return 'bracket-team bracket-team-winner';
-    if (w !== undefined) return 'bracket-team bracket-team-loser';
-    return 'bracket-team';
-  }
-
   return (
     <div className="bracket-node bracket-node-match" style={{ height: cardHeight }} data-testid="bracket-node-match">
-      <button
-        className={teamClass(1)}
-        style={{ height: halfH }}
-        onClick={() => onTeamClick(match, 1)}
-        data-testid={`bracket-team-1-${match.id}`}
-      >
-        {teamName(match, 1)}
-        {w === 1 && <span className="bracket-winner-badge">✓</span>}
-      </button>
-      <button
-        className={teamClass(2)}
-        style={{ height: halfH }}
-        onClick={() => onTeamClick(match, 2)}
-        data-testid={`bracket-team-2-${match.id}`}
-      >
-        {teamName(match, 2)}
-        {w === 2 && <span className="bracket-winner-badge">✓</span>}
-      </button>
+      {([1, 2] as const).map(side => (
+        <button
+          key={side}
+          className={teamClass(w, side)}
+          style={{ height: halfH }}
+          onClick={() => onTeamClick(match, side)}
+          data-testid={`bracket-team-${side}-${match.id}`}
+        >
+          {formatTeamName(side === 1 ? match.team1 : match.team2)}
+          {w === side && <span className="bracket-winner-badge">✓</span>}
+        </button>
+      ))}
     </div>
   );
 };

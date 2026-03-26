@@ -22,45 +22,47 @@ function makeMatchId(index: number): string {
   return `elim-match-${Date.now()}-${index}`;
 }
 
-/**
- * Returns the team that wins a given WB position (round, positionInRound),
- * or 'bye' if the slot produces no team (empty), or 'tbd' if undecided.
- */
-function getWBPositionResult(
+function makeMatch(
+  bracket: 'wb' | 'cb',
   round: number,
-  position: number,
-  teams: TournamentTeam[],
-  wbMatches: TournamentMatch[],
-): TournamentTeam | 'bye' | 'tbd' {
-  if (round === 1) {
-    const slot1 = 2 * position;
-    const slot2 = 2 * position + 1;
-    const team1 = teams[slot1];
-    const team2 = teams[slot2];
+  team1: TournamentTeam,
+  team2: TournamentTeam,
+  courtIndex: number,
+  numberOfCourts: number,
+): TournamentMatch {
+  return {
+    id: makeMatchId(courtIndex),
+    round,
+    courtNumber: (courtIndex % numberOfCourts) + 1,
+    team1,
+    team2,
+    bracket,
+  };
+}
 
-    if (!team1 && !team2) return 'bye';
-    if (!team1) return team2;
-    if (!team2) return team1;
+function roundExists(matches: TournamentMatch[], round: number): boolean {
+  return matches.some(m => m.round === round);
+}
 
-    const match = wbMatches.find(
-      m =>
-        m.round === 1 &&
-        ((m.team1.id === team1.id && m.team2.id === team2.id) ||
-          (m.team1.id === team2.id && m.team2.id === team1.id)),
-    );
-    if (!match || match.winner === undefined) return 'tbd';
-    return match.winner === 1 ? match.team1 : match.team2;
-  }
+function roundComplete(matches: TournamentMatch[], round: number): boolean {
+  const roundMatches = matches.filter(m => m.round === round);
+  return roundMatches.length > 0 && roundMatches.every(m => m.winner !== undefined);
+}
 
-  const resultA = getWBPositionResult(round - 1, 2 * position, teams, wbMatches);
-  const resultB = getWBPositionResult(round - 1, 2 * position + 1, teams, wbMatches);
+type PositionResult = TournamentTeam | 'bye' | 'tbd';
 
+function resolveChildNode(
+  round: number,
+  resultA: PositionResult,
+  resultB: PositionResult,
+  matches: TournamentMatch[],
+): PositionResult {
   if (resultA === 'bye' && resultB === 'bye') return 'bye';
   if (resultA === 'bye') return resultB;
   if (resultB === 'bye') return resultA;
   if (resultA === 'tbd' || resultB === 'tbd') return 'tbd';
 
-  const match = wbMatches.find(
+  const match = matches.find(
     m =>
       m.round === round &&
       ((m.team1.id === (resultA as TournamentTeam).id &&
@@ -73,6 +75,39 @@ function getWBPositionResult(
 }
 
 /**
+ * Returns the team that wins a given bracket position (round, positionInRound),
+ * or 'bye' if the slot produces no team (empty), or 'tbd' if undecided.
+ */
+export function resolvePosition(
+  round: number,
+  position: number,
+  seeds: TournamentTeam[],
+  matches: TournamentMatch[],
+): PositionResult {
+  if (round === 1) {
+    const team1 = seeds[2 * position];
+    const team2 = seeds[2 * position + 1];
+
+    if (!team1 && !team2) return 'bye';
+    if (!team1) return team2;
+    if (!team2) return team1;
+
+    const match = matches.find(
+      m =>
+        m.round === 1 &&
+        ((m.team1.id === team1.id && m.team2.id === team2.id) ||
+          (m.team1.id === team2.id && m.team2.id === team1.id)),
+    );
+    if (!match || match.winner === undefined) return 'tbd';
+    return match.winner === 1 ? match.team1 : match.team2;
+  }
+
+  const resultA = resolvePosition(round - 1, 2 * position, seeds, matches);
+  const resultB = resolvePosition(round - 1, 2 * position + 1, seeds, matches);
+  return resolveChildNode(round, resultA, resultB, matches);
+}
+
+/**
  * Returns the loser of a WB R1 position, or null if no match / no result yet.
  */
 function getWBR1Loser(
@@ -80,10 +115,8 @@ function getWBR1Loser(
   teams: TournamentTeam[],
   wbMatches: TournamentMatch[],
 ): TournamentTeam | null {
-  const slot1 = 2 * position;
-  const slot2 = 2 * position + 1;
-  const team1 = teams[slot1];
-  const team2 = teams[slot2];
+  const team1 = teams[2 * position];
+  const team2 = teams[2 * position + 1];
   if (!team1 || !team2) return null;
   const match = wbMatches.find(
     m =>
@@ -106,14 +139,7 @@ function generateWBRound1(
     const team1 = teams[2 * pos];
     const team2 = teams[2 * pos + 1];
     if (team1 && team2) {
-      matches.push({
-        id: makeMatchId(courtIndex),
-        round: 1,
-        courtNumber: (courtIndex % numberOfCourts) + 1,
-        team1,
-        team2,
-        bracket: 'wb',
-      });
+      matches.push(makeMatch('wb', 1, team1, team2, courtIndex, numberOfCourts));
       courtIndex++;
     }
   }
@@ -138,50 +164,27 @@ function generateFollowUpMatches(
   const cbMatches = allMatches.filter(m => m.bracket === 'cb');
   const totalWBRounds = Math.log2(bracketSize);
 
-  function wbRoundExists(round: number): boolean {
-    return wbMatches.some(m => m.round === round);
-  }
-  function cbRoundExists(round: number): boolean {
-    return cbMatches.some(m => m.round === round);
-  }
-  function wbRoundComplete(round: number): boolean {
-    const roundMatches = wbMatches.filter(m => m.round === round);
-    return roundMatches.length > 0 && roundMatches.every(m => m.winner !== undefined);
-  }
-  function cbRoundComplete(round: number): boolean {
-    const roundMatches = cbMatches.filter(m => m.round === round);
-    return roundMatches.length > 0 && roundMatches.every(m => m.winner !== undefined);
-  }
-
   for (let n = 1; n < totalWBRounds; n++) {
-    if (!wbRoundComplete(n)) break;
-    if (wbRoundExists(n + 1)) continue;
+    if (!roundComplete(wbMatches, n)) break;
+    if (roundExists(wbMatches, n + 1)) continue;
 
     const nextRoundPositions = bracketSize / Math.pow(2, n + 1);
     let courtIndex = allMatches.length + newMatches.length;
     const wbMatchesSoFar = [...wbMatches, ...newMatches.filter(m => m.bracket === 'wb')];
     for (let pos = 0; pos < nextRoundPositions; pos++) {
-      const teamA = getWBPositionResult(n, 2 * pos, teams, wbMatchesSoFar);
-      const teamB = getWBPositionResult(n, 2 * pos + 1, teams, wbMatchesSoFar);
+      const teamA = resolvePosition(n, 2 * pos, teams, wbMatchesSoFar);
+      const teamB = resolvePosition(n, 2 * pos + 1, teams, wbMatchesSoFar);
       if (teamA !== 'bye' && teamA !== 'tbd' && teamB !== 'bye' && teamB !== 'tbd') {
-        newMatches.push({
-          id: makeMatchId(courtIndex),
-          round: n + 1,
-          courtNumber: (courtIndex % numberOfCourts) + 1,
-          team1: teamA,
-          team2: teamB,
-          bracket: 'wb',
-        });
+        newMatches.push(makeMatch('wb', n + 1, teamA, teamB, courtIndex, numberOfCourts));
         courtIndex++;
       }
     }
     break;
   }
 
-  if (wbRoundComplete(1) && !cbRoundExists(1)) {
-    const wbR1Positions = bracketSize / 2;
+  if (roundComplete(wbMatches, 1) && !roundExists(cbMatches, 1)) {
     const losers: TournamentTeam[] = [];
-    for (let pos = 0; pos < wbR1Positions; pos++) {
+    for (let pos = 0; pos < bracketSize / 2; pos++) {
       const loser = getWBR1Loser(pos, teams, wbMatches);
       if (loser) losers.push(loser);
     }
@@ -189,14 +192,7 @@ function generateFollowUpMatches(
     if (losers.length >= 2) {
       let courtIndex = allMatches.length + newMatches.length;
       for (let i = 0; i < Math.floor(losers.length / 2); i++) {
-        newMatches.push({
-          id: makeMatchId(courtIndex),
-          round: 1,
-          courtNumber: (courtIndex % numberOfCourts) + 1,
-          team1: losers[2 * i],
-          team2: losers[2 * i + 1],
-          bracket: 'cb',
-        });
+        newMatches.push(makeMatch('cb', 1, losers[2 * i], losers[2 * i + 1], courtIndex, numberOfCourts));
         courtIndex++;
       }
     }
@@ -206,8 +202,8 @@ function generateFollowUpMatches(
   const maxCBRound = cbRounds.length > 0 ? Math.max(...cbRounds) : 0;
 
   for (let n = 1; n <= maxCBRound; n++) {
-    if (!cbRoundComplete(n)) break;
-    if (cbRoundExists(n + 1)) continue;
+    if (!roundComplete(cbMatches, n)) break;
+    if (roundExists(cbMatches, n + 1)) continue;
 
     const cbMatchesSoFar = [...cbMatches, ...newMatches.filter(m => m.bracket === 'cb')]
       .filter(m => m.round === n);
@@ -224,7 +220,7 @@ function generateFollowUpMatches(
       }
     }
 
-    if (advancers.length < 2 && n + 1 < totalWBRounds && wbRoundComplete(n + 1)) {
+    if (advancers.length < 2 && n + 1 < totalWBRounds && roundComplete(wbMatches, n + 1)) {
       for (const m of wbMatches.filter(m => m.round === n + 1 && m.winner !== undefined)) {
         advancers.push(m.winner === 1 ? m.team2 : m.team1);
       }
@@ -233,14 +229,7 @@ function generateFollowUpMatches(
     if (advancers.length >= 2) {
       let courtIndex = allMatches.length + newMatches.length;
       for (let i = 0; i < Math.floor(advancers.length / 2); i++) {
-        newMatches.push({
-          id: makeMatchId(courtIndex),
-          round: n + 1,
-          courtNumber: (courtIndex % numberOfCourts) + 1,
-          team1: advancers[2 * i],
-          team2: advancers[2 * i + 1],
-          bracket: 'cb',
-        });
+        newMatches.push(makeMatch('cb', n + 1, advancers[2 * i], advancers[2 * i + 1], courtIndex, numberOfCourts));
         courtIndex++;
       }
     }
@@ -299,11 +288,9 @@ export class EliminationTournament extends Tournament {
       updatedMatches,
       numberOfCourts,
     );
-    const allMatches = [...updatedMatches, ...followUp];
-    const updated = new EliminationTournament({ ...this._state, matches: allMatches });
-    return (updated.isComplete()
-      ? new EliminationTournament({ ...updated._state, phase: 'completed' })
-      : new EliminationTournament({ ...updated._state, phase: 'active' })) as unknown as this;
+    const updated = new EliminationTournament({ ...this._state, matches: [...updatedMatches, ...followUp] });
+    const phase = updated.isComplete() ? 'completed' : 'active';
+    return new EliminationTournament({ ...updated._state, phase }) as unknown as this;
   }
 
   validate(teams: TournamentTeam[], format: TournamentFormat): string | null {
@@ -359,14 +346,13 @@ export class EliminationTournament extends Tournament {
   }
 
   completedRounds(): number {
-    const wbMatches = this._state.matches.filter(m => m.bracket === 'wb');
+    const wbMatches = this.wbMatches();
     if (wbMatches.length === 0) return 0;
 
     const roundNums = Array.from(new Set(wbMatches.map(m => m.round))).sort((a, b) => a - b);
     let completed = 0;
     for (const r of roundNums) {
-      const roundMatches = wbMatches.filter(m => m.round === r);
-      if (roundMatches.every(m => m.winner !== undefined)) {
+      if (roundComplete(wbMatches, r)) {
         completed = r;
       } else {
         break;
@@ -385,20 +371,26 @@ export class EliminationTournament extends Tournament {
     return this._state.bracketSize ?? nextPowerOf2(this._state.teams.length);
   }
 
+  private matchesFor(bracket: 'wb' | 'cb', round?: number): TournamentMatch[] {
+    return this._state.matches.filter(
+      m => m.bracket === bracket && (round === undefined || m.round === round),
+    );
+  }
+
   wbMatchesForRound(round: number): TournamentMatch[] {
-    return this._state.matches.filter(m => m.bracket === 'wb' && m.round === round);
+    return this.matchesFor('wb', round);
   }
 
   cbMatchesForRound(round: number): TournamentMatch[] {
-    return this._state.matches.filter(m => m.bracket === 'cb' && m.round === round);
+    return this.matchesFor('cb', round);
   }
 
   wbMatches(): TournamentMatch[] {
-    return this._state.matches.filter(m => m.bracket === 'wb');
+    return this.matchesFor('wb');
   }
 
   cbMatches(): TournamentMatch[] {
-    return this._state.matches.filter(m => m.bracket === 'cb');
+    return this.matchesFor('cb');
   }
 
   isComplete(): boolean {

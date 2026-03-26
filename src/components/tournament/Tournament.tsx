@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
+import { Tournament as TournamentBase } from '../../tournament/Tournament';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../../tournament/EliminationTournament';
 
@@ -24,6 +25,15 @@ interface TournamentProps {
   onReset: () => void;
   onAddPlayers: (names: string[]) => void;
   onTogglePlayer: (id: string) => void;
+}
+
+function standingsSubtitle(t: TournamentBase, isComplete: boolean): string {
+  if (t.state().type === 'elimination') {
+    return isComplete ? 'Final Results' : 'In Progress';
+  }
+  const done = t.completedRounds();
+  const total = t.totalRounds();
+  return done > 0 ? `After Round ${done} / ${total}` : `Round 0 / ${total}`;
 }
 
 const Tournament: React.FC<TournamentProps> = ({
@@ -71,44 +81,19 @@ const Tournament: React.FC<TournamentProps> = ({
     );
   }
 
-  if (tournament.state().type === 'elimination') {
-    const elim = tournament as EliminationTournament;
-    const standings = elim.calculateStandings();
-    const isComplete = elim.isComplete();
-
-    return (
-      <div className="tournament-active-layout">
-        <EliminationBracket tournament={elim} onMatchResult={onMatchResult} />
-        <TournamentStandings
-          standings={standings}
-          isComplete={isComplete}
-          subtitle={isComplete ? 'Final Results' : 'In Progress'}
-        />
-        <button
-          className="button button-primary"
-          onClick={onReset}
-          data-testid="new-tournament-button"
-        >
-          Start a New Tournament
-        </button>
-      </div>
-    );
-  }
-
-  const rr = tournament as RoundRobinTournament;
-  const standings = rr.calculateStandings();
-  const completedRounds = rr.completedRounds();
-  const totalRounds = rr.totalRounds();
-  const isFinal = totalRounds > 0 && completedRounds === totalRounds;
+  const isComplete = tournament.isComplete();
 
   return (
     <div className="tournament-active-layout">
-      <RoundRobinMatches tournament={rr} onMatchResult={onMatchResult} />
+      {tournament.state().type === 'elimination'
+        ? <EliminationBracket tournament={tournament as EliminationTournament} onMatchResult={onMatchResult} />
+        : <RoundRobinMatches tournament={tournament as RoundRobinTournament} onMatchResult={onMatchResult} />
+      }
       <TournamentStandings
-        standings={standings}
-        isComplete={isFinal}
-        subtitle={completedRounds > 0 ? `After Round ${completedRounds} / ${totalRounds}` : `Round 0 / ${totalRounds}`}
-        showPoints
+        standings={tournament.calculateStandings()}
+        isComplete={isComplete}
+        subtitle={standingsSubtitle(tournament, isComplete)}
+        showPoints={tournament.state().type !== 'elimination'}
       />
       <button
         className="button button-primary"

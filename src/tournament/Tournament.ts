@@ -52,5 +52,6 @@ export abstract class Tournament {
   abstract calculateStandings(): TournamentStandingRow[];
   abstract completedRounds(): number;
   abstract totalRounds(): number;
+  abstract isComplete(): boolean;
   abstract validate(teams: TournamentTeam[], format: TournamentFormat): string | null;
 }

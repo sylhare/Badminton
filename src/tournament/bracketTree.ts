@@ -1,5 +1,5 @@
 import type { TournamentMatch, TournamentTeam } from './types';
-import { nextPowerOf2 } from './EliminationTournament';
+import { nextPowerOf2, resolvePosition } from './EliminationTournament';
 
 export type BracketNodeType = 'match' | 'bye-advance' | 'tbd' | 'empty';
 
@@ -15,69 +15,14 @@ export interface BracketNode {
 
 /**
  * Returns the round label based on distance from the final.
- * dist 0 → "Final", dist 1 → "Semi Final", dist 2 → "4th of Final", etc.
+ * roundsFromFinal 0 → "Final", 1 → "Semi Final", 2 → "4th of Final", etc.
  */
 export function roundLabel(roundNumber: number, totalRounds: number): string {
-  const dist = totalRounds - roundNumber;
-  if (dist === 0) return 'Final';
-  if (dist === 1) return 'Semi Final';
-  const n = Math.pow(2, dist);
+  const roundsFromFinal = totalRounds - roundNumber;
+  if (roundsFromFinal === 0) return 'Final';
+  if (roundsFromFinal === 1) return 'Semi Final';
+  const n = Math.pow(2, roundsFromFinal);
   return `${n}th of Final`;
-}
-
-type PositionResult = TournamentTeam | 'bye' | 'tbd';
-
-function resolvePosition(
-  round: number,
-  position: number,
-  seeds: TournamentTeam[],
-  matches: TournamentMatch[],
-): PositionResult {
-  if (round === 1) {
-    const team1 = seeds[2 * position];
-    const team2 = seeds[2 * position + 1];
-
-    if (!team1 && !team2) return 'bye';
-    if (!team1) return team2;
-    if (!team2) return team1;
-
-    const match = matches.find(
-      m =>
-        m.round === 1 &&
-        ((m.team1.id === team1.id && m.team2.id === team2.id) ||
-          (m.team1.id === team2.id && m.team2.id === team1.id)),
-    );
-    if (!match || match.winner === undefined) return 'tbd';
-    return match.winner === 1 ? match.team1 : match.team2;
-  }
-
-  const resultA = resolvePosition(round - 1, 2 * position, seeds, matches);
-  const resultB = resolvePosition(round - 1, 2 * position + 1, seeds, matches);
-
-  return resolveChildNode(round, resultA, resultB, matches);
-}
-
-function resolveChildNode(
-  round: number,
-  resultA: PositionResult,
-  resultB: PositionResult,
-  matches: TournamentMatch[],
-): PositionResult {
-  if (resultA === 'bye' && resultB === 'bye') return 'bye';
-  if (resultA === 'bye') return resultB;
-  if (resultB === 'bye') return resultA;
-  if (resultA === 'tbd' || resultB === 'tbd') return 'tbd';
-
-  const match = matches.find(
-    m =>
-      m.round === round &&
-      ((m.team1.id === (resultA as TournamentTeam).id &&
-        m.team2.id === (resultB as TournamentTeam).id) ||
-        (m.team1.id === (resultB as TournamentTeam).id &&
-          m.team2.id === (resultA as TournamentTeam).id)),
-  );
-  if (!match || match.winner === undefined) return 'tbd';
-  return match.winner === 1 ? match.team1 : match.team2;
 }
 
 /**
