@@ -7,7 +7,7 @@ import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../../tournament/EliminationTournament';
 
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
-import { TournamentSetup } from './round-robin/TournamentSetup';
+import { TournamentSetup } from './TournamentSetup';
 import { EliminationBracket } from './elimination/EliminationBracket';
 import { TournamentStandings } from './TournamentStandings';
 

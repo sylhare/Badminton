@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { TournamentStandingRow } from '../../tournament/types';
-import { formatTeamName } from '../../tournament/teamUtils';
+import { formatTeamName } from '../../tournament/types';
 
 interface TournamentStandingsProps {
   standings: TournamentStandingRow[];

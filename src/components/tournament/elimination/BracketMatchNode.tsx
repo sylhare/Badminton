@@ -2,7 +2,7 @@ import React from 'react';
 
 import type { BracketNode } from '../../../tournament/bracketTree';
 import type { TournamentMatch } from '../../../tournament/types';
-import { formatTeamName } from '../../../tournament/teamUtils';
+import { formatTeamName } from '../../../tournament/types';
 
 interface BracketMatchNodeProps {
   node: BracketNode;

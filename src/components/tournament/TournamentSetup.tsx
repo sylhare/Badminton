@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 
-import type { Player } from '../../../types';
-import type { TournamentFormat, TournamentTeam } from '../../../tournament/types';
-import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
-import { formatTeamName } from '../../../tournament/teamUtils';
-import ManualPlayerEntry from '../../players/ManualPlayerEntry';
+import type { Player } from '../../types';
+import type { TournamentFormat, TournamentTeam } from '../../tournament/types';
+import { formatTeamName } from '../../tournament/types';
+import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
+import ManualPlayerEntry from '../players/ManualPlayerEntry';
 
 interface TournamentSetupProps {
   initialPlayers: Player[];

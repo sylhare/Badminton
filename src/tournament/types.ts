@@ -39,6 +39,10 @@ export interface TournamentState {
   bracketSize?: number;
 }
 
+export function formatTeamName(team: TournamentTeam): string {
+  return team.players.map(p => p.name).join(' & ');
+}
+
 export const DEFAULT_TOURNAMENT_STATE: TournamentState = {
   phase: 'setup',
   format: 'doubles',
