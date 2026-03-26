@@ -207,29 +207,47 @@ function buildWBNode(
 /**
  * Computes a round-by-round bracket tree for the Consolation Bracket.
  *
- * @param cbSeeds   WB R1 losers in seeding order
- * @param cbMatches All CB matches (bracket === 'cb')
+ * @param cbSeeds     WB R1 losers in seeding order
+ * @param cbMatches   All CB matches (bracket === 'cb')
+ * @param bracketSize WB bracket size (power of 2); used to determine extra CB rounds
+ *                    when the WB has more rounds than the CB seed depth
+ *                    (e.g. 5-player: 2 WB R1 losers → 1 seed round, but WB has 3 rounds
+ *                    so CB also needs a 2nd round fed by the WB Semi-Final loser)
  */
 export function computeCBTree(
   cbSeeds: TournamentTeam[],
   cbMatches: TournamentMatch[],
+  bracketSize: number,
 ): BracketNode[][] {
   if (cbSeeds.length < 2) return [];
 
   const cbBracketSize = nextPowerOf2(cbSeeds.length);
+  const cbSeedRounds = Math.log2(cbBracketSize);
+  // WB rounds that produce CB-eligible losers (all except the WB Final round)
+  const wbLoserRounds = Math.log2(bracketSize) - 1;
+  const totalCBRounds = Math.max(cbSeedRounds, wbLoserRounds);
 
-  const totalCBRounds = Math.log2(cbBracketSize);
   const rounds: BracketNode[][] = [];
 
   for (let r = 1; r <= totalCBRounds; r++) {
-    const positionsInRound = cbBracketSize / Math.pow(2, r);
-    const round: BracketNode[] = [];
-
-    for (let pos = 0; pos < positionsInRound; pos++) {
-      round.push(buildCBNode(r, pos, cbSeeds, cbMatches));
+    if (r <= cbSeedRounds) {
+      // Standard seed-based round (recursive resolution from cbSeeds)
+      const positionsInRound = cbBracketSize / Math.pow(2, r);
+      const round: BracketNode[] = [];
+      for (let pos = 0; pos < positionsInRound; pos++) {
+        round.push(buildCBNode(r, pos, cbSeeds, cbMatches));
+      }
+      rounds.push(round);
+    } else {
+      // Extra round: teams enter from CB survivors + WB losers dropping in.
+      // Look up actual cbMatches for this round; show TBD if not yet generated.
+      const roundMatches = cbMatches.filter(m => m.round === r);
+      if (roundMatches.length > 0) {
+        rounds.push(roundMatches.map((m, i) => ({ type: 'match' as const, match: m, slotIndex: i })));
+      } else {
+        rounds.push([{ type: 'tbd' as const, slotIndex: 0 }]);
+      }
     }
-
-    rounds.push(round);
   }
 
   return rounds;

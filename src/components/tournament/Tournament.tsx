@@ -42,7 +42,7 @@ const Tournament: React.FC<TournamentProps> = ({
     return (
       <div className="tournament-setup-wrapper">
         <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
-          <label className="setup-label">Tournament Type</label>
+          <h3>Mode</h3>
           <div className="format-pills">
             <button
               className={`format-pill${selectedType === 'round-robin' ? ' format-pill-active' : ''}`}

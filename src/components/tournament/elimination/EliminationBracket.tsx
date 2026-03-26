@@ -26,14 +26,22 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
   const cbMatches = tournament.cbMatches();
 
   const wbTree = computeWBTree(teams, bracketSize, wbMatches);
-  const cbTree = computeCBTree(cbSeeds, cbMatches);
+  const cbTree = computeCBTree(cbSeeds, cbMatches, bracketSize);
 
   const totalWBRounds = wbTree.length;
   const totalCBRounds = cbTree.length;
 
   const wbHeight = (bracketSize / 2) * CARD_HEIGHT + HEADER_HEIGHT;
   const cbBracketSize = cbSeeds.length > 0 ? Math.pow(2, Math.ceil(Math.log2(cbSeeds.length))) : 0;
-  const cbHeight = cbBracketSize > 0 ? (cbBracketSize / 2) * CARD_HEIGHT + HEADER_HEIGHT : 0;
+  // Extra CB rounds (when WB has more rounds than the seed-bracket depth) push the last card
+  // lower than the standard formula accounts for. Take the max of both extents.
+  const cbCardAreaHeight = cbBracketSize > 0
+    ? Math.max(
+        (cbBracketSize / 2) * CARD_HEIGHT,
+        totalCBRounds > 0 ? CARD_HEIGHT * (Math.pow(2, totalCBRounds - 1) + 1) / 2 : 0,
+      )
+    : 0;
+  const cbHeight = cbCardAreaHeight > 0 ? cbCardAreaHeight + HEADER_HEIGHT : 0;
 
   const handleTeamClick = (match: TournamentMatch, teamNumber: 1 | 2) => {
     if (match.winner === teamNumber) {

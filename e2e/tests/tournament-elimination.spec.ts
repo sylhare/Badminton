@@ -64,6 +64,54 @@ test.describe('Tournament Page - Elimination', () => {
     await expect(page.locator('[data-testid="bracket-node-bye"]').first()).toBeVisible();
   });
 
+  test('5-player elimination — full play-through: CB has 2 rounds (R1 + Final fed by WB Semi-Final loser)', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectType('elimination');
+    await tournamentPage.startElimination();
+
+    // CB not visible before WB R1 complete
+    await expect(page.getByTestId('cb-section')).not.toBeVisible();
+
+    const wbSection = page.getByTestId('wb-section');
+
+    // Play both WB R1 matches
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
+    await page.getByTestId('score-modal-confirm').click();
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // CB appears with 1 match (CB R1) and 1 TBD (CB Final, awaiting WB Semi-Final loser)
+    const cbSection = page.getByTestId('cb-section');
+    await expect(cbSection).toBeVisible();
+    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(1);
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
+
+    // Play CB R1
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
+    await page.getByTestId('score-modal-confirm').click();
+    // CB Final still TBD (waiting for WB Semi-Final)
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
+
+    // Play WB R2 (Semi-Final: Alice vs Charlie, Eve has bye)
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(2).click();
+    await page.getByTestId('score-modal-confirm').click();
+    // Now CB Final is generated (CB R1 winner vs WB Semi-Final loser)
+    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(0);
+    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(2);
+
+    // Play CB Final
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    // Play WB Final (Eve vs WB R2 winner)
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(3).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await expect(page.getByTestId('standings-subtitle')).toHaveText('Final Results');
+    await expect(page.getByTestId('standing-row-0')).toContainText('🥇');
+  });
+
   test('8-player elimination — correct column headers', async ({ page }) => {
     await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry']);
     await page.getByTestId('format-pill-singles').click();

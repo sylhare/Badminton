@@ -172,6 +172,39 @@ describe('EliminationTournament', () => {
       expect(r2.length).toBeGreaterThanOrEqual(1);
     });
 
+    it('5 teams: full play-through — CB has 2 rounds (R1 + Final fed by WB Semi-Final loser)', () => {
+      const [A, B, C, D, E] = makeTeams(['A', 'B', 'C', 'D', 'E']);
+      let t = EliminationTournament.create().start([A, B, C, D, E], 4);
+      expect(t.wbMatchesForRound(1)).toHaveLength(2);
+
+      const [m0, m1] = t.wbMatchesForRound(1);
+      t = t.withMatchResult(m0.id, 1);
+      t = t.withMatchResult(m1.id, 1);
+
+      expect(t.wbMatchesForRound(2)).toHaveLength(1);
+      expect(t.cbMatchesForRound(1)).toHaveLength(1);
+      expect(t.cbMatchesForRound(2)).toHaveLength(0);
+
+      const [cbR1] = t.cbMatchesForRound(1);
+      t = t.withMatchResult(cbR1.id, 1);
+      expect(t.cbMatchesForRound(2)).toHaveLength(0);
+
+      const [wbR2] = t.wbMatchesForRound(2);
+      t = t.withMatchResult(wbR2.id, 1);
+      expect(t.cbMatchesForRound(2)).toHaveLength(1);
+
+      const [cbFinal] = t.cbMatchesForRound(2);
+      t = t.withMatchResult(cbFinal.id, 1);
+
+      expect(t.wbMatchesForRound(3)).toHaveLength(1);
+      const [wbFinal] = t.wbMatchesForRound(3);
+      t = t.withMatchResult(wbFinal.id, 1);
+
+      expect(t.isComplete()).toBe(true);
+      expect(t.phase()).toBe('completed');
+      expect(t.calculateStandings()).toHaveLength(5);
+    });
+
     it('3 teams: 1 WB R1 match; C (slot 2) gets bye-advance', () => {
       const [A, B, C] = makeTeams(['A', 'B', 'C']);
       let t = EliminationTournament.create().start([A, B, C], 4);

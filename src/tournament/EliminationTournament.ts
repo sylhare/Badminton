@@ -227,6 +227,16 @@ function generateFollowUpMatches(
       }
     }
 
+    // When CB has fewer survivors than needed, pull in WB round (n+1) losers.
+    // This handles brackets where WB has more rounds than the CB seed depth
+    // (e.g. 5-player: 2 WB R1 losers → 1 CB R1 match → 1 survivor → needs WB R2 loser for CB Final).
+    // Only applies to pre-Final WB rounds (WB Final loser is runner-up, stays out of CB).
+    if (advancers.length < 2 && n + 1 < totalWBRounds && wbRoundComplete(n + 1)) {
+      for (const m of wbMatches.filter(m => m.round === n + 1 && m.winner !== undefined)) {
+        advancers.push(m.winner === 1 ? m.team2 : m.team1);
+      }
+    }
+
     if (advancers.length >= 2) {
       let courtIndex = allMatches.length + newMatches.length;
       for (let i = 0; i < Math.floor(advancers.length / 2); i++) {
