@@ -5,17 +5,11 @@ import type { BracketNode } from '../../../tournament/bracketTree';
 import { CARD_HEIGHT, COLUMN_GAP, COLUMN_WIDTH, nodeTop } from './BracketColumn';
 
 interface BracketConnectorsProps {
-  /** Nodes in the left (source) column */
   fromNodes: BracketNode[];
-  /** Nodes in the right (target) column */
   toNodes: BracketNode[];
-  /** 1-based round number of the LEFT column */
   fromRound: number;
-  /** 1-based round number of the RIGHT column */
   toRound: number;
-  /** Total height of the bracket in px */
   totalHeight: number;
-  /** Vertical offset from column top to card area (header height) */
   headerOffset: number;
 }
 
@@ -26,7 +20,7 @@ interface BracketConnectorsProps {
  * The SVG is absolutely positioned in the gap between two columns,
  * with width = COLUMN_GAP and height = totalHeight.
  */
-const BracketConnectors: React.FC<BracketConnectorsProps> = ({
+export const BracketConnectors: React.FC<BracketConnectorsProps> = ({
   fromNodes,
   toNodes,
   fromRound,
@@ -88,4 +82,3 @@ const BracketConnectors: React.FC<BracketConnectorsProps> = ({
   );
 };
 
-export default BracketConnectors;

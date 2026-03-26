@@ -7,7 +7,7 @@ import StatsPage from './pages/StatsPage.tsx';
 import AlgorithmPage from './pages/AlgorithmPage.tsx';
 import EnginePage from './pages/EnginePage.tsx';
 import LevelTrackerPage from './pages/LevelTrackerPage.tsx';
-import TournamentPage from './pages/TournamentPage.tsx';
+import { TournamentPage } from './pages/TournamentPage.tsx';
 import { AppStateProvider } from './providers/AppStateProvider.tsx';
 import './index.css';
 

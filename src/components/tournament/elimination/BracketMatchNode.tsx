@@ -1,17 +1,13 @@
 import React from 'react';
 
 import type { BracketNode } from '../../../tournament/bracketTree';
-import type { TournamentMatch, TournamentTeam } from '../../../tournament/types';
+import type { TournamentMatch } from '../../../tournament/types';
+import { formatTeamName } from '../../../tournament/teamUtils';
 
 interface BracketMatchNodeProps {
   node: BracketNode;
-  /** Card height in pixels */
   cardHeight: number;
   onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
-}
-
-function formatTeamName(team: TournamentTeam): string {
-  return team.players.map(p => p.name).join(' & ');
 }
 
 function teamClass(winner: 1 | 2 | undefined, teamNumber: 1 | 2): string {
@@ -20,7 +16,7 @@ function teamClass(winner: 1 | 2 | undefined, teamNumber: 1 | 2): string {
   return 'bracket-team';
 }
 
-const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHeight, onTeamClick }) => {
+export const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHeight, onTeamClick }) => {
   const halfH = cardHeight / 2;
 
   if (node.type === 'empty') {
@@ -67,4 +63,3 @@ const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHeight, o
   );
 };
 
-export default BracketMatchNode;

@@ -2,27 +2,18 @@ import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-import TournamentStandings from '../../../src/components/tournament/TournamentStandings';
-import type { TournamentStandingRow, TournamentTeam } from '../../../src/tournament/types';
-import { createMockPlayer } from '../../data/testFactories';
+import { TournamentStandings } from '../../../src/components/tournament/TournamentStandings';
+import type { TournamentStandingRow } from '../../../src/tournament/types';
+import { createTournamentTeam, createStandingRow } from '../../data/testFactories';
 
-function makeTeam(id: string, name: string): TournamentTeam {
-  return { id, players: [createMockPlayer({ id: `${id}-p`, name })] };
-}
-
-function makeRow(team: TournamentTeam, won: number, lost: number, scoreDiff: number): TournamentStandingRow {
-  const points = won * 2;
-  return { team, played: won + lost, won, lost, points, scoreDiff };
-}
-
-const teamA = makeTeam('a', 'Alice');
-const teamB = makeTeam('b', 'Bob');
-const teamC = makeTeam('c', 'Carol');
+const teamA = createTournamentTeam('a', ['Alice']);
+const teamB = createTournamentTeam('b', ['Bob']);
+const teamC = createTournamentTeam('c', ['Carol']);
 
 const standings: TournamentStandingRow[] = [
-  makeRow(teamA, 2, 0, 10),
-  makeRow(teamB, 1, 1, -3),
-  makeRow(teamC, 0, 2, -7),
+  createStandingRow(teamA, 2, 0, 10),
+  createStandingRow(teamB, 1, 1, -3),
+  createStandingRow(teamC, 0, 2, -7),
 ];
 
 describe('TournamentStandings (round-robin / showPoints)', () => {

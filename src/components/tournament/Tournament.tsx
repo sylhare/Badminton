@@ -6,10 +6,10 @@ import { Tournament as TournamentBase } from '../../tournament/Tournament';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../../tournament/EliminationTournament';
 
-import RoundRobinMatches from './round-robin/RoundRobinMatches';
-import RoundRobinSetup from './round-robin/RoundRobinSetup';
-import EliminationBracket from './elimination/EliminationBracket';
-import TournamentStandings from './TournamentStandings';
+import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
+import { TournamentSetup } from './round-robin/TournamentSetup';
+import { EliminationBracket } from './elimination/EliminationBracket';
+import { TournamentStandings } from './TournamentStandings';
 
 interface TournamentProps {
   tournament: RoundRobinTournament | EliminationTournament | null;
@@ -36,7 +36,7 @@ function standingsSubtitle(t: TournamentBase, isComplete: boolean): string {
   return done > 0 ? `After Round ${done} / ${total}` : `Round 0 / ${total}`;
 }
 
-const Tournament: React.FC<TournamentProps> = ({
+export const Tournament: React.FC<TournamentProps> = ({
   tournament,
   initialPlayers,
   initialNumberOfCourts,
@@ -70,7 +70,7 @@ const Tournament: React.FC<TournamentProps> = ({
             </button>
           </div>
         </div>
-        <RoundRobinSetup
+        <TournamentSetup
           initialPlayers={initialPlayers}
           initialNumberOfCourts={initialNumberOfCourts}
           onStart={(teams, courts, format) => onStart(teams, courts, format, selectedType)}
@@ -106,4 +106,3 @@ const Tournament: React.FC<TournamentProps> = ({
   );
 };
 
-export default Tournament;

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { TournamentStandingRow } from '../../tournament/types';
+import { formatTeamName } from '../../tournament/teamUtils';
 
 interface TournamentStandingsProps {
   standings: TournamentStandingRow[];
@@ -11,11 +12,7 @@ interface TournamentStandingsProps {
 
 const RANK_EMOJI = ['🥇', '🥈', '🥉'];
 
-function teamLabel(row: TournamentStandingRow): string {
-  return row.team.players.map(p => p.name).join(' & ');
-}
-
-const TournamentStandings: React.FC<TournamentStandingsProps> = ({
+export const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   standings,
   isComplete,
   subtitle,
@@ -46,7 +43,7 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
                 data-testid={`standing-row-${index}`}
               >
                 <td>{isComplete && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
-                <td>{teamLabel(row)}</td>
+                <td>{formatTeamName(row.team)}</td>
                 <td>{row.won}</td>
                 <td>{row.lost}</td>
                 {showPoints && <td>{row.points}</td>}
@@ -64,4 +61,3 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   );
 };
 
-export default TournamentStandings;

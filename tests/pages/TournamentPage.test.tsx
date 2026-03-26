@@ -3,17 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import TournamentPage from '../../src/pages/TournamentPage';
+import { TournamentPage } from '../../src/pages/TournamentPage';
 import { storageManager } from '../../src/utils/StorageManager';
 import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
+import { MOCK_PLAYERS } from '../data/testFactories';
 
-const mockPlayers = [
-  { id: 'p1', name: 'Alice', isPresent: true },
-  { id: 'p2', name: 'Bob', isPresent: true },
-  { id: 'p3', name: 'Carol', isPresent: true },
-  { id: 'p4', name: 'Dave', isPresent: true },
-  { id: 'p5', name: 'Eve', isPresent: false },
-];
+const mockPlayers = MOCK_PLAYERS.tournament;
 
 describe('TournamentPage', () => {
   beforeEach(async () => {

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { storageManager } from '../utils/StorageManager';
 import { useAppState } from '../providers/AppStateProvider';
-import Tournament from '../components/tournament/Tournament';
+import { Tournament } from '../components/tournament/Tournament';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../tournament/EliminationTournament';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
@@ -10,7 +10,7 @@ import './TournamentPage.css';
 
 type AnyTournament = RoundRobinTournament | EliminationTournament;
 
-function TournamentPage(): React.ReactElement {
+export const TournamentPage: React.FC = () => {
   const { players, isLoaded, handleAddPlayers, handlePlayerToggle } = useAppState();
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
   const [tournament, setTournament] = useState<AnyTournament | null>(null);
@@ -79,6 +79,5 @@ function TournamentPage(): React.ReactElement {
       </div>
     </div>
   );
-}
+};
 
-export default TournamentPage;

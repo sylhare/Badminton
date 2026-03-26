@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 import type { BracketNode } from '../../../tournament/bracketTree';
 import type { TournamentMatch } from '../../../tournament/types';
 import { EliminationTournament } from '../../../tournament/EliminationTournament';
 import { computeWBTree, computeCBTree, roundLabel } from '../../../tournament/bracketTree';
 import ScoreInputModal from '../../modals/ScoreInputModal';
+import { useMatchModal } from '../useMatchModal';
 
-import BracketColumn, { CARD_HEIGHT, COLUMN_GAP, COLUMN_WIDTH, HEADER_HEIGHT } from './BracketColumn';
-import BracketConnectors from './BracketConnectors';
+import { BracketColumn, CARD_HEIGHT, COLUMN_GAP, COLUMN_WIDTH, HEADER_HEIGHT } from './BracketColumn';
+import { BracketConnectors } from './BracketConnectors';
 
 import './EliminationBracket.css';
 
@@ -50,9 +51,8 @@ interface EliminationBracketProps {
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
 }
 
-const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onMatchResult }) => {
-  const [modalMatch, setModalMatch] = useState<TournamentMatch | null>(null);
-  const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
+export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onMatchResult }) => {
+  const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } = useMatchModal(onMatchResult);
 
   const teams = tournament.teams();
   const bracketSize = tournament.bracketSize();
@@ -68,27 +68,6 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
   const extraRoundHeight = cbTree.length > 0 ? CARD_HEIGHT * (Math.pow(2, cbTree.length - 1) + 1) / 2 : 0;
   const cbCardAreaHeight = cbBracketSize > 0 ? Math.max((cbBracketSize / 2) * CARD_HEIGHT, extraRoundHeight) : 0;
   const cbHeight = cbCardAreaHeight > 0 ? cbCardAreaHeight + HEADER_HEIGHT : 0;
-
-  const handleTeamClick = (match: TournamentMatch, teamNumber: 1 | 2) => {
-    if (match.winner === teamNumber) {
-      onMatchResult(match.id, teamNumber);
-      return;
-    }
-    setModalMatch(match);
-    setPendingWinner(teamNumber);
-  };
-
-  const handleModalConfirm = (score: { team1: number; team2: number }) => {
-    if (!modalMatch || pendingWinner === null) return;
-    onMatchResult(modalMatch.id, pendingWinner, score);
-    setModalMatch(null);
-    setPendingWinner(null);
-  };
-
-  const handleModalCancel = () => {
-    setModalMatch(null);
-    setPendingWinner(null);
-  };
 
   return (
     <div className="elimination-bracket" data-testid="elimination-bracket">
@@ -136,4 +115,3 @@ const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onM
   );
 };
 
-export default EliminationBracket;

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import EliminationBracket from '../../../../src/components/tournament/elimination/EliminationBracket';
+import { EliminationBracket } from '../../../../src/components/tournament/elimination/EliminationBracket';
 import { EliminationTournament } from '../../../../src/tournament/EliminationTournament';
 import type { TournamentTeam } from '../../../../src/tournament/types';
 import { createMockPlayer } from '../../../data/testFactories';

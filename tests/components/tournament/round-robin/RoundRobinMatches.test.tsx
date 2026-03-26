@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import RoundRobinMatches from '../../../../src/components/tournament/round-robin/RoundRobinMatches';
+import { RoundRobinMatches } from '../../../../src/components/tournament/round-robin/RoundRobinMatches';
 import { RoundRobinTournament } from '../../../../src/tournament/RoundRobinTournament';
 import type { TournamentMatch, TournamentTeam } from '../../../../src/tournament/types';
 import { createMockPlayer } from '../../../data/testFactories';

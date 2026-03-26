@@ -3,24 +3,17 @@ import React from 'react';
 import type { BracketNode } from '../../../tournament/bracketTree';
 import type { TournamentMatch } from '../../../tournament/types';
 
-import BracketMatchNode from './BracketMatchNode';
+import { BracketMatchNode } from './BracketMatchNode';
 
-/** Slot height in px — used for spacing and connector math */
 export const CARD_HEIGHT = 72;
-/** Visual card height in px — smaller than CARD_HEIGHT to create gaps between cards */
 const CARD_RENDER_HEIGHT = 64;
-/** Height of the round label header in px */
 export const HEADER_HEIGHT = 40;
-/** Gap between columns in px */
 export const COLUMN_GAP = 48;
-/** Width of one column in px */
 export const COLUMN_WIDTH = 180;
 
 interface BracketColumnProps {
   nodes: BracketNode[];
-  /** 1-based round number */
   round: number;
-  /** Round header label (e.g. "Semi Final") */
   label: string;
   onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
 }
@@ -38,7 +31,7 @@ export function nodeTop(slotIndex: number, round: number): number {
   return firstOffset + slotIndex * spacing;
 }
 
-const BracketColumn: React.FC<BracketColumnProps> = ({
+export const BracketColumn: React.FC<BracketColumnProps> = ({
   nodes,
   round,
   label,
@@ -71,4 +64,3 @@ const BracketColumn: React.FC<BracketColumnProps> = ({
   );
 };
 
-export default BracketColumn;
