@@ -84,7 +84,7 @@ function getWBR1Loser(
   const slot2 = 2 * position + 1;
   const team1 = teams[slot1];
   const team2 = teams[slot2];
-  if (!team1 || !team2) return null; // bye-advance or empty, no loser
+  if (!team1 || !team2) return null;
   const match = wbMatches.find(
     m =>
       m.round === 1 &&
@@ -175,7 +175,7 @@ function generateFollowUpMatches(
         courtIndex++;
       }
     }
-    break; // only generate one round at a time
+    break;
   }
 
   if (wbRoundComplete(1) && !cbRoundExists(1)) {

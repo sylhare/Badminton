@@ -41,7 +41,6 @@ const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHeight, o
     );
   }
 
-  // type === 'match'
   const match = node.match!;
   const w = match.winner;
 

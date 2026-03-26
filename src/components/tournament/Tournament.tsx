@@ -95,7 +95,6 @@ const Tournament: React.FC<TournamentProps> = ({
     );
   }
 
-  // Round Robin
   const rr = tournament as RoundRobinTournament;
   const standings = rr.calculateStandings();
   const completedRounds = rr.completedRounds();
