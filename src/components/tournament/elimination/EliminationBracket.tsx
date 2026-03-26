@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 
 import type { BracketNode } from '../../../tournament/bracketTree';
+import { computeCBTree, computeWBTree, roundLabel } from '../../../tournament/bracketTree';
 import type { TournamentMatch } from '../../../tournament/types';
 import { EliminationTournament } from '../../../tournament/EliminationTournament';
-import { computeWBTree, computeCBTree, roundLabel } from '../../../tournament/bracketTree';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 import { useMatchModal } from '../useMatchModal';
 
@@ -52,7 +52,13 @@ interface EliminationBracketProps {
 }
 
 export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onMatchResult }) => {
-  const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } = useMatchModal(onMatchResult);
+  const {
+    modalMatch,
+    pendingWinner,
+    handleTeamClick,
+    handleModalConfirm,
+    handleModalCancel,
+  } = useMatchModal(onMatchResult);
 
   const bracketSize = tournament.bracketSize();
   const cbSeedsLength = tournament.wbR1Losers().length;

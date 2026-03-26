@@ -68,8 +68,7 @@ function buildNode(
     if (!team2) return { type: 'bye-advance', team: team1, slotIndex: position };
 
     const match = matches.find(
-      m =>
-        m.round === 1 &&
+      m => m.round === 1 &&
         ((m.team1.id === team1.id && m.team2.id === team2.id) ||
           (m.team1.id === team2.id && m.team2.id === team1.id)),
     );
@@ -92,10 +91,9 @@ function buildNode(
   if (parentA === 'tbd' || parentB === 'tbd') return { type: 'tbd', slotIndex: position };
 
   const match = matches.find(
-    m =>
-      m.round === round &&
+    m => m.round === round &&
       ((m.team1.id === (parentA as TournamentTeam).id &&
-        m.team2.id === (parentB as TournamentTeam).id) ||
+          m.team2.id === (parentB as TournamentTeam).id) ||
         (m.team1.id === (parentB as TournamentTeam).id &&
           m.team2.id === (parentA as TournamentTeam).id)),
   );

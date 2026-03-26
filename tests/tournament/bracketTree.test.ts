@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { TournamentTeam } from '../../src/tournament/types';
-import { computeWBTree, computeCBTree, roundLabel } from '../../src/tournament/bracketTree';
+import { computeCBTree, computeWBTree, roundLabel } from '../../src/tournament/bracketTree';
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
 import { createMockPlayer } from '../data/testFactories';
 

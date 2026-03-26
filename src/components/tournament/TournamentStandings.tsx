@@ -26,34 +26,34 @@ export const TournamentStandings: React.FC<TournamentStandingsProps> = ({
       <div className="standings-table-wrapper">
         <table className="leaderboard-table standings-table">
           <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Team</th>
-              <th>W</th>
-              <th>L</th>
-              {showPoints && <th>Pts</th>}
-              {showPoints && <th>Score Diff</th>}
-            </tr>
+          <tr>
+            <th>Rank</th>
+            <th>Team</th>
+            <th>W</th>
+            <th>L</th>
+            {showPoints && <th>Pts</th>}
+            {showPoints && <th>Score Diff</th>}
+          </tr>
           </thead>
           <tbody>
-            {standings.map((row, index) => (
-              <tr
-                key={row.team.id}
-                className={index === 0 && standings.length > 1 ? 'top' : ''}
-                data-testid={`standing-row-${index}`}
-              >
-                <td>{isComplete && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
-                <td>{formatTeamName(row.team)}</td>
-                <td>{row.won}</td>
-                <td>{row.lost}</td>
-                {showPoints && <td>{row.points}</td>}
-                {showPoints && (
-                  <td data-testid={`score-diff-${index}`}>
-                    {row.scoreDiff > 0 ? `+${row.scoreDiff}` : row.scoreDiff}
-                  </td>
-                )}
-              </tr>
-            ))}
+          {standings.map((row, index) => (
+            <tr
+              key={row.team.id}
+              className={index === 0 && standings.length > 1 ? 'top' : ''}
+              data-testid={`standing-row-${index}`}
+            >
+              <td>{isComplete && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
+              <td>{formatTeamName(row.team)}</td>
+              <td>{row.won}</td>
+              <td>{row.lost}</td>
+              {showPoints && <td>{row.points}</td>}
+              {showPoints && (
+                <td data-testid={`score-diff-${index}`}>
+                  {row.scoreDiff > 0 ? `+${row.scoreDiff}` : row.scoreDiff}
+                </td>
+              )}
+            </tr>
+          ))}
           </tbody>
         </table>
       </div>

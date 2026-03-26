@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 
 import { useMatchModal } from '../../../src/components/tournament/useMatchModal';
-import { createTournamentTeam, createTournamentMatch } from '../../data/testFactories';
+import { createTournamentMatch, createTournamentTeam } from '../../data/testFactories';
 
 const teamA = createTournamentTeam('a', ['Alice']);
 const teamB = createTournamentTeam('b', ['Bob']);

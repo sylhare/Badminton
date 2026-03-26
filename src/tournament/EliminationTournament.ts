@@ -63,10 +63,9 @@ function resolveChildNode(
   if (resultA === 'tbd' || resultB === 'tbd') return 'tbd';
 
   const match = matches.find(
-    m =>
-      m.round === round &&
+    m => m.round === round &&
       ((m.team1.id === (resultA as TournamentTeam).id &&
-        m.team2.id === (resultB as TournamentTeam).id) ||
+          m.team2.id === (resultB as TournamentTeam).id) ||
         (m.team1.id === (resultB as TournamentTeam).id &&
           m.team2.id === (resultA as TournamentTeam).id)),
   );
@@ -359,12 +358,6 @@ export class EliminationTournament extends Tournament {
     return this._state.bracketSize ?? nextPowerOf2(this._state.teams.length);
   }
 
-  private matchesFor(bracket: 'wb' | 'cb', round?: number): TournamentMatch[] {
-    return this._state.matches.filter(
-      m => m.bracket === bracket && (round === undefined || m.round === round),
-    );
-  }
-
   wbMatchesForRound(round: number): TournamentMatch[] {
     return this.matchesFor('wb', round);
   }
@@ -404,5 +397,11 @@ export class EliminationTournament extends Tournament {
       if (loser) losers.push(loser);
     }
     return losers;
+  }
+
+  private matchesFor(bracket: 'wb' | 'cb', round?: number): TournamentMatch[] {
+    return this._state.matches.filter(
+      m => m.bracket === bracket && (round === undefined || m.round === round),
+    );
   }
 }

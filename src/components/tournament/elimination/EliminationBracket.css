@@ -1,138 +1,138 @@
 .elimination-bracket {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 16px;
 }
 
 /* Bracket section (WB or CB) */
 .bracket-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .bracket-section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 4px 0;
-  color: var(--color-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: var(--color-primary);
 }
 
 /* Bracket tree container */
 .bracket-tree {
-  overflow-x: auto;
+    overflow-x: auto;
 }
 
 /* Column */
 .bracket-column {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
 }
 
 .bracket-column-header {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-secondary, #888);
-  text-align: center;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary, #888);
+    text-align: center;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
 }
 
 .bracket-column-nodes {
-  /* height is set dynamically via inline style */
+    /* height is set dynamically via inline style */
 }
 
 /* Bracket node cards */
 .bracket-node {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border, #ddd);
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--color-surface, #fff);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--color-surface, #fff);
 }
 
 .bracket-node-empty {
-  border: none;
-  background: transparent;
+    border: none;
+    background: transparent;
 }
 
 .bracket-node-tbd {
-  opacity: 0.4;
+    opacity: 0.4;
 }
 
 .bracket-node-bye {
-  opacity: 0.7;
+    opacity: 0.7;
 }
 
 /* Team rows inside a bracket node */
 .bracket-team {
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  font-size: 0.82rem;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-  transition: background 0.15s;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  border-bottom: 1px solid var(--color-border, #eee);
-  gap: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    transition: background 0.15s;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    border-bottom: 1px solid var(--color-border, #eee);
+    gap: 4px;
 }
 
 .bracket-team:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
 
 .bracket-team:hover {
-  background: var(--color-hover, #f5f5f5);
+    background: var(--color-hover, #f5f5f5);
 }
 
 .bracket-team-tbd {
-  color: var(--color-text-secondary, #aaa);
-  cursor: default;
-  pointer-events: none;
-  font-style: italic;
+    color: var(--color-text-secondary, #aaa);
+    cursor: default;
+    pointer-events: none;
+    font-style: italic;
 }
 
 .bracket-team-bye-label {
-  color: var(--color-text-secondary, #aaa);
-  font-style: italic;
-  font-size: 0.75rem;
-  cursor: default;
-  pointer-events: none;
+    color: var(--color-text-secondary, #aaa);
+    font-style: italic;
+    font-size: 0.75rem;
+    cursor: default;
+    pointer-events: none;
 }
 
 .bracket-team-winner {
-  font-weight: 600;
-  background: var(--color-primary-start, rgba(0, 180, 120, 0.08));
+    font-weight: 600;
+    background: var(--color-primary-start, rgba(0, 180, 120, 0.08));
 }
 
 .bracket-team-loser {
-  color: var(--color-text-secondary, #999);
-  text-decoration: line-through;
+    color: var(--color-text-secondary, #999);
+    text-decoration: line-through;
 }
 
 .bracket-winner-badge {
-  font-size: 0.7rem;
-  color: var(--color-primary, #00b47a);
-  flex-shrink: 0;
+    font-size: 0.7rem;
+    color: var(--color-primary, #00b47a);
+    flex-shrink: 0;
 }
 
 /* SVG connector paths */
 .bracket-connector-path {
-  fill: none;
-  stroke: var(--color-border, #ccc);
-  stroke-width: 1.5;
+    fill: none;
+    stroke: var(--color-border, #ccc);
+    stroke-width: 1.5;
 }

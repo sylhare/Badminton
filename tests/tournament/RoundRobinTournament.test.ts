@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
-import { createMockPlayer, createTournamentTeam, createTournamentMatch } from '../data/testFactories';
+import { createMockPlayer, createTournamentMatch, createTournamentTeam } from '../data/testFactories';
 
 describe('RoundRobinTournament', () => {
   const teamA = createTournamentTeam('a', ['A']);

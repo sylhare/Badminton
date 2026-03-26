@@ -15,7 +15,13 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   tournament,
   onMatchResult,
 }) => {
-  const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } = useMatchModal(onMatchResult);
+  const {
+    modalMatch,
+    pendingWinner,
+    handleTeamClick,
+    handleModalConfirm,
+    handleModalCancel,
+  } = useMatchModal(onMatchResult);
   const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() =>
     new Set([tournament.currentRound()]),
   );

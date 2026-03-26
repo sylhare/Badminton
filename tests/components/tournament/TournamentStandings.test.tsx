@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 
 import { TournamentStandings } from '../../../src/components/tournament/TournamentStandings';
 import type { TournamentStandingRow } from '../../../src/tournament/types';
-import { createTournamentTeam, createStandingRow } from '../../data/testFactories';
+import { createStandingRow, createTournamentTeam } from '../../data/testFactories';
 
 const teamA = createTournamentTeam('a', ['Alice']);
 const teamB = createTournamentTeam('b', ['Bob']);
