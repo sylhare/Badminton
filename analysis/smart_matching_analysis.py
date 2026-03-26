@@ -850,5 +850,230 @@ def _(mo):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("## Doubles Partner Heatmap")
+    return
+
+
+@app.cell(hide_code=True)
+def _(go, make_subplots, mo, sa_pairs, sl_pairs):
+    def _pidx(pid: str) -> int:
+        return int(pid[1:]) - 1
+
+    _pids: set = set()
+    for _r in sa_pairs.iter_rows(named=True):
+        _pids.update(_r["pairId"].split("|"))
+    _n = max(_pidx(p) for p in _pids) + 1
+    _lbls = [f"P{i + 1}" for i in range(_n)]
+
+    def _pmat(pairs_df, n):
+        mat = [[0] * n for _ in range(n)]
+        for row in pairs_df.iter_rows(named=True):
+            ps = row["pairId"].split("|")
+            if len(ps) == 2:
+                i, j = _pidx(ps[0]), _pidx(ps[1])
+                if i < n and j < n:
+                    mat[i][j] = row["asTeammate"]
+                    mat[j][i] = row["asTeammate"]
+        return mat
+
+    _sa_mat = _pmat(sa_pairs, _n)
+    _sl_mat = _pmat(sl_pairs, _n)
+
+    _fig = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=("SA — Doubles Partner Frequency", "SL — Doubles Partner Frequency"),
+    )
+    _fig.add_trace(
+        go.Heatmap(
+            z=_sa_mat,
+            x=_lbls,
+            y=_lbls,
+            colorscale="Greens",
+            colorbar=dict(x=0.46, len=0.9, title="Times"),
+        ),
+        row=1,
+        col=1,
+    )
+    _fig.add_trace(
+        go.Heatmap(
+            z=_sl_mat,
+            x=_lbls,
+            y=_lbls,
+            colorscale="Blues",
+            colorbar=dict(title="Times"),
+        ),
+        row=1,
+        col=2,
+    )
+    _fig.update_layout(
+        height=520,
+        xaxis_title="Player",
+        yaxis_title="Player",
+        xaxis2_title="Player",
+        yaxis2_title="Player",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+    )
+    _fig.update_annotations(font_size=12)
+    mo.ui.plotly(_fig)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+Each cell shows how many times two players appeared as doubles partners across all simulation runs.
+
+**SA** spreads pairings uniformly — any two players have a roughly equal chance of teaming up.
+**SL** concentrates pairings along skill-compatible pairs — same-level players partner far more often
+while cross-level pairs rarely play together.
+""")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("## Partner Repeat Frequency")
+    return
+
+
+@app.cell(hide_code=True)
+def _(go, mo, sa_config, sa_pairs, sl_pairs):
+    _runs = sa_config.get("runs", 50)
+    _n_counts = len(sa_config.get("playerCounts", [20]))
+    _total_sims = _runs * _n_counts
+
+    # For each player pair: how many times were they partners across all simulations?
+    # Bucket into: 0, 1, 2, 3, 4+ times per session (using total / total_sims as avg)
+    # We discretise by rounding to nearest integer average.
+    def _buckets(pairs_df):
+        from collections import Counter
+        avgs = [round(v / _total_sims) for v in pairs_df["asTeammate"].to_list()]
+        cnt = Counter(avgs)
+        n = len(avgs)
+        labels = ["0×", "1×", "2×", "3×", "4×+"]
+        pcts = [
+            cnt.get(0, 0) / n * 100,
+            cnt.get(1, 0) / n * 100,
+            cnt.get(2, 0) / n * 100,
+            cnt.get(3, 0) / n * 100,
+            sum(cnt.get(k, 0) for k in range(4, max(cnt) + 1)) / n * 100,
+        ]
+        return labels, pcts
+
+    _labels, _sa_pcts = _buckets(sa_pairs)
+    _, _sl_pcts = _buckets(sl_pairs)
+
+    _fig = go.Figure()
+    _fig.add_trace(go.Bar(x=_labels, y=_sa_pcts, name="SA", marker_color="#54A24B", opacity=0.85))
+    _fig.add_trace(go.Bar(x=_labels, y=_sl_pcts, name="SL", marker_color="#4C78A8", opacity=0.85))
+    _fig.update_layout(
+        height=380,
+        barmode="group",
+        legend=dict(orientation="h", y=-0.18),
+        title_text="How many times per session does each player pair end up as doubles partners?",
+        xaxis_title="Times partnered per session (rounded avg)",
+        yaxis_title="% of all player pairs",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+    )
+    mo.ui.plotly(_fig)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+**SA**: most pairs partner roughly once per session — no pair is systematically preferred.
+
+**SL**: polarised — many pairs *never* partner (0×, skill-incompatible) and a smaller group
+partners *repeatedly* (2–3×, same skill level), showing the engine's level-aware pairing logic.
+""")
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+## Team Variety
+
+For each player, between consecutive rounds they both played, how many of the other 3 court-mates changed?
+
+- **3 new** — completely fresh group (best variety)
+- **2 new** — two new faces
+- **1 new** — only one new player
+- **0 new** — same 4 players on the same court again (no variety)
+
+A good engine keeps the distribution concentrated at 2–3 so every round feels like a fresh experience.
+""")
+    return
+
+
+@app.cell(hide_code=True)
+def _(go, mo, pl, sa_match, sl_match):
+    def _variety_dist(match_df):
+        from collections import Counter
+        scores = []
+        for sid in match_df["simulationId"].unique().sort().to_list():
+            sim = match_df.filter(pl.col("simulationId") == sid)
+            hist: dict = {}
+            for row in sim.iter_rows(named=True):
+                court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
+                for p in court:
+                    hist.setdefault(p, []).append((row["roundIndex"], frozenset(court - {p})))
+            for rounds in hist.values():
+                rounds.sort()
+                for i in range(1, len(rounds)):
+                    scores.append(len(rounds[i][1] - rounds[i - 1][1]))
+        n = len(scores)
+        cnt = Counter(scores)
+        mk = max(cnt) if cnt else 0
+        pcts = [cnt.get(k, 0) / n * 100 for k in range(mk + 1)]
+        avg = sum(k * cnt.get(k, 0) for k in range(mk + 1)) / n if n else 0.0
+        return pcts, avg
+
+    _sa_p, _sa_avg = _variety_dist(sa_match)
+    _sl_p, _sl_avg = _variety_dist(sl_match)
+
+    _mb = max(len(_sa_p), len(_sl_p)) - 1
+    _sa_p += [0.0] * (_mb + 1 - len(_sa_p))
+    _sl_p += [0.0] * (_mb + 1 - len(_sl_p))
+    _bkts = [str(i) for i in range(_mb + 1)]
+
+    _fig = go.Figure()
+    _fig.add_trace(
+        go.Bar(
+            x=_bkts,
+            y=_sa_p,
+            name=f"SA (avg {_sa_avg:.2f}/3)",
+            marker_color="#54A24B",
+            opacity=0.85,
+        )
+    )
+    _fig.add_trace(
+        go.Bar(
+            x=_bkts,
+            y=_sl_p,
+            name=f"SL (avg {_sl_avg:.2f}/3)",
+            marker_color="#4C78A8",
+            opacity=0.85,
+        )
+    )
+    _fig.update_layout(
+        height=400,
+        barmode="group",
+        legend=dict(orientation="h", y=-0.18),
+        xaxis_title="New court-mates vs previous round (out of 3)",
+        yaxis_title="% of consecutive match pairs",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+    )
+    mo.ui.plotly(_fig)
+    return
+
+
 if __name__ == "__main__":
     app.run()
