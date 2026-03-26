@@ -1,6 +1,7 @@
 /** Records a single match with team compositions, strengths, and outcome. */
 export type MatchEvent = {
   simulationId: number;
+  numPlayers: number;
   roundIndex: number;
   courtIndex: number;
   team1Players: string;

@@ -90,6 +90,7 @@ export const extractRoundPairs = (
   roundIndex: number,
   courts: Court[],
   simulationId: number,
+  numPlayers: number,
   Engine: ICourtAssignmentEngine,
   playerLevels: Map<string, number>,
 ): RoundResult => {
@@ -105,6 +106,7 @@ export const extractRoundPairs = (
 
     const [a1, a2] = court.teams.team1;
     const [b1, b2] = court.teams.team2;
+    if (!a1 || !a2 || !b1 || !b2) continue; // skip singles or under-populated courts
 
     const team1Key = pairKey(a1.id, a2.id);
     const team2Key = pairKey(b1.id, b2.id);
@@ -149,6 +151,7 @@ export const extractRoundPairs = (
 
     matchEvents.push({
       simulationId,
+      numPlayers,
       roundIndex,
       courtIndex: courtIdx + 1,
       team1Players: team1Key,

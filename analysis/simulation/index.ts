@@ -94,7 +94,7 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
     for (let round = 0; round < ROUNDS; round++) {
       const courts = Engine.generate(players, MAX_COURTS);
 
-      const roundResult = extractRoundPairs(round + 1, courts, simId, Engine, PLAYER_LEVELS);
+      const roundResult = extractRoundPairs(round + 1, courts, simId, numPlayers, Engine, PLAYER_LEVELS);
       rounds.push(roundResult);
       for (const m of roundResult.matchEvents) matchEvents.push(m);
       for (const mp of roundResult.matchPairEvents) matchPairEvents.push(mp);
@@ -192,7 +192,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const elapsed = Date.now() - startTime;
 
   const pairEventHeaders = ['simulationId', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
-  const matchEventHeaders = ['simulationId', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'matchAvgLevel', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
+  const matchEventHeaders = ['simulationId', 'numPlayers', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'matchAvgLevel', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
   const benchStatsHeaders = ['simulationId', 'numPlayers', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
 
   writeFileSync(resolve(engineDir, 'summary.csv'), toCsv(summaries));
