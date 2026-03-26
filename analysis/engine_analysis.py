@@ -723,13 +723,176 @@ def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(f"""
-They actively avoid repeating teammate pairs, which naturally maximizes unique combinations and partner variety. 
+They actively avoid repeating teammate pairs, which naturally maximizes unique combinations and partner variety.
 
 The tight distribution (narrow box) shows consistent variety for ALL players, not just some.
 Players assigned to singles courts have no teammate that round, which slightly reduces their unique teammate count compared to players who only play doubles.
 
 *Note: The circles below the boxes in the distribution chart are **outliers** — data points that fall outside 1.5× the interquartile range (IQR) from the quartiles.*
     """)
+    return
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Court Group Freshness
+
+    For each player, between consecutive rounds they played, how many of the other 3 court-mates changed?
+
+    - **3 new** = completely fresh group (ideal)
+    - **0 new** = same 4 players on the same court again (no variety)
+    """)
+    return
+
+@app.cell
+def _(ALGO_COLORS, cg_match_events_div, fig_to_image, mc_match_events_div, mo, np, pl, plt, random_match_events_div, sa_match_events_div, sl_match_events_div):
+    def _court_freshness(match_df):
+        # Group by (simulationId, numPlayers) — simulationId is 1-RUNS for each player
+        # count, so mixing them without numPlayers would corrupt cross-session comparisons.
+        scores = []
+        groups = (
+            match_df.select(["simulationId", "numPlayers"])
+            .unique()
+            .sort(["simulationId", "numPlayers"])
+            .iter_rows()
+        )
+        for sid, npl in groups:
+            sim = match_df.filter(
+                (pl.col("simulationId") == sid) & (pl.col("numPlayers") == npl)
+            )
+            hist: dict = {}
+            for row in sim.iter_rows(named=True):
+                court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
+                for p in court:
+                    hist.setdefault(p, []).append((row["roundIndex"], frozenset(court - {p})))
+            for rounds in hist.values():
+                rounds.sort(key=lambda x: x[0])
+                for i in range(1, len(rounds)):
+                    scores.append(len(rounds[i][1] - rounds[i - 1][1]))
+        return scores
+
+    _algo_names_v = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
+    _colors_v = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
+    _freshness_data = [
+        _court_freshness(random_match_events_div),
+        _court_freshness(mc_match_events_div),
+        _court_freshness(sa_match_events_div),
+        _court_freshness(cg_match_events_div),
+        _court_freshness(sl_match_events_div),
+    ]
+
+    # 100% stacked bar: one bar per algorithm, 4 colour bands for 0/1/2/3 new court-mates
+    _stack_colors = ["#d73027", "#fc8d59", "#91cf60", "#1a9850"]  # red → orange → light-green → dark-green
+    _stack_labels = ["0 new (worst)", "1 new", "2 new", "3 new (best)"]
+
+    _pcts_v = []
+    for _d in _freshness_data:
+        _total = len(_d) or 1
+        _pcts_v.append([sum(1 for v in _d if v == k) / _total * 100 for k in range(4)])
+
+    _fig_v, _ax_v = plt.subplots(figsize=(11, 6))
+    _x_v = np.arange(len(_algo_names_v))
+    _bottoms_v = np.zeros(len(_algo_names_v))
+    for _k in range(4):
+        _heights_v = [_pcts_v[i][_k] for i in range(len(_algo_names_v))]
+        _bars_v = _ax_v.bar(_x_v, _heights_v, bottom=_bottoms_v,
+                            color=_stack_colors[_k], label=_stack_labels[_k],
+                            edgecolor="white", linewidth=0.8)
+        for _bar, _h, _bot in zip(_bars_v, _heights_v, _bottoms_v):
+            if _h >= 5:
+                _ax_v.text(_bar.get_x() + _bar.get_width() / 2, _bot + _h / 2,
+                           f"{_h:.0f}%", ha="center", va="center", fontsize=9,
+                           fontweight="bold", color="white")
+        _bottoms_v = _bottoms_v + np.array(_heights_v)
+
+    _ax_v.set_xticks(_x_v)
+    _ax_v.set_xticklabels(_algo_names_v, fontsize=11)
+    _ax_v.set_ylabel("% of round transitions", fontsize=11)
+    _ax_v.set_ylim(0, 102)
+    _ax_v.legend(loc="upper right", fontsize=10, title="New court-mates", title_fontsize=10)
+    _ax_v.set_title("Court Group Freshness — Distribution of New Court-Mates per Round Transition",
+                    fontsize=12, fontweight="bold")
+    plt.tight_layout()
+    mo.vstack([
+        mo.image(fig_to_image(_fig_v)),
+        mo.md("<center><i>Each bar = one algorithm. Colour bands show % of round-to-round transitions where the player gained 0 / 1 / 2 / 3 new court-mates. Ideal engine: tall green top, thin red bottom. Note that optimising for partner variety (who you team with) is a different objective from court-group freshness (who you share a court with at all) — an algorithm may do well on one metric while scoring lower on the other.</i></center>"),
+    ])
+    return
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Co-occurrence Across Rounds
+
+    Within a single session, how many rounds does any player pair share a court (as teammates *or* opponents)?
+
+    - **1 shared round** — they met once and moved on (ideal variety)
+    - **3+ shared rounds** — they kept appearing on the same court each session (low variety)
+
+    Even if two players are never on the same *team*, being opponents on the same court repeatedly
+    still reduces the freshness of the experience.
+    """)
+    return
+
+@app.cell
+def _(ALGO_COLORS, cg_match_events_div, fig_to_image, mc_match_events_div, mo, pl, plt, random_match_events_div, sa_match_events_div, sl_match_events_div):
+    def _cooccurrence(match_df):
+        # Group by (simulationId, numPlayers) to avoid cross-scenario contamination
+        all_counts = []
+        groups = (
+            match_df.select(["simulationId", "numPlayers"])
+            .unique()
+            .sort(["simulationId", "numPlayers"])
+            .iter_rows()
+        )
+        for sid, npl in groups:
+            sim = match_df.filter(
+                (pl.col("simulationId") == sid) & (pl.col("numPlayers") == npl)
+            )
+            pair_counts: dict = {}
+            for row in sim.iter_rows(named=True):
+                court = sorted(set(row["team1Players"].split("|") + row["team2Players"].split("|")))
+                for i in range(len(court)):
+                    for j in range(i + 1, len(court)):
+                        key = f"{court[i]}|{court[j]}"
+                        pair_counts[key] = pair_counts.get(key, 0) + 1
+            all_counts.extend(pair_counts.values())
+        return all_counts
+
+    _algo_names_c = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
+    _colors_c = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
+    _cooc_data = [
+        _cooccurrence(random_match_events_div),
+        _cooccurrence(mc_match_events_div),
+        _cooccurrence(sa_match_events_div),
+        _cooccurrence(cg_match_events_div),
+        _cooccurrence(sl_match_events_div),
+    ]
+
+    # Overlapping line chart: X = rounds sharing a court (1, 2, 3 …), Y = % of pair-sessions
+    _max_rounds_c = max((max(d) for d in _cooc_data if d), default=10)
+    _xs_c = list(range(1, _max_rounds_c + 1))
+
+    _fig_c, _ax_c = plt.subplots(figsize=(11, 6))
+    _line_styles = ["-o", "-s", "-^", "-D", "-v"]
+    for _i, (_d, _name, _col, _ls) in enumerate(zip(_cooc_data, _algo_names_c, _colors_c, _line_styles)):
+        _total = len(_d) or 1
+        _ys_c = [sum(1 for v in _d if v == k) / _total * 100 for k in _xs_c]
+        _ax_c.plot(_xs_c, _ys_c, _ls, color=_col, label=_name.replace("\n", " "),
+                   linewidth=2, markersize=7, alpha=0.9)
+
+    _ax_c.set_xlabel("Rounds sharing a court per pair per session", fontsize=11)
+    _ax_c.set_ylabel("% of all pair-sessions", fontsize=11)
+    _ax_c.set_xticks(_xs_c)
+    _ax_c.set_title("Co-occurrence Distribution — How Often Do Pairs Share a Court?",
+                    fontsize=12, fontweight="bold")
+    _ax_c.legend(fontsize=10, title="Algorithm", title_fontsize=10)
+    _ax_c.axvline(x=1, color="gray", linestyle="--", linewidth=1, alpha=0.5, label="_ideal")
+    plt.tight_layout()
+    mo.vstack([
+        mo.image(fig_to_image(_fig_c)),
+        mo.md("<center><i>Each line = one algorithm. X = how many rounds two players share a court in a single session. Ideal: spike at 1, short tail. A flat or wide distribution means certain pairs keep meeting.</i></center>"),
+    ])
     return
 
 @app.cell(hide_code=True)
