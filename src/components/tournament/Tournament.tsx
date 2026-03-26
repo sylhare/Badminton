@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
@@ -28,7 +28,7 @@ interface TournamentProps {
 }
 
 function standingsSubtitle(t: TournamentBase, isComplete: boolean): string {
-  if (t.state().type === 'elimination') {
+  if (t instanceof EliminationTournament) {
     return isComplete ? 'Final Results' : 'In Progress';
   }
   const done = t.completedRounds();
@@ -47,6 +47,7 @@ export const Tournament: React.FC<TournamentProps> = ({
   onTogglePlayer,
 }) => {
   const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
+  const standings = useMemo(() => tournament?.calculateStandings() ?? [], [tournament]);
 
   if (!tournament || tournament.phase() === 'setup') {
     return (
@@ -82,18 +83,19 @@ export const Tournament: React.FC<TournamentProps> = ({
   }
 
   const isComplete = tournament.isComplete();
+  const isElimination = tournament instanceof EliminationTournament;
 
   return (
     <div className="tournament-active-layout">
-      {tournament.state().type === 'elimination'
-        ? <EliminationBracket tournament={tournament as EliminationTournament} onMatchResult={onMatchResult} />
-        : <RoundRobinMatches tournament={tournament as RoundRobinTournament} onMatchResult={onMatchResult} />
+      {tournament instanceof EliminationTournament
+        ? <EliminationBracket tournament={tournament} onMatchResult={onMatchResult} />
+        : <RoundRobinMatches tournament={tournament} onMatchResult={onMatchResult} />
       }
       <TournamentStandings
-        standings={tournament.calculateStandings()}
+        standings={standings}
         isComplete={isComplete}
         subtitle={standingsSubtitle(tournament, isComplete)}
-        showPoints={tournament.state().type !== 'elimination'}
+        showPoints={!isElimination}
       />
       <button
         className="button button-primary"

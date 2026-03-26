@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import type { BracketNode } from '../../../tournament/bracketTree';
 import type { TournamentMatch } from '../../../tournament/types';
@@ -54,17 +54,20 @@ interface EliminationBracketProps {
 export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onMatchResult }) => {
   const { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel } = useMatchModal(onMatchResult);
 
-  const teams = tournament.teams();
   const bracketSize = tournament.bracketSize();
-  const wbMatches = tournament.wbMatches();
-  const cbSeeds = tournament.wbR1Losers();
-  const cbMatches = tournament.cbMatches();
+  const cbSeedsLength = tournament.wbR1Losers().length;
 
-  const wbTree = computeWBTree(teams, bracketSize, wbMatches);
-  const cbTree = computeCBTree(cbSeeds, cbMatches, bracketSize);
+  const wbTree = useMemo(
+    () => computeWBTree(tournament.teams(), tournament.bracketSize(), tournament.wbMatches()),
+    [tournament],
+  );
+  const cbTree = useMemo(
+    () => computeCBTree(tournament.wbR1Losers(), tournament.cbMatches(), tournament.bracketSize()),
+    [tournament],
+  );
 
   const wbHeight = (bracketSize / 2) * CARD_HEIGHT + HEADER_HEIGHT;
-  const cbBracketSize = cbSeeds.length > 0 ? Math.pow(2, Math.ceil(Math.log2(cbSeeds.length))) : 0;
+  const cbBracketSize = cbSeedsLength > 0 ? Math.pow(2, Math.ceil(Math.log2(cbSeedsLength))) : 0;
   const extraRoundHeight = cbTree.length > 0 ? CARD_HEIGHT * (Math.pow(2, cbTree.length - 1) + 1) / 2 : 0;
   const cbCardAreaHeight = cbBracketSize > 0 ? Math.max((cbBracketSize / 2) * CARD_HEIGHT, extraRoundHeight) : 0;
   const cbHeight = cbCardAreaHeight > 0 ? cbCardAreaHeight + HEADER_HEIGHT : 0;

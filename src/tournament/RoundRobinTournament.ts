@@ -98,18 +98,6 @@ export class RoundRobinTournament extends Tournament {
     });
   }
 
-  validate(teams: TournamentTeam[], format: TournamentFormat): string | null {
-    if (teams.length < 2) return 'Need at least 2 teams to start';
-    if (format === 'doubles') {
-      for (const team of teams) {
-        if (team.players.length !== 2) {
-          return 'Each doubles team must have exactly 2 players';
-        }
-      }
-    }
-    return null;
-  }
-
   calculateStandings(): TournamentStandingRow[] {
     const { teams, matches } = this._state;
     const standings = new Map<string, TournamentStandingRow>();

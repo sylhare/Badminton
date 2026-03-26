@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentTeam } from '../../tournament/types';
@@ -67,7 +67,10 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
     setSwapSelection(null);
   };
 
-  const tournament = RoundRobinTournament.create(format, numberOfCourts);
+  const tournament = useMemo(
+    () => RoundRobinTournament.create(format, numberOfCourts),
+    [format, numberOfCourts],
+  );
   const validationError = tournament.validate(teams, format);
   const matchesPerRound = RoundRobinTournament.matchesPerRound(teams);
   const courtWarning =

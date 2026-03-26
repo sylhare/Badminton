@@ -48,10 +48,21 @@ export abstract class Tournament {
     return new (this.constructor as new (s: TournamentState) => this)(newState);
   }
 
+  validate(teams: TournamentTeam[], format: TournamentFormat): string | null {
+    if (teams.length < 2) return 'Need at least 2 teams to start';
+    if (format === 'doubles') {
+      for (const team of teams) {
+        if (team.players.length !== 2) {
+          return 'Each doubles team must have exactly 2 players';
+        }
+      }
+    }
+    return null;
+  }
+
   abstract start(teams: TournamentTeam[], numberOfCourts: number): Tournament;
   abstract calculateStandings(): TournamentStandingRow[];
   abstract completedRounds(): number;
   abstract totalRounds(): number;
   abstract isComplete(): boolean;
-  abstract validate(teams: TournamentTeam[], format: TournamentFormat): string | null;
 }

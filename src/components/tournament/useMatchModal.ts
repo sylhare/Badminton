@@ -13,29 +13,31 @@ interface UseMatchModalResult {
 }
 
 export function useMatchModal(onMatchResult: MatchResultFn): UseMatchModalResult {
-  const [modalMatch, setModalMatch] = useState<TournamentMatch | null>(null);
-  const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
+  const [pending, setPending] = useState<{ match: TournamentMatch; winner: 1 | 2 } | null>(null);
 
   const handleTeamClick = (match: TournamentMatch, teamNumber: 1 | 2) => {
     if (match.winner === teamNumber) {
       onMatchResult(match.id, teamNumber);
       return;
     }
-    setModalMatch(match);
-    setPendingWinner(teamNumber);
+    setPending({ match, winner: teamNumber });
   };
 
   const handleModalConfirm = (score: { team1: number; team2: number }) => {
-    if (!modalMatch || pendingWinner === null) return;
-    onMatchResult(modalMatch.id, pendingWinner, score);
-    setModalMatch(null);
-    setPendingWinner(null);
+    if (!pending) return;
+    onMatchResult(pending.match.id, pending.winner, score);
+    setPending(null);
   };
 
   const handleModalCancel = () => {
-    setModalMatch(null);
-    setPendingWinner(null);
+    setPending(null);
   };
 
-  return { modalMatch, pendingWinner, handleTeamClick, handleModalConfirm, handleModalCancel };
+  return {
+    modalMatch: pending?.match ?? null,
+    pendingWinner: pending?.winner ?? null,
+    handleTeamClick,
+    handleModalConfirm,
+    handleModalCancel,
+  };
 }
