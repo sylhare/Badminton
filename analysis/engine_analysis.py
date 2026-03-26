@@ -154,6 +154,8 @@ def _(
     build_configs_by_label,
     cg_config,
     cg_diversity,
+    cooc_by_algo,
+    freshness_by_algo,
     get_balance_pct,
     get_bench_fairness,
     get_bias_score,
@@ -676,6 +678,71 @@ def _(compute_teammate_diversity, data_dir, pl):
     )
 
 @app.cell
+def _(cg_match_events_div, mc_match_events_div, pl, random_match_events_div, sa_match_events_div, sl_match_events_div):
+    """Shared computation of court-group freshness and co-occurrence distributions.
+    Results are consumed by both the chart cells and algo_metrics to avoid duplication."""
+    def _court_freshness_fn(match_df):
+        scores = []
+        groups = (
+            match_df.select(["simulationId", "numPlayers"])
+            .unique()
+            .sort(["simulationId", "numPlayers"])
+            .iter_rows()
+        )
+        for sid, npl in groups:
+            sim = match_df.filter(
+                (pl.col("simulationId") == sid) & (pl.col("numPlayers") == npl)
+            )
+            hist: dict = {}
+            for row in sim.iter_rows(named=True):
+                court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
+                for p in court:
+                    hist.setdefault(p, []).append((row["roundIndex"], frozenset(court - {p})))
+            for rounds in hist.values():
+                rounds.sort(key=lambda x: x[0])
+                for i in range(1, len(rounds)):
+                    scores.append(len(rounds[i][1] - rounds[i - 1][1]))
+        return scores
+
+    def _cooccurrence_fn(match_df):
+        all_counts = []
+        groups = (
+            match_df.select(["simulationId", "numPlayers"])
+            .unique()
+            .sort(["simulationId", "numPlayers"])
+            .iter_rows()
+        )
+        for sid, npl in groups:
+            sim = match_df.filter(
+                (pl.col("simulationId") == sid) & (pl.col("numPlayers") == npl)
+            )
+            pair_counts: dict = {}
+            for row in sim.iter_rows(named=True):
+                court = sorted(set(row["team1Players"].split("|") + row["team2Players"].split("|")))
+                for i in range(len(court)):
+                    for j in range(i + 1, len(court)):
+                        key = f"{court[i]}|{court[j]}"
+                        pair_counts[key] = pair_counts.get(key, 0) + 1
+            all_counts.extend(pair_counts.values())
+        return all_counts
+
+    freshness_by_algo = {
+        "Random Baseline": _court_freshness_fn(random_match_events_div),
+        "Monte Carlo": _court_freshness_fn(mc_match_events_div),
+        "Simulated Annealing": _court_freshness_fn(sa_match_events_div),
+        "Conflict Graph": _court_freshness_fn(cg_match_events_div),
+        "Smart Matching": _court_freshness_fn(sl_match_events_div),
+    }
+    cooc_by_algo = {
+        "Random Baseline": _cooccurrence_fn(random_match_events_div),
+        "Monte Carlo": _cooccurrence_fn(mc_match_events_div),
+        "Simulated Annealing": _cooccurrence_fn(sa_match_events_div),
+        "Conflict Graph": _cooccurrence_fn(cg_match_events_div),
+        "Smart Matching": _cooccurrence_fn(sl_match_events_div),
+    }
+    return freshness_by_algo, cooc_by_algo
+
+@app.cell
 def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random_diversity, sa_diversity, sl_diversity):
     _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
     _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
@@ -745,41 +812,11 @@ def _(mo):
     return
 
 @app.cell
-def _(ALGO_COLORS, cg_match_events_div, fig_to_image, mc_match_events_div, mo, np, pl, plt, random_match_events_div, sa_match_events_div, sl_match_events_div):
-    def _court_freshness(match_df):
-        # Group by (simulationId, numPlayers) — simulationId is 1-RUNS for each player
-        # count, so mixing them without numPlayers would corrupt cross-session comparisons.
-        scores = []
-        groups = (
-            match_df.select(["simulationId", "numPlayers"])
-            .unique()
-            .sort(["simulationId", "numPlayers"])
-            .iter_rows()
-        )
-        for sid, npl in groups:
-            sim = match_df.filter(
-                (pl.col("simulationId") == sid) & (pl.col("numPlayers") == npl)
-            )
-            hist: dict = {}
-            for row in sim.iter_rows(named=True):
-                court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
-                for p in court:
-                    hist.setdefault(p, []).append((row["roundIndex"], frozenset(court - {p})))
-            for rounds in hist.values():
-                rounds.sort(key=lambda x: x[0])
-                for i in range(1, len(rounds)):
-                    scores.append(len(rounds[i][1] - rounds[i - 1][1]))
-        return scores
-
+def _(ALGO_COLORS, fig_to_image, freshness_by_algo, mo, np, plt):
+    _display_order_v = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
     _algo_names_v = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
     _colors_v = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
-    _freshness_data = [
-        _court_freshness(random_match_events_div),
-        _court_freshness(mc_match_events_div),
-        _court_freshness(sa_match_events_div),
-        _court_freshness(cg_match_events_div),
-        _court_freshness(sl_match_events_div),
-    ]
+    _freshness_data = [freshness_by_algo[name] for name in _display_order_v]
 
     # 100% stacked bar: one bar per algorithm, 4 colour bands for 0/1/2/3 new court-mates
     _stack_colors = ["#d73027", "#fc8d59", "#91cf60", "#1a9850"]  # red → orange → light-green → dark-green
@@ -835,39 +872,11 @@ def _(mo):
     return
 
 @app.cell
-def _(ALGO_COLORS, cg_match_events_div, fig_to_image, mc_match_events_div, mo, pl, plt, random_match_events_div, sa_match_events_div, sl_match_events_div):
-    def _cooccurrence(match_df):
-        # Group by (simulationId, numPlayers) to avoid cross-scenario contamination
-        all_counts = []
-        groups = (
-            match_df.select(["simulationId", "numPlayers"])
-            .unique()
-            .sort(["simulationId", "numPlayers"])
-            .iter_rows()
-        )
-        for sid, npl in groups:
-            sim = match_df.filter(
-                (pl.col("simulationId") == sid) & (pl.col("numPlayers") == npl)
-            )
-            pair_counts: dict = {}
-            for row in sim.iter_rows(named=True):
-                court = sorted(set(row["team1Players"].split("|") + row["team2Players"].split("|")))
-                for i in range(len(court)):
-                    for j in range(i + 1, len(court)):
-                        key = f"{court[i]}|{court[j]}"
-                        pair_counts[key] = pair_counts.get(key, 0) + 1
-            all_counts.extend(pair_counts.values())
-        return all_counts
-
+def _(ALGO_COLORS, cooc_by_algo, fig_to_image, mo, plt):
+    _display_order_c = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
     _algo_names_c = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
     _colors_c = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
-    _cooc_data = [
-        _cooccurrence(random_match_events_div),
-        _cooccurrence(mc_match_events_div),
-        _cooccurrence(sa_match_events_div),
-        _cooccurrence(cg_match_events_div),
-        _cooccurrence(sl_match_events_div),
-    ]
+    _cooc_data = [cooc_by_algo[name] for name in _display_order_c]
 
     # Overlapping line chart: X = rounds sharing a court (1, 2, 3 …), Y = % of pair-sessions
     _max_rounds_c = max((max(d) for d in _cooc_data if d), default=10)
