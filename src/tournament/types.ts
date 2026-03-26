@@ -1,4 +1,4 @@
-import type { Player } from './index';
+import type { Player } from '../types';
 
 export type TournamentFormat = 'singles' | 'doubles';
 export type TournamentType = 'round-robin';

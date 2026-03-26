@@ -1,8 +1,8 @@
 import React from 'react';
 
-import type { TournamentStandingRow } from '../../types/tournament';
+import type { TournamentStandingRow } from '../../../tournament/types';
 
-interface TournamentStandingsProps {
+interface RoundRobinStandingsProps {
   standings: TournamentStandingRow[];
   currentRound: number;
   totalRounds: number;
@@ -15,7 +15,7 @@ function teamLabel(row: TournamentStandingRow): string {
   return row.team.players.map(p => p.name).join(' & ');
 }
 
-const TournamentStandings: React.FC<TournamentStandingsProps> = ({
+const RoundRobinStandings: React.FC<RoundRobinStandingsProps> = ({
   standings,
   currentRound,
   totalRounds,
@@ -67,4 +67,4 @@ const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   );
 };
 
-export default TournamentStandings;
+export default RoundRobinStandings;
