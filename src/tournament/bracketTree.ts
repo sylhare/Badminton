@@ -25,27 +25,23 @@ export function roundLabel(roundNumber: number, totalRounds: number): string {
   return `${n}th of Final`;
 }
 
-// ─── Internal helpers ───────────────────────────────────────────────────────
-
 type PositionResult = TournamentTeam | 'bye' | 'tbd';
 
-function resolveWBPosition(
+function resolvePosition(
   round: number,
   position: number,
-  teams: TournamentTeam[],
-  wbMatches: TournamentMatch[],
+  seeds: TournamentTeam[],
+  matches: TournamentMatch[],
 ): PositionResult {
   if (round === 1) {
-    const slot1 = 2 * position;
-    const slot2 = 2 * position + 1;
-    const team1 = teams[slot1];
-    const team2 = teams[slot2];
+    const team1 = seeds[2 * position];
+    const team2 = seeds[2 * position + 1];
 
     if (!team1 && !team2) return 'bye';
     if (!team1) return team2;
     if (!team2) return team1;
 
-    const match = wbMatches.find(
+    const match = matches.find(
       m =>
         m.round === 1 &&
         ((m.team1.id === team1.id && m.team2.id === team2.id) ||
@@ -55,42 +51,10 @@ function resolveWBPosition(
     return match.winner === 1 ? match.team1 : match.team2;
   }
 
-  const resultA = resolveWBPosition(round - 1, 2 * position, teams, wbMatches);
-  const resultB = resolveWBPosition(round - 1, 2 * position + 1, teams, wbMatches);
+  const resultA = resolvePosition(round - 1, 2 * position, seeds, matches);
+  const resultB = resolvePosition(round - 1, 2 * position + 1, seeds, matches);
 
-  return resolveChildNode(round, resultA, resultB, wbMatches);
-}
-
-function resolveCBPosition(
-  round: number,
-  position: number,
-  cbSeeds: TournamentTeam[],
-  cbMatches: TournamentMatch[],
-): PositionResult {
-  if (round === 1) {
-    const slot1 = 2 * position;
-    const slot2 = 2 * position + 1;
-    const team1 = cbSeeds[slot1];
-    const team2 = cbSeeds[slot2];
-
-    if (!team1 && !team2) return 'bye';
-    if (!team1) return team2;
-    if (!team2) return team1;
-
-    const match = cbMatches.find(
-      m =>
-        m.round === 1 &&
-        ((m.team1.id === team1.id && m.team2.id === team2.id) ||
-          (m.team1.id === team2.id && m.team2.id === team1.id)),
-    );
-    if (!match || match.winner === undefined) return 'tbd';
-    return match.winner === 1 ? match.team1 : match.team2;
-  }
-
-  const resultA = resolveCBPosition(round - 1, 2 * position, cbSeeds, cbMatches);
-  const resultB = resolveCBPosition(round - 1, 2 * position + 1, cbSeeds, cbMatches);
-
-  return resolveChildNode(round, resultA, resultB, cbMatches);
+  return resolveChildNode(round, resultA, resultB, matches);
 }
 
 function resolveChildNode(
@@ -104,7 +68,6 @@ function resolveChildNode(
   if (resultB === 'bye') return resultA;
   if (resultA === 'tbd' || resultB === 'tbd') return 'tbd';
 
-  // Both real teams — find the match in this round
   const match = matches.find(
     m =>
       m.round === round &&
@@ -117,16 +80,11 @@ function resolveChildNode(
   return match.winner === 1 ? match.team1 : match.team2;
 }
 
-// ─── Public API ─────────────────────────────────────────────────────────────
-
 /**
  * Computes a round-by-round bracket tree for the Winners Bracket.
  * Returns an array of rounds (from round 1 to finalRound),
  * each containing an array of BracketNode in slot order.
- *
- * @param teams       All seeded teams (indices beyond teams.length are byes)
- * @param bracketSize Power-of-2 total slot count
- * @param wbMatches   All WB matches (bracket === 'wb')
+ * Indices beyond teams.length are treated as byes.
  */
 export function computeWBTree(
   teams: TournamentTeam[],
@@ -141,7 +99,7 @@ export function computeWBTree(
     const round: BracketNode[] = [];
 
     for (let pos = 0; pos < positionsInRound; pos++) {
-      round.push(buildWBNode(r, pos, teams, wbMatches));
+      round.push(buildNode(r, pos, teams, wbMatches));
     }
 
     rounds.push(round);
@@ -150,23 +108,21 @@ export function computeWBTree(
   return rounds;
 }
 
-function buildWBNode(
+function buildNode(
   round: number,
   position: number,
-  teams: TournamentTeam[],
-  wbMatches: TournamentMatch[],
+  seeds: TournamentTeam[],
+  matches: TournamentMatch[],
 ): BracketNode {
   if (round === 1) {
-    const slot1 = 2 * position;
-    const slot2 = 2 * position + 1;
-    const team1 = teams[slot1];
-    const team2 = teams[slot2];
+    const team1 = seeds[2 * position];
+    const team2 = seeds[2 * position + 1];
 
     if (!team1 && !team2) return { type: 'empty', slotIndex: position };
     if (!team1) return { type: 'bye-advance', team: team2, slotIndex: position };
     if (!team2) return { type: 'bye-advance', team: team1, slotIndex: position };
 
-    const match = wbMatches.find(
+    const match = matches.find(
       m =>
         m.round === 1 &&
         ((m.team1.id === team1.id && m.team2.id === team2.id) ||
@@ -176,9 +132,8 @@ function buildWBNode(
     return { type: 'match', match, slotIndex: position };
   }
 
-  // Higher rounds: derive from parent positions
-  const parentA = resolveWBPosition(round - 1, 2 * position, teams, wbMatches);
-  const parentB = resolveWBPosition(round - 1, 2 * position + 1, teams, wbMatches);
+  const parentA = resolvePosition(round - 1, 2 * position, seeds, matches);
+  const parentB = resolvePosition(round - 1, 2 * position + 1, seeds, matches);
 
   if (parentA === 'bye' && parentB === 'bye') return { type: 'empty', slotIndex: position };
   if (parentA === 'bye') {
@@ -191,8 +146,7 @@ function buildWBNode(
   }
   if (parentA === 'tbd' || parentB === 'tbd') return { type: 'tbd', slotIndex: position };
 
-  // Both real teams: find the match
-  const match = wbMatches.find(
+  const match = matches.find(
     m =>
       m.round === round &&
       ((m.team1.id === (parentA as TournamentTeam).id &&
@@ -206,13 +160,9 @@ function buildWBNode(
 
 /**
  * Computes a round-by-round bracket tree for the Consolation Bracket.
- *
- * @param cbSeeds     WB R1 losers in seeding order
- * @param cbMatches   All CB matches (bracket === 'cb')
- * @param bracketSize WB bracket size (power of 2); used to determine extra CB rounds
- *                    when the WB has more rounds than the CB seed depth
- *                    (e.g. 5-player: 2 WB R1 losers → 1 seed round, but WB has 3 rounds
- *                    so CB also needs a 2nd round fed by the WB Semi-Final loser)
+ * When the WB has more rounds than the CB seed depth (e.g. 5-player: 2 WB R1 losers
+ * produce 1 seed round, but WB has 3 rounds), extra CB rounds are appended and
+ * filled by WB losers dropping in from those later rounds.
  */
 export function computeCBTree(
   cbSeeds: TournamentTeam[],
@@ -223,7 +173,6 @@ export function computeCBTree(
 
   const cbBracketSize = nextPowerOf2(cbSeeds.length);
   const cbSeedRounds = Math.log2(cbBracketSize);
-  // WB rounds that produce CB-eligible losers (all except the WB Final round)
   const wbLoserRounds = Math.log2(bracketSize) - 1;
   const totalCBRounds = Math.max(cbSeedRounds, wbLoserRounds);
 
@@ -231,16 +180,13 @@ export function computeCBTree(
 
   for (let r = 1; r <= totalCBRounds; r++) {
     if (r <= cbSeedRounds) {
-      // Standard seed-based round (recursive resolution from cbSeeds)
       const positionsInRound = cbBracketSize / Math.pow(2, r);
       const round: BracketNode[] = [];
       for (let pos = 0; pos < positionsInRound; pos++) {
-        round.push(buildCBNode(r, pos, cbSeeds, cbMatches));
+        round.push(buildNode(r, pos, cbSeeds, cbMatches));
       }
       rounds.push(round);
     } else {
-      // Extra round: teams enter from CB survivors + WB losers dropping in.
-      // Look up actual cbMatches for this round; show TBD if not yet generated.
       const roundMatches = cbMatches.filter(m => m.round === r);
       if (roundMatches.length > 0) {
         rounds.push(roundMatches.map((m, i) => ({ type: 'match' as const, match: m, slotIndex: i })));
@@ -251,56 +197,4 @@ export function computeCBTree(
   }
 
   return rounds;
-}
-
-function buildCBNode(
-  round: number,
-  position: number,
-  cbSeeds: TournamentTeam[],
-  cbMatches: TournamentMatch[],
-): BracketNode {
-  if (round === 1) {
-    const slot1 = 2 * position;
-    const slot2 = 2 * position + 1;
-    const team1 = cbSeeds[slot1];
-    const team2 = cbSeeds[slot2];
-
-    if (!team1 && !team2) return { type: 'empty', slotIndex: position };
-    if (!team1) return { type: 'bye-advance', team: team2, slotIndex: position };
-    if (!team2) return { type: 'bye-advance', team: team1, slotIndex: position };
-
-    const match = cbMatches.find(
-      m =>
-        m.round === 1 &&
-        ((m.team1.id === team1.id && m.team2.id === team2.id) ||
-          (m.team1.id === team2.id && m.team2.id === team1.id)),
-    );
-    if (!match) return { type: 'tbd', slotIndex: position };
-    return { type: 'match', match, slotIndex: position };
-  }
-
-  const parentA = resolveCBPosition(round - 1, 2 * position, cbSeeds, cbMatches);
-  const parentB = resolveCBPosition(round - 1, 2 * position + 1, cbSeeds, cbMatches);
-
-  if (parentA === 'bye' && parentB === 'bye') return { type: 'empty', slotIndex: position };
-  if (parentA === 'bye') {
-    if (parentB === 'tbd') return { type: 'tbd', slotIndex: position };
-    return { type: 'bye-advance', team: parentB as TournamentTeam, slotIndex: position };
-  }
-  if (parentB === 'bye') {
-    if (parentA === 'tbd') return { type: 'tbd', slotIndex: position };
-    return { type: 'bye-advance', team: parentA as TournamentTeam, slotIndex: position };
-  }
-  if (parentA === 'tbd' || parentB === 'tbd') return { type: 'tbd', slotIndex: position };
-
-  const match = cbMatches.find(
-    m =>
-      m.round === round &&
-      ((m.team1.id === (parentA as TournamentTeam).id &&
-        m.team2.id === (parentB as TournamentTeam).id) ||
-        (m.team1.id === (parentB as TournamentTeam).id &&
-          m.team2.id === (parentA as TournamentTeam).id)),
-  );
-  if (!match) return { type: 'tbd', slotIndex: position };
-  return { type: 'match', match, slotIndex: position };
 }

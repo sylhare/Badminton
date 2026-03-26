@@ -38,11 +38,6 @@ export function nodeTop(slotIndex: number, round: number): number {
   return firstOffset + slotIndex * spacing;
 }
 
-/** Total pixel height needed to contain the entire bracket column */
-export function columnHeight(bracketSize: number): number {
-  return bracketSize * CARD_HEIGHT;
-}
-
 const BracketColumn: React.FC<BracketColumnProps> = ({
   nodes,
   round,

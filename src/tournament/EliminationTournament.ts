@@ -38,11 +38,10 @@ function getWBPositionResult(
     const team1 = teams[slot1];
     const team2 = teams[slot2];
 
-    if (!team1 && !team2) return 'bye'; // both slots are byes → empty
-    if (!team1) return team2; // team1 slot is bye → team2 auto-advances
-    if (!team2) return team1; // team2 slot is bye → team1 auto-advances
+    if (!team1 && !team2) return 'bye';
+    if (!team1) return team2;
+    if (!team2) return team1;
 
-    // Both real teams: find the match and return winner
     const match = wbMatches.find(
       m =>
         m.round === 1 &&
@@ -53,7 +52,6 @@ function getWBPositionResult(
     return match.winner === 1 ? match.team1 : match.team2;
   }
 
-  // Higher rounds: get results from the two parent positions
   const resultA = getWBPositionResult(round - 1, 2 * position, teams, wbMatches);
   const resultB = getWBPositionResult(round - 1, 2 * position + 1, teams, wbMatches);
 
@@ -62,7 +60,6 @@ function getWBPositionResult(
   if (resultB === 'bye') return resultA;
   if (resultA === 'tbd' || resultB === 'tbd') return 'tbd';
 
-  // Both real teams: find the match in this WB round
   const match = wbMatches.find(
     m =>
       m.round === round &&
@@ -123,6 +120,13 @@ function generateWBRound1(
   return matches;
 }
 
+/**
+ * Generates any new matches triggered by the latest result.
+ * WB next rounds are seeded from WB winners; CB R1 is seeded from WB R1 losers.
+ * When CB has fewer survivors than needed for a round (e.g. 5-player: 2 WB R1 losers
+ * produce 1 CB R1 match → 1 survivor, but CB Final needs 2), the loser of WB R(n+1)
+ * drops into CB — unless that round is the WB Final (WB Final loser is runner-up).
+ */
 function generateFollowUpMatches(
   teams: TournamentTeam[],
   bracketSize: number,
@@ -134,7 +138,6 @@ function generateFollowUpMatches(
   const cbMatches = allMatches.filter(m => m.bracket === 'cb');
   const totalWBRounds = Math.log2(bracketSize);
 
-  // Count existing matches per bracket+round for quick lookup
   function wbRoundExists(round: number): boolean {
     return wbMatches.some(m => m.round === round);
   }
@@ -150,12 +153,10 @@ function generateFollowUpMatches(
     return roundMatches.length > 0 && roundMatches.every(m => m.winner !== undefined);
   }
 
-  // --- Generate next WB rounds ---
   for (let n = 1; n < totalWBRounds; n++) {
-    if (!wbRoundComplete(n)) break; // must complete in order
-    if (wbRoundExists(n + 1)) continue; // already generated
+    if (!wbRoundComplete(n)) break;
+    if (wbRoundExists(n + 1)) continue;
 
-    // Generate WB round n+1
     const nextRoundPositions = bracketSize / Math.pow(2, n + 1);
     let courtIndex = allMatches.length + newMatches.length;
     const wbMatchesSoFar = [...wbMatches, ...newMatches.filter(m => m.bracket === 'wb')];
@@ -177,7 +178,6 @@ function generateFollowUpMatches(
     break; // only generate one round at a time
   }
 
-  // --- Generate CB R1 from WB R1 losers (only once, when WB R1 completes) ---
   if (wbRoundComplete(1) && !cbRoundExists(1)) {
     const wbR1Positions = bracketSize / 2;
     const losers: TournamentTeam[] = [];
@@ -199,11 +199,9 @@ function generateFollowUpMatches(
         });
         courtIndex++;
       }
-      // If odd number of losers, last one gets a bye (no match stored)
     }
   }
 
-  // --- Generate next CB rounds ---
   const cbRounds = Array.from(new Set(cbMatches.map(m => m.round))).sort((a, b) => a - b);
   const maxCBRound = cbRounds.length > 0 ? Math.max(...cbRounds) : 0;
 
@@ -218,7 +216,6 @@ function generateFollowUpMatches(
       .filter(m => m.winner !== undefined)
       .map(m => m.winner === 1 ? m.team1 : m.team2);
 
-    // Include CB R1 bye-advance teams: WB R1 losers that had no CB R1 match partner
     if (n === 1) {
       const cbR1TeamIds = new Set(cbMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
       for (let pos = 0; pos < bracketSize / 2; pos++) {
@@ -227,10 +224,6 @@ function generateFollowUpMatches(
       }
     }
 
-    // When CB has fewer survivors than needed, pull in WB round (n+1) losers.
-    // This handles brackets where WB has more rounds than the CB seed depth
-    // (e.g. 5-player: 2 WB R1 losers → 1 CB R1 match → 1 survivor → needs WB R2 loser for CB Final).
-    // Only applies to pre-Final WB rounds (WB Final loser is runner-up, stays out of CB).
     if (advancers.length < 2 && n + 1 < totalWBRounds && wbRoundComplete(n + 1)) {
       for (const m of wbMatches.filter(m => m.round === n + 1 && m.winner !== undefined)) {
         advancers.push(m.winner === 1 ? m.team2 : m.team1);
@@ -356,7 +349,6 @@ export class EliminationTournament extends Tournament {
       }
     }
 
-    // Sort: losses asc, then wins desc, then name asc
     return Array.from(standings.values()).sort((a, b) => {
       if (a.lost !== b.lost) return a.lost - b.lost;
       if (b.won !== a.won) return b.won - a.won;

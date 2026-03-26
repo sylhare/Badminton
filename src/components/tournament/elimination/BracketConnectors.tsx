@@ -39,7 +39,6 @@ const BracketConnectors: React.FC<BracketConnectorsProps> = ({
   for (const toNode of toNodes) {
     if (toNode.type === 'empty') continue;
 
-    // The two source positions feeding into this target
     const srcIdx0 = 2 * toNode.slotIndex;
     const srcIdx1 = 2 * toNode.slotIndex + 1;
 
@@ -53,24 +52,17 @@ const BracketConnectors: React.FC<BracketConnectorsProps> = ({
     const fromTop1 = nodeTop(fromNode1.slotIndex, fromRound);
     const toTop = nodeTop(toNode.slotIndex, toRound);
 
-    // Mid-y of each source card
     const y0 = fromTop0 + CARD_HEIGHT / 2;
     const y1 = fromTop1 + CARD_HEIGHT / 2;
-    // Mid-y of target card
     const yTarget = toTop + CARD_HEIGHT / 2;
 
-    // x: left edge of SVG = right edge of left column = 0 in SVG coords
-    // x: right edge = COLUMN_GAP
     const xLeft = 0;
     const xMid = COLUMN_GAP / 2;
     const xRight = COLUMN_GAP;
 
-    // Draw two elbows: one from each source to the midpoint, then connect to target
-    // Elbow for fromNode0
     if (fromNode0.type !== 'empty') {
       paths.push(`M ${xLeft} ${y0} H ${xMid} V ${yTarget} H ${xRight}`);
     }
-    // Elbow for fromNode1
     if (fromNode1.type !== 'empty') {
       paths.push(`M ${xLeft} ${y1} H ${xMid} V ${yTarget} H ${xRight}`);
     }
