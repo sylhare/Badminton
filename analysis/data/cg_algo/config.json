@@ -1,47 +1,45 @@
 {
   "runs": 50,
-  "rounds": 16,
+  "rounds": 10,
   "playerCounts": [
+    15,
+    16,
     17,
-    18,
-    19,
-    20,
-    21,
-    22
+    18
   ],
   "maxCourts": 4,
-  "totalSimulations": 300,
+  "totalSimulations": 200,
   "algorithmParams": {
     "iterationsPerRound": 1
   },
   "aggregateStats": {
-    "repeatRate": 100,
-    "avgRepeatsPerRun": 10.553333333333333,
-    "zeroRepeatRate": 0
+    "repeatRate": 92.5,
+    "avgRepeatsPerRun": 3.215,
+    "zeroRepeatRate": 7.5
   },
   "levelBasedBalance": {
-    "totalMatches": 19200,
-    "strongerTeamWinRate": 93.36979166666667,
-    "avgStrengthDifferential": 44.95625,
-    "perfectlyBalancedMatches": 2561,
-    "perfectlyBalancedRate": 13.338541666666668
+    "totalMatches": 7500,
+    "strongerTeamWinRate": 93.04,
+    "avgStrengthDifferential": 46.74133333333333,
+    "perfectlyBalancedMatches": 988,
+    "perfectlyBalancedRate": 13.173333333333334
   },
   "engineTrackedBalance": {
-    "totalMatches": 19200,
-    "engineBalancedWinRate": 57.99999999999999,
-    "avgEngineWinDifferential": 0.5751041666666666,
-    "perfectlyBalancedMatches": 9175,
-    "perfectlyBalancedRate": 47.78645833333333
+    "totalMatches": 7500,
+    "engineBalancedWinRate": 57.13333333333333,
+    "avgEngineWinDifferential": 0.5221333333333333,
+    "perfectlyBalancedMatches": 3933,
+    "perfectlyBalancedRate": 52.44
   },
   "benchFairness": {
-    "avgBenchRange": 1,
-    "avgMeanGap": 3.52900949058313,
-    "doubleBenchRate": 6.927272727272728,
-    "totalSessions": 300,
-    "totalGapEvents": 11000
+    "avgBenchRange": 0.75,
+    "avgMeanGap": 0.8975,
+    "doubleBenchRate": 12,
+    "totalSessions": 200,
+    "totalGapEvents": 100
   },
   "timing": {
-    "totalMs": 524
+    "totalMs": 119
   },
-  "timestamp": "2026-03-06T21:06:20.540Z"
+  "timestamp": "2026-03-26T19:05:29.420Z"
 }
