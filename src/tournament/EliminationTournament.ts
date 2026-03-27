@@ -206,7 +206,7 @@ export class EliminationTournament extends Tournament {
     return new WinnersBracket(
       this._state.teams,
       this._state.matches.filter(m => m.bracket === BracketKind.Winners),
-      this._state.bracketSize ?? nextPowerOf2(this._state.teams.length),
+      this.bracketSize(),
     );
   }
 
@@ -214,7 +214,7 @@ export class EliminationTournament extends Tournament {
     return new ConsolationBracket(
       this.winners.firstRoundLosers(),
       this._state.matches.filter(m => m.bracket === BracketKind.Consolation),
-      this._state.bracketSize ?? nextPowerOf2(this._state.teams.length),
+      this.bracketSize(),
     );
   }
 

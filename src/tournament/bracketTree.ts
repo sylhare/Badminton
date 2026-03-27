@@ -50,10 +50,6 @@ function resolveChildNode(
   return match.winner === 1 ? match.team1 : match.team2;
 }
 
-/**
- * Returns the team that wins a given bracket position (round, positionInRound),
- * or 'bye' if the slot produces no team (empty), or 'tbd' if undecided.
- */
 export function resolvePosition(
   round: number,
   position: number,
@@ -154,6 +150,7 @@ function buildNode(
 /** Shared base for WinnersBracket and ConsolationBracket. */
 export abstract class Bracket {
   constructor(
+    protected readonly _seeds: TournamentTeam[],
     protected readonly _matches: TournamentMatch[],
     protected readonly _bracketSize: number,
   ) {}
@@ -166,29 +163,43 @@ export abstract class Bracket {
     return this._matches.filter(m => m.round === round);
   }
 
-  abstract totalRounds(): number;
-  abstract computeTree(): BracketNode[][];
-}
-
-/** Winners (main) bracket — tracks teams through the primary elimination path. */
-export class WinnersBracket extends Bracket {
-  constructor(
-    private readonly _teams: TournamentTeam[],
-    matches: TournamentMatch[],
-    bracketSize: number,
-  ) {
-    super(matches, bracketSize);
+  protected buildRound(r: number, seedBracketSize: number): BracketNode[] {
+    const positions = seedBracketSize / Math.pow(2, r);
+    const round: BracketNode[] = [];
+    for (let pos = 0; pos < positions; pos++) {
+      round.push(buildNode(r, pos, this._seeds, this._matches));
+    }
+    return round;
   }
 
   totalRounds(): number {
     return Math.log2(this._bracketSize);
   }
 
+  protected roundNodes(r: number): BracketNode[] {
+    return this.buildRound(r, this._bracketSize);
+  }
+
+  computeTree(): BracketNode[][] {
+    if (this._seeds.length < 2) return [];
+    const rounds: BracketNode[][] = [];
+    for (let r = 1; r <= this.totalRounds(); r++) {
+      rounds.push(this.roundNodes(r));
+    }
+    return rounds;
+  }
+}
+
+/** Winners (main) bracket — tracks teams through the primary elimination path. */
+export class WinnersBracket extends Bracket {
+  constructor(teams: TournamentTeam[], matches: TournamentMatch[], bracketSize: number) {
+    super(teams, matches, bracketSize);
+  }
+
   completedRounds(): number {
     if (this._matches.length === 0) return 0;
-    const total = this.totalRounds();
     let completed = 0;
-    for (let r = 1; r <= total; r++) {
+    for (let r = 1; r <= this.totalRounds(); r++) {
       if (roundComplete(this._matches, r)) completed = r;
       else break;
     }
@@ -198,74 +209,43 @@ export class WinnersBracket extends Bracket {
   firstRoundLosers(): TournamentTeam[] {
     const losers: TournamentTeam[] = [];
     for (let pos = 0; pos < this._bracketSize / 2; pos++) {
-      const loser = getWinnersFirstRoundLoser(pos, this._teams, this._matches);
+      const loser = getWinnersFirstRoundLoser(pos, this._seeds, this._matches);
       if (loser) losers.push(loser);
     }
     return losers;
-  }
-
-  computeTree(): BracketNode[][] {
-    const totalRounds = Math.log2(this._bracketSize);
-    const rounds: BracketNode[][] = [];
-    for (let r = 1; r <= totalRounds; r++) {
-      const positionsInRound = this._bracketSize / Math.pow(2, r);
-      const round: BracketNode[] = [];
-      for (let pos = 0; pos < positionsInRound; pos++) {
-        round.push(buildNode(r, pos, this._teams, this._matches));
-      }
-      rounds.push(round);
-    }
-    return rounds;
   }
 }
 
 /** Consolation bracket — for teams eliminated in the winners bracket first round. */
 export class ConsolationBracket extends Bracket {
-  constructor(
-    private readonly _seeds: TournamentTeam[],
-    matches: TournamentMatch[],
-    bracketSize: number,
-  ) {
-    super(matches, bracketSize);
+  constructor(seeds: TournamentTeam[], matches: TournamentMatch[], bracketSize: number) {
+    super(seeds, matches, bracketSize);
   }
 
   seeds(): TournamentTeam[] {
     return this._seeds;
   }
 
-  totalRounds(): number {
-    if (this._matches.length === 0) return 0;
-    return Math.max(...this._matches.map(m => m.round));
+  private get cbBracketSize(): number {
+    return nextPowerOf2(this._seeds.length);
   }
 
-  computeTree(): BracketNode[][] {
-    if (this._seeds.length < 2) return [];
+  private get cbSeedRounds(): number {
+    return Math.log2(this.cbBracketSize);
+  }
 
-    const cbBracketSize = nextPowerOf2(this._seeds.length);
-    const cbSeedRounds = Math.log2(cbBracketSize);
-    const wbLoserRounds = Math.log2(this._bracketSize) - 1;
-    const totalCBRounds = Math.max(cbSeedRounds, wbLoserRounds);
+  totalRounds(): number {
+    return Math.max(this.cbSeedRounds, Math.log2(this._bracketSize) - 1);
+  }
 
-    const rounds: BracketNode[][] = [];
-
-    for (let r = 1; r <= totalCBRounds; r++) {
-      if (r <= cbSeedRounds) {
-        const positionsInRound = cbBracketSize / Math.pow(2, r);
-        const round: BracketNode[] = [];
-        for (let pos = 0; pos < positionsInRound; pos++) {
-          round.push(buildNode(r, pos, this._seeds, this._matches));
-        }
-        rounds.push(round);
-      } else {
-        const roundMatches = this._matches.filter(m => m.round === r);
-        if (roundMatches.length > 0) {
-          rounds.push(roundMatches.map((m, i) => ({ type: 'match' as const, match: m, slotIndex: i })));
-        } else {
-          rounds.push([{ type: 'tbd' as const, slotIndex: 0 }]);
-        }
-      }
+  protected roundNodes(r: number): BracketNode[] {
+    if (r <= this.cbSeedRounds) {
+      return this.buildRound(r, this.cbBracketSize);
     }
-
-    return rounds;
+    const roundMatches = this.matchesForRound(r);
+    if (roundMatches.length > 0) {
+      return roundMatches.map((m, i) => ({ type: 'match' as const, match: m, slotIndex: i }));
+    }
+    return [{ type: 'tbd' as const, slotIndex: 0 }];
   }
 }
