@@ -19,135 +19,6 @@ import {
   roundComplete,
 } from './bracketTree';
 
-function makeMatchId(index: number): string {
-  return `elim-match-${Date.now()}-${index}`;
-}
-
-function makeMatch(
-  bracket: BracketKind,
-  round: number,
-  team1: TournamentTeam,
-  team2: TournamentTeam,
-  courtIndex: number,
-  numberOfCourts: number,
-): TournamentMatch {
-  return {
-    id: makeMatchId(courtIndex),
-    round,
-    courtNumber: (courtIndex % numberOfCourts) + 1,
-    team1,
-    team2,
-    bracket,
-  };
-}
-
-function roundExists(matches: TournamentMatch[], round: number): boolean {
-  return matches.some(m => m.round === round);
-}
-
-function generateWinnersFirstRound(
-  teams: TournamentTeam[],
-  bracketSize: number,
-  numberOfCourts: number,
-): TournamentMatch[] {
-  const matches: TournamentMatch[] = [];
-  let courtIndex = 0;
-  for (let pos = 0; pos < bracketSize / 2; pos++) {
-    const team1 = teams[2 * pos];
-    const team2 = teams[2 * pos + 1];
-    if (team1 && team2) {
-      matches.push(makeMatch(BracketKind.Winners, 1, team1, team2, courtIndex, numberOfCourts));
-      courtIndex++;
-    }
-  }
-  return matches;
-}
-
-function generateFollowUpMatches(
-  teams: TournamentTeam[],
-  bracketSize: number,
-  allMatches: TournamentMatch[],
-  numberOfCourts: number,
-): TournamentMatch[] {
-  const newMatches: TournamentMatch[] = [];
-  const winnersMatches = allMatches.filter(m => m.bracket === BracketKind.Winners);
-  const consolationMatches = allMatches.filter(m => m.bracket === BracketKind.Consolation);
-  const totalWBRounds = Math.log2(bracketSize);
-
-  for (let n = 1; n < totalWBRounds; n++) {
-    if (!roundComplete(winnersMatches, n)) break;
-    if (roundExists(winnersMatches, n + 1)) continue;
-
-    const nextRoundPositions = bracketSize / Math.pow(2, n + 1);
-    let courtIndex = allMatches.length + newMatches.length;
-    const winnersMatchesSoFar = [...winnersMatches, ...newMatches.filter(m => m.bracket === BracketKind.Winners)];
-    for (let pos = 0; pos < nextRoundPositions; pos++) {
-      const teamA = resolvePosition(n, 2 * pos, teams, winnersMatchesSoFar);
-      const teamB = resolvePosition(n, 2 * pos + 1, teams, winnersMatchesSoFar);
-      if (teamA !== 'bye' && teamA !== 'tbd' && teamB !== 'bye' && teamB !== 'tbd') {
-        newMatches.push(makeMatch(BracketKind.Winners, n + 1, teamA, teamB, courtIndex, numberOfCourts));
-        courtIndex++;
-      }
-    }
-    break;
-  }
-
-  if (roundComplete(winnersMatches, 1) && !roundExists(consolationMatches, 1)) {
-    const losers: TournamentTeam[] = [];
-    for (let pos = 0; pos < bracketSize / 2; pos++) {
-      const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
-      if (loser) losers.push(loser);
-    }
-
-    if (losers.length >= 2) {
-      let courtIndex = allMatches.length + newMatches.length;
-      for (let i = 0; i < Math.floor(losers.length / 2); i++) {
-        newMatches.push(makeMatch(BracketKind.Consolation, 1, losers[2 * i], losers[2 * i + 1], courtIndex, numberOfCourts));
-        courtIndex++;
-      }
-    }
-  }
-
-  const maxCBRound = consolationMatches.length > 0 ? Math.max(...consolationMatches.map(m => m.round)) : 0;
-
-  for (let n = 1; n <= maxCBRound; n++) {
-    if (!roundComplete(consolationMatches, n)) break;
-    if (roundExists(consolationMatches, n + 1)) continue;
-
-    const consolationMatchesSoFar = [...consolationMatches, ...newMatches.filter(m => m.bracket === BracketKind.Consolation)]
-      .filter(m => m.round === n);
-
-    const advancers: TournamentTeam[] = consolationMatchesSoFar
-      .filter(m => m.winner !== undefined)
-      .map(m => m.winner === 1 ? m.team1 : m.team2);
-
-    if (n === 1) {
-      const cbR1TeamIds = new Set(consolationMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
-      for (let pos = 0; pos < bracketSize / 2; pos++) {
-        const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
-        if (loser && !cbR1TeamIds.has(loser.id)) advancers.push(loser);
-      }
-    }
-
-    if (advancers.length < 2 && n + 1 < totalWBRounds && roundComplete(winnersMatches, n + 1)) {
-      for (const m of winnersMatches.filter(m => m.round === n + 1 && m.winner !== undefined)) {
-        advancers.push(m.winner === 1 ? m.team2 : m.team1);
-      }
-    }
-
-    if (advancers.length >= 2) {
-      let courtIndex = allMatches.length + newMatches.length;
-      for (let i = 0; i < Math.floor(advancers.length / 2); i++) {
-        newMatches.push(makeMatch(BracketKind.Consolation, n + 1, advancers[2 * i], advancers[2 * i + 1], courtIndex, numberOfCourts));
-        courtIndex++;
-      }
-    }
-    break;
-  }
-
-  return newMatches;
-}
-
 export class EliminationTournament extends Tournament {
   static create(
     format: TournamentFormat = 'doubles',
@@ -169,17 +40,140 @@ export class EliminationTournament extends Tournament {
     return RoundRobinTournament.createTeams(players, format);
   }
 
+  private makeMatch(
+    bracket: BracketKind,
+    round: number,
+    team1: TournamentTeam,
+    team2: TournamentTeam,
+    courtIndex: number,
+  ): TournamentMatch {
+    return {
+      id: `elim-match-${Date.now()}-${courtIndex}`,
+      round,
+      courtNumber: (courtIndex % this._state.numberOfCourts) + 1,
+      team1,
+      team2,
+      bracket,
+    };
+  }
+
+  private roundExists(matches: TournamentMatch[], round: number): boolean {
+    return matches.some(m => m.round === round);
+  }
+
+  private pairTeamsIntoMatches(
+    bracket: BracketKind,
+    round: number,
+    teams: TournamentTeam[],
+    startCourtIndex: number,
+  ): TournamentMatch[] {
+    const matches: TournamentMatch[] = [];
+    for (let i = 0; i < Math.floor(teams.length / 2); i++) {
+      matches.push(this.makeMatch(bracket, round, teams[2 * i], teams[2 * i + 1], startCourtIndex + i));
+    }
+    return matches;
+  }
+
+  private generateWinnersFirstRound(): TournamentMatch[] {
+    const { teams } = this._state;
+    const bracketSize = this.bracketSize();
+    const matches: TournamentMatch[] = [];
+    let courtIndex = 0;
+    for (let pos = 0; pos < bracketSize / 2; pos++) {
+      const team1 = teams[2 * pos];
+      const team2 = teams[2 * pos + 1];
+      if (team1 && team2) {
+        matches.push(this.makeMatch(BracketKind.Winners, 1, team1, team2, courtIndex));
+        courtIndex++;
+      }
+    }
+    return matches;
+  }
+
+  private generateFollowUpMatches(allMatches: TournamentMatch[]): TournamentMatch[] {
+    const { teams } = this._state;
+    const bracketSize = this.bracketSize();
+    const newMatches: TournamentMatch[] = [];
+    const winnersMatches = allMatches.filter(m => m.bracket === BracketKind.Winners);
+    const consolationMatches = allMatches.filter(m => m.bracket === BracketKind.Consolation);
+    const totalWBRounds = Math.log2(bracketSize);
+
+    for (let n = 1; n < totalWBRounds; n++) {
+      if (!roundComplete(winnersMatches, n)) break;
+      if (this.roundExists(winnersMatches, n + 1)) continue;
+
+      const nextRoundPositions = bracketSize / Math.pow(2, n + 1);
+      let courtIndex = allMatches.length + newMatches.length;
+      const winnersMatchesSoFar = [...winnersMatches, ...newMatches.filter(m => m.bracket === BracketKind.Winners)];
+      for (let pos = 0; pos < nextRoundPositions; pos++) {
+        const teamA = resolvePosition(n, 2 * pos, teams, winnersMatchesSoFar);
+        const teamB = resolvePosition(n, 2 * pos + 1, teams, winnersMatchesSoFar);
+        if (teamA !== 'bye' && teamA !== 'tbd' && teamB !== 'bye' && teamB !== 'tbd') {
+          newMatches.push(this.makeMatch(BracketKind.Winners, n + 1, teamA, teamB, courtIndex));
+          courtIndex++;
+        }
+      }
+      break;
+    }
+
+    if (roundComplete(winnersMatches, 1) && !this.roundExists(consolationMatches, 1)) {
+      const losers: TournamentTeam[] = [];
+      for (let pos = 0; pos < bracketSize / 2; pos++) {
+        const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
+        if (loser) losers.push(loser);
+      }
+      if (losers.length >= 2) {
+        newMatches.push(...this.pairTeamsIntoMatches(
+          BracketKind.Consolation, 1, losers, allMatches.length + newMatches.length,
+        ));
+      }
+    }
+
+    const maxCBRound = consolationMatches.length > 0 ? Math.max(...consolationMatches.map(m => m.round)) : 0;
+
+    for (let n = 1; n <= maxCBRound; n++) {
+      if (!roundComplete(consolationMatches, n)) break;
+      if (this.roundExists(consolationMatches, n + 1)) continue;
+
+      const consolationMatchesSoFar = [
+        ...consolationMatches.filter(m => m.round === n),
+        ...newMatches.filter(m => m.bracket === BracketKind.Consolation && m.round === n),
+      ];
+
+      const advancers: TournamentTeam[] = consolationMatchesSoFar
+        .filter(m => m.winner !== undefined)
+        .map(m => m.winner === 1 ? m.team1 : m.team2);
+
+      if (n === 1) {
+        const cbR1TeamIds = new Set(consolationMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
+        for (let pos = 0; pos < bracketSize / 2; pos++) {
+          const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
+          if (loser && !cbR1TeamIds.has(loser.id)) advancers.push(loser);
+        }
+      }
+
+      if (advancers.length < 2 && n + 1 < totalWBRounds && roundComplete(winnersMatches, n + 1)) {
+        for (const m of winnersMatches.filter(m => m.round === n + 1 && m.winner !== undefined)) {
+          advancers.push(m.winner === 1 ? m.team2 : m.team1);
+        }
+      }
+
+      if (advancers.length >= 2) {
+        newMatches.push(...this.pairTeamsIntoMatches(
+          BracketKind.Consolation, n + 1, advancers, allMatches.length + newMatches.length,
+        ));
+      }
+      break;
+    }
+
+    return newMatches;
+  }
+
   start(teams: TournamentTeam[], numberOfCourts: number): EliminationTournament {
     const bracketSize = nextPowerOf2(teams.length);
-    const matches = generateWinnersFirstRound(teams, bracketSize, numberOfCourts);
-    return new EliminationTournament({
-      ...this._state,
-      phase: 'active',
-      teams,
-      numberOfCourts,
-      bracketSize,
-      matches,
-    });
+    const setup = new EliminationTournament({ ...this._state, teams, numberOfCourts, bracketSize });
+    const matches = setup.generateWinnersFirstRound();
+    return new EliminationTournament({ ...setup._state, phase: 'active', matches });
   }
 
   override withMatchResult(
@@ -190,16 +184,10 @@ export class EliminationTournament extends Tournament {
     const updatedMatches = this._state.matches.map(m =>
       m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
     );
-    const { teams, bracketSize, numberOfCourts } = this._state;
-    const followUp = generateFollowUpMatches(
-      teams,
-      bracketSize ?? nextPowerOf2(teams.length),
-      updatedMatches,
-      numberOfCourts,
-    );
-    const updated = new EliminationTournament({ ...this._state, matches: [...updatedMatches, ...followUp] });
-    const phase = updated.isComplete() ? 'completed' : 'active';
-    return new EliminationTournament({ ...updated._state, phase }) as unknown as this;
+    const followUp = this.generateFollowUpMatches(updatedMatches);
+    const allMatches = [...updatedMatches, ...followUp];
+    const phase = allMatches.length > 0 && allMatches.every(m => m.winner !== undefined) ? 'completed' : 'active';
+    return new EliminationTournament({ ...this._state, matches: allMatches, phase }) as unknown as this;
   }
 
   get winners(): WinnersBracket {
