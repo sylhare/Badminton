@@ -299,7 +299,7 @@ def _(DIV_COLORS, DIVISORS, ELO_DIVISOR, K_DEFAULT, K_MAX, go, make_subplots, mo
     _fig_div.add_hline(y=0.5, line_dash="dot", line_color="#aaa", row=1, col=1)
 
     _fig_div.update_layout(
-        height=400,
+        height=400, minreducedwidth=900,
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(x=0.02, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
         xaxis=dict(title="Level difference (avgA − avgB)", gridcolor="#eee"),
@@ -376,7 +376,7 @@ def _(DIV_COLORS, DIVISORS, ELO_DIVISOR, K_COLORS, K_MAX, go, make_subplots, mo)
             legendgrouptitle_text="K-factor" if _k == _ALL_K[0] else None,
         ), row=1, col=2)
     _fig_top.update_layout(
-        **_LAYOUT,
+        **_LAYOUT, minreducedwidth=900,
         xaxis=dict(title="Level gap (stronger − weaker)", gridcolor="#eee"),
         yaxis=dict(title=f"Max Δ level (K={K_MAX})", gridcolor="#eee"),
         xaxis2=dict(title="Level gap (stronger − weaker)", gridcolor="#eee"),
@@ -412,7 +412,7 @@ def _(DIV_COLORS, DIVISORS, ELO_DIVISOR, K_COLORS, K_MAX, go, make_subplots, mo)
         ), row=1, col=2)
     _fig_bot.add_hline(y=0.5, line_dash="dot", line_color="#aaa", row=1, col=2)
     _fig_bot.update_layout(
-        **_LAYOUT,
+        **_LAYOUT, minreducedwidth=900,
         xaxis=dict(title="Divisor D", gridcolor="#eee"),
         yaxis=dict(title="K-factor", gridcolor="#eee"),
         xaxis2=dict(title="Level gap (stronger − weaker)", gridcolor="#eee"),
@@ -620,7 +620,7 @@ def _(K_COLORS, K_DEFAULT, K_MAX, K_SCALE, get_k_raw, go, make_subplots, mo, win
     )
 
     _fig.update_layout(
-        height=420,
+        height=420, minreducedwidth=900,
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(x=0.02, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
         yaxis=dict(title="Win Δ (level points gained)", gridcolor="#eee"),
@@ -789,7 +789,7 @@ def _(K_MAX, K_SCALE, balance_factor, go, make_subplots, mo):
         )
 
     _fig.update_layout(
-        height=420,
+        height=420, minreducedwidth=900,
         plot_bgcolor="white", paper_bgcolor="white",
         legend=dict(x=0.56, y=0.98, bgcolor="rgba(255,255,255,0.8)", bordercolor="#ccc", borderwidth=1),
         xaxis=dict(title="Team level spread |L₁ − L₂|", gridcolor="#eee"),
@@ -1069,7 +1069,7 @@ def _(ELO_DIVISOR, K_MAX, avg_level, balance_factor, go, k_factor, make_subplots
     ), row=1, col=2)
     _fig_top.add_hline(y=0, line_dash="dot", line_color="#aaa", row=1, col=2)
     _fig_top.update_layout(
-        **_LAYOUT4,
+        **_LAYOUT4, minreducedwidth=900,
         legend=_LEGEND,
         xaxis=dict(title="Team 2 avg level", gridcolor="#eee"),
         yaxis=dict(title="Team 1 avg level", gridcolor="#eee", autorange="reversed"),
@@ -1116,7 +1116,7 @@ def _(ELO_DIVISOR, K_MAX, avg_level, balance_factor, go, k_factor, make_subplots
     ), row=1, col=2)
     _fig_bot.add_hline(y=1.0, line_dash="dot", line_color="#aaa", row=1, col=2)
     _fig_bot.update_layout(
-        **_LAYOUT4,
+        **_LAYOUT4, minreducedwidth=900,
         barmode="group",
         legend=dict(x=0.02, y=0.98, **_LEGEND),
         xaxis=dict(tickangle=-15),
@@ -1301,7 +1301,7 @@ def _(go, make_subplots, mo, play_game, random):
             row=1, col=2,
         )
     _fig_singles.update_layout(
-        **_SHARED_LAYOUT,
+        **_SHARED_LAYOUT, minreducedwidth=900,
         yaxis=_YAXIS, yaxis2=_YAXIS,
         xaxis=dict(title="Game", gridcolor="#eee"),
         xaxis2=dict(title="Game", gridcolor="#eee"),
@@ -1331,7 +1331,7 @@ def _(go, make_subplots, mo, play_game, random):
             row=1, col=2,
         )
     _fig_doubles.update_layout(
-        **_SHARED_LAYOUT,
+        **_SHARED_LAYOUT, minreducedwidth=900,
         yaxis=_YAXIS, yaxis2=_YAXIS,
         xaxis=dict(title="Round", gridcolor="#eee"),
         xaxis2=dict(title="Round", gridcolor="#eee"),
