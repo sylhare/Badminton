@@ -27,8 +27,6 @@ export function roundLabel(roundNumber: number, totalRounds: number): string {
 
 /**
  * Computes a round-by-round bracket tree for the Winners Bracket.
- * Returns an array of rounds (from round 1 to finalRound),
- * each containing an array of BracketNode in slot order.
  * Indices beyond teams.length are treated as byes.
  */
 export function computeWBTree(
@@ -67,11 +65,7 @@ function buildNode(
     if (!team1) return { type: 'bye-advance', team: team2, slotIndex: position };
     if (!team2) return { type: 'bye-advance', team: team1, slotIndex: position };
 
-    const match = matches.find(
-      m => m.round === 1 &&
-        ((m.team1.id === team1.id && m.team2.id === team2.id) ||
-          (m.team1.id === team2.id && m.team2.id === team1.id)),
-    );
+    const match = findMatchBetween(1, team1, team2, matches);
     if (!match) return { type: 'tbd', slotIndex: position };
     return { type: 'match', match, slotIndex: position };
   }

@@ -1,17 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { TournamentTeam } from '../../src/tournament/types';
 import { computeCBTree, computeWBTree, roundLabel } from '../../src/tournament/bracketTree';
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
-import { createMockPlayer } from '../data/testFactories';
-
-function makeTeam(id: string): TournamentTeam {
-  return { id, players: [createMockPlayer({ id: `${id}-p0`, name: id })] };
-}
-
-function makeTeams(ids: string[]): TournamentTeam[] {
-  return ids.map(makeTeam);
-}
+import { createTournamentTeam, createTournamentTeams } from '../data/testFactories';
 
 describe('roundLabel', () => {
   it('last round is Final', () => {
@@ -34,7 +25,7 @@ describe('roundLabel', () => {
 
 describe('computeWBTree', () => {
   describe('4 teams (bracketSize=4)', () => {
-    const [A, B, C, D] = makeTeams(['A', 'B', 'C', 'D']);
+    const [A, B, C, D] = createTournamentTeams(['A', 'B', 'C', 'D']);
     const teams = [A, B, C, D];
     const bracketSize = 4;
 
@@ -76,7 +67,7 @@ describe('computeWBTree', () => {
   });
 
   describe('8 teams (bracketSize=8)', () => {
-    const teams = makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+    const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
     const bracketSize = 8;
 
     it('produces 3 rounds', () => {
@@ -103,7 +94,7 @@ describe('computeWBTree', () => {
   });
 
   describe('5 teams (bracketSize=8) — byes at end', () => {
-    const teams = makeTeams(['A', 'B', 'C', 'D', 'E']);
+    const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E']);
     const bracketSize = 8;
 
     it('round 1 has 4 nodes: 2 tbd + 1 bye-advance + 1 empty', () => {
@@ -131,7 +122,7 @@ describe('computeWBTree', () => {
   });
 
   describe('3 teams (bracketSize=4)', () => {
-    const [A, B, C] = makeTeams(['A', 'B', 'C']);
+    const [A, B, C] = createTournamentTeams(['A', 'B', 'C']);
     const teams = [A, B, C];
     const bracketSize = 4;
 
@@ -148,11 +139,11 @@ describe('computeWBTree', () => {
 describe('computeCBTree', () => {
   it('returns empty when fewer than 2 seeds', () => {
     expect(computeCBTree([], [], 4)).toHaveLength(0);
-    expect(computeCBTree([makeTeam('X')], [], 4)).toHaveLength(0);
+    expect(computeCBTree([createTournamentTeam('X')], [], 4)).toHaveLength(0);
   });
 
   describe('4 CB seeds (from 8-team WB R1)', () => {
-    const seeds = makeTeams(['L1', 'L2', 'L3', 'L4']);
+    const seeds = createTournamentTeams(['L1', 'L2', 'L3', 'L4']);
 
     it('produces 2 rounds', () => {
       expect(computeCBTree(seeds, [], 8)).toHaveLength(2);
@@ -171,7 +162,7 @@ describe('computeCBTree', () => {
     });
 
     it('round 2 becomes a match after CB R1 results', () => {
-      let t = EliminationTournament.create().start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4);
+      let t = EliminationTournament.create().start(createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4);
       for (const m of t.wbMatchesForRound(1)) t = t.withMatchResult(m.id, 1);
 
       const cbSeeds = t.wbR1Losers();
@@ -186,7 +177,7 @@ describe('computeCBTree', () => {
   });
 
   describe('2 CB seeds (from 4-team WB R1, bracketSize=4)', () => {
-    const seeds = makeTeams(['L1', 'L2']);
+    const seeds = createTournamentTeams(['L1', 'L2']);
 
     it('produces 1 round (CB final only), tbd when no matches provided', () => {
       const tree = computeCBTree(seeds, [], 4);
@@ -197,7 +188,7 @@ describe('computeCBTree', () => {
   });
 
   describe('2 CB seeds (from 5-player WB R1, bracketSize=8)', () => {
-    const seeds = makeTeams(['L1', 'L2']);
+    const seeds = createTournamentTeams(['L1', 'L2']);
 
     it('produces 2 rounds (CB R1 + extra CB Final from WB R2 loser)', () => {
       expect(computeCBTree(seeds, [], 8)).toHaveLength(2);
@@ -216,7 +207,7 @@ describe('computeCBTree', () => {
     });
 
     it('round 2 becomes match node once CB R2 match is generated', () => {
-      let t = EliminationTournament.create().start(makeTeams(['A', 'B', 'C', 'D', 'E']), 4);
+      let t = EliminationTournament.create().start(createTournamentTeams(['A', 'B', 'C', 'D', 'E']), 4);
       const [m0, m1] = t.wbMatchesForRound(1);
       t = t.withMatchResult(m0.id, 1);
       t = t.withMatchResult(m1.id, 1);

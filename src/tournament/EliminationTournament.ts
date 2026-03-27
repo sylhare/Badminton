@@ -58,8 +58,13 @@ function roundExists(matches: TournamentMatch[], round: number): boolean {
 }
 
 function roundComplete(matches: TournamentMatch[], round: number): boolean {
-  const roundMatches = matches.filter(m => m.round === round);
-  return roundMatches.length > 0 && roundMatches.every(m => m.winner !== undefined);
+  let count = 0;
+  for (const m of matches) {
+    if (m.round !== round) continue;
+    if (m.winner === undefined) return false;
+    count++;
+  }
+  return count > 0;
 }
 
 type PositionResult = TournamentTeam | 'bye' | 'tbd';
@@ -108,9 +113,6 @@ export function resolvePosition(
   return resolveChildNode(round, resultA, resultB, matches);
 }
 
-/**
- * Returns the loser of a WB R1 position, or null if no match / no result yet.
- */
 function getWBR1Loser(
   position: number,
   teams: TournamentTeam[],
@@ -119,12 +121,7 @@ function getWBR1Loser(
   const team1 = teams[2 * position];
   const team2 = teams[2 * position + 1];
   if (!team1 || !team2) return null;
-  const match = wbMatches.find(
-    m =>
-      m.round === 1 &&
-      ((m.team1.id === team1.id && m.team2.id === team2.id) ||
-        (m.team1.id === team2.id && m.team2.id === team1.id)),
-  );
+  const match = findMatchBetween(1, team1, team2, wbMatches);
   if (!match || match.winner === undefined) return null;
   return match.winner === 1 ? match.team2 : match.team1;
 }
@@ -147,13 +144,6 @@ function generateWBRound1(
   return matches;
 }
 
-/**
- * Generates any new matches triggered by the latest result.
- * WB next rounds are seeded from WB winners; CB R1 is seeded from WB R1 losers.
- * When CB has fewer survivors than needed for a round (e.g. 5-player: 2 WB R1 losers
- * produce 1 CB R1 match → 1 survivor, but CB Final needs 2), the loser of WB R(n+1)
- * drops into CB — unless that round is the WB Final (WB Final loser is runner-up).
- */
 function generateFollowUpMatches(
   teams: TournamentTeam[],
   bracketSize: number,
@@ -199,8 +189,7 @@ function generateFollowUpMatches(
     }
   }
 
-  const cbRounds = Array.from(new Set(cbMatches.map(m => m.round))).sort((a, b) => a - b);
-  const maxCBRound = cbRounds.length > 0 ? Math.max(...cbRounds) : 0;
+  const maxCBRound = cbMatches.length > 0 ? Math.max(...cbMatches.map(m => m.round)) : 0;
 
   for (let n = 1; n <= maxCBRound; n++) {
     if (!roundComplete(cbMatches, n)) break;
@@ -338,14 +327,11 @@ export class EliminationTournament extends Tournament {
     const wbMatches = this.wbMatches();
     if (wbMatches.length === 0) return 0;
 
-    const roundNums = Array.from(new Set(wbMatches.map(m => m.round))).sort((a, b) => a - b);
+    const total = this.totalRounds();
     let completed = 0;
-    for (const r of roundNums) {
-      if (roundComplete(wbMatches, r)) {
-        completed = r;
-      } else {
-        break;
-      }
+    for (let r = 1; r <= total; r++) {
+      if (roundComplete(wbMatches, r)) completed = r;
+      else break;
     }
     return completed;
   }
@@ -388,7 +374,6 @@ export class EliminationTournament extends Tournament {
     return Math.max(...cb.map(m => m.round));
   }
 
-  /** Returns the WB R1 losers in position order (for CB seeding). */
   wbR1Losers(): TournamentTeam[] {
     const { teams, bracketSize } = this._state;
     const bSize = bracketSize ?? nextPowerOf2(teams.length);
