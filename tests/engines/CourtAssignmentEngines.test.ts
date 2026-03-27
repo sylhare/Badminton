@@ -348,6 +348,42 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(state).toHaveProperty('winCountMap');
       expect(state).toHaveProperty('lossCountMap');
     });
+
+    it('should clear pair maps but keep win counts when normal mode state is older than 5 days', async () => {
+      const players = mockPlayers(4);
+
+      engine.generate(players, 1);
+      engine.recordWins([createMockCourt(1, players, 1)]);
+
+      const savedAtSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.now() - 6 * 24 * 60 * 60 * 1000);
+      await engine.saveState(type);
+      savedAtSpy.mockRestore();
+
+      const winCountsBefore = new Map(engine.getWinCounts());
+      expect(engine.getStats().teammateCountMap.size).toBeGreaterThan(0);
+
+      engine.resetHistory();
+      await engine.loadState(type);
+
+      expect(engine.getStats().teammateCountMap.size).toBe(0);
+      expect(engine.getStats().opponentCountMap.size).toBe(0);
+      for (const [id, count] of winCountsBefore) {
+        expect(engine.getWinCounts().get(id)).toBe(count);
+      }
+    });
+
+    it('should keep pair maps when normal mode state is less than 5 days old', async () => {
+      const players = mockPlayers(4);
+
+      engine.generate(players, 1);
+      await engine.saveState(type);
+      expect(engine.getStats().teammateCountMap.size).toBeGreaterThan(0);
+
+      engine.resetHistory();
+      await engine.loadState(type);
+
+      expect(engine.getStats().teammateCountMap.size).toBeGreaterThan(0);
+    });
   });
 
   describe('Manual Court Selection', () => {

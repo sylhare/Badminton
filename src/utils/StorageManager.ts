@@ -30,6 +30,7 @@ const OLD_KEYS = {
 interface CompactEngineState {
   v: 3;
   et?: EngineType;
+  ts?: number;
   pi: string[];
   ps: Array<[number, number, number, number]>;
   pc: Record<string, [number, number]>;
@@ -180,7 +181,7 @@ class StorageManager {
   }
 
   async saveEngine(state: CourtEngineState): Promise<void> {
-    const compact = this.toCompact(state);
+    const compact = this.toCompact({ ...state, savedAt: Date.now() });
     return this.save(
       current => ({ ...current, engine: compact as unknown as CourtEngineState }),
     );
@@ -322,7 +323,7 @@ class StorageManager {
       lh = pi.map(id => state.levelHistory![id] ?? []);
     }
 
-    return { v: 3, et: state.engineType, pi, ps, pc, lh };
+    return { v: 3, et: state.engineType, ts: state.savedAt, pi, ps, pc, lh };
   }
 
   private fromCompact(c: CompactEngineState): CourtEngineState {
@@ -369,6 +370,7 @@ class StorageManager {
 
     return {
       engineType: c.et,
+      savedAt: c.ts,
       benchCountMap, singleCountMap,
       teammateCountMap, opponentCountMap,
       winCountMap, lossCountMap,
