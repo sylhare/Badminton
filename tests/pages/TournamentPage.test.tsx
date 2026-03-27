@@ -7,6 +7,7 @@ import { TournamentPage } from '../../src/pages/TournamentPage';
 import { storageManager } from '../../src/utils/StorageManager';
 import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 import { MOCK_PLAYERS } from '../data/testFactories';
+import { BracketKind } from '../../src/tournament/types';
 
 const mockPlayers = MOCK_PLAYERS.tournament;
 
@@ -214,12 +215,12 @@ describe('TournamentPage', () => {
         ],
         matches: [
           {
-            id: 'm1', round: 1, courtNumber: 1, bracket: 'wb' as const,
+            id: 'm1', round: 1, courtNumber: 1, bracket: BracketKind.Winners,
             team1: { id: 't1', players: [A] },
             team2: { id: 't2', players: [B] },
           },
           {
-            id: 'm2', round: 1, courtNumber: 2, bracket: 'wb' as const,
+            id: 'm2', round: 1, courtNumber: 2, bracket: BracketKind.Winners,
             team1: { id: 't3', players: [C] },
             team2: { id: 't4', players: [D] },
           },

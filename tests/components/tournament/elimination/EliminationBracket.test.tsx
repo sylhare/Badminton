@@ -116,7 +116,7 @@ describe('EliminationBracket', () => {
     it('shows CB section after WB R1 is complete', async () => {
       const [A, B, C, D] = makeTeams(['A', 'B', 'C', 'D']);
       let t = EliminationTournament.create('singles').start([A, B, C, D], 4);
-      const [m0, m1] = t.wbMatchesForRound(1);
+      const [m0, m1] = t.winners.matchesForRound(1);
       t = t.withMatchResult(m0.id, 1);
       t = t.withMatchResult(m1.id, 1);
 

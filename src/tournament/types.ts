@@ -1,6 +1,11 @@
 import type { Player } from '../types';
 
 export type TournamentFormat = 'singles' | 'doubles';
+
+export enum BracketKind {
+  Winners = 'winners',
+  Consolation = 'consolation',
+}
 export type TournamentType = 'round-robin' | 'elimination';
 export type TournamentPhase = 'setup' | 'active' | 'completed';
 
@@ -17,7 +22,7 @@ export interface TournamentMatch {
   team2: TournamentTeam;
   winner?: 1 | 2;
   score?: { team1: number; team2: number };
-  bracket?: 'wb' | 'cb';
+  bracket?: BracketKind;
 }
 
 export interface TournamentStandingRow {
