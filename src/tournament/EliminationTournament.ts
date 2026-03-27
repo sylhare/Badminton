@@ -18,6 +18,19 @@ export function nextPowerOf2(n: number): number {
   return p;
 }
 
+export function findMatchBetween(
+  round: number,
+  teamA: TournamentTeam,
+  teamB: TournamentTeam,
+  matches: TournamentMatch[],
+): TournamentMatch | undefined {
+  return matches.find(
+    m => m.round === round &&
+      ((m.team1.id === teamA.id && m.team2.id === teamB.id) ||
+       (m.team1.id === teamB.id && m.team2.id === teamA.id)),
+  );
+}
+
 function makeMatchId(index: number): string {
   return `elim-match-${Date.now()}-${index}`;
 }
@@ -62,13 +75,7 @@ function resolveChildNode(
   if (resultB === 'bye') return resultA;
   if (resultA === 'tbd' || resultB === 'tbd') return 'tbd';
 
-  const match = matches.find(
-    m => m.round === round &&
-      ((m.team1.id === (resultA as TournamentTeam).id &&
-          m.team2.id === (resultB as TournamentTeam).id) ||
-        (m.team1.id === (resultB as TournamentTeam).id &&
-          m.team2.id === (resultA as TournamentTeam).id)),
-  );
+  const match = findMatchBetween(round, resultA as TournamentTeam, resultB as TournamentTeam, matches);
   if (!match || match.winner === undefined) return 'tbd';
   return match.winner === 1 ? match.team1 : match.team2;
 }
@@ -91,12 +98,7 @@ export function resolvePosition(
     if (!team1) return team2;
     if (!team2) return team1;
 
-    const match = matches.find(
-      m =>
-        m.round === 1 &&
-        ((m.team1.id === team1.id && m.team2.id === team2.id) ||
-          (m.team1.id === team2.id && m.team2.id === team1.id)),
-    );
+    const match = findMatchBetween(1, team1, team2, matches);
     if (!match || match.winner === undefined) return 'tbd';
     return match.winner === 1 ? match.team1 : match.team2;
   }

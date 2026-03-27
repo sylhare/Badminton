@@ -1,5 +1,5 @@
 import type { TournamentMatch, TournamentTeam } from './types';
-import { nextPowerOf2, resolvePosition } from './EliminationTournament';
+import { findMatchBetween, nextPowerOf2, resolvePosition } from './EliminationTournament';
 
 export type BracketNodeType = 'match' | 'bye-advance' | 'tbd' | 'empty';
 
@@ -90,13 +90,7 @@ function buildNode(
   }
   if (parentA === 'tbd' || parentB === 'tbd') return { type: 'tbd', slotIndex: position };
 
-  const match = matches.find(
-    m => m.round === round &&
-      ((m.team1.id === (parentA as TournamentTeam).id &&
-          m.team2.id === (parentB as TournamentTeam).id) ||
-        (m.team1.id === (parentB as TournamentTeam).id &&
-          m.team2.id === (parentA as TournamentTeam).id)),
-  );
+  const match = findMatchBetween(round, parentA as TournamentTeam, parentB as TournamentTeam, matches);
   if (!match) return { type: 'tbd', slotIndex: position };
   return { type: 'match', match, slotIndex: position };
 }
