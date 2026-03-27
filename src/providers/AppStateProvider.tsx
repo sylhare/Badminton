@@ -88,7 +88,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const applyCourtResults = (courts: Court[]) => {
     const courtsWithWinners = courts.filter(c => c.winner);
     if (courtsWithWinners.length > 0) {
-      engine().recordWins(courtsWithWinners);
       const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners, players);
       engine().recordLevelSnapshot(nextPlayers);
       setPlayers(nextPlayers);
