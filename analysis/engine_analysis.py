@@ -27,6 +27,7 @@ def _():
         compute_summary_metrics,
         analyze_adjacency_bias,
         compute_teammate_diversity,
+        compute_match_session_frequency,
         build_repeat_matrix,
         aggregate_bench_stats,
         aggregate_by_player_count,
@@ -38,6 +39,7 @@ def _():
         get_time_per_round, get_balance_pct, get_bench_fairness,
         get_singles_fairness, get_bias_score, build_configs_by_label,
         compute_summary_metrics, analyze_adjacency_bias, compute_teammate_diversity,
+        compute_match_session_frequency,
         build_repeat_matrix, aggregate_bench_stats, aggregate_by_player_count,
         compute_balance_metrics,
     )
@@ -796,6 +798,99 @@ The tight distribution (narrow box) shows consistent variety for ALL players, no
 Players assigned to singles courts have no teammate that round, which slightly reduces their unique teammate count compared to players who only play doubles.
 
 *Note: The circles below the boxes in the distribution chart are **outliers** — data points that fall outside 1.5× the interquartile range (IQR) from the quartiles.*
+    """)
+    return
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ### Match Repeat Likelihood
+
+    Given a specific match from one session (e.g., A+B vs C+D), how likely is the **exact same matchup**
+    to occur in another session?
+
+    This looks at each unique match configuration across all simulation runs and measures how many sessions
+    it appears in. A high concentration at "1 session" means the algorithm generates fresh matchups every time,
+    while a spread toward higher session counts reveals that certain pairings tend to recur.
+    """)
+    return
+
+@app.cell
+def _(compute_match_session_frequency, data_dir, pl):
+    random_match_events_mrf = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
+    mc_match_events_mrf = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
+    sa_match_events_mrf = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
+    cg_match_events_mrf = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
+    sl_match_events_mrf = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
+
+    random_mrf = compute_match_session_frequency(random_match_events_mrf)
+    mc_mrf = compute_match_session_frequency(mc_match_events_mrf)
+    sa_mrf = compute_match_session_frequency(sa_match_events_mrf)
+    cg_mrf = compute_match_session_frequency(cg_match_events_mrf)
+    sl_mrf = compute_match_session_frequency(sl_match_events_mrf)
+    return (
+        random_match_events_mrf, mc_match_events_mrf, sa_match_events_mrf,
+        cg_match_events_mrf, sl_match_events_mrf,
+        random_mrf, mc_mrf, sa_mrf, cg_mrf, sl_mrf,
+    )
+
+@app.cell
+def _(ALGO_COLORS, cg_mrf, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf, sl_mrf):
+    _display_order_mrf = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
+    _algo_names_mrf = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
+    _colors_mrf = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
+    _mrfs = [random_mrf, mc_mrf, sa_mrf, cg_mrf, sl_mrf]
+
+    _fig_mrf, (_ax_mrf1, _ax_mrf2) = plt.subplots(1, 2, figsize=(14, 5))
+
+    # Left: % of match configurations that appear in exactly 1 session
+    _unique_pcts = [m["unique_only_pct"] for m in _mrfs]
+    _x_mrf = np.arange(len(_algo_names_mrf))
+    _bars_mrf = _ax_mrf1.bar(_x_mrf, _unique_pcts, color=_colors_mrf, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _ax_mrf1.set_xticks(_x_mrf)
+    _ax_mrf1.set_xticklabels(_algo_names_mrf, fontsize=10)
+    _ax_mrf1.set_ylabel("% of unique match configurations", fontsize=11)
+    _ax_mrf1.set_title("Matches Seen in Exactly 1 Session\n(Higher = More Session-Unique Matchups)", fontsize=12, fontweight="bold")
+    _ax_mrf1.set_ylim(0, 105)
+    _ax_mrf1.grid(True, alpha=0.3, axis='y')
+    for _bar in _bars_mrf:
+        _h = _bar.get_height()
+        _ax_mrf1.text(_bar.get_x() + _bar.get_width() / 2, _h + 1, f"{_h:.1f}%",
+                      ha="center", va="bottom", fontsize=11, fontweight="bold")
+
+    # Right: distribution line chart — X = # sessions a match appears in, Y = % of unique matches
+    _max_s = max(m["max_sessions"] for m in _mrfs)
+    _xs_mrf = list(range(1, min(_max_s + 1, 16)))  # cap at 15 for readability
+    _line_styles_mrf = ["-o", "-s", "-^", "-D", "-v"]
+    for _mrf, _name, _col, _ls in zip(_mrfs, _algo_names_mrf, _colors_mrf, _line_styles_mrf):
+        _total = _mrf["total_unique_matches"] or 1
+        _ys_mrf = [sum(1 for c in _mrf["counts"] if c == k) / _total * 100 for k in _xs_mrf]
+        _ax_mrf2.plot(_xs_mrf, _ys_mrf, _ls, color=_col, label=_name.replace("\n", " "),
+                      linewidth=2, markersize=6, alpha=0.9)
+
+    _ax_mrf2.set_xlabel("Number of sessions containing the same match", fontsize=11)
+    _ax_mrf2.set_ylabel("% of unique match configurations", fontsize=11)
+    _ax_mrf2.set_xticks(_xs_mrf)
+    _ax_mrf2.set_title("Match Repeat Frequency Distribution\n(Ideal: tall spike at 1, rapid decay)", fontsize=12, fontweight="bold")
+    _ax_mrf2.legend(fontsize=9, title="Algorithm", title_fontsize=9)
+    _ax_mrf2.grid(True, alpha=0.3)
+
+    _fig_mrf.suptitle("Match Repeat Likelihood: How Often Does the Same Matchup Recur Across Sessions?",
+                       fontsize=13, fontweight="bold", y=1.02)
+    plt.tight_layout()
+
+    mo.vstack([
+        mo.image(fig_to_image(_fig_mrf)),
+        mo.md("<center><i>Left: % of match configurations seen in only 1 session. Right: distribution of how many sessions each unique matchup appears in.</i></center>"),
+    ])
+    return
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+A higher percentage of session-unique match configurations (e.g. A+B vs C+D) is better — it means the algorithm
+rarely produces the same matchup twice. Ideally, the distribution peaks at 1 session with as few repeats as possible,
+showing that most matchups are one-off occurrences across all runs.
     """)
     return
 
