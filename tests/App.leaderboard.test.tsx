@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -155,6 +155,31 @@ describe('App Leaderboard Persistence', () => {
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
+    });
+
+    it('should skip level snapshot when regenerating within 2 minutes', async () => {
+      renderWithProvider(<App />);
+      await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
+
+      const snapshotSpy = vi.spyOn(engine(), 'recordLevelSnapshot');
+
+      const team1Elements = screen.getAllByText('Team 1');
+      await act(async () => {
+        await user.click(team1Elements[0]);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      await generateAndWaitForAssignments(user);
+      expect(snapshotSpy).not.toHaveBeenCalled();
+    });
+
+    it('should run level snapshot on first ever generation (no lastGeneratedAt)', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+
+      const snapshotSpy = vi.spyOn(engine(), 'recordLevelSnapshot');
+      await generateAndWaitForAssignments(user);
+      expect(snapshotSpy).toHaveBeenCalledTimes(1);
     });
 
   });
