@@ -111,8 +111,9 @@ function App(): React.ReactElement {
     const isRapidRegeneration =
       lastGeneratedAt !== undefined &&
       now - lastGeneratedAt < REGENERATION_DEBOUNCE_MS;
+    const hasWinners = assignments.some(c => c.winner !== undefined);
 
-    if (!isRapidRegeneration) {
+    if (!isRapidRegeneration || hasWinners) {
       applyCourtResults(assignments);
     }
 

@@ -157,17 +157,11 @@ describe('App Leaderboard Persistence', () => {
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
     });
 
-    it('should skip level snapshot when regenerating within 2 minutes', async () => {
+    it('should skip level snapshot when regenerating within 2 minutes without any game played', async () => {
       renderWithProvider(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana');
 
       const snapshotSpy = vi.spyOn(engine(), 'recordLevelSnapshot');
-
-      const team1Elements = screen.getAllByText('Team 1');
-      await act(async () => {
-        await user.click(team1Elements[0]);
-        await new Promise(resolve => setTimeout(resolve, 50));
-      });
 
       await generateAndWaitForAssignments(user);
       expect(snapshotSpy).not.toHaveBeenCalled();
