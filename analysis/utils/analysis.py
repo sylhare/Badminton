@@ -173,6 +173,54 @@ def compute_teammate_diversity(match_events_df: "pl.DataFrame") -> dict[str, Any
     }
 
 
+def _canonical_match_key(team1_players: str, team2_players: str) -> str:
+    """Return a canonical string key for a match regardless of team or player order."""
+    t1 = tuple(sorted(team1_players.split("|")))
+    t2 = tuple(sorted(team2_players.split("|")))
+    if t1 > t2:
+        t1, t2 = t2, t1
+    return f"{','.join(t1)}|{','.join(t2)}"
+
+
+def compute_match_session_frequency(match_events_df: "pl.DataFrame") -> dict[str, Any]:
+    """Compute how often the same match configuration repeats across sessions.
+
+    A match is identified by its canonical form: sorted players per team, sorted teams.
+    Returns distribution of how many sessions each unique match appears in.
+
+    Args:
+        match_events_df: DataFrame with simulationId, team1Players, team2Players columns
+
+    Returns:
+        Dict with keys: counts (list of per-match session counts), total_unique_matches,
+        total_sessions, unique_only_pct (% seen in exactly 1 session),
+        repeat_pct (% seen in 2+ sessions), max_sessions.
+    """
+    session_matches: dict[Any, set[str]] = {}
+
+    for row in match_events_df.iter_rows(named=True):
+        session_key = row["simulationId"]
+        key = _canonical_match_key(row["team1Players"], row["team2Players"])
+        session_matches.setdefault(session_key, set()).add(key)
+
+    match_session_counts: dict[str, int] = {}
+    for matches in session_matches.values():
+        for match_key in matches:
+            match_session_counts[match_key] = match_session_counts.get(match_key, 0) + 1
+
+    counts = list(match_session_counts.values())
+    total = len(counts) or 1
+
+    return {
+        "counts": counts,
+        "total_unique_matches": len(counts),
+        "total_sessions": len(session_matches),
+        "unique_only_pct": sum(1 for c in counts if c == 1) / total * 100,
+        "repeat_pct": sum(1 for c in counts if c > 1) / total * 100,
+        "max_sessions": max(counts) if counts else 0,
+    }
+
+
 def build_repeat_matrix(events_df: "pl.DataFrame", player_count: int) -> np.ndarray:
     """Build matrix showing repeat counts per pair.
     
