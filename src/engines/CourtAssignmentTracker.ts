@@ -20,6 +20,8 @@ import { levelTracker } from './LevelTracker';
  */
 export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
+  private static readonly PAIR_HISTORY_TTL_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
+
   /** Player bench counts - tracks how many times each player was benched */
   protected static benchCountMap: Map<string, number> = new Map();
 
@@ -146,6 +148,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Loads tracking data from persistent storage. */
   async loadState(currentEngineType: EngineType): Promise<void> {
     const state = await storageManager.loadEngine();
+    const { savedAt } = state;
 
     if (state.engineType && state.engineType !== currentEngineType) {
       console.warn(
@@ -179,6 +182,18 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         Object.entries(state.levelHistory) as [string, number[]][],
       );
     }
+
+    if (currentEngineType === 'sa' && savedAt !== undefined) {
+      if (Date.now() - savedAt > CourtAssignmentTracker.PAIR_HISTORY_TTL_MS) {
+        this.clearPairHistory();
+      }
+    }
+  }
+
+  private clearPairHistory(): void {
+    CourtAssignmentTracker.teammateCountMap.clear();
+    CourtAssignmentTracker.opponentCountMap.clear();
+    CourtAssignmentTracker.lastUpdatedMap.clear();
   }
 
   /**

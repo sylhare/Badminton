@@ -42,6 +42,7 @@ export interface AppState {
 
 export interface CourtEngineState {
   engineType?: EngineType;
+  savedAt?: number;
   benchCountMap: Record<string, number>;
   singleCountMap: Record<string, number>;
   teammateCountMap: Record<string, number>;
