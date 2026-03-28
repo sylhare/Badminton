@@ -1,30 +1,23 @@
 import React from 'react';
 
-import type { TournamentStandingRow } from '../../../tournament/types';
+import type { TournamentStandingRow } from '../../tournament/types';
+import { formatTeamName } from '../../tournament/types';
 
-interface RoundRobinStandingsProps {
+interface TournamentStandingsProps {
   standings: TournamentStandingRow[];
-  currentRound: number;
-  totalRounds: number;
-  isFinal?: boolean;
+  isComplete: boolean;
+  subtitle: string;
+  showPoints?: boolean;
 }
 
 const RANK_EMOJI = ['🥇', '🥈', '🥉'];
 
-function teamLabel(row: TournamentStandingRow): string {
-  return row.team.players.map(p => p.name).join(' & ');
-}
-
-const RoundRobinStandings: React.FC<RoundRobinStandingsProps> = ({
+export const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   standings,
-  currentRound,
-  totalRounds,
-  isFinal,
+  isComplete,
+  subtitle,
+  showPoints,
 }) => {
-  const subtitle = currentRound > 0
-    ? `After Round ${currentRound} / ${totalRounds}`
-    : `Round 0 / ${totalRounds}`;
-
   return (
     <div className="tournament-standings" data-testid="tournament-standings">
       <h2>Standings</h2>
@@ -38,8 +31,8 @@ const RoundRobinStandings: React.FC<RoundRobinStandingsProps> = ({
             <th>Team</th>
             <th>W</th>
             <th>L</th>
-            <th>Pts</th>
-            <th>Score Diff</th>
+            {showPoints && <th>Pts</th>}
+            {showPoints && <th>Score Diff</th>}
           </tr>
           </thead>
           <tbody>
@@ -49,22 +42,22 @@ const RoundRobinStandings: React.FC<RoundRobinStandingsProps> = ({
               className={index === 0 && standings.length > 1 ? 'top' : ''}
               data-testid={`standing-row-${index}`}
             >
-              <td>{isFinal && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
-              <td>{teamLabel(row)}</td>
+              <td>{isComplete && index < 3 ? RANK_EMOJI[index] : index + 1}</td>
+              <td>{formatTeamName(row.team)}</td>
               <td>{row.won}</td>
               <td>{row.lost}</td>
-              <td>{row.points}</td>
-              <td data-testid={`score-diff-${index}`}>
-                {row.scoreDiff > 0 ? `+${row.scoreDiff}` : row.scoreDiff}
-              </td>
+              {showPoints && <td>{row.points}</td>}
+              {showPoints && (
+                <td data-testid={`score-diff-${index}`}>
+                  {row.scoreDiff > 0 ? `+${row.scoreDiff}` : row.scoreDiff}
+                </td>
+              )}
             </tr>
           ))}
           </tbody>
         </table>
       </div>
-
     </div>
   );
 };
 
-export default RoundRobinStandings;

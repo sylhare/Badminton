@@ -27,6 +27,7 @@ const SinglesMatch: React.FC<SinglesMatchProps> = ({
         <div
           className={`singles-player ${isClickable ? 'singles-player-clickable' : ''} ${winner === 1 ? 'singles-player-winner' : ''}`}
           onClick={(event) => onPlayerClick?.(event, 1)}
+          data-testid="singles-player-team1"
         >
           {team1Player.name}
           {winner === 1 && <span className="crown">👑</span>}
@@ -35,6 +36,7 @@ const SinglesMatch: React.FC<SinglesMatchProps> = ({
         <div
           className={`singles-player ${isClickable ? 'singles-player-clickable' : ''} ${winner === 2 ? 'singles-player-winner' : ''}`}
           onClick={(event) => onPlayerClick?.(event, 2)}
+          data-testid="singles-player-team2"
         >
           {team2Player.name}
           {winner === 2 && <span className="crown">👑</span>}

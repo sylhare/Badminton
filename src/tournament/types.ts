@@ -1,7 +1,12 @@
 import type { Player } from '../types';
 
 export type TournamentFormat = 'singles' | 'doubles';
-export type TournamentType = 'round-robin';
+
+export enum BracketKind {
+  Winners = 'winners',
+  Consolation = 'consolation',
+}
+export type TournamentType = 'round-robin' | 'elimination';
 export type TournamentPhase = 'setup' | 'active' | 'completed';
 
 export interface TournamentTeam {
@@ -17,6 +22,7 @@ export interface TournamentMatch {
   team2: TournamentTeam;
   winner?: 1 | 2;
   score?: { team1: number; team2: number };
+  bracket?: BracketKind;
 }
 
 export interface TournamentStandingRow {
@@ -35,6 +41,11 @@ export interface TournamentState {
   numberOfCourts: number;
   teams: TournamentTeam[];
   matches: TournamentMatch[];
+  bracketSize?: number;
+}
+
+export function formatTeamName(team: TournamentTeam): string {
+  return team.players.map(p => p.name).join(' & ');
 }
 
 export const DEFAULT_TOURNAMENT_STATE: TournamentState = {

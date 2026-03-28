@@ -1,19 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import type { TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
-import { createMockPlayer } from '../data/testFactories';
-
-function makeTeam(id: string, playerNames: string[]): TournamentTeam {
-  return {
-    id,
-    players: playerNames.map((name, i) => createMockPlayer({ id: `${id}-p${i}`, name })),
-  };
-}
+import { createTournamentTeam } from '../data/testFactories';
 
 describe('Tournament', () => {
-  const teamA = makeTeam('a', ['Alice']);
-  const teamB = makeTeam('b', ['Bob']);
+  const teamA = createTournamentTeam('a', ['Alice']);
+  const teamB = createTournamentTeam('b', ['Bob']);
 
   function makeTournament(score?: { team1: number; team2: number }) {
     return RoundRobinTournament.fromState({

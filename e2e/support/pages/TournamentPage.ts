@@ -23,10 +23,21 @@ export class TournamentPage {
     await this.goto();
   }
 
-  /** Click Start Tournament and wait for the matches view to appear. */
+  /** Click Start Tournament and wait for the matches view to appear (round-robin). */
   async start(): Promise<void> {
     await this.page.getByTestId('start-tournament-button').click();
     await expect(this.page.getByTestId('tournament-matches')).toBeVisible();
+  }
+
+  /** Click Start Tournament and wait for the elimination bracket to appear. */
+  async startElimination(): Promise<void> {
+    await this.page.getByTestId('start-tournament-button').click();
+    await expect(this.page.getByTestId('elimination-bracket')).toBeVisible();
+  }
+
+  /** Select the tournament type before starting. */
+  async selectType(type: 'round-robin' | 'elimination'): Promise<void> {
+    await this.page.getByTestId(`type-pill-${type}`).click();
   }
 
   /** Add players directly via the tournament page's ManualPlayerEntry. */

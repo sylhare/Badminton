@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
-import type { Player } from '../../../types';
-import type { TournamentFormat, TournamentTeam } from '../../../tournament/types';
-import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
-import ManualPlayerEntry from '../../players/ManualPlayerEntry';
+import type { Player } from '../../types';
+import type { TournamentFormat, TournamentTeam } from '../../tournament/types';
+import { formatTeamName } from '../../tournament/types';
+import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
+import ManualPlayerEntry from '../players/ManualPlayerEntry';
 
-interface RoundRobinSetupProps {
+interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   onStart: (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat) => void;
@@ -18,7 +19,7 @@ interface SwapSelection {
   playerIdx: number;
 }
 
-const RoundRobinSetup: React.FC<RoundRobinSetupProps> = ({
+export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
   onStart,
@@ -66,7 +67,10 @@ const RoundRobinSetup: React.FC<RoundRobinSetupProps> = ({
     setSwapSelection(null);
   };
 
-  const tournament = RoundRobinTournament.create(format, numberOfCourts);
+  const tournament = useMemo(
+    () => RoundRobinTournament.create(format, numberOfCourts),
+    [format, numberOfCourts],
+  );
   const validationError = tournament.validate(teams, format);
   const matchesPerRound = RoundRobinTournament.matchesPerRound(teams);
   const courtWarning =
@@ -78,9 +82,6 @@ const RoundRobinSetup: React.FC<RoundRobinSetupProps> = ({
     if (validationError) return;
     onStart(teams, numberOfCourts, format);
   };
-
-  const teamPlayerName = (team: TournamentTeam) =>
-    team.players.map(p => p.name).join(' & ');
 
   return (
     <div className="tournament-setup">
@@ -163,7 +164,7 @@ const RoundRobinSetup: React.FC<RoundRobinSetupProps> = ({
                 ) : (
                   <div className="team-players-slots">
                     <div className="player-slot" data-testid={`player-slot-${teamIdx}-0`}>
-                      {teamPlayerName(team)}
+                      {formatTeamName(team)}
                     </div>
                   </div>
                 )}
@@ -192,4 +193,3 @@ const RoundRobinSetup: React.FC<RoundRobinSetupProps> = ({
   );
 };
 
-export default RoundRobinSetup;

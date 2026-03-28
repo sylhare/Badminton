@@ -76,7 +76,7 @@ test.describe('Tournament Page', () => {
     await expect(page.getByTestId('round-2')).toBeVisible();
     await expect(page.getByTestId('round-3')).toBeVisible();
 
-    const firstClickable = page.locator('.singles-player-clickable').first();
+    const firstClickable = page.getByTestId('singles-player-team1').first();
     await firstClickable.click();
 
     await expect(page.getByTestId('score-input-modal')).toBeVisible();
@@ -115,7 +115,7 @@ test.describe('Tournament Page', () => {
     }
 
     const lastRound = page.getByTestId(`round-${totalRounds}`);
-    await expect(lastRound.locator('.round-matches')).not.toBeVisible();
+    await expect(lastRound.getByTestId('round-matches')).not.toBeVisible();
   });
 
   test('tournament state persists across page reload', async ({ page }) => {

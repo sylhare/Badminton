@@ -2,6 +2,7 @@ import React from 'react';
 import { vi } from 'vitest';
 
 import { Player } from '../../src/types';
+import type { TournamentMatch, TournamentStandingRow, TournamentTeam } from '../../src/tournament/types';
 
 export { GRAPH_COLORS, GRAPH_LEGEND_LABELS } from '../../src/constants/graphColors';
 
@@ -93,7 +94,46 @@ export const MOCK_PLAYERS = {
     createMockPlayer({ id: 'gl-3', name: 'Carol', isPresent: true, gender: 'F', level: 75 }),
     createMockPlayer({ id: 'gl-4', name: 'Dave', isPresent: true, gender: 'M', level: 25 }),
   ],
+
+  tournament: [
+    createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true }),
+    createMockPlayer({ id: 'p2', name: 'Bob', isPresent: true }),
+    createMockPlayer({ id: 'p3', name: 'Carol', isPresent: true }),
+    createMockPlayer({ id: 'p4', name: 'Dave', isPresent: true }),
+    createMockPlayer({ id: 'p5', name: 'Eve', isPresent: false }),
+  ],
 };
+
+export function createTournamentTeam(id: string, playerNames: string[] = [id]): TournamentTeam {
+  return {
+    id,
+    players: playerNames.map((name, i) => createMockPlayer({ id: `${id}-p${i}`, name })),
+  };
+}
+
+export function createTournamentTeams(ids: string[]): TournamentTeam[] {
+  return ids.map(id => createTournamentTeam(id));
+}
+
+export function createTournamentMatch(
+  id: string,
+  round: number,
+  team1: TournamentTeam,
+  team2: TournamentTeam,
+  winner?: 1 | 2,
+  score?: { team1: number; team2: number },
+): TournamentMatch {
+  return { id, round, courtNumber: 1, team1, team2, winner, score };
+}
+
+export function createStandingRow(
+  team: TournamentTeam,
+  won: number,
+  lost: number,
+  scoreDiff: number,
+): TournamentStandingRow {
+  return { team, played: won + lost, won, lost, points: won * 2, scoreDiff };
+}
 
 export function createMockFile(
   name: string,

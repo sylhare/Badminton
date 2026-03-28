@@ -4,18 +4,24 @@ import type { TournamentMatch } from '../../../tournament/types';
 import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
 import ScoreInputModal from '../../modals/ScoreInputModal';
+import { useMatchModal } from '../useMatchModal';
 
 interface RoundRobinMatchesProps {
   tournament: RoundRobinTournament;
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
 }
 
-const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
+export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   tournament,
   onMatchResult,
 }) => {
-  const [modalMatch, setModalMatch] = useState<TournamentMatch | null>(null);
-  const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
+  const {
+    modalMatch,
+    pendingWinner,
+    handleTeamClick,
+    handleModalConfirm,
+    handleModalCancel,
+  } = useMatchModal(onMatchResult);
   const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() =>
     new Set([tournament.currentRound()]),
   );
@@ -58,27 +64,6 @@ const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
     });
   };
 
-  const handleTeamClick = (match: TournamentMatch, teamNumber: 1 | 2) => {
-    if (match.winner === teamNumber) {
-      onMatchResult(match.id, teamNumber);
-      return;
-    }
-    setModalMatch(match);
-    setPendingWinner(teamNumber);
-  };
-
-  const handleModalConfirm = (score: { team1: number; team2: number }) => {
-    if (!modalMatch || pendingWinner === null) return;
-    onMatchResult(modalMatch.id, pendingWinner, score);
-    setModalMatch(null);
-    setPendingWinner(null);
-  };
-
-  const handleModalCancel = () => {
-    setModalMatch(null);
-    setPendingWinner(null);
-  };
-
   const isSingles = (match: TournamentMatch) => match.team1.players.length === 1;
 
   const formatScore = (match: TournamentMatch) => {
@@ -112,42 +97,43 @@ const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
             </div>
 
             {isExpanded && (
-              <div className="round-matches">
-                {roundMatches.map(match => (
-                  <div
-                    key={match.id}
-                    className={`match-row${match.winner ? ' match-complete' : ''}`}
-                    data-testid={`match-${match.id}`}
-                  >
-                    <div className="match-court">Court {match.courtNumber}</div>
-                    <div className="match-display">
-                      {isSingles(match) ? (
-                        <SinglesMatch
-                          team1Player={match.team1.players[0]}
-                          team2Player={match.team2.players[0]}
-                          winner={match.winner}
-                          isClickable={true}
-                          onPlayerClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
-                        />
-                      ) : (
-                        <DoublesMatch
-                          team1Players={match.team1.players}
-                          team2Players={match.team2.players}
-                          winner={match.winner}
-                          isClickable={true}
-                          onTeamClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
-                        />
-                      )}
-                    </div>
-                    {match.winner && (
-                      <div className="match-result" data-testid={`match-result-${match.id}`}>
-                        {formatScore(match) && (
-                          <span className="match-score">{formatScore(match)}</span>
+              <div className="round-matches" data-testid="round-matches">
+                {roundMatches.map(match => {
+                  const score = formatScore(match);
+                  return (
+                    <div
+                      key={match.id}
+                      className={`match-row${match.winner ? ' match-complete' : ''}`}
+                      data-testid={`match-${match.id}`}
+                    >
+                      <div className="match-court">Court {match.courtNumber}</div>
+                      <div className="match-display">
+                        {isSingles(match) ? (
+                          <SinglesMatch
+                            team1Player={match.team1.players[0]}
+                            team2Player={match.team2.players[0]}
+                            winner={match.winner}
+                            isClickable={true}
+                            onPlayerClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
+                          />
+                        ) : (
+                          <DoublesMatch
+                            team1Players={match.team1.players}
+                            team2Players={match.team2.players}
+                            winner={match.winner}
+                            isClickable={true}
+                            onTeamClick={(_e, teamNum) => handleTeamClick(match, teamNum as 1 | 2)}
+                          />
                         )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {match.winner && (
+                        <div className="match-result" data-testid={`match-result-${match.id}`}>
+                          {score && <span className="match-score">{score}</span>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -166,4 +152,3 @@ const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   );
 };
 
-export default RoundRobinMatches;

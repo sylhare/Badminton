@@ -30,7 +30,10 @@ npm run dev
 ### No inline comments
 
 Code should be self-documenting through clear naming. Don't explain *what* the code does with comments — use a
-well-named function or variable instead. JSDoc on exported classes and public methods is fine.
+well-named function or variable instead. Don't use `{/* ... */}` JSX comments either — the surrounding structure
+and `data-testid` attributes already convey intent. Only add a comment when documenting a non-obvious *why*
+(a hidden constraint, subtle invariant, or external workaround) that can't be expressed in a name — and put it in
+the JSDoc of the enclosing function, not inline.
 
 ```ts
 // ❌
@@ -38,6 +41,26 @@ const v = arr.filter(p => p.present); // get present players
 
 // ✅
 const presentPlayers = arr.filter(p => p.present);
+```
+
+### JSDoc style
+
+Use JSDoc only on exported functions and classes. Describe *why* or *what* at a high level; omit `@param` and
+`@returns` tags — the type signatures and names are already self-documenting.
+
+```ts
+// ❌
+/**
+ * @param bracketSize Power-of-2 total slot count
+ * @returns Array of rounds
+ */
+export function computeWBTree(bracketSize: number): BracketNode[][] { ... }
+
+// ✅
+/**
+ * Computes a round-by-round bracket tree. Indices beyond teams.length are treated as byes.
+ */
+export function computeWBTree(bracketSize: number): BracketNode[][] { ... }
 ```
 
 ### Node.js built-in imports

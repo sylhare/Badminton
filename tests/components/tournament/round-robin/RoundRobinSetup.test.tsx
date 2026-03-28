@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import RoundRobinSetup from '../../../../src/components/tournament/round-robin/RoundRobinSetup';
+import { TournamentSetup } from '../../../../src/components/tournament/TournamentSetup';
 import type { TournamentFormat, TournamentTeam } from '../../../../src/tournament/types';
 import type { Player } from '../../../../src/types';
 import { createMockPlayer } from '../../../data/testFactories';
@@ -23,10 +23,10 @@ const presentPlayers = [
  * Controlled wrapper that mirrors TournamentPage: onTogglePlayer flips isPresent
  * in local state, which flows back as initialPlayers.
  */
-function ControlledSetup(props: React.ComponentProps<typeof RoundRobinSetup>) {
+function ControlledSetup(props: React.ComponentProps<typeof TournamentSetup>) {
   const [players, setPlayers] = useState<Player[]>(props.initialPlayers);
   return (
-    <RoundRobinSetup
+    <TournamentSetup
       {...props}
       initialPlayers={players}
       onTogglePlayer={id =>
@@ -36,7 +36,7 @@ function ControlledSetup(props: React.ComponentProps<typeof RoundRobinSetup>) {
   );
 }
 
-describe('RoundRobinSetup', () => {
+describe('TournamentSetup', () => {
   let onStart: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -49,7 +49,7 @@ describe('RoundRobinSetup', () => {
 
   describe('rendering', () => {
     it('renders present players pre-selected', () => {
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       for (const player of presentPlayers) {
         expect(screen.getByTestId(`player-checkbox-${player.id}`)).toBeChecked();
@@ -57,7 +57,7 @@ describe('RoundRobinSetup', () => {
     });
 
     it('shows all player names', () => {
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Bob').length).toBeGreaterThan(0);
@@ -69,7 +69,7 @@ describe('RoundRobinSetup', () => {
   describe('format selection', () => {
     it('switching to singles re-derives teams as one-per-player', async () => {
       const user = userEvent.setup();
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       expect(screen.getAllByTestId(/^team-card-/)).toHaveLength(2);
       await user.click(screen.getByTestId('format-pill-singles'));
@@ -78,7 +78,7 @@ describe('RoundRobinSetup', () => {
 
     it('switching back to doubles re-derives teams as pairs', async () => {
       const user = userEvent.setup();
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       await user.click(screen.getByTestId('format-pill-singles'));
       await user.click(screen.getByTestId('format-pill-doubles'));
@@ -89,7 +89,7 @@ describe('RoundRobinSetup', () => {
   describe('player swap', () => {
     it('clicking two different slots swaps players', async () => {
       const user = userEvent.setup();
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       const slot00 = screen.getByTestId('player-slot-0-0');
       const slot10 = screen.getByTestId('player-slot-1-0');
@@ -107,7 +107,7 @@ describe('RoundRobinSetup', () => {
 
     it('clicking the same slot twice deselects without swapping', async () => {
       const user = userEvent.setup();
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       const slot00 = screen.getByTestId('player-slot-0-0');
       await user.click(slot00);
@@ -156,7 +156,7 @@ describe('RoundRobinSetup', () => {
 
   describe('court warning', () => {
     it('shows no warning when matches fit within court count', () => {
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={1} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={1} onStart={onStart} />);
 
       expect(screen.queryByTestId('court-warning')).not.toBeInTheDocument();
     });
@@ -169,7 +169,7 @@ describe('RoundRobinSetup', () => {
         createMockPlayer({ id: 'p7', name: 'Grace', isPresent: true }),
         createMockPlayer({ id: 'p8', name: 'Hank', isPresent: true }),
       ];
-      render(<RoundRobinSetup initialPlayers={eightPlayers} initialNumberOfCourts={1} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={eightPlayers} initialNumberOfCourts={1} onStart={onStart} />);
 
       expect(screen.getByTestId('court-warning')).toBeInTheDocument();
       expect(screen.getByTestId('court-warning')).toHaveTextContent('2 matches per round');
@@ -179,7 +179,7 @@ describe('RoundRobinSetup', () => {
   describe('onStart', () => {
     it('passes teams, numberOfCourts, and format to the callback', async () => {
       const user = userEvent.setup();
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       await user.click(screen.getByTestId('start-tournament-button'));
 
@@ -194,7 +194,7 @@ describe('RoundRobinSetup', () => {
 
     it('reflects updated court count in the callback', async () => {
       const user = userEvent.setup();
-      render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       fireEvent.change(screen.getByTestId('tournament-court-count'), { target: { value: '3' } });
       await user.click(screen.getByTestId('start-tournament-button'));
@@ -205,7 +205,7 @@ describe('RoundRobinSetup', () => {
   });
 
   it('court count input updates the displayed value', () => {
-    render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+    render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
     const courtInput = screen.getByTestId('tournament-court-count');
     fireEvent.change(courtInput, { target: { value: '3' } });
@@ -213,14 +213,14 @@ describe('RoundRobinSetup', () => {
   });
 
   it('shows error and disables Start when doubles teams are incomplete', () => {
-    render(<RoundRobinSetup initialPlayers={presentPlayers.slice(0, 3)} initialNumberOfCourts={2} onStart={onStart} />);
+    render(<TournamentSetup initialPlayers={presentPlayers.slice(0, 3)} initialNumberOfCourts={2} onStart={onStart} />);
 
     expect(screen.getByTestId('start-tournament-button')).toBeDisabled();
     expect(screen.getByTestId('setup-error')).toBeInTheDocument();
   });
 
   it('Start button is enabled for a valid doubles setup', () => {
-    render(<RoundRobinSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+    render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
     expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
   });
@@ -230,7 +230,7 @@ describe('RoundRobinSetup', () => {
     const onAddPlayers = vi.fn();
     const zaraMock = createMockPlayer({ id: 'zara-1', name: 'Zara', isPresent: true });
     const { rerender } = render(
-      <RoundRobinSetup
+      <TournamentSetup
         initialPlayers={presentPlayers}
         initialNumberOfCourts={2}
         onStart={onStart}
@@ -245,7 +245,7 @@ describe('RoundRobinSetup', () => {
     expect(screen.getByTestId('player-entry-input')).toHaveValue('');
 
     rerender(
-      <RoundRobinSetup
+      <TournamentSetup
         initialPlayers={[...presentPlayers, zaraMock]}
         initialNumberOfCourts={2}
         onStart={onStart}

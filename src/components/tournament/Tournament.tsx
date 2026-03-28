@@ -1,25 +1,42 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
+import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
+import { Tournament as TournamentBase } from '../../tournament/Tournament';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
-import type { TournamentFormat, TournamentTeam } from '../../tournament/types';
+import { EliminationTournament } from '../../tournament/EliminationTournament';
 
-import RoundRobinMatches from './round-robin/RoundRobinMatches';
-import RoundRobinSetup from './round-robin/RoundRobinSetup';
-import RoundRobinStandings from './round-robin/RoundRobinStandings';
+import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
+import { TournamentSetup } from './TournamentSetup';
+import { EliminationBracket } from './elimination/EliminationBracket';
+import { TournamentStandings } from './TournamentStandings';
 
 interface TournamentProps {
-  tournament: RoundRobinTournament | null;
+  tournament: RoundRobinTournament | EliminationTournament | null;
   initialPlayers: Player[];
   initialNumberOfCourts: number;
-  onStart: (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat) => void;
+  onStart: (
+    teams: TournamentTeam[],
+    numberOfCourts: number,
+    format: TournamentFormat,
+    type: TournamentType,
+  ) => void;
   onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
   onReset: () => void;
   onAddPlayers: (names: string[]) => void;
   onTogglePlayer: (id: string) => void;
 }
 
-const Tournament: React.FC<TournamentProps> = ({
+function standingsSubtitle(t: TournamentBase, isComplete: boolean): string {
+  if (t instanceof EliminationTournament) {
+    return isComplete ? 'Final Results' : 'In Progress';
+  }
+  const done = t.completedRounds();
+  const total = t.totalRounds();
+  return done > 0 ? `After Round ${done} / ${total}` : `Round 0 / ${total}`;
+}
+
+export const Tournament: React.FC<TournamentProps> = ({
   tournament,
   initialPlayers,
   initialNumberOfCourts,
@@ -29,34 +46,56 @@ const Tournament: React.FC<TournamentProps> = ({
   onAddPlayers,
   onTogglePlayer,
 }) => {
+  const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
+  const standings = useMemo(() => tournament?.calculateStandings() ?? [], [tournament]);
+
   if (!tournament || tournament.phase() === 'setup') {
     return (
-      <RoundRobinSetup
-        initialPlayers={initialPlayers}
-        initialNumberOfCourts={initialNumberOfCourts}
-        onStart={onStart}
-        onAddPlayers={onAddPlayers}
-        onTogglePlayer={onTogglePlayer}
-      />
+      <div className="tournament-setup-wrapper">
+        <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
+          <h3>Mode</h3>
+          <div className="format-pills">
+            <button
+              className={`format-pill${selectedType === 'round-robin' ? ' format-pill-active' : ''}`}
+              onClick={() => setSelectedType('round-robin')}
+              data-testid="type-pill-round-robin"
+            >
+              Round Robin
+            </button>
+            <button
+              className={`format-pill${selectedType === 'elimination' ? ' format-pill-active' : ''}`}
+              onClick={() => setSelectedType('elimination')}
+              data-testid="type-pill-elimination"
+            >
+              Elimination
+            </button>
+          </div>
+        </div>
+        <TournamentSetup
+          initialPlayers={initialPlayers}
+          initialNumberOfCourts={initialNumberOfCourts}
+          onStart={(teams, courts, format) => onStart(teams, courts, format, selectedType)}
+          onAddPlayers={onAddPlayers}
+          onTogglePlayer={onTogglePlayer}
+        />
+      </div>
     );
   }
 
-  const standings = tournament.calculateStandings();
-  const completedRounds = tournament.completedRounds();
-  const totalRounds = tournament.totalRounds();
-  const isFinal = totalRounds > 0 && completedRounds === totalRounds;
+  const isComplete = tournament.isComplete();
+  const isElimination = tournament instanceof EliminationTournament;
 
   return (
     <div className="tournament-active-layout">
-      <RoundRobinMatches
-        tournament={tournament}
-        onMatchResult={onMatchResult}
-      />
-      <RoundRobinStandings
+      {tournament instanceof EliminationTournament
+        ? <EliminationBracket tournament={tournament} onMatchResult={onMatchResult} />
+        : <RoundRobinMatches tournament={tournament} onMatchResult={onMatchResult} />
+      }
+      <TournamentStandings
         standings={standings}
-        currentRound={completedRounds}
-        totalRounds={totalRounds}
-        isFinal={isFinal}
+        isComplete={isComplete}
+        subtitle={standingsSubtitle(tournament, isComplete)}
+        showPoints={!isElimination}
       />
       <button
         className="button button-primary"
@@ -69,4 +108,3 @@ const Tournament: React.FC<TournamentProps> = ({
   );
 };
 
-export default Tournament;
