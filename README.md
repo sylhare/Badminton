@@ -1,6 +1,6 @@
 # 🏸 Badminton Court Manager
 
-A React TypeScript application that helps organize badminton players into court assignments using image-based player list extraction.
+A React TypeScript application that helps organize badminton players into court assignments using manual or image-based player list extraction.
 
 ## Features
 
