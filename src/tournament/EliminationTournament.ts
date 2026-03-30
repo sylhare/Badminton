@@ -61,6 +61,10 @@ export class EliminationTournament extends Tournament {
     return matches.some(m => m.round === round);
   }
 
+  private highestRoundMatch(matches: TournamentMatch[]): TournamentMatch | undefined {
+    return matches.length > 0 ? matches.reduce((p, c) => c.round > p.round ? c : p) : undefined;
+  }
+
   private pairTeamsIntoMatches(
     bracket: BracketKind,
     round: number,
@@ -237,13 +241,33 @@ export class EliminationTournament extends Tournament {
       }
     }
 
-    return Array.from(standings.values()).sort((a, b) => {
-      if (a.lost !== b.lost) return a.lost - b.lost;
-      if (b.won !== a.won) return b.won - a.won;
-      const nameA = a.team.players[0]?.name ?? '';
-      const nameB = b.team.players[0]?.name ?? '';
-      return nameA.localeCompare(nameB);
-    });
+    const wbMatches = matches.filter(m => m.bracket === BracketKind.Winners);
+    const cbMatches = matches.filter(m => m.bracket === BracketKind.Consolation);
+    const wbFinal = this.highestRoundMatch(wbMatches);
+    const cbFinal = this.highestRoundMatch(cbMatches);
+
+    const placed: TournamentStandingRow[] = [];
+    const placedIds = new Set<string>();
+    for (const final of [wbFinal, cbFinal]) {
+      if (!final?.winner) continue;
+      const winner = final.winner === 1 ? final.team1 : final.team2;
+      const loser = final.winner === 1 ? final.team2 : final.team1;
+      placed.push(standings.get(winner.id)!, standings.get(loser.id)!);
+      placedIds.add(winner.id);
+      placedIds.add(loser.id);
+    }
+
+    const unplaced = Array.from(standings.values())
+      .filter(r => !placedIds.has(r.team.id))
+      .sort((a, b) => {
+        if (a.lost !== b.lost) return a.lost - b.lost;
+        if (b.won !== a.won) return b.won - a.won;
+        const nameA = a.team.players[0]?.name ?? '';
+        const nameB = b.team.players[0]?.name ?? '';
+        return nameA.localeCompare(nameB);
+      });
+
+    return [...placed, ...unplaced];
   }
 
   completedRounds(): number {

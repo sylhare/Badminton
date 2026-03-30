@@ -147,6 +147,36 @@ test.describe('Tournament Page - Elimination', () => {
     await expect(page.locator('[data-testid="bracket-node-tbd"]').first()).toBeVisible();
   });
 
+  test('5-player standings: CB winner is ranked 3rd, WB finalist is 2nd regardless of win count', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectType('elimination');
+    await tournamentPage.startElimination();
+
+    const wbSection = page.getByTestId('wb-section');
+    const cbSection = page.getByTestId('cb-section');
+
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
+    await page.getByTestId('score-modal-confirm').click();
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(2).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(3).click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await expect(page.getByTestId('standing-row-1')).toContainText('Eve');
+    await expect(page.getByTestId('standing-row-2')).toContainText('Bob');
+  });
+
   test('consolation bracket — 6-player: CB Final shows players after single CB R1 match (odd seeds bug)', async ({ page }) => {
     await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank']);
     await page.getByTestId('format-pill-singles').click();
