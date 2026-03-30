@@ -172,8 +172,9 @@ describe('StorageManager', () => {
       expect(loaded.winCountMap).toEqual({ 'player-1': 5, 'player-2': 3 });
     });
 
-    it('should discard unrecognized (non-v3) engine format and clear storage', async () => {
+    it('should discard unrecognized (non-v3) engine format without touching the rest of storage', async () => {
       const unrecognizedFormat = {
+        app: { players: [{ id: 'p1', name: 'Alice', isPresent: true }], numberOfCourts: 4, assignments: [] },
         engine: {
           benchCountMap: { 'player-1': 3 },
           singleCountMap: {},
@@ -186,9 +187,12 @@ describe('StorageManager', () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(unrecognizedFormat));
 
       const loaded = await storageManager.loadEngine();
+      await storageManager.waitForQueue();
 
       expect(loaded).toEqual({});
-      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+      // app state must be preserved — only the engine portion is discarded
+      const app = await storageManager.loadApp();
+      expect(app.players).toHaveLength(1);
     });
   });
 

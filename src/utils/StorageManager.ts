@@ -183,17 +183,19 @@ class StorageManager {
   }
 
   async loadEngine(): Promise<Partial<CourtEngineState>> {
-    try {
-      const data = await this.read();
-      const raw = data.engine as unknown as CompactEngineState | CourtEngineState | undefined;
-      if (!raw) return {};
-      if ((raw as CompactEngineState).v === 3) return this.fromCompact(raw as CompactEngineState);
-      localStorage.removeItem(StorageManager.KEY);
-      return {};
-    } catch (_error) {
-      localStorage.removeItem(StorageManager.KEY);
-      return {};
+    const data = await this.read();
+    const raw = data.engine as unknown as CompactEngineState | undefined;
+    if (!raw) return {};
+
+    if ((raw as CompactEngineState).v === 3) {
+      try {
+        return this.fromCompact(raw as CompactEngineState);
+      } catch { /* corrupt v3 — fall through to discard */ }
     }
+
+    const { engine: _, ...rest } = data;
+    await this.save(() => rest);
+    return {};
   }
 
   async saveTournament(state: TournamentState | null): Promise<void> {
