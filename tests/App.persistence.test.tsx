@@ -37,7 +37,7 @@ describe('App Persistence Integration', () => {
 
   describe('Error handling in persistence', () => {
     it('should handle localStorage load errors gracefully', async () => {
-      localStorage.setItem('badminton-app-state', 'invalid-json');
+      localStorage.setItem('badminton-state', 'not-valid-compressed-data');
 
       renderWithProvider(<App />);
 

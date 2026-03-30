@@ -8,11 +8,6 @@ interface StorageData {
   tournament?: TournamentState;
 }
 
-const OLD_KEYS = {
-  APP_STATE: 'badminton-app-state',
-  COURT_ENGINE_STATE: 'badminton-court-engine-state',
-} as const;
-
 /**
  * Compact v3 engine state stored in localStorage.
  *
@@ -193,7 +188,8 @@ class StorageManager {
       const raw = data.engine as unknown as CompactEngineState | CourtEngineState | undefined;
       if (!raw) return {};
       if ((raw as CompactEngineState).v === 3) return this.fromCompact(raw as CompactEngineState);
-      return raw as CourtEngineState;
+      localStorage.removeItem(StorageManager.KEY);
+      return {};
     } catch (_error) {
       localStorage.removeItem(StorageManager.KEY);
       return {};
@@ -380,24 +376,7 @@ class StorageManager {
 
   private async read(): Promise<Partial<StorageData>> {
     const raw = this.getRawState();
-    if (!raw) {
-      const oldApp = localStorage.getItem(OLD_KEYS.APP_STATE);
-      const oldEngine = localStorage.getItem(OLD_KEYS.COURT_ENGINE_STATE);
-      if (oldApp || oldEngine) {
-        const merged: Partial<StorageData> = {};
-        if (oldApp) {
-          try { merged.app = JSON.parse(oldApp); } catch {  }
-        }
-        if (oldEngine) {
-          try { merged.engine = JSON.parse(oldEngine); } catch {  }
-        }
-        localStorage.removeItem(OLD_KEYS.APP_STATE);
-        localStorage.removeItem(OLD_KEYS.COURT_ENGINE_STATE);
-        await this.write(merged);
-        return merged;
-      }
-      return {};
-    }
+    if (!raw) return {};
 
     const data = await this.decompressJson(raw);
     if (data === null) {
