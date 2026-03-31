@@ -127,7 +127,8 @@ describe('BaseCourtAssignmentEngine', () => {
     it('calculates cost based on previous pairings', () => {
       const players = mockPlayers(4);
 
-      engine.generate(players, 1);
+      const courts = engine.generate(players, 1);
+      engine.applyRoundStats(courts, players);
       engine.clearCurrentSession();
 
       const team = [players[0], players[1]];
@@ -153,11 +154,11 @@ describe('BaseCourtAssignmentEngine', () => {
     it('calculates cumulative cost for multiple pairs in team', () => {
       const players = mockPlayers(4);
 
-      engine.generate(players, 1);
+      engine.applyRoundStats(engine.generate(players, 1), players);
       engine.clearCurrentSession();
       const firstCost = engine.testCalculateTeammateCost([players[0], players[1]], 1);
 
-      engine.generate(players, 1);
+      engine.applyRoundStats(engine.generate(players, 1), players);
       engine.clearCurrentSession();
       const secondCost = engine.testCalculateTeammateCost([players[0], players[1]], 1);
 
@@ -219,7 +220,7 @@ describe('BaseCourtAssignmentEngine', () => {
     it('calculates cost based on previous opponent pairings', () => {
       const players = mockPlayers(4);
 
-      engine.generate(players, 1);
+      engine.applyRoundStats(engine.generate(players, 1), players);
       engine.clearCurrentSession();
 
       const cost = engine.testCalculateOpponentCost([players[0], players[1]], [players[2], players[3]], 1);
@@ -365,7 +366,7 @@ describe('BaseCourtAssignmentEngine', () => {
     it('calculates cost based on singles history', () => {
       const players = mockPlayers(2);
 
-      engine.generate(players, 1);
+      engine.applyRoundStats(engine.generate(players, 1), players);
       engine.clearCurrentSession();
 
       const cost = engine.testCalculateSinglesCost(players, 1);
@@ -375,7 +376,7 @@ describe('BaseCourtAssignmentEngine', () => {
     it('applies penalty multiplier correctly', () => {
       const players = mockPlayers(2);
 
-      engine.generate(players, 1);
+      engine.applyRoundStats(engine.generate(players, 1), players);
       engine.clearCurrentSession();
 
       const costWith1 = engine.testCalculateSinglesCost(players, 1);
@@ -389,7 +390,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const players = mockPlayers(2);
 
       for (let i = 0; i < 3; i++) {
-        engine.generate(players, 1);
+        engine.applyRoundStats(engine.generate(players, 1), players);
         engine.clearCurrentSession();
       }
 

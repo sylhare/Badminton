@@ -75,8 +75,6 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
       finalCourts = [manualCourtResult, ...finalCourts];
     }
 
-    this.recordSessionStats(benchedPlayers, finalCourts);
-
     return finalCourts;
   }
 
@@ -127,23 +125,6 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     }
 
     return { teams: bestTeams!, cost: bestCost };
-  }
-
-  /**
-   * Records statistics for the generated round.
-   */
-  protected recordSessionStats(benchedPlayers: Player[], courts: Court[]): void {
-    benchedPlayers.forEach(p => this.recordBenching(p.id));
-
-    courts.forEach(court => {
-      if (!court.teams) return;
-
-      if (court.players.length === 2) {
-        court.players.forEach(p => this.recordSingles(p.id));
-      }
-
-      this.updateCourtTeamStats(court);
-    });
   }
 
   /**

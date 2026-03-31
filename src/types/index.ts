@@ -73,6 +73,7 @@ export interface ICourtAssignmentTracker {
   resetHistory(): void;
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
+  applyRoundStats(courts: Court[], players: Player[]): void;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;

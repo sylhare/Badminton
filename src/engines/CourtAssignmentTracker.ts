@@ -123,6 +123,28 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.recordedWinsMap.clear();
   }
 
+  /**
+   * Records bench/singles/teammate/opponent stats for a completed round.
+   * Call this from applyCourtResults, not from generate() — stats should only
+   * be committed once a round is actually finalized.
+   */
+  applyRoundStats(courts: Court[], players: Player[]): void {
+    const assignedIds = new Set(courts.flatMap(c => c.players.map(p => p.id)));
+    const benchedPlayers = players.filter(p => p.isPresent && !assignedIds.has(p.id));
+
+    benchedPlayers.forEach(p => this.recordBenching(p.id));
+
+    courts.forEach(court => {
+      if (!court.teams) return;
+
+      if (court.players.length === 2) {
+        court.players.forEach(p => this.recordSingles(p.id));
+      }
+
+      this.updateCourtTeamStats(court);
+    });
+  }
+
   /** Prepares the internal maps for persistence. Filters and prunes old data. */
   prepareStateForSaving(engineType: EngineType): CourtEngineState {
     const MAX_ENTRIES = 500;
