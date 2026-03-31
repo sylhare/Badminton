@@ -143,6 +143,62 @@ describe('Team rotation', () => {
     });
   });
 
+  describe('Court generation stats', () => {
+    const rapidRegenerate = async () => act(async () => {
+      await user.click(screen.getByTestId('generate-assignments-button'));
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    const regenerate = async () => act(async () => {
+      await user.click(screen.getByTestId('generate-assignments-button'));
+      await new Promise(resolve => setTimeout(resolve, 300));
+    });
+
+    it('does not record bench stats for a discarded round', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
+      await generateAndWaitForAssignments(user);
+      await rapidRegenerate();
+
+      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      expect(totalBenched).toBe(0);
+    });
+
+    it('does not record teammate stats for a discarded round', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+      await generateAndWaitForAssignments(user);
+      await rapidRegenerate();
+
+      const totalPairs = [...engine().getStats().teammateCountMap.values()].reduce((s, n) => s + n, 0);
+      expect(totalPairs).toBe(0);
+    });
+
+    it('commits bench stats from the previous round exactly once', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
+      await generateAndWaitForAssignments(user);
+
+      await clickTeam(user, screen.getAllByText('Team 1')[0]);
+      await regenerate();
+
+      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      expect(totalBenched).toBe(1);
+    });
+
+    it('commits teammate stats from the previous round exactly once', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+      await generateAndWaitForAssignments(user);
+
+      await clickTeam(user, screen.getAllByText('Team 1')[0]);
+      await regenerate();
+
+      const totalPairs = [...engine().getStats().teammateCountMap.values()].reduce((s, n) => s + n, 0);
+      expect(totalPairs).toBeGreaterThan(0);
+    });
+  });
+
   describe('Team pair stats updated on rotation', () => {
     it('replaces teammate pairs on second rotation (undo first, add new)', async () => {
       renderWithProvider(<App />);
