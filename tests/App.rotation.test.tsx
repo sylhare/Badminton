@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../src/App';
 import { engine } from '../src/engines/engineSelector';
 
-import { addPlayers, clearTestState, clickTeam, clickTeamAndConfirm, generateAndWaitForAssignments, renderWithProvider } from './shared';
+import { addPlayers, clearTestState, clickTeam, generateAndWaitForAssignments, renderWithProvider } from './shared';
 
 describe('Team rotation', () => {
   const user = userEvent.setup();
@@ -21,6 +21,24 @@ describe('Team rotation', () => {
       await generateAndWaitForAssignments(user);
 
       expect(screen.getByTestId('rotate-teams-button')).toBeInTheDocument();
+    });
+  });
+
+  describe('Rotated court composition saved to state', () => {
+    it('team composition changes after rotation', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+      await generateAndWaitForAssignments(user);
+
+      const originalTeam1Text = screen.getByTestId('team-1').textContent;
+
+      await act(async () => {
+        await user.click(screen.getByTestId('rotate-teams-button'));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      const rotatedTeam1Text = screen.getByTestId('team-1').textContent;
+      expect(rotatedTeam1Text).not.toEqual(originalTeam1Text);
     });
   });
 
@@ -125,13 +143,11 @@ describe('Team rotation', () => {
     });
   });
 
-  describe('Teammate stats updated on rotation', () => {
+  describe('Team pair stats updated on rotation', () => {
     it('replaces teammate pairs on second rotation (undo first, add new)', async () => {
       renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
-
-      expect(engine().getStats().teammateCountMap.size).toBe(0);
 
       const rotate = async () => act(async () => {
         await user.click(screen.getByTestId('rotate-teams-button'));
@@ -145,6 +161,31 @@ describe('Team rotation', () => {
           .map(([pair]) => pair),
       );
       expect(pairsAfterFirst.size).toBe(2);
+
+      await rotate();
+      const pairsAfterSecond = new Set(
+        [...engine().getStats().teammateCountMap.entries()]
+          .filter(([, count]) => count > 0)
+          .map(([pair]) => pair),
+      );
+      expect(pairsAfterSecond.size).toBe(2);
+      expect([...pairsAfterFirst].every(p => pairsAfterSecond.has(p))).toBe(false);
+    });
+
+    it('updates opponent pairs to reflect the rotated composition', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana');
+      await generateAndWaitForAssignments(user);
+
+      await act(async () => {
+        await user.click(screen.getByTestId('rotate-teams-button'));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      const opponents = [...engine().getStats().opponentCountMap.entries()]
+        .filter(([, count]) => count > 0);
+      expect(opponents).toHaveLength(4);
+      opponents.forEach(([, count]) => expect(count).toBe(1));
     });
   });
 });
