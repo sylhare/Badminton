@@ -77,12 +77,10 @@ export interface ICourtAssignmentTracker {
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;
-  recordWins(courts: Court[]): void;
   recordLevelSnapshot(players: Player[]): void;
   getWinCounts(): Map<string, number>;
   getBenchCounts(): Map<string, number>;
   updateWinner(params: UpdateWinnerParams): Court[];
-  updateCourtTeamStats(court: Court, previousCourt?: Court): void;
   getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
   getStats(): TrackerStats;
   getLevelTrend(playerId: string): 'up' | 'down' | null;

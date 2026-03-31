@@ -20,7 +20,7 @@ import { levelTracker } from './LevelTracker';
  */
 export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
-  private static readonly PAIR_HISTORY_TTL_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
+  private static readonly PAIR_HISTORY_TTL_MS = 5 * 24 * 60 * 60 * 1000; 
 
   /** Player bench counts - tracks how many times each player was benched */
   protected static benchCountMap: Map<string, number> = new Map();
@@ -60,6 +60,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
+
+  /** Court numbers whose team-pair stats were already updated via rotation this round */
+  private pendingRotatedCourts = new Set<number>();
 
   protected get teammateCountMap(): Map<string, number> {
     return CourtAssignmentTracker.teammateCountMap;
@@ -121,6 +124,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Clears only the current session's recorded match outcomes. */
   clearCurrentSession(): void {
     CourtAssignmentTracker.recordedWinsMap.clear();
+    this.pendingRotatedCourts.clear();
   }
 
   /**
@@ -141,7 +145,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         court.players.forEach(p => this.recordSingles(p.id));
       }
 
-      this.updateCourtTeamStats(court);
+      if (!this.pendingRotatedCourts.has(court.courtNumber)) {
+        this.updateCourtTeamStats(court);
+      }
     });
   }
 
@@ -293,27 +299,14 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * Records teammate and opponent pairing stats for a court.
    * If previousCourt is provided, its stats are reversed first (used on rotation).
    */
-  updateCourtTeamStats(court: Court, previousCourt?: Court): void {
+  private updateCourtTeamStats(court: Court, previousCourt?: Court): void {
     if (previousCourt?.teams) {
       const { team1, team2 } = previousCourt.teams;
-      const reverseTeamPairs = (team: Player[]) => {
-        for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            const key = pairKey(team[i].id, team[j].id);
-            const count = CourtAssignmentTracker.teammateCountMap.get(key) ?? 0;
-            if (count > 0) CourtAssignmentTracker.teammateCountMap.set(key, count - 1);
-          }
-        }
-      };
-      reverseTeamPairs(team1);
-      reverseTeamPairs(team2);
-      team1.forEach(a => {
-        team2.forEach(b => {
-          const key = pairKey(a.id, b.id);
-          const count = CourtAssignmentTracker.opponentCountMap.get(key) ?? 0;
-          if (count > 0) CourtAssignmentTracker.opponentCountMap.set(key, count - 1);
-        });
-      });
+      this.decrementTeamPairs(team1);
+      this.decrementTeamPairs(team2);
+      team1.forEach(a => team2.forEach(b => {
+        this.decrementMapCount(CourtAssignmentTracker.opponentCountMap, pairKey(a.id, b.id));
+      }));
     }
 
     if (court.teams) {
@@ -369,6 +362,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
 
     if (rotatedCourt) {
+      this.pendingRotatedCourts.add(courtNumber);
       this.updateCourtTeamStats(rotatedCourt, court);
     }
 
@@ -432,6 +426,19 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    */
   protected incrementMapCount(map: Map<string, number>, key: string, inc = 1): void {
     map.set(key, (map.get(key) ?? 0) + inc);
+  }
+
+  private decrementMapCount(map: Map<string, number>, key: string): void {
+    const count = map.get(key) ?? 0;
+    if (count > 0) map.set(key, count - 1);
+  }
+
+  private decrementTeamPairs(team: Player[]): void {
+    for (let i = 0; i < team.length; i++) {
+      for (let j = i + 1; j < team.length; j++) {
+        this.decrementMapCount(CourtAssignmentTracker.teammateCountMap, pairKey(team[i].id, team[j].id));
+      }
+    }
   }
 
   /** Updates the last seen timestamp for a key */
@@ -516,7 +523,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     currentWinningPlayerIds: string[],
   ): boolean {
     return !(previousRecord.winner === currentWinner &&
-      JSON.stringify(previousRecord.winningPlayers.sort()) === JSON.stringify(currentWinningPlayerIds.sort()));
+      JSON.stringify([...previousRecord.winningPlayers].sort()) === JSON.stringify([...currentWinningPlayerIds].sort()));
   }
 
   /**
@@ -526,17 +533,10 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     previousRecord: { winner: 1 | 2; winningPlayers: string[]; losingPlayers: string[] },
   ): void {
     previousRecord.winningPlayers.forEach(playerId => {
-      const currentWins = CourtAssignmentTracker.winCountMap.get(playerId) || 0;
-      if (currentWins > 0) {
-        CourtAssignmentTracker.winCountMap.set(playerId, currentWins - 1);
-      }
+      this.decrementMapCount(CourtAssignmentTracker.winCountMap, playerId);
     });
-
     previousRecord.losingPlayers.forEach(playerId => {
-      const currentLosses = CourtAssignmentTracker.lossCountMap.get(playerId) || 0;
-      if (currentLosses > 0) {
-        CourtAssignmentTracker.lossCountMap.set(playerId, currentLosses - 1);
-      }
+      this.decrementMapCount(CourtAssignmentTracker.lossCountMap, playerId);
     });
   }
 

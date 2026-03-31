@@ -13,7 +13,7 @@ import { storageManager } from './utils/StorageManager';
 import { useAppState } from './providers/AppStateProvider';
 import type { Court, ManualCourtSelection, WinnerSelection } from './types';
 
-const REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000; // 2 minutes
+const REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000; 
 
 export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
@@ -113,7 +113,7 @@ function App(): React.ReactElement {
       now - lastGeneratedAt < REGENERATION_DEBOUNCE_MS;
     const hasWinners = assignments.some(c => c.winner !== undefined);
 
-    if (!isRapidRegeneration || hasWinners) {
+    if (!isRapidRegeneration || hasWinners || forceBenchPlayerIds.size > 0) {
       applyCourtResults(assignments);
     }
 

@@ -89,7 +89,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     if (courts.length > 0) {
       engine().applyRoundStats(courts, players);
     }
-
     const courtsWithWinners = courts.filter(c => c.winner);
     if (courtsWithWinners.length > 0) {
       const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners, players);
