@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { engine, getEngineType, setEngine } from '../engines/engineSelector';
 import { storageManager } from '../utils/StorageManager';
+import { type StatAnomaly } from '../engines/anomaly/statisticalAnomalyChecker';
+import { getAnomalies, onAnomaliesChange } from '../engines/anomaly/anomalyStore';
 import TeammateGraph from '../components/graphs/TeammateGraph';
 import SinglesGraph from '../components/graphs/SinglesGraph';
 import BenchGraph from '../components/graphs/BenchGraph';
@@ -67,6 +69,7 @@ function StatsPage(): React.ReactElement {
   const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [isSmartEngine, setIsSmartEngine] = useState(false);
+  const [anomalies, setAnomalies] = useState<StatAnomaly[]>(getAnomalies);
 
   useEffect(() => {
     const load = async () => {
@@ -80,9 +83,11 @@ function StatsPage(): React.ReactElement {
       if (appState.players) setPlayers(appState.players);
     };
     load();
-    return engine().onStateChange(() => {
-      setEngineState(engine().prepareStateForSaving(getEngineType()));
-    });
+    const cleanups = [
+      engine().onStateChange(() => setEngineState(engine().prepareStateForSaving(getEngineType()))),
+      onAnomaliesChange(() => setAnomalies(getAnomalies())),
+    ];
+    return () => cleanups.forEach(cleanup => cleanup());
   }, []);
 
   const basePath = import.meta.env.BASE_URL || '/';
@@ -304,13 +309,18 @@ function StatsPage(): React.ReactElement {
         </header>
 
         {/* Warnings Section */}
-        {hasData && diagnostics.warnings.length > 0 && (
+        {hasData && (diagnostics.warnings.length > 0 || anomalies.length > 0) && (
           <section className="warnings-section">
             <h2>⚠️ Warnings</h2>
             <div className="warnings-list">
               {diagnostics.warnings.map((warning, idx) => (
-                <div key={idx} className="warning-item">
+                <div key={`diag-${idx}`} className="warning-item">
                   {warning}
+                </div>
+              ))}
+              {anomalies.map((anomaly, idx) => (
+                <div key={`anomaly-${idx}`} className="warning-item">
+                  {anomaly.message}
                 </div>
               ))}
             </div>
@@ -335,8 +345,8 @@ function StatsPage(): React.ReactElement {
                   <div className="stat-value">{diagnostics.repeatedTeammates.length}</div>
                   <div className="stat-label">Repeated Pairs</div>
                 </div>
-                <div className="stat-card highlight-warning" data-warning={diagnostics.warnings.length > 0}>
-                  <div className="stat-value">{diagnostics.warnings.length}</div>
+                <div className="stat-card highlight-warning" data-warning={diagnostics.warnings.length + anomalies.length > 0}>
+                  <div className="stat-value">{diagnostics.warnings.length + anomalies.length}</div>
                   <div className="stat-label">Warnings</div>
                 </div>
               </div>
