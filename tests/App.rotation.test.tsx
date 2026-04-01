@@ -154,27 +154,27 @@ describe('Team rotation', () => {
       await new Promise(resolve => setTimeout(resolve, 300));
     });
 
-    it('does not record bench stats for a discarded round', async () => {
+    it('replaces bench stats when rapid-regenerating (discarded round not double-counted)', async () => {
       renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
       await generateAndWaitForAssignments(user);
       await rapidRegenerate();
 
       const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
-      expect(totalBenched).toBe(0);
+      expect(totalBenched).toBe(1);
     });
 
-    it('does not record teammate stats for a discarded round', async () => {
+    it('replaces teammate stats when rapid-regenerating (discarded round not double-counted)', async () => {
       renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
       await rapidRegenerate();
 
       const totalPairs = [...engine().getStats().teammateCountMap.values()].reduce((s, n) => s + n, 0);
-      expect(totalPairs).toBe(0);
+      expect(totalPairs).toBeGreaterThan(0);
     });
 
-    it('commits bench stats from the previous round exactly once', async () => {
+    it('commits bench stats for each played round', async () => {
       renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
       await generateAndWaitForAssignments(user);
@@ -183,7 +183,7 @@ describe('Team rotation', () => {
       await regenerate();
 
       const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
-      expect(totalBenched).toBe(1);
+      expect(totalBenched).toBe(2);
     });
 
     it('commits teammate stats from the previous round exactly once', async () => {

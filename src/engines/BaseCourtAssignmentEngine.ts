@@ -35,6 +35,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     numberOfCourts: number,
     manualSelection?: ManualCourtSelection,
     forceBenchPlayerIds?: Set<string>,
+    replaceRound = false,
   ): Court[] {
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return [];
@@ -74,6 +75,9 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     if (manualCourtResult) {
       finalCourts = [manualCourtResult, ...finalCourts];
     }
+
+    if (replaceRound) this.undoLastRound();
+    this.applyRoundStats(finalCourts, presentPlayers);
 
     return finalCourts;
   }

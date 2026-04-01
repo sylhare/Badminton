@@ -73,7 +73,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
-        engine.applyRoundStats(assignments, players);
         const benched = engine.getBenchedPlayers(assignments, players);
         benched.forEach(p => (benchHistory[p.id] += 1));
       }
@@ -93,7 +92,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('getBenchCounts should return an empty map after resetHistory', () => {
       const players = mockPlayers(12);
-      engine.applyRoundStats(engine.generate(players, 2), players);
+      engine.generate(players, 2);
 
       expect(engine.getBenchCounts().size).toBeGreaterThan(0);
 
@@ -111,7 +110,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
-        engine.applyRoundStats(assignments, players);
         assignments.forEach(court => {
           if (!court.teams) return;
           const teams = [court.teams.team1, court.teams.team2];
@@ -354,7 +352,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('should clear pair maps but keep win counts when normal mode state is older than 5 days', async () => {
       const players = mockPlayers(4);
 
-      engine.applyRoundStats(engine.generate(players, 1), players);
+      engine.generate(players, 1);
       engine.recordWins([createMockCourt(1, players, 1)]);
 
       const savedAtSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.now() - 6 * 24 * 60 * 60 * 1000);
@@ -377,7 +375,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('should keep pair maps when normal mode state is less than 5 days old', async () => {
       const players = mockPlayers(4);
 
-      engine.applyRoundStats(engine.generate(players, 1), players);
+      engine.generate(players, 1);
       await engine.saveState(type);
       expect(engine.getStats().teammateCountMap.size).toBeGreaterThan(0);
 
@@ -722,7 +720,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('should increment singles count when 2 players are assigned', () => {
       const players = mockPlayers(2);
 
-      engine.applyRoundStats(engine.generate(players, 1), players);
+      engine.generate(players, 1);
 
       const state = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
       const singlesPlayed = Object.values(state.singleCountMap).filter(v => v > 0).length;
@@ -743,7 +741,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(4);
 
       const twoPlayers = players.slice(0, 2);
-      engine.applyRoundStats(engine.generate(twoPlayers, 1), twoPlayers);
+      engine.generate(twoPlayers, 1);
 
       const stateAfterFirst = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
       expect(stateAfterFirst.singleCountMap['P0']).toBe(1);
@@ -752,7 +750,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(stateAfterFirst.singleCountMap['P3'] ?? 0).toBe(0);
 
       const anotherTwoPlayers = players.slice(2, 4);
-      engine.applyRoundStats(engine.generate(anotherTwoPlayers, 1), anotherTwoPlayers);
+      engine.generate(anotherTwoPlayers, 1);
 
       const stateAfterSecond = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
       expect(stateAfterSecond.singleCountMap['P2']).toBe(1);
@@ -762,7 +760,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('should clear singles count on resetHistory', () => {
       const players = mockPlayers(2);
 
-      engine.applyRoundStats(engine.generate(players, 1), players);
+      engine.generate(players, 1);
 
       const stateBefore = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
       expect(Object.values(stateBefore.singleCountMap).some(v => v > 0)).toBe(true);

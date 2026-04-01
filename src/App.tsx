@@ -13,7 +13,7 @@ import { storageManager } from './utils/StorageManager';
 import { useAppState } from './providers/AppStateProvider';
 import type { Court, ManualCourtSelection, WinnerSelection } from './types';
 
-const REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000; 
+const REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000;
 
 export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
@@ -120,11 +120,13 @@ function App(): React.ReactElement {
     setLastGeneratedAt(now);
     engine().clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
+    const replaceRound = isRapidRegeneration && !hasWinners && forceBenchPlayerIds.size === 0;
     const courts = engine().generate(
       players,
       numberOfCourts,
       manualCourtSelection || undefined,
       forceBenchPlayerIds,
+      replaceRound,
     );
 
     if (hadManualSelection) {

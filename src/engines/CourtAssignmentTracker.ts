@@ -20,7 +20,7 @@ import { levelTracker } from './LevelTracker';
  */
 export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
-  private static readonly PAIR_HISTORY_TTL_MS = 5 * 24 * 60 * 60 * 1000; 
+  private static readonly PAIR_HISTORY_TTL_MS = 5 * 24 * 60 * 60 * 1000;
 
   /** Player bench counts - tracks how many times each player was benched */
   protected static benchCountMap: Map<string, number> = new Map();
@@ -63,6 +63,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Court numbers whose team-pair stats were already updated via rotation this round */
   private pendingRotatedCourts = new Set<number>();
+
+  /** Delta of stats recorded in the most recent generate() call, used to undo on replace */
+  private lastRoundDelta: { bench: string[]; singles: string[]; teammates: string[]; opponents: string[] } | null = null;
 
   protected get teammateCountMap(): Map<string, number> {
     return CourtAssignmentTracker.teammateCountMap;
@@ -109,6 +112,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lastUpdatedMap.clear();
     CourtAssignmentTracker.levelHistoryMap.clear();
     CourtAssignmentTracker.globalCounter = 0;
+    this.lastRoundDelta = null;
     this.notifyStateChange();
   }
 
@@ -128,27 +132,56 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /**
-   * Records bench/singles/teammate/opponent stats for a completed round.
-   * Call this from applyCourtResults, not from generate() — stats should only
-   * be committed once a round is actually finalized.
+   * Records bench/singles/teammate/opponent stats for a round.
+   * Called from generate() so stats are immediately visible after generation.
+   * Tracks a delta so undoLastRound() can reverse it on rapid re-generation.
    */
   applyRoundStats(courts: Court[], players: Player[]): void {
     const assignedIds = new Set(courts.flatMap(c => c.players.map(p => p.id)));
     const benchedPlayers = players.filter(p => p.isPresent && !assignedIds.has(p.id));
+    const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
 
-    benchedPlayers.forEach(p => this.recordBenching(p.id));
+    benchedPlayers.forEach(p => {
+      this.recordBenching(p.id);
+      delta.bench.push(p.id);
+    });
 
     courts.forEach(court => {
       if (!court.teams) return;
 
       if (court.players.length === 2) {
-        court.players.forEach(p => this.recordSingles(p.id));
+        court.players.forEach(p => {
+          this.recordSingles(p.id);
+          delta.singles.push(p.id);
+        });
       }
 
       if (!this.pendingRotatedCourts.has(court.courtNumber)) {
         this.updateCourtTeamStats(court);
+        const { team1, team2 } = court.teams;
+        for (const team of [team1, team2]) {
+          for (let i = 0; i < team.length; i++) {
+            for (let j = i + 1; j < team.length; j++) {
+              delta.teammates.push(pairKey(team[i].id, team[j].id));
+            }
+          }
+        }
+        team1.forEach(a => team2.forEach(b => delta.opponents.push(pairKey(a.id, b.id))));
       }
     });
+
+    this.lastRoundDelta = delta;
+  }
+
+  /** Reverses the stats recorded by the most recent applyRoundStats call. */
+  protected undoLastRound(): void {
+    if (!this.lastRoundDelta) return;
+    const { bench, singles, teammates, opponents } = this.lastRoundDelta;
+    bench.forEach(id => this.decrementMapCount(CourtAssignmentTracker.benchCountMap, id));
+    singles.forEach(id => this.decrementMapCount(CourtAssignmentTracker.singleCountMap, id));
+    teammates.forEach(key => this.decrementMapCount(CourtAssignmentTracker.teammateCountMap, key));
+    opponents.forEach(key => this.decrementMapCount(CourtAssignmentTracker.opponentCountMap, key));
+    this.lastRoundDelta = null;
   }
 
   /** Prepares the internal maps for persistence. Filters and prunes old data. */
