@@ -127,7 +127,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * False when this is a rapid regeneration with no winners (discard the previous trial round).
    * Must be called before generate() so recordedWinsMap reflects the previous round.
    */
-  shouldCommitRound(): boolean {
+  protected shouldCommitRound(): boolean {
     const isRapidRegeneration =
       this.lastGeneratedAt !== undefined &&
       Date.now() - this.lastGeneratedAt < CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS;

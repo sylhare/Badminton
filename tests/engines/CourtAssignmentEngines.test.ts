@@ -43,7 +43,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
   describe('Core Behaviour', () => {
     it('returns empty assignments when no present players', () => {
-      expect(engine.generate([], 4)).toEqual([]);
+      expect(engine.generate([], 4)).toHaveLength(0);
     });
 
     it('assigns everyone when capacity not exceeded', () => {
@@ -65,6 +65,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     });
 
     it('benched players rotate fairly (no repeats until everyone benched)', () => {
+      vi.useFakeTimers();
       const players = mockPlayers(12);
       const numberOfCourts = 2;
       const rounds = 4;
@@ -73,10 +74,11 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
-        engine.clearCurrentSession();
+        vi.advanceTimersByTime(3 * 60 * 1000);
         const benched = engine.getBenchedPlayers(assignments, players);
         benched.forEach(p => (benchHistory[p.id] += 1));
       }
+      vi.useRealTimers();
 
       Object.values(benchHistory).forEach(count => {
         expect(count).toBeGreaterThan(0);
@@ -102,6 +104,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     });
 
     it('statistical check: teammate pairs are reasonably balanced over many rounds', () => {
+      vi.useFakeTimers();
       const players = mockPlayers(8);
       const numberOfCourts = 2;
       const rounds = name.includes('SA') ? 30 : 100;
@@ -111,7 +114,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
-        engine.clearCurrentSession();
+        vi.advanceTimersByTime(3 * 60 * 1000);
         assignments.forEach(court => {
           if (!court.teams) return;
           const teams = [court.teams.team1, court.teams.team2];
@@ -135,6 +138,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       expect(max / min).toBeLessThanOrEqual(3);
       expect(max).toBeLessThanOrEqual(avg * 2);
+      vi.useRealTimers();
     });
   });
 

@@ -1,4 +1,4 @@
-import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../types';
+import type { Court, GenerateResult, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../types';
 import { pairKey } from '../utils/playerUtils';
 
 import { CourtAssignmentTracker } from './CourtAssignmentTracker';
@@ -35,10 +35,10 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     numberOfCourts: number,
     manualSelection?: ManualCourtSelection,
     forceBenchPlayerIds?: Set<string>,
-  ): Court[] {
+  ): GenerateResult {
     const replaceRound = !this.shouldCommitRound();
     const presentPlayers = players.filter(p => p.isPresent);
-    if (presentPlayers.length === 0) return [];
+    if (presentPlayers.length === 0) return Object.assign([] as Court[], { committed: true }) as GenerateResult;
 
     let manualCourtResult: Court | null = null;
     let remainingPlayers = presentPlayers;
@@ -81,7 +81,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     if (replaceRound) this.undoLastRound();
     this.applyRoundStats(finalCourts, presentPlayers);
 
-    return finalCourts;
+    return Object.assign(finalCourts, { committed: !replaceRound });
   }
 
   /**

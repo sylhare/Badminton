@@ -68,12 +68,15 @@ export interface UpdateWinnerParams {
   rotatedCourt?: Court;
 }
 
+export interface GenerateResult extends Array<Court> {
+  committed: boolean;
+}
+
 export interface ICourtAssignmentTracker {
   onStateChange(listener: () => void): () => void;
   resetHistory(): void;
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
-  shouldCommitRound(): boolean;
   applyRoundStats(courts: Court[], players: Player[]): void;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): Promise<void>;
@@ -88,7 +91,7 @@ export interface ICourtAssignmentTracker {
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): Court[];
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): GenerateResult;
   getName(): string;
   getDescription(): string;
   supportsScoreTracking(): boolean;

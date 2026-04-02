@@ -105,10 +105,6 @@ function App(): React.ReactElement {
   };
 
   const generateAssignments = () => {
-    if (engine().shouldCommitRound()) {
-      applyCourtResults(assignments);
-    }
-
     setLastGeneratedAt(Date.now());
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
     const courts = engine().generate(
@@ -117,6 +113,10 @@ function App(): React.ReactElement {
       manualCourtSelection || undefined,
       forceBenchPlayerIds,
     );
+
+    if (courts.committed) {
+      applyCourtResults(assignments);
+    }
 
     if (hadManualSelection) {
       courts.forEach(court => {

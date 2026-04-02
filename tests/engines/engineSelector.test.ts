@@ -155,10 +155,10 @@ describe('Engine Selector', () => {
       const players: Player[] = [];
 
       setEngine('sa');
-      expect(engine().generate(players, 2)).toEqual([]);
+      expect(engine().generate(players, 2)).toHaveLength(0);
 
       setEngine('sl');
-      expect(engine().generate(players, 2)).toEqual([]);
+      expect(engine().generate(players, 2)).toHaveLength(0);
     });
   });
 });
