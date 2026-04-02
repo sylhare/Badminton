@@ -205,7 +205,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           <div className="regenerate-section">
             <button
               onClick={handleGenerateAssignments}
-              disabled={!hasPlayers || isButtonShaking}
+              disabled={!hasPlayers}
               className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
               data-testid="generate-assignments-button"
             >
@@ -229,7 +229,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           </p>
           <button
             onClick={handleGenerateAssignments}
-            disabled={!hasPlayers || isButtonShaking}
+            disabled={!hasPlayers}
             className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
             data-testid="generate-assignments-button"
           >

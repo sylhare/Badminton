@@ -61,11 +61,16 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
 
+  private static readonly REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000;
+
   /** Court numbers whose team-pair stats were already updated via rotation this round */
   private pendingRotatedCourts = new Set<number>();
 
   /** Delta of stats recorded in the most recent generate() call, used to undo on replace */
   private lastRoundDelta: { bench: string[]; singles: string[]; teammates: string[]; opponents: string[] } | null = null;
+
+  /** Timestamp of the most recent generate() call, used to detect rapid regeneration */
+  protected lastGeneratedAt: number | undefined = undefined;
 
   protected get teammateCountMap(): Map<string, number> {
     return CourtAssignmentTracker.teammateCountMap;
@@ -113,7 +118,21 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.levelHistoryMap.clear();
     CourtAssignmentTracker.globalCounter = 0;
     this.lastRoundDelta = null;
+    this.lastGeneratedAt = undefined;
     this.notifyStateChange();
+  }
+
+  /**
+   * Returns true if the previous round's results should be committed before generating.
+   * False when this is a rapid regeneration with no winners (discard the previous trial round).
+   * Must be called before generate() so recordedWinsMap reflects the previous round.
+   */
+  shouldCommitRound(): boolean {
+    const isRapidRegeneration =
+      this.lastGeneratedAt !== undefined &&
+      Date.now() - this.lastGeneratedAt < CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS;
+    const hasWinners = CourtAssignmentTracker.recordedWinsMap.size > 0;
+    return !isRapidRegeneration || hasWinners;
   }
 
   /** Removes all historical tracking data for a specific player. */
@@ -129,6 +148,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   clearCurrentSession(): void {
     CourtAssignmentTracker.recordedWinsMap.clear();
     this.pendingRotatedCourts.clear();
+    this.lastGeneratedAt = undefined;
   }
 
   /**

@@ -73,6 +73,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
+        engine.clearCurrentSession();
         const benched = engine.getBenchedPlayers(assignments, players);
         benched.forEach(p => (benchHistory[p.id] += 1));
       }
@@ -110,6 +111,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
+        engine.clearCurrentSession();
         assignments.forEach(court => {
           if (!court.teams) return;
           const teams = [court.teams.team1, court.teams.team2];

@@ -73,6 +73,7 @@ export interface ICourtAssignmentTracker {
   resetHistory(): void;
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
+  shouldCommitRound(): boolean;
   applyRoundStats(courts: Court[], players: Player[]): void;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): Promise<void>;
@@ -87,7 +88,7 @@ export interface ICourtAssignmentTracker {
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>, replaceRound?: boolean): Court[];
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): Court[];
   getName(): string;
   getDescription(): string;
   supportsScoreTracking(): boolean;
