@@ -113,14 +113,14 @@ function App(): React.ReactElement {
       now - lastGeneratedAt < REGENERATION_DEBOUNCE_MS;
     const hasWinners = assignments.some(c => c.winner !== undefined);
 
-    if (!isRapidRegeneration || hasWinners || forceBenchPlayerIds.size > 0) {
+    if (!isRapidRegeneration || hasWinners) {
       applyCourtResults(assignments);
     }
 
     setLastGeneratedAt(now);
     engine().clearCurrentSession();
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
-    const replaceRound = isRapidRegeneration && !hasWinners && forceBenchPlayerIds.size === 0;
+    const replaceRound = isRapidRegeneration && !hasWinners;
     const courts = engine().generate(
       players,
       numberOfCourts,

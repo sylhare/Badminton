@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
 import { engine } from '../src/engines/engineSelector';
+import { storageManager } from '../src/utils/StorageManager';
 
 import { addPlayers, clearTestState, clickTeam, generateAndWaitForAssignments, renderWithProvider } from './shared';
 
@@ -158,6 +159,27 @@ describe('Team rotation', () => {
       renderWithProvider(<App />);
       await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
       await generateAndWaitForAssignments(user);
+      await rapidRegenerate();
+
+      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      expect(totalBenched).toBe(1);
+    });
+
+    it('replaces bench stats when rapid-regenerating with force-bench (discarded round not double-counted)', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
+      await generateAndWaitForAssignments(user);
+
+      await act(async () => {
+        await user.click(screen.getByText('Manage Players'));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      const state = await storageManager.loadApp();
+      const playerId = state!.players[0].id;
+      await act(async () => {
+        await user.click(screen.getByTestId(`force-bench-${playerId}`));
+      });
       await rapidRegenerate();
 
       const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
