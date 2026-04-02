@@ -105,15 +105,15 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     setIsButtonShaking(true);
     setIsAnimating(true);
     trackCourtAction('generate_assignments', { courtCount: numberOfCourts });
+    onGenerateAssignments();
 
     setTimeout(() => {
       setIsButtonShaking(false);
-      onGenerateAssignments();
-
-      setTimeout(() => {
-        setIsAnimating(false);
-      }, 400);
     }, 200);
+
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 600);
   };
 
   const handleWinnerChange = (courtNumber: number, teamNumber: number) => {
