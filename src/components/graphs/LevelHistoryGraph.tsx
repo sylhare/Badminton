@@ -27,15 +27,9 @@ const CANVAS_HEIGHT = 400;
 const INNER_W = CANVAS_WIDTH - MARGIN.left - MARGIN.right;
 const INNER_H = CANVAS_HEIGHT - MARGIN.top - MARGIN.bottom;
 
-const Y_TICKS = [0, 25, 50, 75, 100];
-
 function toX(round: number, totalRounds: number): number {
   if (totalRounds <= 1) return MARGIN.left + INNER_W / 2;
   return MARGIN.left + ((round - 1) / (totalRounds - 1)) * INNER_W;
-}
-
-function toY(level: number): number {
-  return MARGIN.top + INNER_H - (level / 100) * INNER_H;
 }
 
 /**
@@ -46,11 +40,17 @@ export function LevelHistoryGraph({
   levelHistory,
   getPlayerName,
 }: LevelHistoryGraphProps): React.ReactElement | null {
-  const { topPlayers, greyPlayers, totalRounds } = useMemo(() => {
+  const { topPlayers, greyPlayers, totalRounds, yMin, yMax } = useMemo(() => {
     const entries = Object.entries(levelHistory).filter(([, h]) => h.length > 0);
-    if (entries.length === 0) return { topPlayers: [], greyPlayers: [], totalRounds: 0 };
+    if (entries.length === 0) return { topPlayers: [], greyPlayers: [], totalRounds: 0, yMin: 0, yMax: 100 };
 
     const rounds = Math.max(...entries.map(([, h]) => h.length));
+
+    const allLevels = entries.flatMap(([, h]) => h);
+    const rawMin = Math.min(...allLevels);
+    const rawMax = Math.max(...allLevels);
+    const yMin = Math.max(0, rawMin - 5);
+    const yMax = Math.min(100, rawMax + 5);
 
     entries.sort((a, b) => {
       const aFinal = a[1][a[1].length - 1] ?? 50;
@@ -72,10 +72,21 @@ export function LevelHistoryGraph({
       name: getPlayerName(id),
     }));
 
-    return { topPlayers: top, greyPlayers: grey, totalRounds: rounds };
+    return { topPlayers: top, greyPlayers: grey, totalRounds: rounds, yMin, yMax };
   }, [levelHistory, getPlayerName]);
 
   if (totalRounds === 0) return null;
+
+  const toY = (level: number): number =>
+    MARGIN.top + INNER_H - ((level - yMin) / (yMax - yMin)) * INNER_H;
+
+  const yRange = yMax - yMin;
+  const step = Math.max(1, Math.ceil(yRange / 4));
+  const firstTick = Math.ceil(yMin / step) * step;
+  const yTicks: number[] = [];
+  for (let t = firstTick; t <= yMax; t += step) yTicks.push(t);
+  if (!yTicks.includes(yMin)) yTicks.unshift(yMin);
+  if (!yTicks.includes(yMax)) yTicks.push(yMax);
 
   const xTicks = Array.from({ length: totalRounds }, (_, i) => i + 1);
   const xLabelStep = Math.max(1, Math.ceil(totalRounds / 10));
@@ -87,7 +98,7 @@ export function LevelHistoryGraph({
     <div className="level-history-graph">
       <SvgChart viewBoxWidth={CANVAS_WIDTH} viewBoxHeight={CANVAS_HEIGHT} maxWidth={CANVAS_WIDTH} ariaLabel="Level progression chart">
         {/* Y gridlines and labels */}
-        {Y_TICKS.map(tick => {
+        {yTicks.map(tick => {
           const y = toY(tick);
           return (
             <g key={tick}>
@@ -98,7 +109,7 @@ export function LevelHistoryGraph({
                 y2={y}
                 stroke="#333"
                 strokeWidth={1}
-                strokeDasharray={tick === 0 || tick === 100 ? undefined : '3 3'}
+                strokeDasharray={tick === yMin || tick === yMax ? undefined : '3 3'}
               />
               <text
                 x={MARGIN.left - 4}
