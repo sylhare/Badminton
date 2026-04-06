@@ -268,7 +268,7 @@ function App(): React.ReactElement {
         onDecline={handleImportDecline}
       />
 
-      <Footer />
+      <Footer showTournamentLink={winCounts.size > 0 || isSmartEngineEnabled} />
     </div>
   );
 }

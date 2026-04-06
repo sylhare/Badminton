@@ -26,4 +26,20 @@ describe('Footer', () => {
     expect(link).toHaveTextContent('View Statistics & Analysis');
     expect(link).toHaveAttribute('href', '/stats');
   });
+
+  it('does not render tournament link by default', () => {
+    renderFooter();
+    expect(screen.queryByTestId('tournament-link')).not.toBeInTheDocument();
+  });
+
+  it('renders tournament link when showTournamentLink is true', () => {
+    render(
+      <MemoryRouter>
+        <Footer showTournamentLink />
+      </MemoryRouter>,
+    );
+    const link = screen.getByTestId('tournament-link');
+    expect(link).toHaveTextContent('Try Tournament Mode');
+    expect(link).toHaveAttribute('href', '/tournament');
+  });
 });

@@ -25,6 +25,9 @@ interface TournamentProps {
   onReset: () => void;
   onAddPlayers: (names: string[]) => void;
   onTogglePlayer: (id: string) => void;
+  showSetup?: boolean;
+  onShowSetup?: () => void;
+  onShowTournament?: () => void;
 }
 
 function standingsSubtitle(t: TournamentBase, isComplete: boolean): string {
@@ -45,13 +48,23 @@ export const Tournament: React.FC<TournamentProps> = ({
   onReset,
   onAddPlayers,
   onTogglePlayer,
+  showSetup,
+  onShowSetup,
+  onShowTournament,
 }) => {
   const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
   const standings = useMemo(() => tournament?.calculateStandings() ?? [], [tournament]);
 
-  if (!tournament || tournament.phase() === 'setup') {
+  const isSetupPhase = !tournament || tournament.phase() === 'setup';
+
+  if (isSetupPhase || showSetup) {
     return (
       <div className="tournament-setup-wrapper">
+        {!isSetupPhase && onShowTournament && (
+          <button className="back-link back-link-right" onClick={onShowTournament} data-testid="back-to-tournament">
+            To Current Tournament →
+          </button>
+        )}
         <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
           <h3>Mode</h3>
           <div className="format-pills">
@@ -87,6 +100,11 @@ export const Tournament: React.FC<TournamentProps> = ({
 
   return (
     <div className="tournament-active-layout">
+      {onShowSetup && (
+        <button className="back-link" onClick={onShowSetup} data-testid="back-to-setup">
+          ← Back to Setup
+        </button>
+      )}
       {tournament instanceof EliminationTournament
         ? <EliminationBracket tournament={tournament} onMatchResult={onMatchResult} />
         : <RoundRobinMatches tournament={tournament} onMatchResult={onMatchResult} />

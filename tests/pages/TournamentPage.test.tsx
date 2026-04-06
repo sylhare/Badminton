@@ -30,6 +30,14 @@ describe('TournamentPage', () => {
     expect(screen.getByTestId('app-footer')).toBeInTheDocument();
   });
 
+  it('renders a back-to-app banner link', () => {
+    renderWithProvider(<TournamentPage />);
+    expect(screen.getByTestId('tournament-banner')).toBeInTheDocument();
+    const link = screen.getByTestId('back-to-app');
+    expect(link).toHaveTextContent('← Back to Court Manager');
+    expect(link).toHaveAttribute('href', '/');
+  });
+
   it('shows TournamentSetup with present players pre-selected', async () => {
     renderWithProvider(<TournamentPage />);
     await waitFor(() => {

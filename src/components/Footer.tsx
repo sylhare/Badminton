@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 
 interface FooterProps {
   showStatsLink?: boolean;
+  showTournamentLink?: boolean;
 }
 
-const Footer: React.FC<FooterProps> = ({ showStatsLink = true }) => (
+const Footer: React.FC<FooterProps> = ({ showStatsLink = true, showTournamentLink = false }) => (
   <footer className="app-footer" data-testid="app-footer">
     <p>
       Have feedback? Found a bug or want to suggest a feature?
@@ -18,15 +19,26 @@ const Footer: React.FC<FooterProps> = ({ showStatsLink = true }) => (
         Let us know on GitHub
       </a>
     </p>
-    {showStatsLink && (
+    {(showStatsLink || showTournamentLink) && (
       <p>
-        <Link
-          to="/stats"
-          className="analysis-link"
-          data-testid="stats-link"
-        >
-          View Statistics & Analysis
-        </Link>
+        {showStatsLink && (
+          <Link
+            to="/stats"
+            className="analysis-link"
+            data-testid="stats-link"
+          >
+            View Statistics & Analysis
+          </Link>
+        )}
+        {showTournamentLink && (
+          <Link
+            to="/tournament"
+            className="analysis-link"
+            data-testid="tournament-link"
+          >
+            Try Tournament Mode
+          </Link>
+        )}
       </p>
     )}
   </footer>
