@@ -1,5 +1,3 @@
-import { createWorker } from 'tesseract.js';
-
 import { preprocessImage } from './imagePreprocess';
 
 interface OcrOptions {
@@ -23,6 +21,7 @@ export async function recognizePlayerNames(
 
   pushProgress(0.1);
 
+  const { createWorker } = await import('tesseract.js');
   const worker: any = await (createWorker as any)('eng', workerPath ? { workerPath } : undefined);
 
   pushProgress(0.2);

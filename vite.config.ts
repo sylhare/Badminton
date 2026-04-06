@@ -4,8 +4,15 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ command }) => ({
   plugins: [react()],
   base: command === 'build' ? '/Badminton/' : '/',
-  optimizeDeps: {
-    include: ['tesseract.js'],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-icons': ['@phosphor-icons/react'],
+        },
+      },
+    },
   },
   server: {
     watch: {
