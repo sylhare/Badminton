@@ -5,6 +5,11 @@
     transition: background 0.5s ease;
 }
 
+.app:not([data-loaded="true"]) {
+    background: transparent;
+    transition: none;
+}
+
 .app:not([data-loaded="true"]) .container,
 .app:not([data-loaded="true"]) .app-footer {
     visibility: hidden;
