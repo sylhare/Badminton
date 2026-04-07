@@ -1,4 +1,5 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../types';
+import { shuffleArray } from '../utils/playerUtils';
 
 import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
 
@@ -69,7 +70,7 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
 
   private generateInitialSolution(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     const courts: Court[] = [];
-    const shuffled = this.shuffleArray([...players]);
+    const shuffled = shuffleArray(players);
 
     let idx = 0;
     for (let courtNum = startCourtNum; courtNum < startCourtNum + numberOfCourts; courtNum++) {
@@ -127,7 +128,7 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
     const courtIdx = Math.floor(Math.random() * courts.length);
     const court = courts[courtIdx];
     if (court.players.length === 4) {
-      this.shuffleArray(court.players);
+      court.players = shuffleArray(court.players);
       court.teams = this.chooseBestTeamSplit(court.players).teams;
     }
   }

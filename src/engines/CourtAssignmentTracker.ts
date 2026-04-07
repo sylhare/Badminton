@@ -8,7 +8,7 @@ import type {
   UpdateWinnerParams,
 } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
-import { benchedPlayers, opponentPairs, teamPairs } from '../utils/playerUtils';
+import { benchedPlayers, opponentPairs, shuffleArray, teamPairs } from '../utils/playerUtils';
 
 import { levelTracker } from './LevelTracker';
 
@@ -471,25 +471,12 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /**
-   * Shuffles an array in place (Fisher-Yates).
-   */
-  protected shuffleArray<T>(array: T[]): T[] {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = array[i];
-      array[i] = array[j];
-      array[j] = temp;
-    }
-    return array;
-  }
-
-  /**
    * Selects which players should be benched.
    */
   protected selectBenchedPlayers(players: Player[], benchSpots: number): Player[] {
     if (benchSpots <= 0) return [];
 
-    const shuffled = this.shuffleArray([...players]);
+    const shuffled = shuffleArray(players);
     return shuffled.sort((a, b) => {
       const countA = CourtAssignmentTracker.benchCountMap.get(a.id) ?? 0;
       const countB = CourtAssignmentTracker.benchCountMap.get(b.id) ?? 0;
