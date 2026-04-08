@@ -9,6 +9,9 @@ import { CourtAssignments } from './components/court';
 import { useShareState } from './hooks/useShareState';
 import Leaderboard from './components/players/Leaderboard';
 import { engine, getEngineType } from './engines/engineSelector';
+import { checkForAnomalies } from './engines/anomaly/statisticalAnomalyChecker';
+import { setAnomalies } from './engines/anomaly/anomalyStore';
+import { useAnalytics } from './hooks/useAnalytics';
 import { storageManager } from './utils/StorageManager';
 import { useAppState } from './providers/AppStateProvider';
 import type { Court, ManualCourtSelection, WinnerSelection } from './types';
@@ -59,6 +62,7 @@ function App(): React.ReactElement {
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
 
   const { shareUrl, setShareUrl, importState, handleShare, handleImportAccept, handleImportDecline } = useShareState();
+  const { trackEvent } = useAnalytics();
 
   const hasLocalLoadedRef = useRef(false);
   const managePlayersRef = useRef<HTMLDivElement>(null);
@@ -126,6 +130,23 @@ function App(): React.ReactElement {
       manualCourtSelection || undefined,
       forceBenchPlayerIds,
     );
+
+    const currentEngineType = getEngineType();
+    const state = engine().prepareStateForSaving(currentEngineType);
+    const maxBench = Object.values(state.benchCountMap).reduce((m, v) => Math.max(m, v), 0);
+    const anomalies = checkForAnomalies({
+      engineType: currentEngineType,
+      benchCountMap: state.benchCountMap,
+      teammateCountMap: state.teammateCountMap,
+      opponentCountMap: state.opponentCountMap,
+      totalRounds: Math.max(1, maxBench),
+    });
+    setAnomalies(anomalies);
+    anomalies.forEach(anomaly => trackEvent({
+      action: anomaly.code,
+      category: 'Statistical Anomaly',
+      label: `${currentEngineType}: ${anomaly.message}`,
+    }));
 
     if (hadManualSelection) {
       courts.forEach(court => {
