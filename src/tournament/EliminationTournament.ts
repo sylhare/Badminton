@@ -1,5 +1,6 @@
 import type { Player } from '../types';
 
+import { shuffleArray } from '../utils/playerUtils';
 import { Tournament } from './Tournament';
 import { BracketKind, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
@@ -203,8 +204,9 @@ export class EliminationTournament extends Tournament {
   }
 
   start(teams: TournamentTeam[], numberOfCourts: number): EliminationTournament {
-    const bracketSize = nextPowerOf2(teams.length);
-    const setup = new EliminationTournament({ ...this._state, teams, numberOfCourts, bracketSize });
+    const shuffled = shuffleArray(teams);
+    const bracketSize = nextPowerOf2(shuffled.length);
+    const setup = new EliminationTournament({ ...this._state, teams: shuffled, numberOfCourts, bracketSize });
     const matches = setup.generateWinnersFirstRound();
     return new EliminationTournament({ ...setup._state, phase: 'active', matches });
   }
