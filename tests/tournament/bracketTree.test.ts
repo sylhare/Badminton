@@ -53,7 +53,7 @@ describe('WinnersBracket.computeTree', () => {
       t = t.withMatchResult(m0.id, 1);
       t = t.withMatchResult(m1.id, 1);
 
-      const tree = new WinnersBracket(teams, t.winners.matches(), bracketSize).computeTree();
+      const tree = new WinnersBracket(t.teams(), t.winners.matches(), bracketSize).computeTree();
       expect(tree[1][0].type).toBe('match');
     });
 

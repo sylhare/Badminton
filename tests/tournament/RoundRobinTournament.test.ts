@@ -76,6 +76,20 @@ describe('RoundRobinTournament', () => {
       expect(RoundRobinTournament.create().start([], 2).matches()).toHaveLength(0);
       expect(RoundRobinTournament.create().start([createTournamentTeam('a', ['A'])], 2).matches()).toHaveLength(0);
     });
+
+    it('shuffles team order so repeated starts can produce different schedules', () => {
+      const teams = [
+        createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']),
+        createTournamentTeam('c', ['C']), createTournamentTeam('d', ['D']),
+        createTournamentTeam('e', ['E']), createTournamentTeam('f', ['F']),
+      ];
+      const schedules = new Set<string>();
+      for (let i = 0; i < 20; i++) {
+        const t = RoundRobinTournament.create().start(teams, 2);
+        schedules.add(t.matches().map(m => `${m.team1.id}-${m.team2.id}`).join(','));
+      }
+      expect(schedules.size).toBeGreaterThan(1);
+    });
   });
 
   describe('calculateStandings', () => {
