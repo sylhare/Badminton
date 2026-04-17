@@ -247,6 +247,7 @@ describe('TournamentPage', () => {
   });
 
   it('match result update propagates to standings (score diff updates)', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
     const user = userEvent.setup();
     renderWithProvider(<TournamentPage />);
 
@@ -266,5 +267,6 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('score-modal-confirm'));
 
     expect(screen.getByTestId('score-diff-0')).toHaveTextContent('+11');
+    vi.restoreAllMocks();
   });
 });
