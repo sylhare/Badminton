@@ -69,11 +69,11 @@ const TournamentPage = (): React.ReactElement => {
 
   return (
     <div className="app tournament-page" data-loaded={isLoaded}>
-      <header className="tournament-banner" data-testid="tournament-banner">
+      <nav className="tournament-banner" data-testid="tournament-banner">
         <Link to="/" className="banner-back-link" data-testid="back-to-app">
           ← Back to Court Manager
         </Link>
-      </header>
+      </nav>
       <div className="container main-container">
         <h1><span className="title-emoji">🏆 </span>Tournament</h1>
         <Tournament

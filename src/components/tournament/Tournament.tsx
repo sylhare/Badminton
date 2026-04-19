@@ -53,9 +53,11 @@ export const Tournament: React.FC<TournamentProps> = ({
   onShowTournament,
 }) => {
   const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
-  const standings = useMemo(() => tournament?.calculateStandings() ?? [], [tournament]);
-
   const isSetupPhase = !tournament || tournament.phase() === 'setup';
+  const standings = useMemo(
+    () => (isSetupPhase || showSetup) ? [] : (tournament?.calculateStandings() ?? []),
+    [tournament, isSetupPhase, showSetup],
+  );
 
   if (isSetupPhase || showSetup) {
     return (
