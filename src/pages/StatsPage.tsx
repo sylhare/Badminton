@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { engine, getEngineType, setEngine } from '../engines/engineSelector';
 import { storageManager } from '../utils/StorageManager';
@@ -296,9 +297,9 @@ function StatsPage(): React.ReactElement {
     <div className="stats-page">
       <div className="stats-container">
         <header className="stats-header">
-          <a href={basePath} className="back-link" data-testid="back-to-app">
+          <Link to="/" className="back-link" data-testid="back-to-app">
             ← Back to App
-          </a>
+          </Link>
           <h1>{engine().getName()} Diagnostics</h1>
           <p className="stats-subtitle">
             {engine().getDescription()}
@@ -486,9 +487,9 @@ function StatsPage(): React.ReactElement {
           ) : (
             <div className="no-data">
               <p>No session data yet. Start playing to see diagnostics!</p>
-              <a href={basePath} className="start-link">
+              <Link to="/" className="start-link">
                 Start a Game →
-              </a>
+              </Link>
             </div>
           )}
         </section>

@@ -1,8 +1,9 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 
 import StatsPage from '../../src/pages/StatsPage';
+import { renderWithProvider } from '../shared';
 
 const { mockLoadState, mockPrepareStateForSaving, mockOnStateChange, mockLoadApp } = vi.hoisted(() => ({
   mockLoadState: vi.fn(),
@@ -18,18 +19,23 @@ vi.mock('../../src/engines/engineSelector', () => ({
     onStateChange: mockOnStateChange,
     getName: vi.fn(() => 'Test Engine'),
     getDescription: vi.fn(() => 'Test engine description'),
+    getWinCounts: vi.fn(() => new Map()),
+    getStats: vi.fn(() => ({ lossCountMap: new Map() })),
   }),
   getEngineType: vi.fn(() => 'sa'),
   setEngine: vi.fn(),
 }));
 
 vi.mock('../../src/utils/StorageManager', () => ({
+  MAX_LEVEL_HISTORY_ENTRIES: 10,
   storageManager: {
     loadApp: mockLoadApp,
     loadEngine: vi.fn(),
     saveApp: vi.fn(),
     saveEngine: vi.fn(),
     clearAll: vi.fn(),
+    waitForQueue: vi.fn(() => Promise.resolve()),
+    onStateChange: vi.fn(() => vi.fn()),
   },
 }));
 
@@ -62,14 +68,14 @@ describe('StatsPage Component', () => {
   });
 
   it('renders the page header', () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     expect(screen.getByText('Test Engine Diagnostics')).toBeInTheDocument();
     expect(screen.getByText('Test engine description')).toBeInTheDocument();
   });
 
   it('renders back to app link', () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     const backLink = screen.getByTestId('back-to-app');
     expect(backLink).toBeInTheDocument();
@@ -77,7 +83,7 @@ describe('StatsPage Component', () => {
   });
 
   it('renders notebook links section', () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     expect(screen.getByText('📓 Analysis Notebooks')).toBeInTheDocument();
     expect(screen.getByTestId('algorithm-link')).toBeInTheDocument();
@@ -85,7 +91,7 @@ describe('StatsPage Component', () => {
   });
 
   it('renders diagnostic sections when data exists', async () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('🔍 Current Session Diagnostics')).toBeInTheDocument();
@@ -99,14 +105,14 @@ describe('StatsPage Component', () => {
   it('shows no data message when engine state is empty', () => {
     mockPrepareStateForSaving.mockReturnValue(null);
 
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     expect(screen.getByText('No session data yet. Start playing to see diagnostics!')).toBeInTheDocument();
     expect(screen.getByText('Start a Game →')).toBeInTheDocument();
   });
 
   it('displays total players count from engine state', async () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Total Players')).toBeInTheDocument();
@@ -114,7 +120,7 @@ describe('StatsPage Component', () => {
   });
 
   it('loads engine state on mount', async () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(mockLoadState).toHaveBeenCalled();
@@ -123,7 +129,7 @@ describe('StatsPage Component', () => {
   });
 
   it('loads app state to get player names', async () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(mockLoadApp).toHaveBeenCalled();
@@ -131,13 +137,13 @@ describe('StatsPage Component', () => {
   });
 
   it('subscribes to engine state changes', () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     expect(mockOnStateChange).toHaveBeenCalled();
   });
 
   it('renders bench distribution summary', async () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/Never benched/)).toBeInTheDocument();
@@ -148,7 +154,7 @@ describe('StatsPage Component', () => {
   });
 
   it('renders collapsible sections with counts', async () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/View bench counts per player/)).toBeInTheDocument();
@@ -156,7 +162,7 @@ describe('StatsPage Component', () => {
   });
 
   it('displays footer with GitHub link', () => {
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     expect(screen.getByText(/Have feedback/)).toBeInTheDocument();
     expect(screen.getByText('Let us know on GitHub')).toHaveAttribute(
@@ -176,7 +182,7 @@ describe('StatsPage Component', () => {
       lastUpdatedMap: {},
     });
 
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('✓ No teammate pairings recorded yet')).toBeInTheDocument();
@@ -194,7 +200,7 @@ describe('StatsPage Component', () => {
       lastUpdatedMap: {},
     });
 
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('✓ No opponent matchups recorded yet')).toBeInTheDocument();
@@ -212,7 +218,7 @@ describe('StatsPage Component', () => {
       lastUpdatedMap: {},
     });
 
-    render(<StatsPage />);
+    renderWithProvider(<StatsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('No singles matches recorded')).toBeInTheDocument();
@@ -231,7 +237,7 @@ describe('StatsPage Component', () => {
         lastUpdatedMap: {},
       });
 
-      render(<StatsPage />);
+      renderWithProvider(<StatsPage />);
 
       await waitFor(() => {
         expect(screen.queryByText('⚠️ Warnings')).not.toBeInTheDocument();
@@ -249,7 +255,7 @@ describe('StatsPage Component', () => {
         lastUpdatedMap: {},
       });
 
-      render(<StatsPage />);
+      renderWithProvider(<StatsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('⚠️ Warnings')).toBeInTheDocument();
@@ -260,7 +266,7 @@ describe('StatsPage Component', () => {
 
   describe('diagnostics calculations', () => {
     it('calculates bench fairness score correctly', async () => {
-      render(<StatsPage />);
+      renderWithProvider(<StatsPage />);
 
       await waitFor(() => {
         const fairnessScore = screen.getByText(/lower is better/);
@@ -279,7 +285,7 @@ describe('StatsPage Component', () => {
         lastUpdatedMap: {},
       });
 
-      render(<StatsPage />);
+      renderWithProvider(<StatsPage />);
 
       await waitFor(() => {
         const repeatedPairs = screen.getByText('Repeated Pairs');

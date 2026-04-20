@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import './NotebookPage.css';
 
 interface NotebookPageProps {
@@ -32,9 +33,9 @@ function NotebookPage({ notebookUrl, title }: NotebookPageProps): React.ReactEle
   return (
     <div className="notebook-page">
       <header className="notebook-header">
-        <a href={`${import.meta.env.BASE_URL || '/'}stats`} className="back-link" data-testid="back-to-stats">
+        <Link to="/stats" className="back-link" data-testid="back-to-stats">
           ← Back to Stats
-        </a>
+        </Link>
         <h1 style={{ marginLeft: 'auto' }}>{title}</h1>
       </header>
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import './App.css';
 import ManualPlayerEntry from './components/players/ManualPlayerEntry';
@@ -284,13 +285,13 @@ function App(): React.ReactElement {
           </a>
         </p>
         <p>
-          <a
-            href={`${import.meta.env.BASE_URL || '/'}stats`}
+          <Link
+            to="/stats"
             className="analysis-link"
             data-testid="stats-link"
           >
             View Statistics & Analysis
-          </a>
+          </Link>
         </p>
       </footer>
     </div>
