@@ -281,7 +281,10 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       );
     }
     if (state.roundsPlayed !== undefined) {
-      CourtAssignmentTracker.roundsPlayed = state.roundsPlayed;
+      CourtAssignmentTracker.roundsPlayed = Math.max(
+        CourtAssignmentTracker.roundsPlayed,
+        state.roundsPlayed,
+      );
     }
 
     if (currentEngineType === 'sa' && savedAt !== undefined) {
