@@ -8,7 +8,7 @@ import type {
   UpdateWinnerParams,
 } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
-import { pairKey } from '../utils/playerUtils';
+import { pairKey, teamPairs } from '../utils/playerUtils';
 
 import { levelTracker } from './LevelTracker';
 
@@ -64,7 +64,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
 
-  private static readonly REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000;
+  static readonly REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000;
 
   /** Court numbers whose team-pair stats were already updated via rotation this round */
   private pendingRotatedCourts = new Set<number>();
@@ -196,11 +196,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         this.updateCourtTeamStats(court);
         const { team1, team2 } = court.teams;
         for (const team of [team1, team2]) {
-          for (let i = 0; i < team.length; i++) {
-            for (let j = i + 1; j < team.length; j++) {
-              delta.teammates.push(pairKey(team[i].id, team[j].id));
-            }
-          }
+          delta.teammates.push(...teamPairs(team));
         }
         team1.forEach(a => team2.forEach(b => delta.opponents.push(pairKey(a.id, b.id))));
       }
@@ -387,15 +383,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
     if (court.teams) {
       const { team1, team2 } = court.teams;
-      const addTeamPairs = (team: Player[]) => {
-        for (let i = 0; i < team.length; i++) {
-          for (let j = i + 1; j < team.length; j++) {
-            this.recordTeammatePair(team[i].id, team[j].id);
-          }
-        }
-      };
-      addTeamPairs(team1);
-      addTeamPairs(team2);
+      [team1, team2].forEach(team => this.recordTeamPairs(team));
       team1.forEach(a => {
         team2.forEach(b => {
           this.recordOpponentPair(a.id, b.id);
@@ -462,15 +450,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /**
-   * Records a teammate pairing.
-   */
-  recordTeammatePair(p1: string, p2: string): void {
-    const key = pairKey(p1, p2);
-    this.incrementMapCount(CourtAssignmentTracker.teammateCountMap, key);
-    this.updateTimestamp(key);
-  }
-
-  /**
    * Records an opponent pairing.
    */
   recordOpponentPair(p1: string, p2: string): void {
@@ -509,12 +488,15 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     if (count > 0) map.set(key, count - 1);
   }
 
+  private recordTeamPairs(team: Player[]): void {
+    teamPairs(team).forEach(k => {
+      this.incrementMapCount(CourtAssignmentTracker.teammateCountMap, k);
+      this.updateTimestamp(k);
+    });
+  }
+
   private decrementTeamPairs(team: Player[]): void {
-    for (let i = 0; i < team.length; i++) {
-      for (let j = i + 1; j < team.length; j++) {
-        this.decrementMapCount(CourtAssignmentTracker.teammateCountMap, pairKey(team[i].id, team[j].id));
-      }
-    }
+    teamPairs(team).forEach(k => this.decrementMapCount(CourtAssignmentTracker.teammateCountMap, k));
   }
 
   /** Updates the last seen timestamp for a key */

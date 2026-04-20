@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CourtAssignmentTracker } from '../../src/engines/CourtAssignmentTracker';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import * as selector from '../../src/engines/engineSelector';
 import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../../src/types';
@@ -74,7 +75,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
-        vi.advanceTimersByTime(3 * 60 * 1000);
+        vi.advanceTimersByTime(CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 60000);
         const benched = engine.getBenchedPlayers(assignments, players);
         benched.forEach(p => (benchHistory[p.id] += 1));
       }
@@ -114,7 +115,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
-        vi.advanceTimersByTime(3 * 60 * 1000);
+        vi.advanceTimersByTime(CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 60000);
         assignments.forEach(court => {
           if (!court.teams) return;
           const teams = [court.teams.team1, court.teams.team2];

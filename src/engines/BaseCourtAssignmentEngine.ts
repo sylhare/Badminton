@@ -1,5 +1,5 @@
 import type { Court, GenerateResult, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../types';
-import { pairKey } from '../utils/playerUtils';
+import { pairKey, teamPairs } from '../utils/playerUtils';
 
 import { CourtAssignmentTracker } from './CourtAssignmentTracker';
 
@@ -138,13 +138,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
    * Calculates the teammate repetition cost for a team.
    */
   protected calculateTeammateCost(team: Player[], penaltyMultiplier: number): number {
-    let cost = 0;
-    for (let i = 0; i < team.length; i++) {
-      for (let j = i + 1; j < team.length; j++) {
-        cost += (this.teammateCountMap.get(pairKey(team[i].id, team[j].id)) ?? 0) * penaltyMultiplier;
-      }
-    }
-    return cost;
+    return teamPairs(team).reduce((cost, k) => cost + (this.teammateCountMap.get(k) ?? 0) * penaltyMultiplier, 0);
   }
 
   /**
