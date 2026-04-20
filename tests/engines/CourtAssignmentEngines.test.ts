@@ -967,7 +967,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(stateAfterLoad.engineType).toBe(type);
     });
 
-    it('resets history when loading state with different engine type', async () => {
+    it('preserves history when loading state with different engine type', async () => {
       engine.resetHistory();
       const players = mockPlayers(8);
 
@@ -982,7 +982,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       await engine.loadState(differentType);
 
       const winCountsAfterLoad = engine.getWinCounts();
-      expect(winCountsAfterLoad.size).toBe(0);
+      expect(winCountsAfterLoad.size).toBeGreaterThan(0);
     });
   });
 
