@@ -10,6 +10,10 @@ export function teamPairs(team: Player[]): string[] {
   return pairs;
 }
 
+export function opponentPairs(team1: Player[], team2: Player[]): string[] {
+  return team1.flatMap(a => team2.map(b => pairKey(a.id, b.id)));
+}
+
 export function createPlayersFromNames(names: string[], idPrefix = 'player'): Player[] {
   const timestamp = Date.now();
   return names.map((name, index) => ({

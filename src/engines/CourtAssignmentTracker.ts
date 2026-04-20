@@ -8,7 +8,7 @@ import type {
   UpdateWinnerParams,
 } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
-import { pairKey, teamPairs } from '../utils/playerUtils';
+import { opponentPairs, teamPairs } from '../utils/playerUtils';
 
 import { levelTracker } from './LevelTracker';
 
@@ -198,7 +198,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         for (const team of [team1, team2]) {
           delta.teammates.push(...teamPairs(team));
         }
-        team1.forEach(a => team2.forEach(b => delta.opponents.push(pairKey(a.id, b.id))));
+        delta.opponents.push(...opponentPairs(team1, team2));
       }
     });
 
@@ -376,18 +376,15 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       const { team1, team2 } = previousCourt.teams;
       this.decrementTeamPairs(team1);
       this.decrementTeamPairs(team2);
-      team1.forEach(a => team2.forEach(b => {
-        this.decrementMapCount(CourtAssignmentTracker.opponentCountMap, pairKey(a.id, b.id));
-      }));
+      opponentPairs(team1, team2).forEach(k => this.decrementMapCount(CourtAssignmentTracker.opponentCountMap, k));
     }
 
     if (court.teams) {
       const { team1, team2 } = court.teams;
       [team1, team2].forEach(team => this.recordTeamPairs(team));
-      team1.forEach(a => {
-        team2.forEach(b => {
-          this.recordOpponentPair(a.id, b.id);
-        });
+      opponentPairs(team1, team2).forEach(k => {
+        this.incrementMapCount(CourtAssignmentTracker.opponentCountMap, k);
+        this.updateTimestamp(k);
       });
     }
 
@@ -447,15 +444,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   recordSingles(playerId: string): void {
     this.incrementMapCount(CourtAssignmentTracker.singleCountMap, playerId);
     this.updateTimestamp(playerId);
-  }
-
-  /**
-   * Records an opponent pairing.
-   */
-  recordOpponentPair(p1: string, p2: string): void {
-    const key = pairKey(p1, p2);
-    this.incrementMapCount(CourtAssignmentTracker.opponentCountMap, key);
-    this.updateTimestamp(key);
   }
 
   getWinCounts(): Map<string, number> {
