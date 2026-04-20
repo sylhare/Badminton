@@ -65,7 +65,7 @@ export const getEngineType = (): EngineType => currentEngineType;
  * import { engine } from './engineSelector';
  *
  * const assignments = engine.generateCourtAssignments(players, 2);
- * const stats = engine.getStats();
+ * const stats = engine.stats();
  * ```
  */
 export const engine = (): ICourtAssignmentEngine => {

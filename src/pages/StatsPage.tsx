@@ -207,7 +207,7 @@ function StatsPage(): React.ReactElement {
     const matchesPerRound = Math.max(1, Math.floor(playersPerRound / 4) + (playersPerRound % 4 >= 2 ? 1 : 0));
     const roundsFromMatches = matchesPerRound > 0 ? Math.ceil(totalMatchesEstimate / matchesPerRound) : 0;
     const internalRounds = Math.max(maxBenchFromData, roundsFromMatches, 1);
-    const storedRoundsPlayed = engineState?.roundsPlayed ?? 0;
+    const storedRoundsPlayed = engine().stats().roundsPlayed;
     const totalRounds = storedRoundsPlayed > 0 ? storedRoundsPlayed : internalRounds;
 
     const benchCounts = Object.values(maps.bench);

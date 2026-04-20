@@ -20,6 +20,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState(false);
   const [winCounts, setWinCounts] = useState<Map<string, number>>(new Map());
   const [lossCounts, setLossCounts] = useState<Map<string, number>>(new Map());
+  const [benchCounts, setBenchCounts] = useState<Map<string, number>>(new Map());
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -33,16 +34,20 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
       const engineType = smart ? 'sl' : 'sa';
       setEngine(engineType);
       await engine().loadState(engineType);
-      setWinCounts(new Map(engine().getWinCounts()));
-      setLossCounts(new Map(engine().getStats().lossCountMap));
+      const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
+      setWinCounts(winCountMap);
+      setLossCounts(lossCountMap);
+      setBenchCounts(benchCountMap);
       hasLoadedRef.current = true;
       setIsLoaded(true);
     };
     load();
 
     return engine().onStateChange(() => {
-      setWinCounts(new Map(engine().getWinCounts()));
-      setLossCounts(new Map(engine().getStats().lossCountMap));
+      const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
+      setWinCounts(winCountMap);
+      setLossCounts(lossCountMap);
+      setBenchCounts(benchCountMap);
     });
   }, []);
 
@@ -110,6 +115,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     applyCourtResults,
     winCounts,
     lossCounts,
+    benchCounts,
+    levelTrend: (playerId: string) => engine().levelTrend(playerId),
   };
 
   return (

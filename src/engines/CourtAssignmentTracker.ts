@@ -126,10 +126,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.notifyStateChange();
   }
 
-  /** Returns the number of rounds where a winner was committed. */
-  getRoundsPlayed(): number {
-    return CourtAssignmentTracker.roundsPlayed;
-  }
 
   /** Increments roundsPlayed if the current session had at least one winner. */
   protected markRoundCompleted(): void {
@@ -295,11 +291,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /**
    * Returns tracking statistics as Maps.
    */
-  getLevelTrend(playerId: string): 'up' | 'down' | null {
+  levelTrend(playerId: string): 'up' | 'down' | null {
     return levelTracker.getLevelTrend(playerId, CourtAssignmentTracker.levelHistoryMap);
   }
 
-  getStats(): TrackerStats {
+  stats(): TrackerStats {
     return {
       winCountMap: new Map(CourtAssignmentTracker.winCountMap),
       lossCountMap: new Map(CourtAssignmentTracker.lossCountMap),
@@ -307,6 +303,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       opponentCountMap: new Map(CourtAssignmentTracker.opponentCountMap),
       benchCountMap: new Map(CourtAssignmentTracker.benchCountMap),
       singleCountMap: new Map(CourtAssignmentTracker.singleCountMap),
+      roundsPlayed: CourtAssignmentTracker.roundsPlayed,
     };
   }
 
@@ -442,15 +439,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.updateTimestamp(playerId);
   }
 
-  getWinCounts(): Map<string, number> {
-    return new Map(CourtAssignmentTracker.winCountMap);
-  }
 
-  getBenchCounts(): Map<string, number> {
-    return new Map(CourtAssignmentTracker.benchCountMap);
-  }
-
-  getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
+  benchedPlayers(assignments: Court[], players: Player[]): Player[] {
     const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
     return players.filter(p => p.isPresent && !assignedIds.has(p.id));
   }

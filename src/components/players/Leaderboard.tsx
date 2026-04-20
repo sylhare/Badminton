@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { CaretDown, CaretUp } from '@phosphor-icons/react';
 
 import type { Player } from '../../types';
-import { engine } from '../../engines/engineSelector';
+import { useAppState } from '../../providers/AppStateProvider';
 
 interface LeaderboardProps {
   players: Player[];
@@ -35,6 +35,7 @@ const SortIcon: React.FC<{ col: SortColumn; sortCol: SortColumn; sortDir: SortDi
 };
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCounts }) => {
+  const { levelTrend, isSmartEngineEnabled } = useAppState();
   const [sortCol, setSortCol] = useState<SortColumn>('avgScore');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
@@ -53,7 +54,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
     losses: lossCounts?.get(p.id) ?? 0,
   }));
 
-  if (engine().supportsScoreTracking()) {
+  if (isSmartEngineEnabled) {
     const filtered = allPlayersWithData.filter(p => p.wins > 0 || p.losses > 0);
 
     const ranked = [...filtered].sort((a, b) => {
@@ -96,7 +97,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
             </thead>
             <tbody>
             {ranked.map((p, idx) => {
-              const trend = engine().getLevelTrend(p.id);
+              const trend = levelTrend(p.id);
               return (
                 <tr key={p.id} className={idx === 0 ? 'top' : undefined}>
                   <td>{idx + 1}</td>

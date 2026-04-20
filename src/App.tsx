@@ -48,6 +48,7 @@ function App(): React.ReactElement {
     applyCourtResults,
     winCounts,
     lossCounts,
+    benchCounts,
   } = useAppState();
 
   const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
@@ -211,7 +212,7 @@ function App(): React.ReactElement {
                   onRemovePlayer={handleRemovePlayer}
                   onClearAllPlayers={handleClearAllPlayers}
                   onResetAlgorithm={handleResetAlgorithm}
-                  benchCounts={engine().getBenchCounts()}
+                  benchCounts={benchCounts}
                   forceBenchPlayerIds={forceBenchPlayerIds}
                   onToggleForceBench={handleToggleForceBench}
                   onToggleSmartEngine={handleToggleSmartEngine}
@@ -233,7 +234,7 @@ function App(): React.ReactElement {
             <CourtAssignments
               players={players}
               assignments={assignments}
-              benchedPlayers={engine().getBenchedPlayers(assignments, players)}
+              benchedPlayers={engine().benchedPlayers(assignments, players)}
               numberOfCourts={numberOfCourts}
               onNumberOfCourtsChange={setNumberOfCourts}
               onGenerateAssignments={generateAssignments}

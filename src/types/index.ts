@@ -60,6 +60,7 @@ export interface TrackerStats {
   opponentCountMap: Map<string, number>;
   benchCountMap: Map<string, number>;
   singleCountMap: Map<string, number>;
+  roundsPlayed: number;
 }
 
 export interface UpdateWinnerParams {
@@ -83,13 +84,10 @@ export interface ICourtAssignmentTracker {
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;
   recordLevelSnapshot(players: Player[]): void;
-  getWinCounts(): Map<string, number>;
-  getBenchCounts(): Map<string, number>;
-  getRoundsPlayed(): number;
   updateWinner(params: UpdateWinnerParams): Court[];
-  getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
-  getStats(): TrackerStats;
-  getLevelTrend(playerId: string): 'up' | 'down' | null;
+  benchedPlayers(assignments: Court[], players: Player[]): Player[];
+  stats(): TrackerStats;
+  levelTrend(playerId: string): 'up' | 'down' | null;
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
@@ -113,4 +111,6 @@ export interface AppStateContextType {
   applyCourtResults: (courts: Court[]) => void;
   winCounts: Map<string, number>;
   lossCounts: Map<string, number>;
+  benchCounts: Map<string, number>;
+  levelTrend: (playerId: string) => 'up' | 'down' | null;
 }

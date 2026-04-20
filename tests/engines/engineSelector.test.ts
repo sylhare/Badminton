@@ -83,7 +83,7 @@ describe('Engine Selector', () => {
     it('should get benched players', () => {
       const players = mockPlayers(10);
       const assignments = engine().generate(players, 2);
-      const benched = engine().getBenchedPlayers(assignments, players);
+      const benched = engine().benchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -107,7 +107,7 @@ describe('Engine Selector', () => {
     it('should get benched players', () => {
       const players = mockPlayers(10);
       const assignments = engine().generate(players, 2);
-      const benched = engine().getBenchedPlayers(assignments, players);
+      const benched = engine().benchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -140,12 +140,12 @@ describe('Engine Selector', () => {
       setEngine('sa');
       engineSA.resetHistory();
       const saAssignments = engine().generate(players, 2);
-      const saBenched = engine().getBenchedPlayers(saAssignments, players);
+      const saBenched = engine().benchedPlayers(saAssignments, players);
 
       setEngine('sl');
       engineSL.resetHistory();
       const slAssignments = engine().generate(players, 2);
-      const slBenched = engine().getBenchedPlayers(slAssignments, players);
+      const slBenched = engine().benchedPlayers(slAssignments, players);
 
       expect(saBenched.length).toBe(1);
       expect(slBenched.length).toBe(1);
