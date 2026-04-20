@@ -219,6 +219,52 @@ describe('Team rotation', () => {
       const totalPairs = [...engine().getStats().teammateCountMap.values()].reduce((s, n) => s + n, 0);
       expect(totalPairs).toBeGreaterThan(0);
     });
+
+    it('rapid regen × 2 (no winner) then regen with winner records exactly 1 round played', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
+      await generateAndWaitForAssignments(user);
+
+      await rapidRegenerate();
+      await rapidRegenerate();
+
+      await clickTeam(user, screen.getAllByText('Team 1')[0]);
+
+      await regenerate();
+
+      expect(engine().getRoundsPlayed()).toBe(1);
+    });
+
+    it('rapid regen × 2 (no winner) then regen with winner commits only 2 rounds of bench stats', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
+      await generateAndWaitForAssignments(user);
+
+      await rapidRegenerate();
+
+      await clickTeam(user, screen.getAllByText('Team 1')[0]);
+
+      await regenerate();
+
+      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      expect(totalBenched).toBe(2);
+    });
+
+    it('rapid regen × 2 (no winner) then regen with winner commits only 2 rounds (no triple count)', async () => {
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice,Bob,Charlie,Diana,Eve');
+      await generateAndWaitForAssignments(user);
+
+      await rapidRegenerate();
+      await rapidRegenerate();
+
+      await clickTeam(user, screen.getAllByText('Team 1')[0]);
+
+      await regenerate();
+
+      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      expect(totalBenched).toBe(2);
+    });
   });
 
   describe('Team pair stats updated on rotation', () => {

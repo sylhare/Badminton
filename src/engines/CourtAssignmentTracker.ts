@@ -58,6 +58,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Monotonic counter for generating timestamps */
   protected static globalCounter = 0;
 
+  /** Count of rounds where a winner was committed — used for "Rounds Played" display */
+  private static roundsPlayed = 0;
+
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
 
@@ -117,9 +120,22 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lastUpdatedMap.clear();
     CourtAssignmentTracker.levelHistoryMap.clear();
     CourtAssignmentTracker.globalCounter = 0;
+    CourtAssignmentTracker.roundsPlayed = 0;
     this.lastRoundDelta = null;
     this.lastGeneratedAt = undefined;
     this.notifyStateChange();
+  }
+
+  /** Returns the number of rounds where a winner was committed. */
+  getRoundsPlayed(): number {
+    return CourtAssignmentTracker.roundsPlayed;
+  }
+
+  /** Increments roundsPlayed if the current session had at least one winner. */
+  protected markRoundCompleted(): void {
+    if (CourtAssignmentTracker.recordedWinsMap.size > 0) {
+      CourtAssignmentTracker.roundsPlayed++;
+    }
   }
 
   /**
@@ -218,6 +234,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       winCountMap: Object.fromEntries(CourtAssignmentTracker.winCountMap),
       lossCountMap: Object.fromEntries(CourtAssignmentTracker.lossCountMap),
       levelHistory: Object.fromEntries(CourtAssignmentTracker.levelHistoryMap),
+      roundsPlayed: CourtAssignmentTracker.roundsPlayed,
     };
   }
 
@@ -262,6 +279,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       CourtAssignmentTracker.levelHistoryMap = new Map(
         Object.entries(state.levelHistory) as [string, number[]][],
       );
+    }
+    if (state.roundsPlayed !== undefined) {
+      CourtAssignmentTracker.roundsPlayed = state.roundsPlayed;
     }
 
     if (currentEngineType === 'sa' && savedAt !== undefined) {

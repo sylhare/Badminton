@@ -213,6 +213,27 @@ test.describe('Stats Page', () => {
     });
   });
 
+  test('rapid re-generate × 2 (no winner) then regenerate with winner shows 1 round played (not 2 or 3)', async ({ page }) => {
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    await mainPage.generateAssignments(1);
+
+    await mainPage.regenerate();
+    await mainPage.regenerate();
+
+    await mainPage.court(1).selectWinner();
+
+    await mainPage.regenerate();
+
+    await page.locator('a[href*="stats"]').click();
+    await expect(page.locator('.stats-grid')).toBeVisible();
+
+    await test.step('rounds played is 1 (winner round only), not 2 or 3', async () => {
+      await expect(
+        page.locator('.stat-card').filter({ hasText: 'Rounds Played' }).locator('.stat-value'),
+      ).toHaveText('1');
+    });
+  });
+
   test('data persistence - shows data after reload, clears after localStorage clear', async ({ page }) => {
     await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
     await statsPage.goto();
