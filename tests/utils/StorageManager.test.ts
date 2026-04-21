@@ -4,8 +4,6 @@ import { decompress, storageManager } from '../../src/utils/StorageManager';
 import type { Court, CourtEngineState, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
-const OLD_APP_KEY = 'badminton-app-state';
-const OLD_ENGINE_KEY = 'badminton-court-engine-state';
 
 async function readDecompressed(): Promise<unknown> {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -174,8 +172,9 @@ describe('StorageManager', () => {
       expect(loaded.winCountMap).toEqual({ 'player-1': 5, 'player-2': 3 });
     });
 
-    it('should load old uncompressed plain-JSON format (backward compat)', async () => {
-      const oldFormat = {
+    it('should discard unrecognized (non-v3) engine format without touching the rest of storage', async () => {
+      const unrecognizedFormat = {
+        app: { players: [{ id: 'p1', name: 'Alice', isPresent: true }], numberOfCourts: 4, assignments: [] },
         engine: {
           benchCountMap: { 'player-1': 3 },
           singleCountMap: {},
@@ -185,13 +184,15 @@ describe('StorageManager', () => {
           lossCountMap: { 'player-1': 1 },
         },
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(oldFormat));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(unrecognizedFormat));
 
       const loaded = await storageManager.loadEngine();
+      await storageManager.waitForQueue();
 
-      expect(loaded.benchCountMap).toEqual({ 'player-1': 3 });
-      expect(loaded.winCountMap).toEqual({ 'player-1': 7 });
-      expect(loaded.teammateCountMap).toEqual({ 'player-1|player-2': 1 });
+      expect(loaded).toEqual({});
+      // app state must be preserved — only the engine portion is discarded
+      const app = await storageManager.loadApp();
+      expect(app.players).toHaveLength(1);
     });
   });
 
@@ -213,55 +214,6 @@ describe('StorageManager', () => {
       });
 
       expect(() => storageManager.clearAll()).not.toThrow();
-    });
-  });
-
-  describe('migration from old keys', () => {
-    it('should migrate data from old keys to new key on first load', async () => {
-      const oldApp = { players: [{ id: 'p1', name: 'Alice', isPresent: true }], numberOfCourts: 4, assignments: [] };
-      const oldEngine = { benchCountMap: { 'p1': 1 }, singleCountMap: {}, teammateCountMap: {}, opponentCountMap: {}, winCountMap: {}, lossCountMap: {} };
-
-      localStorage.setItem(OLD_APP_KEY, JSON.stringify(oldApp));
-      localStorage.setItem(OLD_ENGINE_KEY, JSON.stringify(oldEngine));
-
-      const loadedApp = await storageManager.loadApp();
-
-      expect(loadedApp.players).toEqual(oldApp.players);
-      expect(localStorage.getItem(OLD_APP_KEY)).toBeNull();
-      expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
-    });
-
-    it('should migrate engine data from old key', async () => {
-      const oldEngine = { benchCountMap: { 'p1': 2 }, singleCountMap: {}, teammateCountMap: {}, opponentCountMap: {}, winCountMap: {}, lossCountMap: {} };
-      localStorage.setItem(OLD_ENGINE_KEY, JSON.stringify(oldEngine));
-
-      const loadedEngine = await storageManager.loadEngine();
-
-      expect(loadedEngine.benchCountMap).toEqual({ 'p1': 2 });
-      expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
-    });
-
-    it('should persist migrated data to new key so a second load does not lose it', async () => {
-      const oldApp = { players: [{ id: 'p1', name: 'Alice', isPresent: true }], numberOfCourts: 4, assignments: [] };
-      localStorage.setItem(OLD_APP_KEY, JSON.stringify(oldApp));
-
-      await storageManager.loadApp();
-      await storageManager.waitForQueue();
-
-      expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
-      const reloaded = await storageManager.loadApp();
-      expect(reloaded.players).toEqual(oldApp.players);
-    });
-
-    it('should handle corrupted old key values gracefully and still remove them', async () => {
-      localStorage.setItem(OLD_APP_KEY, 'invalid-json');
-      localStorage.setItem(OLD_ENGINE_KEY, 'invalid-json');
-
-      const loaded = await storageManager.loadApp();
-
-      expect(loaded).toEqual({});
-      expect(localStorage.getItem(OLD_APP_KEY)).toBeNull();
-      expect(localStorage.getItem(OLD_ENGINE_KEY)).toBeNull();
     });
   });
 
