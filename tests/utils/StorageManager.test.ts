@@ -190,7 +190,6 @@ describe('StorageManager', () => {
       await storageManager.waitForQueue();
 
       expect(loaded).toEqual({});
-      // app state must be preserved — only the engine portion is discarded
       const app = await storageManager.loadApp();
       expect(app.players).toHaveLength(1);
     });

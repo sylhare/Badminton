@@ -112,5 +112,6 @@ export interface AppStateContextType {
   winCounts: Map<string, number>;
   lossCounts: Map<string, number>;
   benchCounts: Map<string, number>;
+  engineState: CourtEngineState | null;
   levelTrend: (playerId: string) => 'up' | 'down' | null;
 }
