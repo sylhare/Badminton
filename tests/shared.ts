@@ -2,6 +2,7 @@ import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import { engineSA } from '../src/engines/SimulatedAnnealingEngine';
 import { storageManager } from '../src/utils/StorageManager';
@@ -32,9 +33,9 @@ export const flushPendingSaves = async (): Promise<void> => {
   await storageManager.waitForQueue();
 };
 
-/** Render a component wrapped in AppStateProvider */
+/** Render a component wrapped in AppStateProvider and MemoryRouter */
 export function renderWithProvider(ui: React.ReactElement) {
-  return render(React.createElement(AppStateProvider, null, ui));
+  return render(React.createElement(MemoryRouter, null, React.createElement(AppStateProvider, null, ui)));
 }
 
 /** Helper to add players via the input field */

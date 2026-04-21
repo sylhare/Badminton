@@ -175,6 +175,9 @@ test.describe('Player Management', () => {
     await expect(aliceItem.locator('.toggle-switch')).toHaveClass(/active/);
     await expect(bobItem.locator('.toggle-switch')).toHaveClass(/active/);
 
+    await page.clock.install();
+    await page.clock.fastForward(3 * 60 * 1000);
+
     await mainPage.regenerate();
     await page.waitForTimeout(500);
 

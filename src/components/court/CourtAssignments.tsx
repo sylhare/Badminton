@@ -105,15 +105,15 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     setIsButtonShaking(true);
     setIsAnimating(true);
     trackCourtAction('generate_assignments', { courtCount: numberOfCourts });
+    onGenerateAssignments();
 
     setTimeout(() => {
       setIsButtonShaking(false);
-      onGenerateAssignments();
-
-      setTimeout(() => {
-        setIsAnimating(false);
-      }, 400);
     }, 200);
+
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 600);
   };
 
   const handleWinnerChange = (courtNumber: number, teamNumber: number) => {
@@ -205,7 +205,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           <div className="regenerate-section">
             <button
               onClick={handleGenerateAssignments}
-              disabled={!hasPlayers || isButtonShaking}
+              disabled={!hasPlayers}
               className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
               data-testid="generate-assignments-button"
             >
@@ -229,7 +229,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           </p>
           <button
             onClick={handleGenerateAssignments}
-            disabled={!hasPlayers || isButtonShaking}
+            disabled={!hasPlayers}
             className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
             data-testid="generate-assignments-button"
           >

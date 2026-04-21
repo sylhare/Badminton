@@ -1,5 +1,5 @@
-import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../types';
-import { pairKey } from '../utils/playerUtils';
+import type { Court, GenerateResult, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../types';
+import { pairKey, teamPairs } from '../utils/playerUtils';
 
 import { CourtAssignmentTracker } from './CourtAssignmentTracker';
 
@@ -35,9 +35,10 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     numberOfCourts: number,
     manualSelection?: ManualCourtSelection,
     forceBenchPlayerIds?: Set<string>,
-  ): Court[] {
+  ): GenerateResult {
+    const replaceRound = !this.shouldCommitRound();
     const presentPlayers = players.filter(p => p.isPresent);
-    if (presentPlayers.length === 0) return [];
+    if (presentPlayers.length === 0) return Object.assign([] as Court[], { committed: true }) as GenerateResult;
 
     let manualCourtResult: Court | null = null;
     let remainingPlayers = presentPlayers;
@@ -75,9 +76,13 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
       finalCourts = [manualCourtResult, ...finalCourts];
     }
 
-    this.recordSessionStats(benchedPlayers, finalCourts);
+    if (!replaceRound) this.markRoundCompleted();
+    this.clearCurrentSession();
+    this.lastGeneratedAt = Date.now();
+    if (replaceRound) this.undoLastRound();
+    this.applyRoundStats(finalCourts, presentPlayers);
 
-    return finalCourts;
+    return Object.assign(finalCourts, { committed: !replaceRound });
   }
 
   /**
@@ -130,33 +135,10 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
   }
 
   /**
-   * Records statistics for the generated round.
-   */
-  protected recordSessionStats(benchedPlayers: Player[], courts: Court[]): void {
-    benchedPlayers.forEach(p => this.recordBenching(p.id));
-
-    courts.forEach(court => {
-      if (!court.teams) return;
-
-      if (court.players.length === 2) {
-        court.players.forEach(p => this.recordSingles(p.id));
-      }
-
-      this.updateCourtTeamStats(court);
-    });
-  }
-
-  /**
    * Calculates the teammate repetition cost for a team.
    */
   protected calculateTeammateCost(team: Player[], penaltyMultiplier: number): number {
-    let cost = 0;
-    for (let i = 0; i < team.length; i++) {
-      for (let j = i + 1; j < team.length; j++) {
-        cost += (this.teammateCountMap.get(pairKey(team[i].id, team[j].id)) ?? 0) * penaltyMultiplier;
-      }
-    }
-    return cost;
+    return teamPairs(team).reduce((cost, k) => cost + (this.teammateCountMap.get(k) ?? 0) * penaltyMultiplier, 0);
   }
 
   /**

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import './App.css';
 import ManualPlayerEntry from './components/players/ManualPlayerEntry';
@@ -12,8 +13,6 @@ import { engine, getEngineType } from './engines/engineSelector';
 import { storageManager } from './utils/StorageManager';
 import { useAppState } from './providers/AppStateProvider';
 import type { Court, ManualCourtSelection, WinnerSelection } from './types';
-
-const REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000; // 2 minutes
 
 export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
@@ -107,18 +106,7 @@ function App(): React.ReactElement {
   };
 
   const generateAssignments = () => {
-    const now = Date.now();
-    const isRapidRegeneration =
-      lastGeneratedAt !== undefined &&
-      now - lastGeneratedAt < REGENERATION_DEBOUNCE_MS;
-    const hasWinners = assignments.some(c => c.winner !== undefined);
-
-    if (!isRapidRegeneration || hasWinners) {
-      applyCourtResults(assignments);
-    }
-
-    setLastGeneratedAt(now);
-    engine().clearCurrentSession();
+    setLastGeneratedAt(Date.now());
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
     const courts = engine().generate(
       players,
@@ -126,6 +114,10 @@ function App(): React.ReactElement {
       manualCourtSelection || undefined,
       forceBenchPlayerIds,
     );
+
+    if (courts.committed) {
+      applyCourtResults(assignments);
+    }
 
     if (hadManualSelection) {
       courts.forEach(court => {
@@ -293,13 +285,13 @@ function App(): React.ReactElement {
           </a>
         </p>
         <p>
-          <a
-            href={`${import.meta.env.BASE_URL || '/'}stats`}
+          <Link
+            to="/stats"
             className="analysis-link"
             data-testid="stats-link"
           >
             View Statistics & Analysis
-          </a>
+          </Link>
         </p>
       </footer>
     </div>

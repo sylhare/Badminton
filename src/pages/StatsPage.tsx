@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { engine, getEngineType, setEngine } from '../engines/engineSelector';
 import { storageManager } from '../utils/StorageManager';
@@ -205,7 +206,9 @@ function StatsPage(): React.ReactElement {
     const playersPerRound = Math.max(4, totalPlayers - 1);
     const matchesPerRound = Math.max(1, Math.floor(playersPerRound / 4) + (playersPerRound % 4 >= 2 ? 1 : 0));
     const roundsFromMatches = matchesPerRound > 0 ? Math.ceil(totalMatchesEstimate / matchesPerRound) : 0;
-    const totalRounds = Math.max(maxBenchFromData, roundsFromMatches, 1);
+    const internalRounds = Math.max(maxBenchFromData, roundsFromMatches, 1);
+    const storedRoundsPlayed = engineState?.roundsPlayed ?? 0;
+    const totalRounds = storedRoundsPlayed > 0 ? storedRoundsPlayed : internalRounds;
 
     const benchCounts = Object.values(maps.bench);
     const benchedOnce = benchCounts.filter(c => c === 1).length;
@@ -238,9 +241,9 @@ function StatsPage(): React.ReactElement {
     const totalSinglesPlayed = sumValues(maps.single);
     const expectedSinglesPerPlayer = totalPlayers > 0 ? totalSinglesPlayed / totalPlayers : 0;
 
-    const expectedBenchSpread = Math.ceil(Math.sqrt(totalRounds)) + 1;
+    const expectedBenchSpread = Math.ceil(Math.sqrt(internalRounds)) + 1;
     if (maxBenchCount - minBenchCount > expectedBenchSpread + 2) {
-      warnings.push(`Bench imbalance: spread of ${maxBenchCount - minBenchCount} (expected ~${expectedBenchSpread} for ${totalRounds} rounds)`);
+      warnings.push(`Bench imbalance: spread of ${maxBenchCount - minBenchCount} (expected ~${expectedBenchSpread} for ${internalRounds} rounds)`);
     }
 
     const maxSingles = singlesPlayers.length > 0 ? singlesPlayers[0].count : 0;
@@ -294,9 +297,9 @@ function StatsPage(): React.ReactElement {
     <div className="stats-page">
       <div className="stats-container">
         <header className="stats-header">
-          <a href={basePath} className="back-link" data-testid="back-to-app">
+          <Link to="/" className="back-link" data-testid="back-to-app">
             ← Back to App
-          </a>
+          </Link>
           <h1>{engine().getName()} Diagnostics</h1>
           <p className="stats-subtitle">
             {engine().getDescription()}
@@ -484,9 +487,9 @@ function StatsPage(): React.ReactElement {
           ) : (
             <div className="no-data">
               <p>No session data yet. Start playing to see diagnostics!</p>
-              <a href={basePath} className="start-link">
+              <Link to="/" className="start-link">
                 Start a Game →
-              </a>
+              </Link>
             </div>
           )}
         </section>

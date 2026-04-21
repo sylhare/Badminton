@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CourtAssignmentTracker } from '../../src/engines/CourtAssignmentTracker';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import * as selector from '../../src/engines/engineSelector';
 import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../../src/types';
@@ -43,7 +44,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
   describe('Core Behaviour', () => {
     it('returns empty assignments when no present players', () => {
-      expect(engine.generate([], 4)).toEqual([]);
+      expect(engine.generate([], 4)).toHaveLength(0);
     });
 
     it('assigns everyone when capacity not exceeded', () => {
@@ -65,6 +66,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     });
 
     it('benched players rotate fairly (no repeats until everyone benched)', () => {
+      vi.useFakeTimers();
       const players = mockPlayers(12);
       const numberOfCourts = 2;
       const rounds = 4;
@@ -73,9 +75,11 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
+        vi.advanceTimersByTime(CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 60000);
         const benched = engine.getBenchedPlayers(assignments, players);
         benched.forEach(p => (benchHistory[p.id] += 1));
       }
+      vi.useRealTimers();
 
       Object.values(benchHistory).forEach(count => {
         expect(count).toBeGreaterThan(0);
@@ -101,6 +105,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     });
 
     it('statistical check: teammate pairs are reasonably balanced over many rounds', () => {
+      vi.useFakeTimers();
       const players = mockPlayers(8);
       const numberOfCourts = 2;
       const rounds = name.includes('SA') ? 30 : 100;
@@ -110,6 +115,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
+        vi.advanceTimersByTime(CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 60000);
         assignments.forEach(court => {
           if (!court.teams) return;
           const teams = [court.teams.team1, court.teams.team2];
@@ -133,6 +139,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       expect(max / min).toBeLessThanOrEqual(3);
       expect(max).toBeLessThanOrEqual(avg * 2);
+      vi.useRealTimers();
     });
   });
 

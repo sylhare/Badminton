@@ -50,6 +50,7 @@ export interface CourtEngineState {
   winCountMap: Record<string, number>;
   lossCountMap: Record<string, number>;
   levelHistory?: Record<string, number[]>;
+  roundsPlayed?: number;
 }
 
 export interface TrackerStats {
@@ -68,27 +69,31 @@ export interface UpdateWinnerParams {
   rotatedCourt?: Court;
 }
 
+export interface GenerateResult extends Array<Court> {
+  committed: boolean;
+}
+
 export interface ICourtAssignmentTracker {
   onStateChange(listener: () => void): () => void;
   resetHistory(): void;
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
+  applyRoundStats(courts: Court[], players: Player[]): void;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;
-  recordWins(courts: Court[]): void;
   recordLevelSnapshot(players: Player[]): void;
   getWinCounts(): Map<string, number>;
   getBenchCounts(): Map<string, number>;
+  getRoundsPlayed(): number;
   updateWinner(params: UpdateWinnerParams): Court[];
-  updateCourtTeamStats(court: Court, previousCourt?: Court): void;
   getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
   getStats(): TrackerStats;
   getLevelTrend(playerId: string): 'up' | 'down' | null;
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): Court[];
+  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): GenerateResult;
   getName(): string;
   getDescription(): string;
   supportsScoreTracking(): boolean;

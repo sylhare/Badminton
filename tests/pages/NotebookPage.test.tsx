@@ -1,8 +1,9 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 
 import NotebookPage from '../../src/pages/NotebookPage';
+import { renderWithProvider } from '../shared';
 
 describe('NotebookPage Component', () => {
   const mockNotebookUrlAvailable = `/analysis/engine_analysis.html`;
@@ -22,7 +23,7 @@ describe('NotebookPage Component', () => {
   it('renders the page header with the correct title', async () => {
     vi.mocked(fetchSpy).mockResolvedValueOnce(new Response(null, { status: 200 }));
 
-    render(<NotebookPage notebookUrl={mockNotebookUrlAvailable} title="Engine Comparison" />);
+    renderWithProvider(<NotebookPage notebookUrl={mockNotebookUrlAvailable} title="Engine Comparison" />);
 
     expect(screen.getByText('Engine Comparison')).toBeInTheDocument();
     expect(screen.getByTestId('back-to-stats')).toHaveAttribute('href', `/stats`);
@@ -35,7 +36,7 @@ describe('NotebookPage Component', () => {
   it('renders unavailable message when fetch fails', async () => {
     vi.mocked(fetchSpy).mockRejectedValueOnce(new Error('Network error'));
 
-    render(<NotebookPage notebookUrl={mockNotebookUrlUnavailable} title="Engine Comparison" />);
+    renderWithProvider(<NotebookPage notebookUrl={mockNotebookUrlUnavailable} title="Engine Comparison" />);
 
     await waitFor(() => {
       expect(screen.queryByText('Loading notebook...')).not.toBeInTheDocument();
@@ -46,7 +47,7 @@ describe('NotebookPage Component', () => {
   it('calls fetch with the correct URL', async () => {
     vi.mocked(fetchSpy).mockResolvedValueOnce(new Response(null, { status: 200 }));
 
-    render(<NotebookPage notebookUrl={mockNotebookUrlAvailable} title="Engine Comparison" />);
+    renderWithProvider(<NotebookPage notebookUrl={mockNotebookUrlAvailable} title="Engine Comparison" />);
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(mockNotebookUrlAvailable, { method: 'HEAD' });
@@ -57,7 +58,7 @@ describe('NotebookPage Component', () => {
   it('renders instructions when notebook is not available', async () => {
     vi.mocked(fetchSpy).mockResolvedValueOnce(new Response(null, { status: 404 }));
 
-    render(<NotebookPage notebookUrl={mockNotebookUrlUnavailable} title="Engine Comparison" />);
+    renderWithProvider(<NotebookPage notebookUrl={mockNotebookUrlUnavailable} title="Engine Comparison" />);
 
     await waitFor(() => {
       expect(screen.getByText('To generate it, run the following commands:')).toBeInTheDocument();

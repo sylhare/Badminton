@@ -183,6 +183,57 @@ test.describe('Stats Page', () => {
     await expect(legend).toContainText('4×+');
   });
 
+  test('rapid re-generate without winners is ignored - stats page shows only 1 round of data', async ({ page }) => {
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    await mainPage.generateAssignments(1);
+    await mainPage.regenerate();
+
+    await page.locator('a[href*="stats"]').click();
+    await expect(page.locator('.stats-grid')).toBeVisible();
+
+    await test.step('rounds played is 1, not doubled', async () => {
+      await expect(
+        page.locator('.stat-card').filter({ hasText: 'Rounds Played' }).locator('.stat-value'),
+      ).toHaveText('1');
+    });
+
+    await test.step('bench stats show only one round of benching', async () => {
+      await expect(page.getByText(/Benched once:/)).toBeVisible();
+      await expect(
+        page.locator('.bench-stat').filter({ hasText: 'Benched once:' }).locator('.bench-value'),
+      ).toHaveText('1');
+    });
+
+    await test.step('teammate connections reflect only the current (re-generated) round', async () => {
+      const teammateGraph = page.locator('.teammate-graph').first();
+      await expect(teammateGraph).toBeVisible();
+      await expect(
+        page.locator('.stat-card').filter({ hasText: 'Repeated Pairs' }).locator('.stat-value'),
+      ).toHaveText('0');
+    });
+  });
+
+  test('rapid re-generate × 2 (no winner) then regenerate with winner shows 1 round played (not 2 or 3)', async ({ page }) => {
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    await mainPage.generateAssignments(1);
+
+    await mainPage.regenerate();
+    await mainPage.regenerate();
+
+    await mainPage.court(1).selectWinner();
+
+    await mainPage.regenerate();
+
+    await page.locator('a[href*="stats"]').click();
+    await expect(page.locator('.stats-grid')).toBeVisible();
+
+    await test.step('rounds played is 1 (winner round only), not 2 or 3', async () => {
+      await expect(
+        page.locator('.stat-card').filter({ hasText: 'Rounds Played' }).locator('.stat-value'),
+      ).toHaveText('1');
+    });
+  });
+
   test('data persistence - shows data after reload, clears after localStorage clear', async ({ page }) => {
     await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
     await statsPage.goto();
