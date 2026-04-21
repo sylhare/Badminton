@@ -280,9 +280,9 @@ function StatsPage(): React.ReactElement {
           <Link to="/" className="back-link" data-testid="back-to-app">
             ← Back to App
           </Link>
-          <h1>{engine().getName()} Diagnostics</h1>
+          <h1>{engine().name} Diagnostics</h1>
           <p className="stats-subtitle">
-            {engine().getDescription()}
+            {engine().description}
           </p>
         </header>
 

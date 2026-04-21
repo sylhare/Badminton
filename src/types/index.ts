@@ -92,8 +92,8 @@ export interface ICourtAssignmentTracker {
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
   generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): GenerateResult;
-  getName(): string;
-  getDescription(): string;
+  readonly name: string;
+  readonly description: string;
   supportsScoreTracking(): boolean;
 }
 

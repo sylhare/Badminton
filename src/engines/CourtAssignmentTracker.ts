@@ -355,6 +355,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       if (history.length > CourtAssignmentTracker.MAX_LEVEL_HISTORY) history.shift();
       CourtAssignmentTracker.levelHistoryMap.set(p.id, history);
     }
+    this.notifyStateChange();
   }
 
   /**

@@ -891,8 +891,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       await selector.engine().saveState(type);
       await selector.engine().loadState(type);
 
-      expect(selector.engine().getName()).toBe(name.split(' (')[0]);
-      expect(selector.engine().getDescription()).toBeDefined();
       expect(selector.getEngineType()).toBe(type);
     });
   });

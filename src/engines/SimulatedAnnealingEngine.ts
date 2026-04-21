@@ -11,12 +11,9 @@ import { SimulatedAnnealingBase } from './SimulatedAnnealingBase';
 export class CourtAssignmentEngineSA extends SimulatedAnnealingBase implements ICourtAssignmentEngine {
   private readonly SKILL_PAIR_PENALTY = 1000;
 
-  getName(): string {
-    return 'Simulated Annealing';
-  }
-
-  getDescription(): string {
-    return 'Simulated Annealing with iterative improvement. Performs 5000 iterations, accepting worse solutions probabilistically to escape local minima.';
+  readonly name = 'Simulated Annealing';
+  get description(): string {
+    return `Simulated Annealing with iterative improvement. Performs ${this.SA_ITERATIONS} iterations, accepting worse solutions probabilistically to escape local minima.`;
   }
 
   protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {

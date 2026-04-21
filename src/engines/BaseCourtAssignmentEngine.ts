@@ -18,9 +18,8 @@ import { CourtAssignmentTracker } from './CourtAssignmentTracker';
  */
 export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker implements ICourtAssignmentEngine {
 
-  abstract getDescription(): string;
-
-  abstract getName(): string;
+  abstract readonly name: string;
+  abstract readonly description: string;
 
   supportsScoreTracking(): boolean {
     return false;

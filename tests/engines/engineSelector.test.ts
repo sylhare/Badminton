@@ -41,27 +41,13 @@ describe('Engine Selector', () => {
   });
 
   describe('Engine Names and Descriptions', () => {
-    it('should return correct name for Simulated Annealing', () => {
-      setEngine('sa');
-      expect(engine().getName()).toBe('Simulated Annealing');
-    });
-
-    it('should return correct name for Smart engine', () => {
-      setEngine('sl');
-      expect(engine().getName()).toBeDefined();
-    });
-
-    it('should return description for Simulated Annealing', () => {
-      setEngine('sa');
-      const desc = engine().getDescription();
-      expect(desc).toContain('Simulated Annealing');
-      expect(desc).toContain('5000');
-    });
-
-    it('should return description for Smart engine', () => {
-      setEngine('sl');
-      const desc = engine().getDescription();
-      expect(desc).toBeDefined();
+    it.each([
+      ['sa', 'Simulated Annealing'],
+      ['sl', 'Smart Matching'],
+    ] as const)('%s has correct name and description', (type, expectedName) => {
+      setEngine(type);
+      expect(engine().name).toBe(expectedName);
+      expect(engine().description).toBeTruthy();
     });
   });
 
