@@ -126,7 +126,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.notifyStateChange();
   }
 
-
   /** Increments roundsPlayed if the current session had at least one winner. */
   protected markRoundCompleted(): void {
     if (CourtAssignmentTracker.recordedWinsMap.size > 0) {
@@ -169,11 +168,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * Tracks a delta so undoLastRound() can reverse it on rapid re-generation.
    */
   applyRoundStats(courts: Court[], players: Player[]): void {
-    const assignedIds = new Set(courts.flatMap(c => c.players.map(p => p.id)));
-    const benchedPlayers = players.filter(p => p.isPresent && !assignedIds.has(p.id));
     const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
 
-    benchedPlayers.forEach(p => {
+    this.benchedPlayers(courts, players).forEach(p => {
       this.recordBenching(p.id);
       delta.bench.push(p.id);
     });
@@ -438,7 +435,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.incrementMapCount(CourtAssignmentTracker.singleCountMap, playerId);
     this.updateTimestamp(playerId);
   }
-
 
   benchedPlayers(assignments: Court[], players: Player[]): Player[] {
     const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));

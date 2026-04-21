@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { engine, setEngine } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
@@ -116,7 +116,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     winCounts,
     lossCounts,
     benchCounts,
-    levelTrend: (playerId: string) => engine().levelTrend(playerId),
+    levelTrend: useCallback((playerId: string) => engine().levelTrend(playerId), []),
   };
 
   return (
