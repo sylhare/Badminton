@@ -7,7 +7,8 @@ export class StatsPage {
   private readonly url: string;
 
   constructor(private page: Page) {
-    this.url = (process.env.E2E_BASE_URL || 'http://localhost:5173') + '/stats';
+    const base = (process.env.E2E_BASE_URL || 'http://localhost:5173').replace(/\/$/, '');
+    this.url = base + '/stats';
   }
 
   /** Navigate directly to the stats page via URL. */

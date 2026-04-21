@@ -126,6 +126,44 @@ test.describe('State Persistence', () => {
   });
 });
 
+test.describe('SA engine session TTL', () => {
+  test('clears SA session data older than 5 days on app load', async ({ page }) => {
+    const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const sixDaysAgo = now - (FIVE_DAYS_MS + 24 * 60 * 60 * 1000);
+
+    const mainPage = new MainPage(page);
+
+    await page.clock.setFixedTime(sixDaysAgo);
+    await mainPage.goto();
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    await mainPage.generateAssignments(1);
+    await mainPage.court(1).selectWinner();
+    await mainPage.regenerate();
+    await page.waitForTimeout(300);
+
+    await page.locator('a[href*="stats"]').click();
+    await expect(page.locator('.teammate-graph').first()).toBeVisible();
+    await expect(page.locator('.teammate-graph svg line').first()).toBeVisible();
+    await page.getByText(/View bench counts per player/).click();
+    await expect(page.locator('.bench-graph').first()).toBeVisible();
+    await expect(page.locator('.bench-graph svg circle').first()).toBeVisible();
+    await page.getByTestId('back-to-app').click();
+
+    await page.clock.setFixedTime(now);
+    await page.reload();
+    await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');
+
+    await page.locator('a[href*="stats"]').click();
+    await expect(page.locator('.teammate-graph')).toHaveCount(0);
+    await expect(page.locator('.bench-graph')).toHaveCount(0);
+    await expect(page.locator('.stats-grid')).toBeVisible();
+  });
+});
+
 test.describe('Leaderboard Persistence', () => {
   let mainPage: MainPage;
 

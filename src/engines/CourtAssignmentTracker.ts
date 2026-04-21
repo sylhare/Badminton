@@ -245,12 +245,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     const { savedAt } = state;
 
     if (state.engineType && state.engineType !== currentEngineType) {
-      console.warn(
-        `[Engine Storage] Engine changed from ${state.engineType} to ${currentEngineType}. ` +
-        `Resetting history to avoid inconsistent cost evaluation.`,
-      );
-      this.resetHistory();
-      return;
+      console.warn(`[Engine Storage] Engine changed from ${state.engineType} to ${currentEngineType}.`);
     }
 
     if (state.benchCountMap) {
@@ -294,6 +289,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.teammateCountMap.clear();
     CourtAssignmentTracker.opponentCountMap.clear();
     CourtAssignmentTracker.lastUpdatedMap.clear();
+    CourtAssignmentTracker.benchCountMap.clear();
   }
 
   /**
