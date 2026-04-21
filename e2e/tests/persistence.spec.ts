@@ -143,11 +143,12 @@ test.describe('SA engine session TTL', () => {
     await mainPage.generateAssignments(1);
     await mainPage.court(1).selectWinner();
     await mainPage.regenerate();
-    await page.waitForTimeout(300); 
+    await page.waitForTimeout(300);
 
     await page.locator('a[href*="stats"]').click();
     await expect(page.locator('.teammate-graph').first()).toBeVisible();
     await expect(page.locator('.teammate-graph svg line').first()).toBeVisible();
+    await page.getByText(/View bench counts per player/).click();
     await expect(page.locator('.bench-graph').first()).toBeVisible();
     await expect(page.locator('.bench-graph svg circle').first()).toBeVisible();
     await page.getByTestId('back-to-app').click();
