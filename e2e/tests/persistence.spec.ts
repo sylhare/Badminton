@@ -126,8 +126,8 @@ test.describe('State Persistence', () => {
   });
 });
 
-test.describe('SA engine pair history TTL', () => {
-  test('clears pair history older than 5 days on app load in SA mode', async ({ page }) => {
+test.describe('SA engine session TTL', () => {
+  test('clears SA session data older than 5 days on app load', async ({ page }) => {
     const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
     const now = Date.now();
     const sixDaysAgo = now - (FIVE_DAYS_MS + 24 * 60 * 60 * 1000);
@@ -148,6 +148,8 @@ test.describe('SA engine pair history TTL', () => {
     await page.locator('a[href*="stats"]').click();
     await expect(page.locator('.teammate-graph').first()).toBeVisible();
     await expect(page.locator('.teammate-graph svg line').first()).toBeVisible();
+    await expect(page.locator('.bench-graph').first()).toBeVisible();
+    await expect(page.locator('.bench-graph svg circle').first()).toBeVisible();
     await page.getByTestId('back-to-app').click();
 
     await page.clock.setFixedTime(now);
@@ -156,6 +158,7 @@ test.describe('SA engine pair history TTL', () => {
 
     await page.locator('a[href*="stats"]').click();
     await expect(page.locator('.teammate-graph')).toHaveCount(0);
+    await expect(page.locator('.bench-graph')).toHaveCount(0);
     await expect(page.locator('.stats-grid')).toBeVisible();
   });
 });

@@ -289,6 +289,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.teammateCountMap.clear();
     CourtAssignmentTracker.opponentCountMap.clear();
     CourtAssignmentTracker.lastUpdatedMap.clear();
+    CourtAssignmentTracker.benchCountMap.clear();
   }
 
   /**
