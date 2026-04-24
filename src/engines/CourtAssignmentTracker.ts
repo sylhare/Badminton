@@ -8,7 +8,7 @@ import type {
   UpdateWinnerParams,
 } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
-import { opponentPairs, teamPairs } from '../utils/playerUtils';
+import { benchedPlayers, opponentPairs, teamPairs } from '../utils/playerUtils';
 
 import { levelTracker } from './LevelTracker';
 
@@ -438,8 +438,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   benchedPlayers(assignments: Court[], players: Player[]): Player[] {
-    const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
-    return players.filter(p => p.isPresent && !assignedIds.has(p.id));
+    return benchedPlayers(assignments, players);
   }
 
   /** Notifies all subscribed listeners of a state change. */

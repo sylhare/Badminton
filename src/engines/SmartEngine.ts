@@ -19,10 +19,6 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
   readonly name = 'Smart Matching';
   readonly description = 'Gender/Level-aware matching. Avoids gender-homogeneous matchups (FF vs MM) and extreme level gaps. Includes a small bias for similar-level teammates.';
 
-  supportsScoreTracking(): boolean {
-    return true;
-  }
-
   protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
     let cost = 0;
     cost += this.calculateTeammateCost(t1, this.TEAMMATE_REPEAT_PENALTY);

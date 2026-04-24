@@ -1,10 +1,9 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import PlayerList from '../../../src/components/players/PlayerList';
-import { setEngine } from '../../../src/engines/engineSelector';
 import { createMockPlayer, createMockPlayers } from '../../data/testFactories';
 
 describe('PlayerList Component', () => {
@@ -595,10 +594,7 @@ describe('PlayerList Component', () => {
       vi.clearAllMocks();
     });
 
-    afterEach(() => setEngine('sa'));
-
-    it('shows smart engine toggle unchecked when engine is sa', () => {
-      setEngine('sa');
+    it('shows smart engine toggle unchecked when isSmartEngineEnabled is false', () => {
       render(
         <PlayerList
           players={createMockPlayers(1)}
@@ -614,8 +610,7 @@ describe('PlayerList Component', () => {
       expect(toggle.checked).toBe(false);
     });
 
-    it('shows smart engine toggle checked when engine is sl', () => {
-      setEngine('sl');
+    it('shows smart engine toggle checked when isSmartEngineEnabled is true', () => {
       render(
         <PlayerList
           players={createMockPlayers(1)}
@@ -624,6 +619,7 @@ describe('PlayerList Component', () => {
           onClearAllPlayers={mockClearAll}
           onResetAlgorithm={mockResetAlgorithm}
           onToggleSmartEngine={mockOnToggleSmartEngine}
+          isSmartEngineEnabled={true}
         />,
       );
 
@@ -657,10 +653,7 @@ describe('PlayerList Component', () => {
       vi.clearAllMocks();
     });
 
-    afterEach(() => setEngine('sa'));
-
     it('opens PlayerEditModal when player name is clicked with smart engine enabled', async () => {
-      setEngine('sl');
       const players = [createMockPlayer({ id: 'edit-p', name: 'Alice', isPresent: true })];
 
       render(
@@ -671,6 +664,7 @@ describe('PlayerList Component', () => {
           onClearAllPlayers={mockClearAll}
           onResetAlgorithm={mockResetAlgorithm}
           onUpdatePlayer={mockOnUpdatePlayer}
+          isSmartEngineEnabled={true}
         />,
       );
 
@@ -702,10 +696,7 @@ describe('PlayerList Component', () => {
   });
 
   describe('Gender/level badges', () => {
-    afterEach(() => setEngine('sa'));
-
     it('shows badges when smart engine is enabled and player has gender/level', () => {
-      setEngine('sl');
       const players = [
         createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true, gender: 'F', level: 80 }),
       ];
@@ -717,6 +708,7 @@ describe('PlayerList Component', () => {
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
           onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={true}
         />,
       );
 
@@ -742,7 +734,6 @@ describe('PlayerList Component', () => {
     });
 
     it('does not show badge when player has no gender or level set', () => {
-      setEngine('sl');
       const players = [
         createMockPlayer({ id: 'p1', name: 'Alice', isPresent: true }),
       ];
@@ -754,6 +745,7 @@ describe('PlayerList Component', () => {
           onRemovePlayer={mockRemove}
           onClearAllPlayers={mockClearAll}
           onResetAlgorithm={mockResetAlgorithm}
+          isSmartEngineEnabled={true}
         />,
       );
 

@@ -94,7 +94,6 @@ export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
   generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): GenerateResult;
   readonly name: string;
   readonly description: string;
-  supportsScoreTracking(): boolean;
 }
 
 export interface AppStateContextType {
@@ -108,10 +107,15 @@ export interface AppStateContextType {
   setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
   isSmartEngineEnabled: boolean;
   handleToggleSmartEngine: () => void;
-  applyCourtResults: (courts: Court[]) => void;
   winCounts: Map<string, number>;
   lossCounts: Map<string, number>;
   benchCounts: Map<string, number>;
   engineState: CourtEngineState | null;
   levelTrend: (playerId: string) => 'up' | 'down' | null;
+  generateCourts(players: Player[], numberOfCourts: number, previousAssignments: Court[], manualCourtSelection?: ManualCourtSelection | null, forceBenchPlayerIds?: Set<string>): GenerateResult;
+  updateWinner(params: UpdateWinnerParams): Court[];
+  saveState(): Promise<void>;
+  resetAlgorithm(): Promise<void>;
+  engineName: string;
+  engineDescription: string;
 }

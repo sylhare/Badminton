@@ -1,11 +1,10 @@
 import React from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { CourtCard } from '../../../../src/components/court/card';
 import { Court } from '../../../../src/types';
-import { setEngine } from '../../../../src/engines/engineSelector';
 import { TEST_PLAYERS } from '../../../data/testData';
 
 describe('CourtCard', () => {
@@ -96,8 +95,6 @@ describe('CourtCard', () => {
   });
 
   describe('Doubles match', () => {
-    afterEach(() => setEngine('sa'));
-
     const doublesCourt: Court = {
       courtNumber: 3,
       players: [TEST_PLAYERS[0], TEST_PLAYERS[1], TEST_PLAYERS[2], TEST_PLAYERS[3]],
@@ -146,7 +143,6 @@ describe('CourtCard', () => {
     });
 
     it('calls onWinnerChange and onScoreChange when team is clicked and score is confirmed', async () => {
-      setEngine('sl');
       const user = userEvent.setup();
       const mockOnWinnerChange = vi.fn();
       const mockOnScoreChange = vi.fn();
@@ -156,6 +152,7 @@ describe('CourtCard', () => {
           court={doublesCourt}
           onWinnerChange={mockOnWinnerChange}
           onScoreChange={mockOnScoreChange}
+          isSmartEngineEnabled={true}
         />,
       );
 

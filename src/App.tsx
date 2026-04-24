@@ -9,9 +9,9 @@ import ImportStateModal from './components/modals/ImportStateModal';
 import { CourtAssignments } from './components/court';
 import { useShareState } from './hooks/useShareState';
 import Leaderboard from './components/players/Leaderboard';
-import { engine, getEngineType } from './engines/engineSelector';
 import { storageManager } from './utils/StorageManager';
 import { useAppState } from './providers/AppStateProvider';
+import { benchedPlayers } from './utils/playerUtils';
 import type { Court, ManualCourtSelection, WinnerSelection } from './types';
 
 export function rotateCourtTeams(court: Court): Court {
@@ -45,10 +45,13 @@ function App(): React.ReactElement {
     clearPlayers,
     isSmartEngineEnabled,
     handleToggleSmartEngine,
-    applyCourtResults,
     winCounts,
     lossCounts,
     benchCounts,
+    generateCourts,
+    updateWinner,
+    saveState,
+    resetAlgorithm,
   } = useAppState();
 
   const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
@@ -80,7 +83,7 @@ function App(): React.ReactElement {
   useEffect(() => {
     if (!hasLocalLoadedRef.current) return;
     storageManager.saveApp({ numberOfCourts, assignments, lastGeneratedAt });
-    engine().saveState(getEngineType());
+    void saveState();
   }, [numberOfCourts, assignments, lastGeneratedAt]);
 
   const handleClearAllPlayers = () => {
@@ -91,9 +94,8 @@ function App(): React.ReactElement {
     setManualCourtSelection(null);
   };
 
-  const handleResetAlgorithm = () => {
-    engine().resetHistory();
-    engine().saveState(getEngineType());
+  const handleResetAlgorithm = async () => {
+    await resetAlgorithm();
     setAssignments([]);
     setLastGeneratedAt(undefined);
   };
@@ -109,16 +111,7 @@ function App(): React.ReactElement {
   const generateAssignments = () => {
     setLastGeneratedAt(Date.now());
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
-    const courts = engine().generate(
-      players,
-      numberOfCourts,
-      manualCourtSelection || undefined,
-      forceBenchPlayerIds,
-    );
-
-    if (courts.committed) {
-      applyCourtResults(assignments);
-    }
+    const courts = generateCourts(players, numberOfCourts, assignments, manualCourtSelection, forceBenchPlayerIds);
 
     if (hadManualSelection) {
       courts.forEach(court => {
@@ -138,7 +131,7 @@ function App(): React.ReactElement {
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
     setAssignments(prevAssignments =>
-      engine().updateWinner({ courtNumber, winner, currentAssignments: prevAssignments }),
+      updateWinner({ courtNumber, winner, currentAssignments: prevAssignments }),
     );
   };
 
@@ -147,7 +140,7 @@ function App(): React.ReactElement {
       const court = prevAssignments.find(c => c.courtNumber === courtNumber);
       if (!court?.teams) return prevAssignments;
 
-      return engine().updateWinner({ courtNumber, winner: undefined, currentAssignments: prevAssignments, rotatedCourt: rotateCourtTeams(court) });
+      return updateWinner({ courtNumber, winner: undefined, currentAssignments: prevAssignments, rotatedCourt: rotateCourtTeams(court) });
     });
   };
 
@@ -216,6 +209,7 @@ function App(): React.ReactElement {
                   forceBenchPlayerIds={forceBenchPlayerIds}
                   onToggleForceBench={handleToggleForceBench}
                   onToggleSmartEngine={handleToggleSmartEngine}
+                  isSmartEngineEnabled={isSmartEngineEnabled}
                   onUpdatePlayer={handleUpdatePlayer}
                   onShare={handleShare}
                 />
@@ -234,7 +228,7 @@ function App(): React.ReactElement {
             <CourtAssignments
               players={players}
               assignments={assignments}
-              benchedPlayers={engine().benchedPlayers(assignments, players)}
+              benchedPlayers={benchedPlayers(assignments, players)}
               numberOfCourts={numberOfCourts}
               onNumberOfCourtsChange={setNumberOfCourts}
               onGenerateAssignments={generateAssignments}
@@ -247,6 +241,7 @@ function App(): React.ReactElement {
               manualCourtSelection={manualCourtSelection}
               onManualCourtSelectionChange={setManualCourtSelection}
               lastGeneratedAt={lastGeneratedAt}
+              isSmartEngineEnabled={isSmartEngineEnabled}
             />
           </div>
         </div>

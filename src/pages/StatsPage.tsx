@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-import { engine } from '../engines/engineSelector';
 import { useAppState } from '../providers/AppStateProvider';
 import TeammateGraph from '../components/graphs/TeammateGraph';
 import SinglesGraph from '../components/graphs/SinglesGraph';
@@ -64,7 +63,7 @@ interface DiagnosticStats {
 }
 
 function StatsPage(): React.ReactElement {
-  const { players, isSmartEngineEnabled: isSmartEngine, engineState } = useAppState();
+  const { players, isSmartEngineEnabled: isSmartEngine, engineState, engineName, engineDescription } = useAppState();
 
   const basePath = import.meta.env.BASE_URL || '/';
 
@@ -280,9 +279,9 @@ function StatsPage(): React.ReactElement {
           <Link to="/" className="back-link" data-testid="back-to-app">
             ← Back to App
           </Link>
-          <h1>{engine().name} Diagnostics</h1>
+          <h1>{engineName} Diagnostics</h1>
           <p className="stats-subtitle">
-            {engine().description}
+            {engineDescription}
           </p>
         </header>
 
