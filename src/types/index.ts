@@ -85,7 +85,6 @@ export interface ICourtAssignmentTracker {
   loadState(engineType: EngineType): Promise<void>;
   recordLevelSnapshot(players: Player[]): void;
   updateWinner(params: UpdateWinnerParams): Court[];
-  benchedPlayers(assignments: Court[], players: Player[]): Player[];
   stats(): TrackerStats;
   levelTrend(playerId: string): 'up' | 'down' | null;
 }
@@ -112,7 +111,7 @@ export interface AppStateContextType {
   benchCounts: Map<string, number>;
   engineState: CourtEngineState | null;
   levelTrend: (playerId: string) => 'up' | 'down' | null;
-  generateCourts(players: Player[], numberOfCourts: number, previousAssignments: Court[], manualCourtSelection?: ManualCourtSelection | null, forceBenchPlayerIds?: Set<string>): GenerateResult;
+  generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], manualCourtSelection?: ManualCourtSelection | null, forceBenchPlayerIds?: Set<string>): GenerateResult;
   updateWinner(params: UpdateWinnerParams): Court[];
   saveState(): Promise<void>;
   resetAlgorithm(): Promise<void>;

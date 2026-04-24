@@ -4,6 +4,7 @@ import { engine, getEngineType, setEngine } from '../../src/engines/engineSelect
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import { engineSL } from '../../src/engines/SmartEngine';
 import type { Player } from '../../src/types';
+import { benchedPlayers } from '../../src/utils/playerUtils';
 
 function mockPlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -69,7 +70,7 @@ describe('Engine Selector', () => {
     it('should get benched players', () => {
       const players = mockPlayers(10);
       const assignments = engine().generate(players, 2);
-      const benched = engine().benchedPlayers(assignments, players);
+      const benched = benchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -93,7 +94,7 @@ describe('Engine Selector', () => {
     it('should get benched players', () => {
       const players = mockPlayers(10);
       const assignments = engine().generate(players, 2);
-      const benched = engine().benchedPlayers(assignments, players);
+      const benched = benchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -126,12 +127,12 @@ describe('Engine Selector', () => {
       setEngine('sa');
       engineSA.resetHistory();
       const saAssignments = engine().generate(players, 2);
-      const saBenched = engine().benchedPlayers(saAssignments, players);
+      const saBenched = benchedPlayers(saAssignments, players);
 
       setEngine('sl');
       engineSL.resetHistory();
       const slAssignments = engine().generate(players, 2);
-      const slBenched = engine().benchedPlayers(slAssignments, players);
+      const slBenched = benchedPlayers(slAssignments, players);
 
       expect(saBenched.length).toBe(1);
       expect(slBenched.length).toBe(1);

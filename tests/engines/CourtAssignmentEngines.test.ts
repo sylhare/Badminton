@@ -4,6 +4,7 @@ import { CourtAssignmentTracker } from '../../src/engines/CourtAssignmentTracker
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import * as selector from '../../src/engines/engineSelector';
 import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../../src/types';
+import { benchedPlayers } from '../../src/utils/playerUtils';
 
 const engines: Array<{ name: string; engine: ICourtAssignmentEngine; type: selector.EngineType }> = [
   { name: 'Simulated Annealing (SA)', engine: engineSA, type: 'sa' },
@@ -50,7 +51,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('assigns everyone when capacity not exceeded', () => {
       const players = mockPlayers(8);
       const assignments = engine.generate(players, 4);
-      const benched = engine.benchedPlayers(assignments, players);
+      const benched = benchedPlayers(assignments, players);
 
       expect(benched.length).toBe(0);
       const idsOnCourts = assignments.flatMap(c => c.players.map(p => p.id));
@@ -76,7 +77,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       for (let r = 0; r < rounds; r++) {
         const assignments = engine.generate(players, numberOfCourts);
         vi.advanceTimersByTime(CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 60000);
-        const benched = engine.benchedPlayers(assignments, players);
+        const benched = benchedPlayers(assignments, players);
         benched.forEach(p => (benchHistory[p.id] += 1));
       }
       vi.useRealTimers();
@@ -520,7 +521,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       };
 
       const assignments = engine.generate(players, 2, manualSelection);
-      const benched = engine.benchedPlayers(assignments, players);
+      const benched = benchedPlayers(assignments, players);
 
       expect(assignments).toHaveLength(2);
       expect(benched).toHaveLength(2);
@@ -642,7 +643,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const totalAssigned = assignments.reduce((sum, c) => sum + c.players.length, 0);
       expect(totalAssigned).toBe(4);
 
-      const benched = engine.benchedPlayers(assignments, players);
+      const benched = benchedPlayers(assignments, players);
       expect(benched.length).toBe(1);
     });
 
@@ -786,7 +787,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
       expect(assignments[1].players).toHaveLength(2);
-      expect(engine.benchedPlayers(assignments, players)).toHaveLength(1);
+      expect(benchedPlayers(assignments, players)).toHaveLength(1);
     });
 
     it('considers player losses in team balancing', () => {
@@ -841,7 +842,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(onCourtIds.has('P0')).toBeFalsy();
       expect(onCourtIds.has('P1')).toBeFalsy();
 
-      const benched = engine.benchedPlayers(assignments, players);
+      const benched = benchedPlayers(assignments, players);
       const benchedIds = benched.map(p => p.id);
       expect(benchedIds).toContain('P0');
       expect(benchedIds).toContain('P1');

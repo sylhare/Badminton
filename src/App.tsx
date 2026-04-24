@@ -48,7 +48,7 @@ function App(): React.ReactElement {
     winCounts,
     lossCounts,
     benchCounts,
-    generateCourts,
+    generate,
     updateWinner,
     saveState,
     resetAlgorithm,
@@ -111,7 +111,7 @@ function App(): React.ReactElement {
   const generateAssignments = () => {
     setLastGeneratedAt(Date.now());
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
-    const courts = generateCourts(players, numberOfCourts, assignments, manualCourtSelection, forceBenchPlayerIds);
+    const courts = generate(players, numberOfCourts, assignments, manualCourtSelection, forceBenchPlayerIds);
 
     if (hadManualSelection) {
       courts.forEach(court => {

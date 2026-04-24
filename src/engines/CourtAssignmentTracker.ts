@@ -170,7 +170,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   applyRoundStats(courts: Court[], players: Player[]): void {
     const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
 
-    this.benchedPlayers(courts, players).forEach(p => {
+    benchedPlayers(courts, players).forEach(p => {
       this.recordBenching(p.id);
       delta.bench.push(p.id);
     });
@@ -435,10 +435,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   recordSingles(playerId: string): void {
     this.incrementMapCount(CourtAssignmentTracker.singleCountMap, playerId);
     this.updateTimestamp(playerId);
-  }
-
-  benchedPlayers(assignments: Court[], players: Player[]): Player[] {
-    return benchedPlayers(assignments, players);
   }
 
   /** Notifies all subscribed listeners of a state change. */

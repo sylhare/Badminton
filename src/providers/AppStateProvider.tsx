@@ -98,7 +98,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     }
   }, [players]);
 
-  const generateCourts = useCallback((
+  const generate = useCallback((
     players: Player[],
     numberOfCourts: number,
     previousAssignments: Court[],
@@ -141,7 +141,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     benchCounts: counts.bench,
     engineState,
     levelTrend,
-    generateCourts,
+    generate,
     updateWinner,
     saveState,
     resetAlgorithm,
