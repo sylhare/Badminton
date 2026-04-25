@@ -8,13 +8,8 @@ import type { Court, Player } from '../../src/types';
  * for testing purposes.
  */
 class TestEngine extends BaseCourtAssignmentEngine {
-  getName(): string {
-    return 'Test Engine';
-  }
-
-  getDescription(): string {
-    return 'Test engine for BaseCourtAssignmentEngine tests';
-  }
+  readonly name = 'Test Engine';
+  readonly description = 'Test engine for BaseCourtAssignmentEngine tests';
 
   protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     const courts: Court[] = [];

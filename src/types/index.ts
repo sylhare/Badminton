@@ -60,6 +60,7 @@ export interface TrackerStats {
   opponentCountMap: Map<string, number>;
   benchCountMap: Map<string, number>;
   singleCountMap: Map<string, number>;
+  roundsPlayed: number;
 }
 
 export interface UpdateWinnerParams {
@@ -83,20 +84,15 @@ export interface ICourtAssignmentTracker {
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;
   recordLevelSnapshot(players: Player[]): void;
-  getWinCounts(): Map<string, number>;
-  getBenchCounts(): Map<string, number>;
-  getRoundsPlayed(): number;
   updateWinner(params: UpdateWinnerParams): Court[];
-  getBenchedPlayers(assignments: Court[], players: Player[]): Player[];
-  getStats(): TrackerStats;
-  getLevelTrend(playerId: string): 'up' | 'down' | null;
+  stats(): TrackerStats;
+  levelTrend(playerId: string): 'up' | 'down' | null;
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
   generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): GenerateResult;
-  getName(): string;
-  getDescription(): string;
-  supportsScoreTracking(): boolean;
+  readonly name: string;
+  readonly description: string;
 }
 
 export interface AppStateContextType {
@@ -110,7 +106,15 @@ export interface AppStateContextType {
   setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
   isSmartEngineEnabled: boolean;
   handleToggleSmartEngine: () => void;
-  applyCourtResults: (courts: Court[]) => void;
   winCounts: Map<string, number>;
   lossCounts: Map<string, number>;
+  benchCounts: Map<string, number>;
+  engineState: CourtEngineState | null;
+  levelTrend: (playerId: string) => 'up' | 'down' | null;
+  generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], manualCourtSelection?: ManualCourtSelection | null, forceBenchPlayerIds?: Set<string>): GenerateResult;
+  updateWinner(params: UpdateWinnerParams): Court[];
+  saveState(): Promise<void>;
+  resetAlgorithm(): Promise<void>;
+  engineName: string;
+  engineDescription: string;
 }

@@ -98,7 +98,7 @@ export const extractRoundPairs = (
   const matchEvents: MatchEvent[] = [];
   const matchPairEvents: MatchPairEvent[] = [];
   const courtsWithWinners: Court[] = [];
-  const engineWinCounts = Engine.getWinCounts ? Engine.getWinCounts() : new Map<string, number>();
+  const engineWinCounts = Engine.stats ? Engine.stats().winCountMap : new Map<string, number>();
 
   for (let courtIdx = 0; courtIdx < courts.length; courtIdx++) {
     const court = courts[courtIdx];

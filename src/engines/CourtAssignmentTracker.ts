@@ -8,7 +8,7 @@ import type {
   UpdateWinnerParams,
 } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
-import { opponentPairs, teamPairs } from '../utils/playerUtils';
+import { benchedPlayers, opponentPairs, teamPairs } from '../utils/playerUtils';
 
 import { levelTracker } from './LevelTracker';
 
@@ -126,11 +126,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.notifyStateChange();
   }
 
-  /** Returns the number of rounds where a winner was committed. */
-  getRoundsPlayed(): number {
-    return CourtAssignmentTracker.roundsPlayed;
-  }
-
   /** Increments roundsPlayed if the current session had at least one winner. */
   protected markRoundCompleted(): void {
     if (CourtAssignmentTracker.recordedWinsMap.size > 0) {
@@ -173,11 +168,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * Tracks a delta so undoLastRound() can reverse it on rapid re-generation.
    */
   applyRoundStats(courts: Court[], players: Player[]): void {
-    const assignedIds = new Set(courts.flatMap(c => c.players.map(p => p.id)));
-    const benchedPlayers = players.filter(p => p.isPresent && !assignedIds.has(p.id));
     const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
 
-    benchedPlayers.forEach(p => {
+    benchedPlayers(courts, players).forEach(p => {
       this.recordBenching(p.id);
       delta.bench.push(p.id);
     });
@@ -295,11 +288,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /**
    * Returns tracking statistics as Maps.
    */
-  getLevelTrend(playerId: string): 'up' | 'down' | null {
+  levelTrend(playerId: string): 'up' | 'down' | null {
     return levelTracker.getLevelTrend(playerId, CourtAssignmentTracker.levelHistoryMap);
   }
 
-  getStats(): TrackerStats {
+  stats(): TrackerStats {
     return {
       winCountMap: new Map(CourtAssignmentTracker.winCountMap),
       lossCountMap: new Map(CourtAssignmentTracker.lossCountMap),
@@ -307,6 +300,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       opponentCountMap: new Map(CourtAssignmentTracker.opponentCountMap),
       benchCountMap: new Map(CourtAssignmentTracker.benchCountMap),
       singleCountMap: new Map(CourtAssignmentTracker.singleCountMap),
+      roundsPlayed: CourtAssignmentTracker.roundsPlayed,
     };
   }
 
@@ -361,6 +355,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       if (history.length > CourtAssignmentTracker.MAX_LEVEL_HISTORY) history.shift();
       CourtAssignmentTracker.levelHistoryMap.set(p.id, history);
     }
+    this.notifyStateChange();
   }
 
   /**
@@ -440,19 +435,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   recordSingles(playerId: string): void {
     this.incrementMapCount(CourtAssignmentTracker.singleCountMap, playerId);
     this.updateTimestamp(playerId);
-  }
-
-  getWinCounts(): Map<string, number> {
-    return new Map(CourtAssignmentTracker.winCountMap);
-  }
-
-  getBenchCounts(): Map<string, number> {
-    return new Map(CourtAssignmentTracker.benchCountMap);
-  }
-
-  getBenchedPlayers(assignments: Court[], players: Player[]): Player[] {
-    const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
-    return players.filter(p => p.isPresent && !assignedIds.has(p.id));
   }
 
   /** Notifies all subscribed listeners of a state change. */

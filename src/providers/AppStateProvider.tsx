@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-import { engine, setEngine } from '../engines/engineSelector';
+import { engine, getEngineType, setEngine } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
-import type { AppStateContextType, Court, Player } from '../types';
+import type { AppStateContextType, CourtEngineState, Court, GenerateResult, ManualCourtSelection, Player, UpdateWinnerParams } from '../types';
 import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
 
@@ -18,8 +18,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState(false);
-  const [winCounts, setWinCounts] = useState<Map<string, number>>(new Map());
-  const [lossCounts, setLossCounts] = useState<Map<string, number>>(new Map());
+  const [counts, setCounts] = useState({ wins: new Map<string, number>(), losses: new Map<string, number>(), bench: new Map<string, number>() });
+  const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -33,16 +33,18 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
       const engineType = smart ? 'sl' : 'sa';
       setEngine(engineType);
       await engine().loadState(engineType);
-      setWinCounts(new Map(engine().getWinCounts()));
-      setLossCounts(new Map(engine().getStats().lossCountMap));
+      const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
+      setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
+      setEngineState(engine().prepareStateForSaving(engineType));
       hasLoadedRef.current = true;
       setIsLoaded(true);
     };
     load();
 
     return engine().onStateChange(() => {
-      setWinCounts(new Map(engine().getWinCounts()));
-      setLossCounts(new Map(engine().getStats().lossCountMap));
+      const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
+      setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
+      setEngineState(engine().prepareStateForSaving(getEngineType()));
     });
   }, []);
 
@@ -85,7 +87,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     setEngine(next ? 'sl' : 'sa');
   };
 
-  const applyCourtResults = (courts: Court[]) => {
+  const applyCourtResults = useCallback((courts: Court[]) => {
     const courtsWithWinners = courts.filter(c => c.winner);
     if (courtsWithWinners.length > 0) {
       const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners, players);
@@ -94,7 +96,34 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     } else {
       engine().recordLevelSnapshot(players);
     }
-  };
+  }, [players]);
+
+  const generate = useCallback((
+    players: Player[],
+    numberOfCourts: number,
+    previousAssignments: Court[],
+    manualCourtSelection?: ManualCourtSelection | null,
+    forceBenchPlayerIds?: Set<string>,
+  ): GenerateResult => {
+    const courts = engine().generate(players, numberOfCourts, manualCourtSelection || undefined, forceBenchPlayerIds);
+    if (courts.committed) applyCourtResults(previousAssignments);
+    return courts;
+  }, [applyCourtResults]);
+
+  const updateWinner = useCallback((params: UpdateWinnerParams): Court[] => {
+    return engine().updateWinner(params);
+  }, []);
+
+  const saveState = useCallback(async (): Promise<void> => {
+    await engine().saveState(getEngineType());
+  }, []);
+
+  const resetAlgorithm = useCallback(async (): Promise<void> => {
+    engine().resetHistory();
+    await engine().saveState(getEngineType());
+  }, []);
+
+  const levelTrend = useCallback((playerId: string) => engine().levelTrend(playerId), []);
 
   const value: AppStateContextType = {
     players,
@@ -107,9 +136,17 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     setPlayers,
     isSmartEngineEnabled,
     handleToggleSmartEngine,
-    applyCourtResults,
-    winCounts,
-    lossCounts,
+    winCounts: counts.wins,
+    lossCounts: counts.losses,
+    benchCounts: counts.bench,
+    engineState,
+    levelTrend,
+    generate,
+    updateWinner,
+    saveState,
+    resetAlgorithm,
+    engineName: engine().name,
+    engineDescription: engine().description,
   };
 
   return (

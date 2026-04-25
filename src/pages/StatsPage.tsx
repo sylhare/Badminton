@@ -1,14 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-import { engine, getEngineType, setEngine } from '../engines/engineSelector';
-import { storageManager } from '../utils/StorageManager';
+import { useAppState } from '../providers/AppStateProvider';
 import TeammateGraph from '../components/graphs/TeammateGraph';
 import SinglesGraph from '../components/graphs/SinglesGraph';
 import BenchGraph from '../components/graphs/BenchGraph';
 import PairsGraph from '../components/graphs/PairsGraph';
 import LevelHistoryGraph from '../components/graphs/LevelHistoryGraph';
-import type { CourtEngineState, Player } from '../types';
 import './StatsPage.css';
 
 type CountMap = Record<string, number>;
@@ -65,26 +63,7 @@ interface DiagnosticStats {
 }
 
 function StatsPage(): React.ReactElement {
-  const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [isSmartEngine, setIsSmartEngine] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      const appState = await storageManager.loadApp();
-      const smart = appState.isSmartEngineEnabled ?? false;
-      setIsSmartEngine(smart);
-      const engineType = smart ? 'sl' : 'sa';
-      setEngine(engineType);
-      await engine().loadState(engineType);
-      setEngineState(engine().prepareStateForSaving(engineType));
-      if (appState.players) setPlayers(appState.players);
-    };
-    load();
-    return engine().onStateChange(() => {
-      setEngineState(engine().prepareStateForSaving(getEngineType()));
-    });
-  }, []);
+  const { players, isSmartEngineEnabled: isSmartEngine, engineState, engineName, engineDescription } = useAppState();
 
   const basePath = import.meta.env.BASE_URL || '/';
 
@@ -300,9 +279,9 @@ function StatsPage(): React.ReactElement {
           <Link to="/" className="back-link" data-testid="back-to-app">
             ← Back to App
           </Link>
-          <h1>{engine().getName()} Diagnostics</h1>
+          <h1>{engineName} Diagnostics</h1>
           <p className="stats-subtitle">
-            {engine().getDescription()}
+            {engineDescription}
           </p>
         </header>
 

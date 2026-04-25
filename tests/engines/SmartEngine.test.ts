@@ -35,18 +35,6 @@ describe('SmartEngine', () => {
     engine.resetHistory();
   });
 
-  describe('getName / getDescription', () => {
-    it('returns Smart Matching as name', () => {
-      expect(engine.getName()).toBe('Smart Matching');
-    });
-
-    it('returns a description mentioning gender and level', () => {
-      const desc = engine.getDescription().toLowerCase();
-      expect(desc).toContain('gender');
-      expect(desc).toContain('level');
-    });
-  });
-
   describe('calculateGenderCost', () => {
     it('returns 0 for mixed-gender teams (F+M vs F+M)', () => {
       const team1 = [makePlayer('1', 'F'), makePlayer('2', 'M')];

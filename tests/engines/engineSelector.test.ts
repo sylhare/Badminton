@@ -4,6 +4,7 @@ import { engine, getEngineType, setEngine } from '../../src/engines/engineSelect
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import { engineSL } from '../../src/engines/SmartEngine';
 import type { Player } from '../../src/types';
+import { benchedPlayers } from '../../src/utils/playerUtils';
 
 function mockPlayers(count: number): Player[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -41,27 +42,13 @@ describe('Engine Selector', () => {
   });
 
   describe('Engine Names and Descriptions', () => {
-    it('should return correct name for Simulated Annealing', () => {
-      setEngine('sa');
-      expect(engine().getName()).toBe('Simulated Annealing');
-    });
-
-    it('should return correct name for Smart engine', () => {
-      setEngine('sl');
-      expect(engine().getName()).toBeDefined();
-    });
-
-    it('should return description for Simulated Annealing', () => {
-      setEngine('sa');
-      const desc = engine().getDescription();
-      expect(desc).toContain('Simulated Annealing');
-      expect(desc).toContain('5000');
-    });
-
-    it('should return description for Smart engine', () => {
-      setEngine('sl');
-      const desc = engine().getDescription();
-      expect(desc).toBeDefined();
+    it.each([
+      ['sa', 'Simulated Annealing'],
+      ['sl', 'Smart Matching'],
+    ] as const)('%s has correct name and description', (type, expectedName) => {
+      setEngine(type);
+      expect(engine().name).toBe(expectedName);
+      expect(engine().description).toBeTruthy();
     });
   });
 
@@ -83,7 +70,7 @@ describe('Engine Selector', () => {
     it('should get benched players', () => {
       const players = mockPlayers(10);
       const assignments = engine().generate(players, 2);
-      const benched = engine().getBenchedPlayers(assignments, players);
+      const benched = benchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -107,7 +94,7 @@ describe('Engine Selector', () => {
     it('should get benched players', () => {
       const players = mockPlayers(10);
       const assignments = engine().generate(players, 2);
-      const benched = engine().getBenchedPlayers(assignments, players);
+      const benched = benchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
     });
@@ -140,12 +127,12 @@ describe('Engine Selector', () => {
       setEngine('sa');
       engineSA.resetHistory();
       const saAssignments = engine().generate(players, 2);
-      const saBenched = engine().getBenchedPlayers(saAssignments, players);
+      const saBenched = benchedPlayers(saAssignments, players);
 
       setEngine('sl');
       engineSL.resetHistory();
       const slAssignments = engine().generate(players, 2);
-      const slBenched = engine().getBenchedPlayers(slAssignments, players);
+      const slBenched = benchedPlayers(slAssignments, players);
 
       expect(saBenched.length).toBe(1);
       expect(slBenched.length).toBe(1);

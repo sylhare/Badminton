@@ -18,13 +18,8 @@ import { CourtAssignmentTracker } from './CourtAssignmentTracker';
  */
 export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker implements ICourtAssignmentEngine {
 
-  abstract getDescription(): string;
-
-  abstract getName(): string;
-
-  supportsScoreTracking(): boolean {
-    return false;
-  }
+  abstract readonly name: string;
+  abstract readonly description: string;
 
   /**
    * Generates court assignments for a set of players.

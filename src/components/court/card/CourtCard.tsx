@@ -4,7 +4,6 @@ import type { Court } from '../../../types';
 import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
 import ScoreInputModal from '../../modals/ScoreInputModal';
-import { engine } from '../../../engines/engineSelector';
 import { useAnalytics } from '../../../hooks/useAnalytics';
 
 import CourtHeader from './CourtHeader';
@@ -16,6 +15,7 @@ interface CourtCardProps {
   onRotateTeams?: (courtNumber: number) => void;
   isManualCourt?: boolean;
   isAnimating?: boolean;
+  isSmartEngineEnabled?: boolean;
 }
 
 const CourtCard: React.FC<CourtCardProps> = ({
@@ -25,6 +25,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   onRotateTeams,
   isManualCourt = false,
   isAnimating = false,
+  isSmartEngineEnabled = false,
 }) => {
   const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
   const clickCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -36,7 +37,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
     if (court.winner === teamNumber) {
       onWinnerChange(court.courtNumber, teamNumber);
       onScoreChange?.(court.courtNumber, undefined);
-    } else if (!engine().supportsScoreTracking()) {
+    } else if (!isSmartEngineEnabled) {
       onWinnerChange(court.courtNumber, teamNumber);
       triggerConfetti(event.clientX, event.clientY, 30);
     } else {

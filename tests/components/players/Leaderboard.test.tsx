@@ -1,10 +1,14 @@
 import React from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import Leaderboard from '../../../src/components/players/Leaderboard';
 import type { Player } from '../../../src/types';
 import { TEST_PLAYERS } from '../../data/testData';
+
+vi.mock('../../../src/providers/AppStateProvider', () => ({
+  useAppState: () => ({ levelTrend: () => null, isSmartEngineEnabled: false }),
+}));
 
 describe('Leaderboard Component', () => {
   const mockPlayers = TEST_PLAYERS.slice(0, 2);

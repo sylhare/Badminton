@@ -59,13 +59,13 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
         if (currentCost < bestCost) {
           best = this.cloneCourts(current);
           bestCost = currentCost;
-          if (bestCost === 0) console.log(`[${this.getName()} ANNEAL] Found 0 cost at iteration ${i}, temp ${temperature.toFixed(2)}`);
+          if (bestCost === 0) console.log(`[${this.name} ANNEAL] Found 0 cost at iteration ${i}, temp ${temperature.toFixed(2)}`);
         }
       }
 
       temperature *= this.COOLING_RATE;
     }
-    console.log(`[${this.getName()} ANNEAL] Finished. Best cost: ${bestCost}`);
+    console.log(`[${this.name} ANNEAL] Finished. Best cost: ${bestCost}`);
     return best;
   }
 

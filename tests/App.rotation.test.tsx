@@ -52,7 +52,7 @@ describe('Team rotation', () => {
       await clickTeam(user, screen.getAllByText('Team 1')[0]);
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
-      const winsBefore = Array.from(engine().getWinCounts().values()).reduce((sum, w) => sum + w, 0);
+      const winsBefore = Array.from(engine().stats().winCountMap.values()).reduce((sum, w) => sum + w, 0);
       expect(winsBefore).toBe(2);
 
       await act(async () => {
@@ -61,7 +61,7 @@ describe('Team rotation', () => {
       });
 
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
-      const winsAfter = Array.from(engine().getWinCounts().values()).reduce((sum, w) => sum + w, 0);
+      const winsAfter = Array.from(engine().stats().winCountMap.values()).reduce((sum, w) => sum + w, 0);
       expect(winsAfter).toBe(0);
     });
   });
@@ -77,11 +77,11 @@ describe('Team rotation', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      expect(engine().getWinCounts().size).toBe(0);
+      expect(engine().stats().winCountMap.size).toBe(0);
 
       await clickTeam(user, screen.getAllByText('Team 1')[0]);
 
-      const winCounts = engine().getWinCounts();
+      const winCounts = engine().stats().winCountMap;
       const winners = Array.from(winCounts.entries()).filter(([, count]) => count > 0);
       expect(winners).toHaveLength(2);
       winners.forEach(([, count]) => expect(count).toBe(1));
@@ -97,7 +97,7 @@ describe('Team rotation', () => {
 
       await clickTeam(user, screen.getAllByText('Team 1')[0]);
       const firstWinnerIds = new Set(
-        Array.from(engine().getWinCounts().entries())
+        Array.from(engine().stats().winCountMap.entries())
           .filter(([, count]) => count > 0)
           .map(([id]) => id),
       );
@@ -106,12 +106,12 @@ describe('Team rotation', () => {
 
       await clickTeam(user, screen.getAllByText('Team 1')[0]);
       const secondWinnerIds = new Set(
-        Array.from(engine().getWinCounts().entries())
+        Array.from(engine().stats().winCountMap.entries())
           .filter(([, count]) => count > 0)
           .map(([id]) => id),
       );
 
-      const totalWins = Array.from(engine().getWinCounts().values()).reduce((sum, w) => sum + w, 0);
+      const totalWins = Array.from(engine().stats().winCountMap.values()).reduce((sum, w) => sum + w, 0);
       expect(totalWins).toBe(2);
 
       const sameSet =
@@ -127,7 +127,7 @@ describe('Team rotation', () => {
 
       await clickTeam(user, screen.getAllByText('Team 1')[0]);
 
-      const winsAfterFirstClick = Array.from(engine().getWinCounts().values())
+      const winsAfterFirstClick = Array.from(engine().stats().winCountMap.values())
         .reduce((sum, w) => sum + w, 0);
       expect(winsAfterFirstClick).toBe(2);
 
@@ -138,7 +138,7 @@ describe('Team rotation', () => {
 
       await clickTeam(user, screen.getAllByText('Team 1')[0]);
 
-      const winCounts = engine().getWinCounts();
+      const winCounts = engine().stats().winCountMap;
       const totalWins = Array.from(winCounts.values()).reduce((sum, w) => sum + w, 0);
       expect(totalWins).toBe(2);
     });
@@ -161,7 +161,7 @@ describe('Team rotation', () => {
       await generateAndWaitForAssignments(user);
       await rapidRegenerate();
 
-      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      const totalBenched = [...engine().stats().benchCountMap.values()].reduce((s, n) => s + n, 0);
       expect(totalBenched).toBe(1);
     });
 
@@ -182,7 +182,7 @@ describe('Team rotation', () => {
       });
       await rapidRegenerate();
 
-      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      const totalBenched = [...engine().stats().benchCountMap.values()].reduce((s, n) => s + n, 0);
       expect(totalBenched).toBe(1);
     });
 
@@ -192,7 +192,7 @@ describe('Team rotation', () => {
       await generateAndWaitForAssignments(user);
       await rapidRegenerate();
 
-      const totalPairs = [...engine().getStats().teammateCountMap.values()].reduce((s, n) => s + n, 0);
+      const totalPairs = [...engine().stats().teammateCountMap.values()].reduce((s, n) => s + n, 0);
       expect(totalPairs).toBeGreaterThan(0);
     });
 
@@ -204,7 +204,7 @@ describe('Team rotation', () => {
       await clickTeam(user, screen.getAllByText('Team 1')[0]);
       await regenerate();
 
-      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      const totalBenched = [...engine().stats().benchCountMap.values()].reduce((s, n) => s + n, 0);
       expect(totalBenched).toBe(2);
     });
 
@@ -216,7 +216,7 @@ describe('Team rotation', () => {
       await clickTeam(user, screen.getAllByText('Team 1')[0]);
       await regenerate();
 
-      const totalPairs = [...engine().getStats().teammateCountMap.values()].reduce((s, n) => s + n, 0);
+      const totalPairs = [...engine().stats().teammateCountMap.values()].reduce((s, n) => s + n, 0);
       expect(totalPairs).toBeGreaterThan(0);
     });
 
@@ -232,7 +232,7 @@ describe('Team rotation', () => {
 
       await regenerate();
 
-      expect(engine().getRoundsPlayed()).toBe(1);
+      expect(engine().stats().roundsPlayed).toBe(1);
     });
 
     it('rapid regen × 2 (no winner) then regen with winner commits only 2 rounds of bench stats', async () => {
@@ -246,7 +246,7 @@ describe('Team rotation', () => {
 
       await regenerate();
 
-      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      const totalBenched = [...engine().stats().benchCountMap.values()].reduce((s, n) => s + n, 0);
       expect(totalBenched).toBe(2);
     });
 
@@ -262,7 +262,7 @@ describe('Team rotation', () => {
 
       await regenerate();
 
-      const totalBenched = [...engine().getBenchCounts().values()].reduce((s, n) => s + n, 0);
+      const totalBenched = [...engine().stats().benchCountMap.values()].reduce((s, n) => s + n, 0);
       expect(totalBenched).toBe(2);
     });
   });
@@ -280,7 +280,7 @@ describe('Team rotation', () => {
 
       await rotate();
       const pairsAfterFirst = new Set(
-        [...engine().getStats().teammateCountMap.entries()]
+        [...engine().stats().teammateCountMap.entries()]
           .filter(([, count]) => count > 0)
           .map(([pair]) => pair),
       );
@@ -288,7 +288,7 @@ describe('Team rotation', () => {
 
       await rotate();
       const pairsAfterSecond = new Set(
-        [...engine().getStats().teammateCountMap.entries()]
+        [...engine().stats().teammateCountMap.entries()]
           .filter(([, count]) => count > 0)
           .map(([pair]) => pair),
       );
@@ -306,7 +306,7 @@ describe('Team rotation', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      const opponents = [...engine().getStats().opponentCountMap.entries()]
+      const opponents = [...engine().stats().opponentCountMap.entries()]
         .filter(([, count]) => count > 0);
       expect(opponents).toHaveLength(4);
       opponents.forEach(([, count]) => expect(count).toBe(1));

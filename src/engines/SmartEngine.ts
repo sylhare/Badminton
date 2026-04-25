@@ -16,17 +16,8 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
   protected readonly LEVEL_BALANCE_PENALTY = 250;
   protected readonly LEVEL_PAIR_BIAS = 120;
 
-  getName(): string {
-    return 'Smart Matching';
-  }
-
-  supportsScoreTracking(): boolean {
-    return true;
-  }
-
-  getDescription(): string {
-    return 'Gender/Level-aware matching. Avoids gender-homogeneous matchups (FF vs MM) and extreme level gaps. Includes a small bias for similar-level teammates.';
-  }
+  readonly name = 'Smart Matching';
+  readonly description = 'Gender/Level-aware matching. Avoids gender-homogeneous matchups (FF vs MM) and extreme level gaps. Includes a small bias for similar-level teammates.';
 
   protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
     let cost = 0;

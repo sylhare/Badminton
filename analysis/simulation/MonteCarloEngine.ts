@@ -15,13 +15,8 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
     if (typeof params.samplesPerRound === 'number') this.MAX_ATTEMPTS = params.samplesPerRound;
   }
 
-  getName(): string {
-    return 'Monte Carlo';
-  }
-
-  getDescription(): string {
-    return 'Monte Carlo sampling with greedy evaluation. Generates 300 random candidate assignments and selects the one with lowest cost.';
-  }
+  readonly name = 'Monte Carlo';
+  readonly description = 'Monte Carlo sampling with greedy evaluation. Generates 300 random candidate assignments and selects the one with lowest cost.';
 
   protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     this.costCache.clear();
