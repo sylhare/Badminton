@@ -5,7 +5,7 @@ export default defineConfig(({ command }) => ({
   plugins: [react()],
   base: command === 'build' ? '/Badminton/' : '/',
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
