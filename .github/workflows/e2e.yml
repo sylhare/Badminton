@@ -13,7 +13,7 @@ on:
       - 'playwright.config.ts'
       - '.github/workflows/**'
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
     branches: [ main ]
     paths:
       - 'src/**'
@@ -25,10 +25,16 @@ on:
 
 jobs:
   e2e-tests:
-    timeout-minutes: 60
+    name: E2E (${{ matrix.browser }})
+    timeout-minutes: 30
     runs-on: ubuntu-latest
-    env:
-      ALL_BROWSERS: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(github.event.pull_request.labels.*.name, 'test:all-browsers')) && 'true' || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    if: |
+      matrix.browser == 'chromium' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
 
     steps:
     - uses: actions/checkout@v6
@@ -42,13 +48,7 @@ jobs:
       run: npm ci
 
     - name: Install Playwright Browsers
-      run: |
-        if [ "$ALL_BROWSERS" = "true" ]; then
-          npx playwright install --with-deps
-        else
-          npx playwright install --with-deps chromium
-        fi
+      run: npx playwright install --with-deps ${{ matrix.browser }}
 
     - name: Run Playwright tests
-      run: npm run test:e2e
-
+      run: npx playwright test --project=${{ matrix.browser }}
