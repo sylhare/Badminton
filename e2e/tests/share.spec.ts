@@ -13,21 +13,23 @@ test.describe('Session Sharing via URL', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('Share button appears after adding players', async ({ page }) => {
+  test('share button and URL state', async ({ page }) => {
     await expect(page.getByTestId('share-button')).not.toBeVisible();
     await mainPage.addPlayers(DEFAULT_PLAYERS);
-    await expect(page.getByTestId('share-button')).toBeVisible();
-  });
 
-  test('Clicking Share opens modal with URL containing ?state=', async ({ page: _page }) => {
-    await mainPage.addPlayers(DEFAULT_PLAYERS);
+    await test.step('share button appears', async () => {
+      await expect(page.getByTestId('share-button')).toBeVisible();
+    });
+
     await mainPage.openShareModal();
 
-    const urlValue = await mainPage.getShareUrl();
-    expect(urlValue).toContain('?state=');
+    await test.step('share modal URL contains ?state=', async () => {
+      const urlValue = await mainPage.getShareUrl();
+      expect(urlValue).toContain('?state=');
+    });
   });
 
-  test('Navigate to shared URL shows ImportStateModal', async ({ page }) => {
+  test('import from shared URL', async ({ page }) => {
     await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.openShareModal();
     const shareUrl = await mainPage.getShareUrl();
@@ -37,31 +39,23 @@ test.describe('Session Sharing via URL', () => {
     await page.goto(shareUrl);
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByTestId('import-state-modal')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId('shared-saved-at')).toBeVisible();
-    await expect(page.getByTestId('current-saved-at')).not.toBeVisible();
-  });
+    await test.step('import modal visible with shared metadata', async () => {
+      await expect(page.getByTestId('import-state-modal')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId('shared-saved-at')).toBeVisible();
+      await expect(page.getByTestId('current-saved-at')).not.toBeVisible();
+    });
 
-  test('Accept import loads players from shared state', async ({ page }) => {
-    await mainPage.addPlayers(DEFAULT_PLAYERS);
-    await mainPage.openShareModal();
-    const shareUrl = await mainPage.getShareUrl();
-
-    await page.evaluate(() => localStorage.clear());
-    await page.goto(shareUrl);
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.getByTestId('import-state-modal')).toBeVisible({ timeout: 5000 });
     await page.getByTestId('import-state-accept').click();
     await page.waitForLoadState('networkidle');
 
-    await mainPage.expandPlayersSection();
-    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Bob')).toBeVisible();
-    await expect(page.getByText('Charlie')).toBeVisible();
-    await expect(page.getByText('Diana')).toBeVisible();
-
-    expect(page.url()).not.toContain('?state=');
+    await test.step('accepting loads players from shared state', async () => {
+      await mainPage.expandPlayersSection();
+      await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText('Bob')).toBeVisible();
+      await expect(page.getByText('Charlie')).toBeVisible();
+      await expect(page.getByText('Diana')).toBeVisible();
+      expect(page.url()).not.toContain('?state=');
+    });
   });
 
   test('Decline import keeps original session and cleans URL', async ({ page }) => {

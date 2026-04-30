@@ -47,7 +47,7 @@ test.describe('Leaderboard', () => {
     await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).not.toBeVisible();
   });
 
-  test('Player deletion removes player from leaderboard immediately and persists after reload', async ({ page }) => {
+  test('player deletion cleans up leaderboard', async ({ page }) => {
     await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.generateAssignments(1);
     await mainPage.court(1).selectWinner();

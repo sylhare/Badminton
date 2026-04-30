@@ -20,42 +20,40 @@ test.describe('Tournament Page', () => {
     await expect(page.locator('h1')).toContainText('Tournament');
   });
 
-  test('setup flow - present players pre-selected', async ({ page }) => {
+  test('tournament setup flow', async ({ page }) => {
     await tournamentPage.setup(DEFAULT_PLAYERS);
 
-    await expect(page.locator('h1')).toContainText('Tournament');
-    await expect(page.getByTestId('player-selection').getByText('Alice')).toBeVisible();
-    await expect(page.getByTestId('player-selection').getByText('Bob')).toBeVisible();
-  });
+    await test.step('present players are pre-selected', async () => {
+      await expect(page.locator('h1')).toContainText('Tournament');
+      await expect(page.getByTestId('player-selection').getByText('Alice')).toBeVisible();
+      await expect(page.getByTestId('player-selection').getByText('Bob')).toBeVisible();
+    });
 
-  test('format switch: singles vs doubles updates team display', async ({ page }) => {
-    await tournamentPage.setup(DEFAULT_PLAYERS);
+    await test.step('format switch: singles vs doubles updates team display', async () => {
+      await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(2);
 
-    await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(2);
+      await page.getByTestId('format-pill-singles').click();
+      await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(4);
 
-    await page.getByTestId('format-pill-singles').click();
-    await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(4);
+      await page.getByTestId('format-pill-doubles').click();
+      await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(2);
+    });
 
-    await page.getByTestId('format-pill-doubles').click();
-    await expect(page.locator('[data-testid^="team-card-"]')).toHaveCount(2);
-  });
+    await test.step('team swap: click two slots swaps players', async () => {
+      const slot00 = page.getByTestId('player-slot-0-0');
+      const slot10 = page.getByTestId('player-slot-1-0');
 
-  test('team swap: click two slots swaps players', async ({ page }) => {
-    await tournamentPage.setup(DEFAULT_PLAYERS);
+      await expect(slot00).toContainText('Alice');
+      await expect(slot10).toContainText('Charlie');
 
-    const slot00 = page.getByTestId('player-slot-0-0');
-    const slot10 = page.getByTestId('player-slot-1-0');
+      await slot00.click();
+      await expect(slot00).toHaveClass(/swap-selected/);
 
-    await expect(slot00).toContainText('Alice');
-    await expect(slot10).toContainText('Charlie');
+      await slot10.click();
 
-    await slot00.click();
-    await expect(slot00).toHaveClass(/swap-selected/);
-
-    await slot10.click();
-
-    await expect(page.getByTestId('player-slot-0-0')).toContainText('Charlie');
-    await expect(page.getByTestId('player-slot-1-0')).toContainText('Alice');
+      await expect(page.getByTestId('player-slot-0-0')).toContainText('Charlie');
+      await expect(page.getByTestId('player-slot-1-0')).toContainText('Alice');
+    });
   });
 
   test('odd player count in doubles disables Start Tournament', async ({ page }) => {

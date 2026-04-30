@@ -45,7 +45,7 @@ test.describe('Stats Page', () => {
     });
   });
 
-  test('stats page empty state - no data message, notebook links and footer', async ({ page }) => {
+  test('stats page empty state', async ({ page }) => {
     await statsPage.goto();
 
     await test.step('shows no data message', async () => {
@@ -54,16 +54,31 @@ test.describe('Stats Page', () => {
       await expect(page.getByText('Start a Game →')).toBeVisible();
     });
 
-    await test.step('algorithm documentation link', async () => {
+    await test.step('algorithm documentation link visible and navigates', async () => {
       const algorithmLink = page.getByTestId('algorithm-link');
       await expect(algorithmLink).toBeVisible();
       await expect(algorithmLink).toContainText('Algorithm Documentation');
+      await algorithmLink.click();
+      await expect(page).toHaveURL(/\/algorithm/);
+      await expect(page.locator('h1')).toContainText('Algorithm Documentation');
+      await page.goBack();
     });
 
-    await test.step('engine comparison link', async () => {
+    await test.step('engine comparison link visible and navigates', async () => {
       const engineLink = page.getByTestId('engine-link');
       await expect(engineLink).toBeVisible();
       await expect(engineLink).toContainText('Engine Comparison');
+      await engineLink.click();
+      await expect(page).toHaveURL(/\/engine/);
+      await expect(page.locator('h1')).toContainText('Engine Comparison');
+      await page.goBack();
+    });
+
+    await test.step('level tracker link navigates', async () => {
+      await page.getByTestId('level-tracker-link').click();
+      await expect(page).toHaveURL(/\/level-tracker/);
+      await expect(page.locator('h1')).toContainText('Level Tracker Analysis');
+      await page.goBack();
     });
 
     await test.step('GitHub feedback link in footer', async () => {
@@ -72,31 +87,6 @@ test.describe('Stats Page', () => {
       await expect(footer.getByText('Let us know on GitHub')).toBeVisible();
       const githubLink = footer.locator('a[href*="github.com"]');
       await expect(githubLink).toHaveAttribute('href', 'https://github.com/sylhare/Badminton/issues/new/choose');
-    });
-  });
-
-  test('notebook pages - all three are accessible from stats', async ({ page }) => {
-    await statsPage.goto();
-
-    await test.step('algorithm documentation page loads', async () => {
-      await page.getByTestId('algorithm-link').click();
-      await expect(page).toHaveURL(/\/algorithm/);
-      await expect(page.locator('h1')).toContainText('Algorithm Documentation');
-      await page.goBack();
-    });
-
-    await test.step('engine comparison page loads', async () => {
-      await page.getByTestId('engine-link').click();
-      await expect(page).toHaveURL(/\/engine/);
-      await expect(page.locator('h1')).toContainText('Engine Comparison');
-      await page.goBack();
-    });
-
-    await test.step('level tracker analysis page loads', async () => {
-      await page.getByTestId('level-tracker-link').click();
-      await expect(page).toHaveURL(/\/level-tracker/);
-      await expect(page.locator('h1')).toContainText('Level Tracker Analysis');
-      await page.goBack();
     });
   });
 
