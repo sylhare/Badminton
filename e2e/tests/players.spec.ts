@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
 
 test.describe('Player Management', () => {
@@ -12,15 +13,13 @@ test.describe('Player Management', () => {
   });
 
   test('Player toggle and bench counts always visible', async ({ page }) => {
-    const players = ['Alice', 'Bob', 'Charlie', 'Diana'];
-
     await test.step('no players hint visible with disabled generate button', async () => {
       await expect(page.locator('.no-players-hint')).toBeVisible();
       await expect(page.locator('.no-players-hint')).toContainText('Add some players above');
       await expect(page.getByTestId('generate-assignments-button')).toBeDisabled();
     });
 
-    await mainPage.addPlayers(players);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
 
     await test.step('no assignments hint visible after adding players', async () => {
       await expect(page.locator('.no-assignments-hint')).toBeVisible();

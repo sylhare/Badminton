@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
 import { StatsPage } from '../support/pages/StatsPage';
 
@@ -152,7 +153,7 @@ test.describe('Stats Page', () => {
   });
 
   test('teammate network graph and repeated pairs section', async ({ page }) => {
-    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.setupGame(DEFAULT_PLAYERS);
     // 4 rounds played: with 4 players in doubles there are only 6 unique teammate pairs,
     // so 8 assignments across 4 rounds guarantees at least one repeated pair (pigeonhole).
     await mainPage.playRound();
@@ -230,7 +231,7 @@ test.describe('Stats Page', () => {
   });
 
   test('data persistence - shows data after reload, clears after localStorage clear', async ({ page }) => {
-    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.setupGame(DEFAULT_PLAYERS);
     await statsPage.goto();
 
     await test.step('shows data after page reload', async () => {

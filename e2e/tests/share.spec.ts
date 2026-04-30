@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
 
 test.describe('Session Sharing via URL', () => {
@@ -14,12 +15,12 @@ test.describe('Session Sharing via URL', () => {
 
   test('Share button appears after adding players', async ({ page }) => {
     await expect(page.getByTestId('share-button')).not.toBeVisible();
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await expect(page.getByTestId('share-button')).toBeVisible();
   });
 
   test('Clicking Share opens modal with URL containing ?state=', async ({ page: _page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.openShareModal();
 
     const urlValue = await mainPage.getShareUrl();
@@ -27,7 +28,7 @@ test.describe('Session Sharing via URL', () => {
   });
 
   test('Navigate to shared URL shows ImportStateModal', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.openShareModal();
     const shareUrl = await mainPage.getShareUrl();
     expect(shareUrl).toContain('?state=');
@@ -42,7 +43,7 @@ test.describe('Session Sharing via URL', () => {
   });
 
   test('Accept import loads players from shared state', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.openShareModal();
     const shareUrl = await mainPage.getShareUrl();
 
@@ -64,7 +65,7 @@ test.describe('Session Sharing via URL', () => {
   });
 
   test('Decline import keeps original session and cleans URL', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.openShareModal();
     const shareUrl = await mainPage.getShareUrl();
 

@@ -63,6 +63,13 @@ export class MainPage {
     await this.page.getByTestId('player-removal-modal-remove').click();
   }
 
+  /** Remove a specific player by name (expands the players section, then confirms the removal modal). */
+  async removePlayer(name: string): Promise<void> {
+    await this.expandPlayersSection();
+    await this.page.locator('.player-item').filter({ hasText: name }).locator('[data-testid^="remove-player-"]').click();
+    await this.page.getByTestId('player-removal-modal-remove').click();
+  }
+
   /** Toggle the presence state of the first player. */
   async toggleFirstPlayer(): Promise<void> {
     await this.page.locator('[data-testid^="toggle-presence-"]').first().click();

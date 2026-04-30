@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
 
 test.describe('State Persistence', () => {
@@ -12,7 +13,7 @@ test.describe('State Persistence', () => {
   });
 
   test('should persist players and presence state across reload', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await page.locator('[data-testid^="toggle-presence-"]').nth(1).click();
     await page.waitForFunction(() => !!localStorage.getItem('badminton-state'));
     await page.reload();
@@ -31,7 +32,7 @@ test.describe('State Persistence', () => {
   });
 
   test('should persist court count setting across reload', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.setCourtCount(6);
     await expect(page.getByTestId('court-count-input')).toHaveValue('6');
 
@@ -56,7 +57,7 @@ test.describe('State Persistence', () => {
   });
 
   test('should collapse Manage Players section on reload when players exist', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await page.waitForFunction(() => !!localStorage.getItem('badminton-state'));
     await page.reload();
     await expect(page.getByTestId('manage-players-section')).toHaveClass(/collapsed/);
@@ -67,7 +68,7 @@ test.describe('State Persistence', () => {
   });
 
   test('should clear all data when clear all is confirmed and stay clear after reload', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.generateAssignments();
 
     await mainPage.expandPlayersSection();
@@ -82,7 +83,7 @@ test.describe('State Persistence', () => {
   });
 
   test('should persist reset algorithm state across reload', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.generateAssignments();
 
     await mainPage.expandPlayersSection();
@@ -97,7 +98,7 @@ test.describe('State Persistence', () => {
   });
 
   test('App resilience after session data loss', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
     await mainPage.generateAssignments(1);
 
@@ -171,7 +172,7 @@ test.describe('Leaderboard Persistence', () => {
   });
 
   test('should persist leaderboard data across reload', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.generateAssignments();
     await mainPage.court(1).selectWinner();
 

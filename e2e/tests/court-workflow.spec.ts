@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { expect, test } from '@playwright/test';
 
 import { MainPage } from '../support/pages/MainPage';
-import { BULK_PLAYERS, completeWorkflow, SINGLE_PLAYERS } from '../support/helpers';
+import { BULK_PLAYERS, completeWorkflow, DEFAULT_PLAYERS, SINGLE_PLAYERS } from '../support/helpers';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -201,7 +201,7 @@ test.describe('Court Workflow', () => {
 
   test.describe('Team Rotation', () => {
     test('Team rotation button changes team pairs and clears winner', async ({ page }) => {
-      await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.generateAssignments(1);
 
       const court1 = mainPage.court(1);
@@ -232,7 +232,7 @@ test.describe('Court Workflow', () => {
     });
 
     test('Leaderboard reflects rotated team winners, not original team', async ({ page }) => {
-      await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.generateAssignments(1);
 
       const court1 = mainPage.court(1);

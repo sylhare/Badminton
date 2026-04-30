@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
 
 test.describe('Leaderboard', () => {
@@ -12,7 +13,7 @@ test.describe('Leaderboard', () => {
   });
 
   test('Leaderboard updates in real-time when changing winners', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await expect(page.getByTestId('stats-total-count')).toHaveText('4');
     await mainPage.generateAssignments(1);
 
@@ -47,7 +48,7 @@ test.describe('Leaderboard', () => {
   });
 
   test('Player deletion removes player from leaderboard immediately and persists after reload', async ({ page }) => {
-    await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
     await mainPage.generateAssignments(1);
     await mainPage.court(1).selectWinner();
 
@@ -56,10 +57,7 @@ test.describe('Leaderboard', () => {
     const names = await mainPage.getLeaderboardPlayerNames();
     const winningPlayerName = names[0];
 
-    await mainPage.expandPlayersSection();
-    const playerRow = page.locator('.player-item').filter({ hasText: winningPlayerName });
-    await playerRow.locator('[data-testid^="remove-player-"]').click();
-    await page.getByTestId('player-removal-modal-remove').click();
+    await mainPage.removePlayer(winningPlayerName);
     await page.waitForTimeout(200);
 
     await test.step('player removed from leaderboard immediately', async () => {

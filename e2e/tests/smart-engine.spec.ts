@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
-
-const PLAYERS = ['Alice', 'Bob', 'Charlie', 'Diana'];
 
 test.describe('Smart Engine', () => {
   let mainPage: MainPage;
@@ -87,7 +86,7 @@ test.describe('Smart Engine', () => {
 
   test.describe('Score input modal', () => {
     test.beforeEach(async ({ page: _page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
     });
@@ -124,7 +123,7 @@ test.describe('Smart Engine', () => {
 
   test.describe('Enhanced Leaderboard', () => {
     test('Level / Avg Pts / Matches column headers visible in smart mode', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.setCourtCount(1);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
@@ -139,7 +138,7 @@ test.describe('Smart Engine', () => {
     });
 
     test('after a scored game, Avg Pts shows a numeric value', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.generateAssignments(1);
       await mainPage.toggleSmartEngine();
 
@@ -158,7 +157,7 @@ test.describe('Smart Engine', () => {
 
   test.describe('Level Trend Indicator', () => {
     test.beforeEach(async ({ page: _page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
     });
@@ -184,7 +183,7 @@ test.describe('Smart Engine', () => {
 
   test.describe('Stats Integration', () => {
     test('TeammateGraph shows gender legend when smart engine is enabled', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
 
@@ -202,7 +201,7 @@ test.describe('Smart Engine', () => {
     });
 
     test('normal mode - no Level column, no gender legend, no Level Progression', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.generateAssignments(1);
       await page.locator('.team-clickable').first().click();
 
@@ -226,7 +225,7 @@ test.describe('Smart Engine', () => {
     });
 
     test('Level Progression section shows updated lines after a scored round', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
 
@@ -248,7 +247,7 @@ test.describe('Smart Engine', () => {
     });
 
     test('Level Progression section appears after first generate even without winners', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
 

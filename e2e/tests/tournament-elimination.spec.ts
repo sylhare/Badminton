@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
 import { TournamentPage } from '../support/pages/TournamentPage';
 
@@ -22,7 +23,7 @@ test.describe('Tournament Page - Elimination', () => {
   });
 
   test('full 4-player elimination tournament (singles)', async ({ page }) => {
-    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await tournamentPage.setup(DEFAULT_PLAYERS);
     await page.getByTestId('format-pill-singles').click();
     await tournamentPage.selectType('elimination');
     await tournamentPage.startElimination();
@@ -106,7 +107,7 @@ test.describe('Tournament Page - Elimination', () => {
   });
 
   test('elimination tournament state persists across reload', async ({ page }) => {
-    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await tournamentPage.setup(DEFAULT_PLAYERS);
     await page.getByTestId('format-pill-singles').click();
     await tournamentPage.selectType('elimination');
     await tournamentPage.startElimination();
@@ -121,7 +122,7 @@ test.describe('Tournament Page - Elimination', () => {
   });
 
   test('can switch back to round-robin after resetting elimination tournament', async ({ page }) => {
-    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await tournamentPage.setup(DEFAULT_PLAYERS);
     await page.getByTestId('format-pill-singles').click();
     await tournamentPage.selectType('elimination');
     await tournamentPage.startElimination();
@@ -139,7 +140,7 @@ test.describe('Tournament Page - Elimination', () => {
   });
 
   test('tbd nodes render for future rounds before results are entered', async ({ page }) => {
-    await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await tournamentPage.setup(DEFAULT_PLAYERS);
     await page.getByTestId('format-pill-singles').click();
     await tournamentPage.selectType('elimination');
     await tournamentPage.startElimination();
