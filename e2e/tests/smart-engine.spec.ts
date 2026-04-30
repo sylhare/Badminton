@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
-
-const PLAYERS = ['Alice', 'Bob', 'Charlie', 'Diana'];
 
 test.describe('Smart Engine', () => {
   let mainPage: MainPage;
@@ -87,14 +86,9 @@ test.describe('Smart Engine', () => {
 
   test.describe('Score input modal', () => {
     test.beforeEach(async ({ page: _page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
-    });
-
-    test('clicking a team opens score-input-modal', async ({ page }) => {
-      await page.locator('.team-clickable').first().click();
-      await expect(page.getByTestId('score-input-modal')).toBeVisible();
     });
 
     test('cancelling does not set a winner', async ({ page }) => {
@@ -128,68 +122,64 @@ test.describe('Smart Engine', () => {
   });
 
   test.describe('Enhanced Leaderboard', () => {
-    test('Level / Avg Pts / Matches column headers visible in smart mode', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
-      await mainPage.setCourtCount(1);
+    test('smart mode leaderboard', async ({ page }) => {
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
-
-      await page.locator('.team-clickable').first().click();
-      await expect(page.getByTestId('score-input-modal')).toBeVisible();
-      await page.getByTestId('score-modal-confirm').click();
-
-      await expect(page.getByTestId('leaderboard-level-header')).toBeVisible();
-      await expect(page.getByTestId('leaderboard-avg-pts-header')).toBeVisible();
-      await expect(page.getByTestId('leaderboard-matches-header')).toBeVisible();
-    });
-
-    test('after a scored game, Avg Pts shows a numeric value', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
-      await mainPage.generateAssignments(1);
-      await mainPage.toggleSmartEngine();
 
       await page.locator('.team-clickable').first().click();
       await mainPage.enterScore('21', '15');
 
+      await test.step('Level / Avg Pts / Matches column headers visible', async () => {
+        await expect(page.getByTestId('leaderboard-level-header')).toBeVisible();
+        await expect(page.getByTestId('leaderboard-avg-pts-header')).toBeVisible();
+        await expect(page.getByTestId('leaderboard-matches-header')).toBeVisible();
+      });
+
       await mainPage.regenerate();
-      await page.waitForTimeout(300);
-      const firstRow = page.locator('.leaderboard-table tbody tr').first();
-      await expect(firstRow).toBeVisible();
-      const avgPts = await firstRow.locator('td').nth(3).textContent();
-      expect(avgPts).not.toBe('—');
-      expect(parseFloat(avgPts ?? '')).toBeGreaterThan(0);
+
+      await test.step('avg pts shows a numeric value after a scored game', async () => {
+        const firstRow = page.locator('.leaderboard-table tbody tr').first();
+        await expect(firstRow).toBeVisible();
+        const avgPtsCell = firstRow.locator('td').nth(3);
+        await expect(avgPtsCell).not.toHaveText('—');
+        const avgPts = await avgPtsCell.textContent();
+        expect(parseFloat(avgPts ?? '')).toBeGreaterThan(0);
+      });
     });
   });
 
   test.describe('Level Trend Indicator', () => {
     test.beforeEach(async ({ page: _page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
     });
 
-    test('shows ▲/▼ in leaderboard level column after second round', async ({ page }) => {
+    test('▲/▼ trend indicators', async ({ page }) => {
+      await page.locator('.team-clickable').first().click();
+      await page.getByTestId('score-modal-confirm').click();
+
+      await test.step('no ▲/▼ on first round — only one snapshot', async () => {
+        await expect(page.locator('.leaderboard-table .trend-up')).toHaveCount(0);
+        await expect(page.locator('.leaderboard-table .trend-down')).toHaveCount(0);
+      });
+
+      await mainPage.regenerate();
       await page.locator('.team-clickable').first().click();
       await mainPage.enterScore('21', '10');
       await mainPage.regenerate();
 
-      const trendIndicator = page.locator('.leaderboard-table .trend-up, .leaderboard-table .trend-down');
-      await expect(trendIndicator.first()).toBeVisible();
-    });
-
-    test('no ▲/▼ on first round (only one snapshot)', async ({ page }) => {
-      await page.locator('.team-clickable').first().click();
-      await expect(page.getByTestId('score-input-modal')).toBeVisible();
-      await page.getByTestId('score-modal-confirm').click();
-
-      await expect(page.locator('.leaderboard-table .trend-up')).toHaveCount(0);
-      await expect(page.locator('.leaderboard-table .trend-down')).toHaveCount(0);
+      await test.step('▲/▼ appears in leaderboard after second scored round', async () => {
+        const trendIndicator = page.locator('.leaderboard-table .trend-up, .leaderboard-table .trend-down');
+        await expect(trendIndicator.first()).toBeVisible();
+      });
     });
   });
 
   test.describe('Stats Integration', () => {
     test('TeammateGraph shows gender legend when smart engine is enabled', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
 
@@ -207,7 +197,7 @@ test.describe('Smart Engine', () => {
     });
 
     test('normal mode - no Level column, no gender legend, no Level Progression', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.generateAssignments(1);
       await page.locator('.team-clickable').first().click();
 
@@ -231,7 +221,7 @@ test.describe('Smart Engine', () => {
     });
 
     test('Level Progression section shows updated lines after a scored round', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
 
@@ -253,7 +243,7 @@ test.describe('Smart Engine', () => {
     });
 
     test('Level Progression section appears after first generate even without winners', async ({ page }) => {
-      await mainPage.addPlayers(PLAYERS);
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
       await mainPage.generateAssignments(1);
 

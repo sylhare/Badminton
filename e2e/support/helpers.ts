@@ -2,6 +2,9 @@ import { expect, Page } from '@playwright/test';
 
 import type { MainPage } from '../support/pages/MainPage';
 
+/** Default 4-player list used across most tests. */
+export const DEFAULT_PLAYERS = ['Alice', 'Bob', 'Charlie', 'Diana'];
+
 /** Sample player names for bulk testing */
 export const BULK_PLAYERS = [
   'Alice Johnson',

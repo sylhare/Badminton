@@ -23,7 +23,7 @@ export class CourtCard {
         : this.locator.locator('.team-clickable').last();
     await expect(team).toBeVisible();
     await team.click();
-    await this.page.waitForTimeout(200);
+    await expect(this.locator.locator('.crown')).toBeVisible();
   }
 
   /** Clicks the rotate-teams button on this court. */
@@ -31,6 +31,6 @@ export class CourtCard {
     const btn = this.page.getByTestId('rotate-teams-button');
     await expect(btn).toBeVisible();
     await btn.click();
-    await this.page.waitForTimeout(200);
+    await expect(this.locator.locator('.crown')).not.toBeVisible();
   }
 }

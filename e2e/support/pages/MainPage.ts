@@ -39,7 +39,7 @@ export class MainPage {
     await expect(input).toBeVisible();
     await input.fill(players.join(','));
     await this.page.getByTestId('add-player-button').click();
-    await this.page.waitForTimeout(100);
+    await expect(input).toHaveValue('');
   }
 
   /** Add a single player. */
@@ -49,19 +49,24 @@ export class MainPage {
 
   /** Expand the Manage Players section if it is currently collapsed. */
   async expandPlayersSection(): Promise<void> {
-    const header = this.page.locator('h2').filter({ hasText: /Manage Players/ });
-    const isCollapsed = await header
-      .locator('..')
-      .evaluate(el => el.closest('.section')?.classList.contains('collapsed'));
-    if (isCollapsed) {
-      await header.click();
-      await this.page.waitForTimeout(200);
-    }
+    await this.page
+      .locator('[data-testid="manage-players-section"].collapsed h2')
+      .filter({ hasText: /Manage Players/ })
+      .click({ timeout: 500 })
+      .catch(() => {});
+    await expect(this.page.getByTestId('manage-players-section')).not.toHaveClass(/collapsed/);
   }
 
   /** Remove the first player in the list (opens and confirms the removal modal). */
   async removeFirstPlayer(): Promise<void> {
     await this.page.locator('[data-testid^="remove-player-"]').first().click();
+    await this.page.getByTestId('player-removal-modal-remove').click();
+  }
+
+  /** Remove a specific player by name (expands the players section, then confirms the removal modal). */
+  async removePlayer(name: string): Promise<void> {
+    await this.expandPlayersSection();
+    await this.page.locator('.player-item').filter({ hasText: name }).locator('[data-testid^="remove-player-"]').click();
     await this.page.getByTestId('player-removal-modal-remove').click();
   }
 
@@ -152,7 +157,7 @@ export class MainPage {
   async setupGame(players: string[]): Promise<void> {
     await this.addPlayers(players);
     await this.page.getByTestId('generate-assignments-button').click();
-    await this.page.waitForTimeout(300);
+    await expect(this.page.locator('.court-card').first()).toBeVisible({ timeout: 5000 });
   }
 
   /**
@@ -162,6 +167,6 @@ export class MainPage {
   async playRound(): Promise<void> {
     await this.page.locator('.team-clickable').first().click();
     await this.page.getByTestId('generate-assignments-button').click();
-    await this.page.waitForTimeout(200);
+    await expect(this.page.locator('.court-card').first()).toBeVisible({ timeout: 5000 });
   }
 }
