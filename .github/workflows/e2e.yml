@@ -54,7 +54,7 @@ jobs:
       run: npx playwright test --project=chromium
 
   e2e-main:
-    name: E2E (${{ matrix.browser }})
+    name: E2E (all browsers)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 30
     runs-on: ubuntu-latest
