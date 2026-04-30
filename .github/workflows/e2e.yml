@@ -2,6 +2,12 @@ name: E2E Tests
 
 on:
   workflow_call:
+    inputs:
+      base_url:
+        description: 'Base URL for e2e tests (defaults to localhost dev server)'
+        required: false
+        type: string
+        default: ''
   push:
     branches: [ main ]
     paths:
@@ -27,7 +33,7 @@ on:
 jobs:
   e2e-pr:
     name: E2E (chromium)
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_call'
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +58,8 @@ jobs:
 
     - name: Run Playwright tests
       run: npx playwright test --project=chromium
+      env:
+        E2E_BASE_URL: ${{ inputs.base_url }}
 
   e2e-main:
     name: E2E (all browsers)
