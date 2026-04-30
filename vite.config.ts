@@ -5,11 +5,15 @@ export default defineConfig(({ command }) => ({
   plugins: [react()],
   base: command === 'build' ? '/Badminton/' : '/',
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-icons': ['@phosphor-icons/react'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/@phosphor-icons/react')) {
+            return 'vendor-icons';
+          }
         },
       },
     },
