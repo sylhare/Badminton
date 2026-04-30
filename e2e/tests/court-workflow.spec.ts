@@ -29,7 +29,6 @@ test.describe('Court Workflow', () => {
       });
 
       await page.getByTestId('add-player-button').click();
-      await page.waitForTimeout(100);
 
       await expect(page.getByTestId('stats-present-count')).toHaveText('7');
       await expect(page.getByTestId('stats-total-count')).toHaveText('7');
@@ -166,7 +165,6 @@ test.describe('Court Workflow', () => {
       const manualCourtButton = page.getByTestId('manual-court-button');
       await expect(manualCourtButton).toBeVisible();
       await manualCourtButton.click();
-      await page.waitForTimeout(300);
 
       const modal = page.getByTestId('manual-court-modal');
       await expect(modal).toBeVisible();
@@ -192,7 +190,7 @@ test.describe('Court Workflow', () => {
       await expect(page.locator('.selection-count')).toContainText('2/4 players selected');
 
       await page.getByText('Done').click();
-      await page.waitForTimeout(200);
+      await expect(page.getByTestId('manual-court-modal')).not.toBeVisible();
 
       await mainPage.generateAssignments();
 
@@ -259,9 +257,8 @@ test.describe('Court Workflow', () => {
       const droppedPlayer = team1NamesBefore
         .map(n => n.trim())
         .find(n => !team1NamesAfter.map(a => a.trim()).includes(n));
-      if (droppedPlayer) {
-        expect(leaderboardNames).not.toContain(droppedPlayer);
-      }
+      expect(droppedPlayer).toBeDefined();
+      expect(leaderboardNames).not.toContain(droppedPlayer);
     });
   });
 });

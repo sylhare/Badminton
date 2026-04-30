@@ -14,7 +14,7 @@ test.describe('State Persistence', () => {
   test('should persist players and presence state across reload', async ({ page }) => {
     await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
     await page.locator('[data-testid^="toggle-presence-"]').nth(1).click();
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => !!localStorage.getItem('badminton-state'));
     await page.reload();
 
     await mainPage.expandPlayersSection();
@@ -35,7 +35,7 @@ test.describe('State Persistence', () => {
     await mainPage.setCourtCount(6);
     await expect(page.getByTestId('court-count-input')).toHaveValue('6');
 
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => !!localStorage.getItem('badminton-state'));
     await page.reload();
 
     await expect(page.getByTestId('court-count-input')).toHaveValue('6');
@@ -48,7 +48,7 @@ test.describe('State Persistence', () => {
     await expect(page.getByTestId('court-1')).toBeVisible();
     await expect(page.getByTestId('court-2')).toBeVisible();
 
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => !!localStorage.getItem('badminton-state'));
     await page.reload();
 
     await expect(page.getByTestId('court-1')).toBeVisible({ timeout: 3000 });
@@ -57,7 +57,7 @@ test.describe('State Persistence', () => {
 
   test('should collapse Manage Players section on reload when players exist', async ({ page }) => {
     await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana']);
-    await page.waitForTimeout(200);
+    await page.waitForFunction(() => !!localStorage.getItem('badminton-state'));
     await page.reload();
     await expect(page.getByTestId('manage-players-section')).toHaveClass(/collapsed/);
   });
@@ -76,7 +76,6 @@ test.describe('State Persistence', () => {
 
     await expect(page.getByText('Alice')).not.toBeVisible();
 
-    await page.waitForTimeout(300);
     await page.reload();
 
     await expect(page.getByText('Alice')).not.toBeVisible();
@@ -90,7 +89,7 @@ test.describe('State Persistence', () => {
     await page.getByTestId('reset-algorithm-button').click();
     await page.getByTestId('confirm-modal-confirm').click();
 
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => !!localStorage.getItem('badminton-state'));
     await page.reload();
 
     await mainPage.expandPlayersSection();
@@ -143,8 +142,6 @@ test.describe('SA engine session TTL', () => {
     await mainPage.generateAssignments(1);
     await mainPage.court(1).selectWinner();
     await mainPage.regenerate();
-    await page.waitForTimeout(300);
-
     await page.locator('a[href*="stats"]').click();
     await expect(page.locator('.teammate-graph').first()).toBeVisible();
     await expect(page.locator('.teammate-graph svg line').first()).toBeVisible();
@@ -180,7 +177,7 @@ test.describe('Leaderboard Persistence', () => {
 
     await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
 
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => !!localStorage.getItem('badminton-state'));
     await page.reload();
 
     await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible({ timeout: 3000 });

@@ -151,24 +151,14 @@ test.describe('Stats Page', () => {
     });
   });
 
-  test('can expand repeated pairs section when available', async ({ page }) => {
+  test('teammate network graph and repeated pairs section', async ({ page }) => {
     await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    // 4 rounds played: with 4 players in doubles there are only 6 unique teammate pairs,
+    // so 8 assignments across 4 rounds guarantees at least one repeated pair (pigeonhole).
     await mainPage.playRound();
     await mainPage.playRound();
-    await statsPage.goto();
-
-    const teammateGraph = page.locator('.teammate-graph').first();
-    if (await teammateGraph.isVisible()) {
-      const pairsDetails = page.locator('summary').filter({ hasText: /View repeated pairs/ });
-      if (await pairsDetails.isVisible()) {
-        await pairsDetails.click();
-        await expect(page.locator('.pairs-graph').first()).toBeVisible();
-      }
-    }
-  });
-
-  test('renders teammate network graph', async ({ page }) => {
-    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.playRound();
+    await mainPage.playRound();
     await statsPage.goto();
 
     const teammateGraph = page.locator('.teammate-graph').first();
@@ -181,6 +171,11 @@ test.describe('Stats Page', () => {
     await expect(legend).toContainText('2×');
     await expect(legend).toContainText('3×');
     await expect(legend).toContainText('4×+');
+
+    const pairsDetails = page.locator('summary').filter({ hasText: /View repeated pairs/ });
+    await expect(pairsDetails).toBeVisible();
+    await pairsDetails.click();
+    await expect(page.locator('.pairs-graph').first()).toBeVisible();
   });
 
   test('rapid re-generate without winners is ignored - stats page shows only 1 round of data', async ({ page }) => {

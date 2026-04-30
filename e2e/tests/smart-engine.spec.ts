@@ -92,11 +92,6 @@ test.describe('Smart Engine', () => {
       await mainPage.generateAssignments(1);
     });
 
-    test('clicking a team opens score-input-modal', async ({ page }) => {
-      await page.locator('.team-clickable').first().click();
-      await expect(page.getByTestId('score-input-modal')).toBeVisible();
-    });
-
     test('cancelling does not set a winner', async ({ page }) => {
       await page.locator('.team-clickable').first().click();
       await expect(page.getByTestId('score-input-modal')).toBeVisible();
@@ -152,11 +147,11 @@ test.describe('Smart Engine', () => {
       await mainPage.enterScore('21', '15');
 
       await mainPage.regenerate();
-      await page.waitForTimeout(300);
       const firstRow = page.locator('.leaderboard-table tbody tr').first();
       await expect(firstRow).toBeVisible();
-      const avgPts = await firstRow.locator('td').nth(3).textContent();
-      expect(avgPts).not.toBe('—');
+      const avgPtsCell = firstRow.locator('td').nth(3);
+      await expect(avgPtsCell).not.toHaveText('—');
+      const avgPts = await avgPtsCell.textContent();
       expect(parseFloat(avgPts ?? '')).toBeGreaterThan(0);
     });
   });
