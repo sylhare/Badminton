@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
 import { StatsPage } from '../support/pages/StatsPage';
 
@@ -44,7 +45,7 @@ test.describe('Stats Page', () => {
     });
   });
 
-  test('stats page empty state - no data message, notebook links and footer', async ({ page }) => {
+  test('stats page empty state', async ({ page }) => {
     await statsPage.goto();
 
     await test.step('shows no data message', async () => {
@@ -53,16 +54,31 @@ test.describe('Stats Page', () => {
       await expect(page.getByText('Start a Game →')).toBeVisible();
     });
 
-    await test.step('algorithm documentation link', async () => {
+    await test.step('algorithm documentation link visible and navigates', async () => {
       const algorithmLink = page.getByTestId('algorithm-link');
       await expect(algorithmLink).toBeVisible();
       await expect(algorithmLink).toContainText('Algorithm Documentation');
+      await algorithmLink.click();
+      await expect(page).toHaveURL(/\/algorithm/);
+      await expect(page.locator('h1')).toContainText('Algorithm Documentation');
+      await page.goBack();
     });
 
-    await test.step('engine comparison link', async () => {
+    await test.step('engine comparison link visible and navigates', async () => {
       const engineLink = page.getByTestId('engine-link');
       await expect(engineLink).toBeVisible();
       await expect(engineLink).toContainText('Engine Comparison');
+      await engineLink.click();
+      await expect(page).toHaveURL(/\/engine/);
+      await expect(page.locator('h1')).toContainText('Engine Comparison');
+      await page.goBack();
+    });
+
+    await test.step('level tracker link navigates', async () => {
+      await page.getByTestId('level-tracker-link').click();
+      await expect(page).toHaveURL(/\/level-tracker/);
+      await expect(page.locator('h1')).toContainText('Level Tracker Analysis');
+      await page.goBack();
     });
 
     await test.step('GitHub feedback link in footer', async () => {
@@ -71,31 +87,6 @@ test.describe('Stats Page', () => {
       await expect(footer.getByText('Let us know on GitHub')).toBeVisible();
       const githubLink = footer.locator('a[href*="github.com"]');
       await expect(githubLink).toHaveAttribute('href', 'https://github.com/sylhare/Badminton/issues/new/choose');
-    });
-  });
-
-  test('notebook pages - all three are accessible from stats', async ({ page }) => {
-    await statsPage.goto();
-
-    await test.step('algorithm documentation page loads', async () => {
-      await page.getByTestId('algorithm-link').click();
-      await expect(page).toHaveURL(/\/algorithm/);
-      await expect(page.locator('h1')).toContainText('Algorithm Documentation');
-      await page.goBack();
-    });
-
-    await test.step('engine comparison page loads', async () => {
-      await page.getByTestId('engine-link').click();
-      await expect(page).toHaveURL(/\/engine/);
-      await expect(page.locator('h1')).toContainText('Engine Comparison');
-      await page.goBack();
-    });
-
-    await test.step('level tracker analysis page loads', async () => {
-      await page.getByTestId('level-tracker-link').click();
-      await expect(page).toHaveURL(/\/level-tracker/);
-      await expect(page.locator('h1')).toContainText('Level Tracker Analysis');
-      await page.goBack();
     });
   });
 
@@ -151,24 +142,14 @@ test.describe('Stats Page', () => {
     });
   });
 
-  test('can expand repeated pairs section when available', async ({ page }) => {
-    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+  test('teammate network graph and repeated pairs section', async ({ page }) => {
+    await mainPage.setupGame(DEFAULT_PLAYERS);
+    // 4 rounds played: with 4 players in doubles there are only 6 unique teammate pairs,
+    // so 8 assignments across 4 rounds guarantees at least one repeated pair (pigeonhole).
     await mainPage.playRound();
     await mainPage.playRound();
-    await statsPage.goto();
-
-    const teammateGraph = page.locator('.teammate-graph').first();
-    if (await teammateGraph.isVisible()) {
-      const pairsDetails = page.locator('summary').filter({ hasText: /View repeated pairs/ });
-      if (await pairsDetails.isVisible()) {
-        await pairsDetails.click();
-        await expect(page.locator('.pairs-graph').first()).toBeVisible();
-      }
-    }
-  });
-
-  test('renders teammate network graph', async ({ page }) => {
-    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.playRound();
+    await mainPage.playRound();
     await statsPage.goto();
 
     const teammateGraph = page.locator('.teammate-graph').first();
@@ -181,6 +162,11 @@ test.describe('Stats Page', () => {
     await expect(legend).toContainText('2×');
     await expect(legend).toContainText('3×');
     await expect(legend).toContainText('4×+');
+
+    const pairsDetails = page.locator('summary').filter({ hasText: /View repeated pairs/ });
+    await expect(pairsDetails).toBeVisible();
+    await pairsDetails.click();
+    await expect(page.locator('.pairs-graph').first()).toBeVisible();
   });
 
   test('rapid re-generate without winners is ignored - stats page shows only 1 round of data', async ({ page }) => {
@@ -235,7 +221,7 @@ test.describe('Stats Page', () => {
   });
 
   test('data persistence - shows data after reload, clears after localStorage clear', async ({ page }) => {
-    await mainPage.setupGame(['Alice', 'Bob', 'Charlie', 'Diana']);
+    await mainPage.setupGame(DEFAULT_PLAYERS);
     await statsPage.goto();
 
     await test.step('shows data after page reload', async () => {

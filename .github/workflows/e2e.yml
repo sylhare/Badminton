@@ -1,7 +1,17 @@
 name: E2E Tests
+# Triggered on pull_request (chromium only) and push to main (all browsers).
+# Called by deploy.yml via workflow_call with base_url to test the deployed app.
+# Browser selection is driven by a setup job that outputs a dynamic matrix,
+# avoiding matrix.* in if conditions which GitHub does not support at job level.
 
 on:
   workflow_call:
+    inputs:
+      base_url:
+        description: 'Base URL for e2e tests (defaults to localhost dev server)'
+        required: false
+        type: string
+        default: ''
   push:
     branches: [ main ]
     paths:
@@ -13,7 +23,7 @@ on:
       - 'playwright.config.ts'
       - '.github/workflows/**'
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
     branches: [ main ]
     paths:
       - 'src/**'
@@ -22,14 +32,32 @@ on:
       - 'package*.json'
       - 'vite.config.ts'
       - 'playwright.config.ts'
+      - '.github/workflows/**'
 
 jobs:
-  e2e-tests:
-    timeout-minutes: 60
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
-    env:
-      ALL_BROWSERS: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || contains(github.event.pull_request.labels.*.name, 'test:all-browsers')) && 'true' || '' }}
+    outputs:
+      browsers: ${{ steps.set-browsers.outputs.browsers }}
+    steps:
+    - id: set-browsers
+      run: |
+        if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          echo 'browsers=["chromium","firefox","webkit"]' >> $GITHUB_OUTPUT
+        else
+          echo 'browsers=["chromium"]' >> $GITHUB_OUTPUT
+        fi
 
+  e2e:
+    name: E2E (${{ matrix.browser }})
+    needs: setup
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ${{ fromJSON(needs.setup.outputs.browsers) }}
     steps:
     - uses: actions/checkout@v6
 
@@ -38,17 +66,20 @@ jobs:
         node-version: 22
         cache: 'npm'
 
+    - name: Cache Playwright browsers
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+
     - name: Install dependencies
       run: npm ci
 
     - name: Install Playwright Browsers
-      run: |
-        if [ "$ALL_BROWSERS" = "true" ]; then
-          npx playwright install --with-deps
-        else
-          npx playwright install --with-deps chromium
-        fi
+      run: npx playwright install --with-deps ${{ matrix.browser }}
 
     - name: Run Playwright tests
-      run: npm run test:e2e
-
+      run: npx playwright test --project=${{ matrix.browser }}
+      env:
+        E2E_BASE_URL: ${{ inputs.base_url }}
+        ALL_BROWSERS: 'true'
