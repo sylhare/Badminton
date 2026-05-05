@@ -70,8 +70,14 @@ export interface UpdateWinnerParams {
   rotatedCourt?: Court;
 }
 
+export interface AssignmentAnomaly {
+  type: 'consecutive_bench' | 'consecutive_singles' | 'consecutive_teammates';
+  playerIds: string[];
+}
+
 export interface GenerateResult extends Array<Court> {
   committed: boolean;
+  anomalies: AssignmentAnomaly[];
 }
 
 export interface ICourtAssignmentTracker {

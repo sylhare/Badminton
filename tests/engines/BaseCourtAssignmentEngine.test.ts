@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
-import type { Court, Player } from '../../src/types';
+import type { AssignmentAnomaly, Court, Player } from '../../src/types';
 
 /**
  * Test implementation of BaseCourtAssignmentEngine that exposes protected methods
@@ -75,6 +75,10 @@ class TestEngine extends BaseCourtAssignmentEngine {
 
   public testChooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
     return this.chooseBestTeamSplit(players);
+  }
+
+  public testDetectAnomalies(courts: Court[], players: Player[]): AssignmentAnomaly[] {
+    return this.detectAnomalies(courts, players);
   }
 }
 
@@ -542,6 +546,64 @@ describe('BaseCourtAssignmentEngine', () => {
       }
 
       expect(Object.keys(pairings).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('detectAnomalies', () => {
+    it('returns empty on first generation (no previous delta)', () => {
+      const players = mockPlayers(4);
+      const result = engine.generate(players, 1);
+      expect(result.anomalies).toEqual([]);
+    });
+
+    it('detects consecutive bench', () => {
+      const players = mockPlayers(6);
+      const court1 = { courtNumber: 1, players: players.slice(0, 4), teams: { team1: players.slice(0, 2), team2: players.slice(2, 4) } };
+      engine.applyRoundStats([court1], players);
+
+      const anomalies = engine.testDetectAnomalies([court1], players);
+      expect(anomalies.some(a => a.type === 'consecutive_bench')).toBe(true);
+      const benchAnomaly = anomalies.find(a => a.type === 'consecutive_bench')!;
+      expect(benchAnomaly.playerIds).toContain(players[4].id);
+      expect(benchAnomaly.playerIds).toContain(players[5].id);
+    });
+
+    it('detects consecutive singles', () => {
+      const players = mockPlayers(2);
+      const singlesCourt = { courtNumber: 1, players, teams: { team1: [players[0]], team2: [players[1]] } };
+      engine.applyRoundStats([singlesCourt], players);
+
+      const anomalies = engine.testDetectAnomalies([singlesCourt], players);
+      expect(anomalies.some(a => a.type === 'consecutive_singles')).toBe(true);
+      const singlesAnomaly = anomalies.find(a => a.type === 'consecutive_singles')!;
+      expect(singlesAnomaly.playerIds).toContain(players[0].id);
+      expect(singlesAnomaly.playerIds).toContain(players[1].id);
+    });
+
+    it('detects consecutive teammates', () => {
+      const players = mockPlayers(4);
+      const court = { courtNumber: 1, players, teams: { team1: [players[0], players[1]], team2: [players[2], players[3]] } };
+      engine.applyRoundStats([court], players);
+
+      const anomalies = engine.testDetectAnomalies([court], players);
+      expect(anomalies.some(a => a.type === 'consecutive_teammates')).toBe(true);
+    });
+
+    it('returns empty when no overlap between rounds', () => {
+      const players = mockPlayers(8);
+      const court1 = { courtNumber: 1, players: players.slice(0, 4), teams: { team1: players.slice(0, 2), team2: players.slice(2, 4) } };
+      engine.applyRoundStats([court1], players.slice(0, 4));
+
+      const court2 = { courtNumber: 1, players: players.slice(4, 8), teams: { team1: players.slice(4, 6), team2: players.slice(6, 8) } };
+      const anomalies = engine.testDetectAnomalies([court2], players.slice(4, 8));
+      expect(anomalies).toEqual([]);
+    });
+
+    it('returns empty anomalies on replaceRound (rapid regeneration)', () => {
+      const players = mockPlayers(4);
+      engine.generate(players, 1);
+      const result2 = engine.generate(players, 1);
+      expect(result2.anomalies).toEqual([]);
     });
   });
 });
