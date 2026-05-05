@@ -110,7 +110,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     const courts = engine().generate(players, numberOfCourts, manualCourtSelection || undefined, forceBenchPlayerIds);
     if (courts.committed) applyCourtResults(previousAssignments);
 
-    courts.anomalies?.forEach(anomaly => {
+    courts.anomalies.forEach(anomaly => {
       trackEvent({
         action: anomaly.type,
         category: 'Assignment Anomaly',

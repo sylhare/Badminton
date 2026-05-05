@@ -33,7 +33,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
   ): GenerateResult {
     const replaceRound = !this.shouldCommitRound();
     const presentPlayers = players.filter(p => p.isPresent);
-    if (presentPlayers.length === 0) return Object.assign([] as Court[], { committed: true }) as GenerateResult;
+    if (presentPlayers.length === 0) return Object.assign([] as Court[], { committed: true, anomalies: [] }) as GenerateResult;
 
     let manualCourtResult: Court | null = null;
     let remainingPlayers = presentPlayers;
@@ -74,8 +74,8 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     if (!replaceRound) this.markRoundCompleted();
     this.clearCurrentSession();
     this.lastGeneratedAt = Date.now();
-    const anomalies = replaceRound ? [] : this.detectAnomalies(finalCourts, presentPlayers);
     if (replaceRound) this.undoLastRound();
+    const anomalies = replaceRound ? [] : this.detectAnomalies(finalCourts, presentPlayers);
     this.applyRoundStats(finalCourts, presentPlayers);
     this.notifyStateChange();
 

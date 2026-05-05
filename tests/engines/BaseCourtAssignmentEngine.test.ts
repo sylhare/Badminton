@@ -558,10 +558,10 @@ describe('BaseCourtAssignmentEngine', () => {
 
     it('detects consecutive bench', () => {
       const players = mockPlayers(6);
-      const court1 = { courtNumber: 1, players: players.slice(0, 4), teams: { team1: players.slice(0, 2), team2: players.slice(2, 4) } };
-      engine.applyRoundStats([court1], players);
+      const court = createMockCourt(1, players.slice(0, 4));
+      engine.applyRoundStats([court], players);
 
-      const anomalies = engine.testDetectAnomalies([court1], players);
+      const anomalies = engine.testDetectAnomalies([court], players);
       expect(anomalies.some(a => a.type === 'consecutive_bench')).toBe(true);
       const benchAnomaly = anomalies.find(a => a.type === 'consecutive_bench')!;
       expect(benchAnomaly.playerIds).toContain(players[4].id);
@@ -582,7 +582,7 @@ describe('BaseCourtAssignmentEngine', () => {
 
     it('detects consecutive teammates', () => {
       const players = mockPlayers(4);
-      const court = { courtNumber: 1, players, teams: { team1: [players[0], players[1]], team2: [players[2], players[3]] } };
+      const court = createMockCourt(1, players);
       engine.applyRoundStats([court], players);
 
       const anomalies = engine.testDetectAnomalies([court], players);
@@ -591,10 +591,10 @@ describe('BaseCourtAssignmentEngine', () => {
 
     it('returns empty when no overlap between rounds', () => {
       const players = mockPlayers(8);
-      const court1 = { courtNumber: 1, players: players.slice(0, 4), teams: { team1: players.slice(0, 2), team2: players.slice(2, 4) } };
+      const court1 = createMockCourt(1, players.slice(0, 4));
       engine.applyRoundStats([court1], players.slice(0, 4));
 
-      const court2 = { courtNumber: 1, players: players.slice(4, 8), teams: { team1: players.slice(4, 6), team2: players.slice(6, 8) } };
+      const court2 = createMockCourt(1, players.slice(4, 8));
       const anomalies = engine.testDetectAnomalies([court2], players.slice(4, 8));
       expect(anomalies).toEqual([]);
     });
