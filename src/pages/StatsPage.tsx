@@ -476,8 +476,8 @@ function StatsPage(): React.ReactElement {
         <section className="notebook-links">
           <h2>📓 Analysis Notebooks</h2>
           <div className="notebooks-grid">
-            <a
-              href={`${basePath}algorithm`}
+            <Link
+              to={`${basePath}algorithm`}
               className="notebook-card"
               data-testid="algorithm-link"
             >
@@ -490,10 +490,10 @@ function StatsPage(): React.ReactElement {
                 </p>
               </div>
               <span className="notebook-arrow">→</span>
-            </a>
+            </Link>
 
-            <a
-              href={`${basePath}engine`}
+            <Link
+              to={`${basePath}engine`}
               className="notebook-card"
               data-testid="engine-link"
             >
@@ -506,10 +506,10 @@ function StatsPage(): React.ReactElement {
                 </p>
               </div>
               <span className="notebook-arrow">→</span>
-            </a>
+            </Link>
 
-            <a
-              href={`${basePath}level-tracker`}
+            <Link
+              to={`${basePath}level-tracker`}
               className="notebook-card"
               data-testid="level-tracker-link"
             >
@@ -522,7 +522,7 @@ function StatsPage(): React.ReactElement {
                 </p>
               </div>
               <span className="notebook-arrow">→</span>
-            </a>
+            </Link>
           </div>
         </section>
 
