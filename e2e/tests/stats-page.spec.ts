@@ -61,7 +61,7 @@ test.describe('Stats Page', () => {
       await algorithmLink.click();
       await expect(page).toHaveURL(/\/algorithm/);
       await expect(page.locator('h1')).toContainText('Algorithm Documentation');
-      await page.goBack();
+      await statsPage.goto();
     });
 
     await test.step('engine comparison link visible and navigates', async () => {
@@ -71,14 +71,14 @@ test.describe('Stats Page', () => {
       await engineLink.click();
       await expect(page).toHaveURL(/\/engine/);
       await expect(page.locator('h1')).toContainText('Engine Comparison');
-      await page.goBack();
+      await statsPage.goto();
     });
 
     await test.step('level tracker link navigates', async () => {
       await page.getByTestId('level-tracker-link').click();
       await expect(page).toHaveURL(/\/level-tracker/);
       await expect(page.locator('h1')).toContainText('Level Tracker Analysis');
-      await page.goBack();
+      await statsPage.goto();
     });
 
     await test.step('GitHub feedback link in footer', async () => {

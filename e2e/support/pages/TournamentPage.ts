@@ -6,16 +6,11 @@ import { MainPage } from './MainPage';
  * Page object for the Tournament page (/tournament).
  */
 export class TournamentPage {
-  private readonly url: string;
-
-  constructor(private page: Page, private mainPage: MainPage) {
-    const base = (process.env.E2E_BASE_URL || 'http://localhost:5173').replace(/\/$/, '');
-    this.url = base + '/tournament';
-  }
+  constructor(private page: Page, private mainPage: MainPage) {}
 
   /** Navigate directly to the tournament page. */
   async goto(): Promise<void> {
-    await this.page.goto(this.url);
+    await this.page.goto('./tournament');
   }
 
   /** Add players via MainPage, then navigate to the tournament page. */

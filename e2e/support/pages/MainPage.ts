@@ -14,15 +14,11 @@ import { CourtCard } from './CourtCard';
  * });
  */
 export class MainPage {
-  private readonly baseUrl: string;
-
-  constructor(private page: Page) {
-    this.baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
-  }
+  constructor(private page: Page) {}
 
   /** Navigate to the app and verify it loaded. */
   async goto(): Promise<void> {
-    await this.page.goto(this.baseUrl);
+    await this.page.goto('./');
     await expect(this.page).toHaveTitle(/Badminton/);
     await expect(this.page.locator('h1')).toContainText('🏸 Badminton Court Manager');
   }
@@ -49,12 +45,11 @@ export class MainPage {
 
   /** Expand the Manage Players section if it is currently collapsed. */
   async expandPlayersSection(): Promise<void> {
-    await this.page
-      .locator('[data-testid="manage-players-section"].collapsed h2')
-      .filter({ hasText: /Manage Players/ })
-      .click({ timeout: 500 })
-      .catch(() => {});
-    await expect(this.page.getByTestId('manage-players-section')).not.toHaveClass(/collapsed/);
+    const section = this.page.getByTestId('manage-players-section');
+    if (await section.evaluate(el => el.classList.contains('collapsed'))) {
+      await section.locator('.section-header').click();
+    }
+    await expect(section).not.toHaveClass(/collapsed/);
   }
 
   /** Remove the first player in the list (opens and confirms the removal modal). */
