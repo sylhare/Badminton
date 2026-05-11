@@ -65,7 +65,7 @@ interface DiagnosticStats {
 function StatsPage(): React.ReactElement {
   const { players, isSmartEngineEnabled: isSmartEngine, engineState, engineName, engineDescription } = useAppState();
 
-  const basePath = import.meta.env.BASE_URL || '/';
+  const basePath = '/';
 
   /**
    * Resolves a player ID to their display name.
