@@ -182,10 +182,11 @@ def _(mo):
           levels, dampening the signal when the team composition itself is uneven.
 
         The player level scale runs from **0 to 100** (instead of the chess range of ~100–3000).
-        The divisor is set to **4000** — ten times the standard chess value — making the
-        win-probability curve nearly flat: even the largest possible level gap (100 points) shifts
-        the expected win probability by less than 2 %, so the K-factor and score margin are the
-        dominant drivers of rating change.
+        The divisor is set to **400** — the same as the chess standard — which keeps the
+        win-probability curve moderate: a 100-point gap (the maximum possible) shifts the
+        expected win probability by ~14 %. Combined with relatively small K-factors
+        (0.6–3.0), this means the score margin and K-factor are still the dominant drivers
+        of rating change, with each game moving a rating by at most ~1.9 points.
 
         Sections 1–4 examine each component of the formula in isolation before section 5 shows
         how average scores are tracked and section 6 runs end-to-end convergence simulations.
@@ -224,9 +225,7 @@ def _(DIVISORS, ELO_DIVISOR, K_MAX, mo):
         else:
             _rows.append(f"| {_D} | {_pct} | {_eff} |")
 
-    _ep_100_chess = _ep(400, gap=100)
-    _ep_100_cfg   = _ep(ELO_DIVISOR, gap=100)
-    _max_swing    = round(K_MAX * (1 - _ep(ELO_DIVISOR)), 2)
+    _ep_100_cfg = _ep(ELO_DIVISOR, gap=100)
 
     mo.md(
         f"""
@@ -248,14 +247,16 @@ def _(DIVISORS, ELO_DIVISOR, K_MAX, mo):
         |-------------|----------------------|--------|
         """ + "\n        ".join(_rows) + f"""
 
-        With $D = 400$ (the chess standard), a 100-point gap gives $E_A \\approx {_ep_100_chess*100:.0f}\\,\\%$.
-        With $D = {ELO_DIVISOR}$, the same gap gives only $E_A \\approx {_ep_100_cfg*100:.0f}\\,\\%$ — levels barely influence
-        the expected win probability. Upsets are almost always possible and the rating changes
-        are driven almost entirely by the K-factor and score margin.
+        With $D = {ELO_DIVISOR}$ (the chess standard), a 100-point gap gives $E_A \\approx {_ep_100_cfg*100:.0f}\\,\\%$,
+        meaning the stronger side is expected to win about {100 - round(_ep_100_cfg*100):.0f}\\,\\% of the time.
+        The probability curve is moderate — level gaps matter, but even the weakest player still
+        has a realistic chance of winning any individual game.
 
-        A larger $D$ also caps the maximum rating swing: since $|\\text{{actual}} - E|$ is at most
-        $\\approx {1 - _ep(ELO_DIVISOR):.2f}$ with $D = {ELO_DIVISOR}$, even the largest $K = {K_MAX}$ can move a rating by at most
-        ${K_MAX} \\times {1 - _ep(ELO_DIVISOR):.2f} = {_max_swing}$ points — **guaranteed below 1 per game**.
+        The maximum possible rating swing in a single game is $K \\times |1 - E|$: with the largest
+        gap (100 points) and the highest K-factor ($K = {K_MAX}$), $|1 - E| \\approx {1 - _ep(ELO_DIVISOR, 100):.2f}$
+        giving a maximum delta of ${K_MAX} \\times {1 - _ep(ELO_DIVISOR, 100):.2f} = {round(K_MAX * (1 - _ep(ELO_DIVISOR, 100)), 2)}$ points.
+        In practice, most games involve closer opponents and lower K tiers, so typical swings are
+        well under 1 point.
         """
     )
     return
@@ -324,7 +325,7 @@ def _(DIVISORS, K_DEFAULT, K_MAX, mo):
         ## 1b · Divisor × K-Factor — Combined Impact
 
         The two parameters that most influence rating change are the **divisor $D$** and the
-        **K-factor**. This section shows how they interact across the full historical range:
+        **K-factor**. This section shows how they interact across the full explored range:
         divisors from {DIVISORS[0]} (very steep, chess-like) to {DIVISORS[-1]} (nearly flat), and
         all K tiers from the most dominant win ($K = {K_MAX}$) down to deuce/no-score ($K = {K_DEFAULT}$).
 
@@ -425,14 +426,14 @@ def _(DIV_COLORS, DIVISORS, ELO_DIVISOR, K_COLORS, K_MAX, go, make_subplots, mo)
             mo.md(f"""
 **Left — divisor impact on max delta (K = {K_MAX}).**
 At D={DIVISORS[0]} even a 10-point gap produces a large swing, and a 100-point gap pushes
-the delta close to K = {K_MAX}. At D={ELO_DIVISOR} (bold line) the curve is almost flat —
-the maximum delta stays near K/2 = {K_MAX / 2} regardless of the level gap.
+the delta close to K = {K_MAX}. At D={ELO_DIVISOR} (bold line) the curve rises moderately —
+a 100-point gap gives a max delta of ~{round(K_MAX * 0.64, 1)}, while equal opponents give K/2 = {K_MAX / 2}.
             """),
             mo.md(f"""
 **Right — K-factor impact at D = {ELO_DIVISOR}.**
-With a fixed divisor of {ELO_DIVISOR}, each K tier produces a nearly horizontal band —
-confirming that at this divisor the K-factor alone determines the size of the rating change,
-with the level gap contributing less than 1 %.
+With a fixed divisor of {ELO_DIVISOR}, the K-factor is the dominant driver of rating change.
+Each K tier rises gently with the level gap, but the difference between tiers is much larger
+than the effect of the gap itself.
             """),
         ], widths="equal"),
         mo.ui.plotly(_fig_bot),
@@ -447,7 +448,7 @@ The cell at D={ELO_DIVISOR}, K={K_MAX} sits in the bottom-right region of the he
 **Right — win probability for each divisor.**
 The weaker team's win probability as a function of level gap. At D={DIVISORS[0]} a 50-point
 gap gives the weaker team only ~9 % chance. At D={ELO_DIVISOR} (bold) the same gap gives
-~49 % — nearly a coin flip.
+~43 % — still a competitive match.
             """),
         ], widths="equal"),
     ])
@@ -963,15 +964,16 @@ def _(ELO_DIVISOR, K_DEFAULT, K_MAX, K_SCALE, mo, win_prob):
 
 Before each game, the system estimates how likely each team is to win based on their
 average player levels. Equal teams each get 50 %. The formula uses a divisor of {ELO_DIVISOR}
-(see § 1), which makes the curve flat — even a very large level gap barely
-moves the probability away from 50 %:
+(see § 1), which keeps the curve moderate — level gaps influence the probability but
+do not predetermine the result:
 
 $$\\bar{{L}}_\\text{{team}} = \\frac{{1}}{{n}}\\sum_{{i=1}}^{{n}} L_i
   \\qquad \\text{{(unknown level}} \\to 50\\text{{)}}$$
 
 $$E_A = \\frac{{1}}{{1 + 10^{{(\\bar{{L}}_B - \\bar{{L}}_A)\\,/\\,D}}}}, \\qquad E_B = 1 - E_A$$
 
-A 50-point level gap (level 75 vs level 25) gives $E_A \\approx {_e_gap}\\,\\%$ — close to a coin flip.
+A 50-point level gap (level 75 vs level 25) gives $E_A \\approx {_e_gap}\\,\\%$ — an edge, but the weaker
+side still wins over 40 % of the time.
 
 ### 4b · Level Delta
 
@@ -1199,17 +1201,17 @@ def _(mo):
         Both `averageScore` and `scoredGames` are stored on the `Player` object and persisted
         to localStorage.
 
-        **Level-rating example — [0, 100] vs [50, 60], no score ($K_{\text{raw}} = 0.3$, $E \approx 0.5$):**
+        **Level-rating example — [0, 100] vs [50, 60], no score ($K_{\text{raw}} = 0.6$, $E \approx 0.5$):**
 
-        The unbalanced team [0, 100] has $\beta = 0.5$, so $K_{\text{eff}} = 0.15$.
-        The balanced team [50, 60] has $\beta = 0.95$, so $K_{\text{eff}} = 0.285$.
+        The unbalanced team [0, 100] has $\beta = 0.5$, so $K_{\text{eff}} = 0.3$.
+        The balanced team [50, 60] has $\beta = 0.95$, so $K_{\text{eff}} = 0.57$.
 
-        |           | Team 1 ([0, 100], $K_{\text{eff}} = 0.15$) | Team 2 ([50, 60], $K_{\text{eff}} = 0.285$) |
+        |           | Team 1 ([0, 100], $K_{\text{eff}} = 0.3$) | Team 2 ([50, 60], $K_{\text{eff}} = 0.57$) |
         |-----------|---------------------------------------------|----------------------------------------------|
-        | Lose / Win  | $-0.075$ pts each                         | $+0.14$ pts each                             |
-        | Win / Lose  | $+0.075$ pts each                         | $-0.14$ pts each                             |
+        | Lose / Win  | $-0.15$ pts each                          | $+0.28$ pts each                             |
+        | Win / Lose  | $+0.15$ pts each                          | $-0.29$ pts each                             |
 
-        The unbalanced team is penalised half as much as the balanced team — the outcome is
+        The unbalanced team is penalised roughly half as much as the balanced team — the outcome is
         less informative about individual skill when partners are so mismatched.
         """
     )
