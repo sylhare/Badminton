@@ -1,11 +1,14 @@
 """Matplotlib utilities for marimo notebooks."""
 
+from __future__ import annotations
+
 import io
 import os
 from pathlib import Path
+from typing import Union
 
 
-def setup_matplotlib(script_path: str | Path) -> None:
+def setup_matplotlib(script_path: Union[str, Path]) -> None:
     """
     Configure matplotlib directories for reliable rendering in marimo.
     
