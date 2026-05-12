@@ -24,6 +24,32 @@ def _(setup_matplotlib):
 
 
 @app.cell
+def _():
+    import json
+    from pathlib import Path
+
+    _config = json.loads((Path(__file__).parent / "data" / "config.json").read_text())
+    _sa = _config["engines"]["sa"]
+    _mc = _config["engines"]["mc"]
+
+    SA_ITERATIONS = _sa["iterations"]
+    SA_INITIAL_TEMP = _sa["initialTemperature"]
+    SA_COOLING_RATE = _sa["coolingRate"]
+    MC_SAMPLES = _mc["samplesPerRound"]
+
+    SA_TEAMMATE_PENALTY = 10000
+    SA_OPPONENT_PENALTY = 50
+    SA_BALANCE_PENALTY = 2000
+    SA_SINGLES_PENALTY = 100
+    SA_SKILL_PAIR_PENALTY = 1000
+    return (
+        MC_SAMPLES,
+        SA_BALANCE_PENALTY, SA_COOLING_RATE, SA_INITIAL_TEMP, SA_ITERATIONS,
+        SA_OPPONENT_PENALTY, SA_SINGLES_PENALTY, SA_SKILL_PAIR_PENALTY, SA_TEAMMATE_PENALTY,
+    )
+
+
+@app.cell
 def _(mo):
     mo.md(r"""
     # Court Assignment Algorithms: Mathematical Foundations
@@ -193,8 +219,8 @@ def _(mo):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
+def _(SA_BALANCE_PENALTY, SA_OPPONENT_PENALTY, SA_SINGLES_PENALTY, SA_SKILL_PAIR_PENALTY, SA_TEAMMATE_PENALTY, mo):
+    mo.md(f"""
     ---
 
     ## 2. Cost Function
@@ -206,36 +232,40 @@ def _(mo):
     The total cost of an assignment $A$ is defined as:
 
     $$
-    \mathcal{C}(A) = \sum_{c \in \text{Courts}} \mathcal{C}_{\text{court}}(c)
+    \mathcal{{C}}(A) = \sum_{{c \in \\text{{Courts}}}} \mathcal{{C}}_{{\\text{{court}}}}(c)
     $$
 
     **Variable definitions**:
-    - $\mathcal{C}(A)$ = total cost of assignment $A$ (lower is better)
+    - $\mathcal{{C}}(A)$ = total cost of assignment $A$ (lower is better)
     - $A$ = a complete court assignment (who plays where, on which team)
     - $c$ = a single court
-    - $\sum_{c \in \text{Courts}}$ = sum over all courts being used
+    - $\sum_{{c \in \\text{{Courts}}}}$ = sum over all courts being used
 
     **What this calculates**: The total "badness" of an assignment by adding up the costs from each individual court.
 
     Where the court cost function is:
 
     $$
-    \begin{aligned}
-    \mathcal{C}_{\text{court}}(c) = \; & \mathcal{C}_{\text{teammate}}(c) \\
-    & + \mathcal{C}_{\text{opponent}}(c) \\
-    & + \mathcal{C}_{\text{skill-pair}}(c) \\
-    & + \mathcal{C}_{\text{balance}}(c)
-    \end{aligned}
+    \\begin{{aligned}}
+    \mathcal{{C}}_{{\\text{{court}}}}(c) = \\; & \mathcal{{C}}_{{\\text{{singles}}}}(c) \\\\
+    & + \mathcal{{C}}_{{\\text{{teammate}}}}(c) \\\\
+    & + \mathcal{{C}}_{{\\text{{opponent}}}}(c) \\\\
+    & + \mathcal{{C}}_{{\\text{{skill-pair}}}}(c) \\\\
+    & + \mathcal{{C}}_{{\\text{{win-balance}}}}(c) \\\\
+    & + \mathcal{{C}}_{{\\text{{loss-balance}}}}(c)
+    \\end{{aligned}}
     $$
 
     **Variable definitions**:
-    - $\mathcal{C}_{\text{court}}(c)$ = cost for a single court $c$
-    - $\mathcal{C}_{\text{teammate}}(c)$ = penalty for repeated teammate pairings on court $c$
-    - $\mathcal{C}_{\text{opponent}}(c)$ = penalty for repeated opponent matchups on court $c$
-    - $\mathcal{C}_{\text{skill-pair}}(c)$ = penalty for similar-skill players on same team
-    - $\mathcal{C}_{\text{balance}}(c)$ = penalty for unbalanced teams
+    - $\mathcal{{C}}_{{\\text{{court}}}}(c)$ = cost for a single court $c$
+    - $\mathcal{{C}}_{{\\text{{singles}}}}(c)$ = penalty for repeated singles pairings (1v1 courts only)
+    - $\mathcal{{C}}_{{\\text{{teammate}}}}(c)$ = penalty for repeated teammate pairings on court $c$
+    - $\mathcal{{C}}_{{\\text{{opponent}}}}(c)$ = penalty for repeated opponent matchups on court $c$
+    - $\mathcal{{C}}_{{\\text{{skill-pair}}}}(c)$ = penalty for similar-skill players on same team
+    - $\mathcal{{C}}_{{\\text{{win-balance}}}}(c)$ = penalty for unbalanced win records between teams
+    - $\mathcal{{C}}_{{\\text{{loss-balance}}}}(c)$ = penalty for unbalanced loss records between teams
 
-    **Note**: All components are additive. Monte Carlo uses equal weights (1.0). Simulated Annealing uses a hard constraint for teammate repeats (weight = 10000) and different weights for other components. Conflict Graph uses opponent weight = 10 and balance weight = 2. Lower cost = better assignment.
+    **SA penalty weights**: teammate = {SA_TEAMMATE_PENALTY:,}, skill-pair = {SA_SKILL_PAIR_PENALTY:,}, balance = {SA_BALANCE_PENALTY:,}, singles = {SA_SINGLES_PENALTY}, opponent = {SA_OPPONENT_PENALTY}. Lower cost = better assignment.
 
     **Important**: The algorithms maintain **separate** tracking maps for teammate and opponent history. A pair like (Alice, Bob) can have different counts in each map (e.g., teammates 5 times, opponents 3 times).
     """)
@@ -487,7 +517,7 @@ def _(mo):
 
 
 @app.cell
-def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
+def _(FancyArrowPatch, FancyBboxPatch, MC_SAMPLES, SA_ITERATIONS, fig_to_image, mo, plt):
     # Visual diagram: Algorithm Comparison Overview
     _fig_overview, _ax_overview = plt.subplots(figsize=(14, 7))
     _ax_overview.set_xlim(0, 14)
@@ -497,10 +527,10 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
 
     # Algorithm boxes
     _algos = [
-        ('Monte Carlo\nGreedy Search', '#4C78A8', 1.5, 
-         '• Random sampling\n• K=300 iterations\n• Best-of-K selection'),
+        ('Monte Carlo\nGreedy Search', '#4C78A8', 1.5,
+         f'• Random sampling\n• K={MC_SAMPLES} iterations\n• Best-of-K selection'),
         ('Simulated\nAnnealing', '#54A24B', 5.5,
-         '• Iterative improvement\n• 1500 iterations\n• Escape local minima'),
+         f'• Iterative improvement\n• {SA_ITERATIONS} iterations\n• Escape local minima'),
         ('Conflict Graph\nEngine', '#F58518', 9.5,
          '• Greedy construction\n• Explicit conflict tracking\n• Single-pass algorithm'),
     ]
@@ -564,9 +594,9 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
-    *Figure 4: High-level comparison of the three court assignment algorithms. Monte Carlo (blue) uses random sampling with K=300 iterations, Simulated Annealing (green) performs iterative improvement with 1500 iterations and temperature-based exploration, and Conflict Graph (orange) uses greedy construction with explicit conflict tracking. The table below shows speed, quality, and tuning requirements for each approach.*
+def _(MC_SAMPLES, SA_ITERATIONS, mo):
+    mo.md(f"""
+    *Figure 4: High-level comparison of the three court assignment algorithms. Monte Carlo (blue) uses random sampling with K={MC_SAMPLES} iterations, Simulated Annealing (green) performs iterative improvement with {SA_ITERATIONS} iterations and temperature-based exploration, and Conflict Graph (orange) uses greedy construction with explicit conflict tracking. The table below shows speed, quality, and tuning requirements for each approach.*
     """)
     return
 
@@ -577,8 +607,8 @@ def _(mo):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
+def _(MC_SAMPLES, mo):
+    mo.md(f"""
     ---
 
     ## 4. Monte Carlo Greedy Search
@@ -587,19 +617,19 @@ def _(mo):
 
     Monte Carlo methods are a class of algorithms that rely on repeated random sampling to obtain numerical results [[2]](#ref-2). The key insight is that by generating many random solutions and keeping the best one, we can approximate the global optimum without exhaustive search.
 
-    **Definition (Monte Carlo Greedy Search)**: Given a solution space $\mathcal{S}$ and cost function $\mathcal{C}$, the Monte Carlo Greedy Search generates $K$ independent random samples $\{A_1, A_2, ..., A_K\} \subset \mathcal{S}$ and returns:
+    **Definition (Monte Carlo Greedy Search)**: Given a solution space $\\mathcal{{S}}$ and cost function $\\mathcal{{C}}$, the Monte Carlo Greedy Search generates $K$ independent random samples $\\{{A_1, A_2, ..., A_K\\}} \\subset \\mathcal{{S}}$ and returns:
 
     $$
-    A^* = \arg\min_{i \in \{1,...,K\}} \mathcal{C}(A_i)
+    A^* = \\arg\\min_{{i \\in \\{{1,...,K\\}}}} \\mathcal{{C}}(A_i)
     $$
 
     **Variable definitions**:
-    - $\mathcal{S}$ = the set of all possible court assignments
-    - $\mathcal{C}$ = cost function (measures how "bad" an assignment is)
-    - $K$ = number of random samples (300 in our implementation)
+    - $\\mathcal{{S}}$ = the set of all possible court assignments
+    - $\\mathcal{{C}}$ = cost function (measures how "bad" an assignment is)
+    - $K$ = number of random samples ({MC_SAMPLES} in our implementation)
     - $A_i$ = the $i$-th randomly generated assignment
     - $A^*$ = the best assignment found (returned result)
-    - $\arg\min$ = "the argument that minimizes" (which assignment has lowest cost)
+    - $\\arg\\min$ = "the argument that minimizes" (which assignment has lowest cost)
 
     **What this formula calculates**: Among all $K$ random assignments, return the one with the lowest cost.
 
@@ -607,10 +637,10 @@ def _(mo):
 
     ```
     Algorithm: MonteCarloGreedyAssignment
-    Input: Players P, Courts C, MaxAttempts K = 300
+    Input: Players P, Courts C, MaxAttempts K = {MC_SAMPLES}
     Output: Assignment A* with minimum cost
 
-    1. Filter present players: P' ← {p ∈ P : σ(p) = 1}
+    1. Filter present players: P' ← {{p ∈ P : σ(p) = 1}}
     2. Select benched players using fairness heuristic
     3. Initialize best ← null, bestCost ← ∞
 
@@ -632,7 +662,7 @@ def _(mo):
 
 
 @app.cell
-def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
+def _(FancyArrowPatch, FancyBboxPatch, MC_SAMPLES, fig_to_image, mo, plt):
     # Visual diagram: Monte Carlo Algorithm Flowchart
     _fig4, _ax4 = plt.subplots(figsize=(8, 10))
     _ax4.set_xlim(0, 10)
@@ -674,7 +704,7 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
     _loop_box = plt.Rectangle((2.3, 1.8), 5.4, 4.8, fill=False, 
                                edgecolor='#4C78A8', linewidth=2, linestyle='--')
     _ax4.add_patch(_loop_box)
-    _ax4.text(2.5, 6.4, 'Repeat K=300 times', fontsize=9, color='#4C78A8', fontweight='bold')
+    _ax4.text(2.5, 6.4, f'Repeat K={MC_SAMPLES} times', fontsize=9, color='#4C78A8', fontweight='bold')
 
     # Shuffle (inside loop)
     _draw_flowchart_arrow(_ax4, _cx, 6.6, _cx, 6.0, '#4C78A8')
@@ -724,33 +754,35 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
-    *Figure 5: Flowchart of the Monte Carlo Greedy Search algorithm. The main loop (dashed blue box) runs K=300 times: each iteration shuffles players randomly, assigns them to courts sequentially, evaluates all 3 possible team splits per court, and updates the best solution if the new cost is lower. The algorithm returns the best assignment found across all iterations.*
+def _(MC_SAMPLES, mo):
+    mo.md(f"""
+    *Figure 5: Flowchart of the Monte Carlo Greedy Search algorithm. The main loop (dashed blue box) runs K={MC_SAMPLES} times: each iteration shuffles players randomly, assigns them to courts sequentially, evaluates all 3 possible team splits per court, and updates the best solution if the new cost is lower. The algorithm returns the best assignment found across all iterations.*
     """)
     return
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
+def _(MC_SAMPLES, mo, np):
+    _fail_prob = (1 - 0.02) ** MC_SAMPLES * 100
+    _confidence = 100 - _fail_prob
+    mo.md(f"""
     ### 4.3 Team Split Enumeration
 
-    For 4 players $\{p_0, p_1, p_2, p_3\}$, there are exactly 3 unique 2v2 configurations:
+    For 4 players $\\{{p_0, p_1, p_2, p_3\\}}$, there are exactly 3 unique 2v2 configurations:
 
     | Split | Team 1 | Team 2 |
     |-------|--------|--------|
-    | 1 | $\{p_0, p_1\}$ | $\{p_2, p_3\}$ |
-    | 2 | $\{p_0, p_2\}$ | $\{p_1, p_3\}$ |
-    | 3 | $\{p_0, p_3\}$ | $\{p_1, p_2\}$ |
+    | 1 | $\\{{p_0, p_1\\}}$ | $\\{{p_2, p_3\\}}$ |
+    | 2 | $\\{{p_0, p_2\\}}$ | $\\{{p_1, p_3\\}}$ |
+    | 3 | $\\{{p_0, p_3\\}}$ | $\\{{p_1, p_2\\}}$ |
 
     **Why only 3?** The number of ways to partition 4 items into 2 unordered groups of 2:
 
     $$
-    \begin{aligned}
-    \frac{\binom{4}{2}}{2!} &= \frac{6}{2} \\
+    \\begin{{aligned}}
+    \\frac{{\\binom{{4}}{{2}}}}{{2!}} &= \\frac{{6}}{{2}} \\\\
     &= 3
-    \end{aligned}
+    \\end{{aligned}}
     $$
 
     ### 4.4 Convergence Theorem
@@ -758,46 +790,46 @@ def _(mo):
     **Theorem (MC Convergence)** [[2]](#ref-2): Let $p^*$ be the probability of sampling a near-optimal solution in a single iteration. After $K$ iterations, the probability of **not** finding any near-optimal solution is:
 
     $$
-    P(\text{failure}) \leq (1 - p^*)^K
+    P(\\text{{failure}}) \\leq (1 - p^*)^K
     $$
 
     **Variable definitions**:
-    - $P(\text{failure})$ = probability of failing to find a good solution
+    - $P(\\text{{failure}})$ = probability of failing to find a good solution
     - $p^*$ = probability that any single random assignment is "near-optimal"
-    - $K$ = number of random samples we generate (300 in our implementation)
+    - $K$ = number of random samples we generate ({MC_SAMPLES} in our implementation)
     - $(1 - p^*)$ = probability of failure in a single iteration
 
     **What this formula calculates**: The worst-case probability of not finding any good solution after K attempts. Since each attempt is independent, we multiply failure probabilities.
 
-    To achieve failure probability $\leq \delta$, we need:
+    To achieve failure probability $\\leq \\delta$, we need:
 
     $$
-    K \geq \frac{\ln(1/\delta)}{p^*}
+    K \\geq \\frac{{\\ln(1/\\delta)}}{{p^*}}
     $$
 
     **Variable definitions**:
-    - $\delta$ = our acceptable failure probability (e.g., 0.01 = 1% failure rate)
-    - $\ln$ = natural logarithm
+    - $\\delta$ = our acceptable failure probability (e.g., 0.01 = 1% failure rate)
+    - $\\ln$ = natural logarithm
 
     **What this formula calculates**: The minimum number of iterations needed to achieve our desired confidence level.
 
-    **Proof**: Each iteration is an independent Bernoulli trial. The probability that all $K$ trials fail is $(1-p^*)^K$. Setting this $\leq \delta$ and solving yields the bound. $\blacksquare$
+    **Proof**: Each iteration is an independent Bernoulli trial. The probability that all $K$ trials fail is $(1-p^*)^K$. Setting this $\\leq \\delta$ and solving yields the bound. $\\blacksquare$
 
     ---
 
-    **Example**: With $p^* = 0.02$ (2% chance each attempt is good) and $K = 300$:
+    **Example**: With $p^* = 0.02$ (2% chance each attempt is good) and $K = {MC_SAMPLES}$:
 
     $$
-    P(\text{failure}) = 0.98^{300} \approx 0.24\%
+    P(\\text{{failure}}) = 0.98^{{{MC_SAMPLES}}} \\approx {_fail_prob:.2f}\\%
     $$
 
-    So we have ~99.76% confidence of finding a near-optimal solution.
+    So we have ~{_confidence:.2f}% confidence of finding a near-optimal solution.
     """)
     return
 
 
 @app.cell
-def _(fig_to_image, mo, np, plt):
+def _(MC_SAMPLES, fig_to_image, mo, np, plt):
     # Visual diagram: MC Convergence Probability
     _fig_mc_conv, (_ax_mc1, _ax_mc2) = plt.subplots(1, 2, figsize=(12, 4.5))
     _fig_mc_conv.suptitle('Monte Carlo Convergence Analysis', fontsize=14, fontweight='bold')
@@ -812,7 +844,7 @@ def _(fig_to_image, mo, np, plt):
         _ax_mc1.plot(_k_values, _fail_prob * 100, color=_line_color, linewidth=2, label=f'p* = {_p_star:.0%}')
 
     _ax_mc1.axhline(y=1, color='gray', linestyle='--', alpha=0.7, label='1% failure')
-    _ax_mc1.axvline(x=300, color='#F39C12', linestyle='-', linewidth=2, alpha=0.8, label='K=300')
+    _ax_mc1.axvline(x=MC_SAMPLES, color='#F39C12', linestyle='-', linewidth=2, alpha=0.8, label=f'K={MC_SAMPLES}')
 
     _ax_mc1.set_xlabel('Number of Iterations (K)', fontsize=11)
     _ax_mc1.set_ylabel('Failure Probability (%)', fontsize=11)
@@ -828,11 +860,11 @@ def _(fig_to_image, mo, np, plt):
         _ax_mc2.semilogy(_k_values, _fail_prob * 100, color=_line_color, linewidth=2, label=f'p* = {_p_star:.0%}')
 
     _ax_mc2.axhline(y=1, color='gray', linestyle='--', alpha=0.7)
-    _ax_mc2.axvline(x=300, color='#F39C12', linestyle='-', linewidth=2, alpha=0.8)
+    _ax_mc2.axvline(x=MC_SAMPLES, color='#F39C12', linestyle='-', linewidth=2, alpha=0.8)
 
-    _fail_at_300 = (1 - 0.02) ** 300 * 100
-    _ax_mc2.annotate(f'K=300, p*=2%\n≈{_fail_at_300:.2f}% fail',
-                  xy=(300, _fail_at_300), xytext=(350, 5),
+    _fail_at_k = (1 - 0.02) ** MC_SAMPLES * 100
+    _ax_mc2.annotate(f'K={MC_SAMPLES}, p*=2%\n≈{_fail_at_k:.2f}% fail',
+                  xy=(MC_SAMPLES, _fail_at_k), xytext=(350, 5),
                   fontsize=9, ha='left',
                   arrowprops=dict(arrowstyle='->', color='#3498DB'),
                   bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -851,16 +883,16 @@ def _(fig_to_image, mo, np, plt):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
-    *Figure 6: Monte Carlo convergence analysis. Left panel shows failure probability decreasing exponentially as iterations increase, with different curves for various p* values (probability of sampling a good solution). Right panel uses log scale to show the rapid convergence — with K=300 iterations and p*=2%, failure probability drops to approximately 0.24%.*
+def _(MC_SAMPLES, mo):
+    mo.md(f"""
+    *Figure 6: Monte Carlo convergence analysis. Left panel shows failure probability decreasing exponentially as iterations increase, with different curves for various p* values (probability of sampling a good solution). Right panel uses log scale to show the rapid convergence — with K={MC_SAMPLES} iterations and p*=2%, failure probability drops to approximately 0.24%.*
     """)
     return
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
+def _(MC_SAMPLES, mo):
+    mo.md(f"""
     ### 4.5 Complexity Analysis
 
     | Operation | Complexity | Notes |
@@ -868,9 +900,9 @@ def _(mo):
     | Fisher-Yates Shuffle | $O(n)$ | Single pass through array |
     | Single Court Cost | $O(1)$ | Fixed 4 players, constant operations |
     | Team Split Selection | $O(3) = O(1)$ | Always exactly 3 configurations |
-    | Full Algorithm | $O(K \cdot n)$ | K iterations, each O(n) |
+    | Full Algorithm | $O(K \\cdot n)$ | K iterations, each O(n) |
 
-    **Total**: $O(300n) = O(n)$ - linear in number of players.
+    **Total**: $O({MC_SAMPLES}n) = O(n)$ - linear in number of players.
 
     **Space**: $O(n^2)$ for pairwise history tracking.
     """)
@@ -936,9 +968,9 @@ def _(mo):
     - Current assignment has cost 45 (some teammate repeats)
     - Proposed swap results in cost 48 (more repeats, worse!)
     - $\Delta E = 48 - 45 = 3$ (positive = worse)
-    - At high temperature ($T = 100$): $P = e^{-3/100} = e^{-0.03} ≈ 0.97$ → **97% chance to accept anyway!**
+    - At high temperature ($T = 2000$): $P = e^{-3/2000} = e^{-0.0015} ≈ 1.00$ → **~100% chance to accept**
+    - At medium temperature ($T = 100$): $P = e^{-3/100} = e^{-0.03} ≈ 0.97$ → **97% chance to accept**
     - At low temperature ($T = 5$): $P = e^{-3/5} = e^{-0.6} ≈ 0.55$ → **55% chance to accept**
-    - At very low temperature ($T = 1$): $P = e^{-3/1} = e^{-3} ≈ 0.05$ → **Only 5% chance to accept**
 
     **Why accept worse solutions?** This allows the algorithm to escape "local minima"—situations where any single change makes things worse, but a sequence of changes could find a much better solution.
     """)
@@ -946,7 +978,7 @@ def _(mo):
 
 
 @app.cell
-def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
+def _(FancyArrowPatch, FancyBboxPatch, SA_ITERATIONS, fig_to_image, mo, plt):
     # Visual diagram: Annealing Process Analogy
     _fig_anneal, _ax_anneal = plt.subplots(figsize=(14, 5))
     _ax_anneal.set_xlim(0, 14)
@@ -995,7 +1027,7 @@ def _(FancyArrowPatch, FancyBboxPatch, fig_to_image, mo, plt):
     _arrow2 = FancyArrowPatch((10.1, 3.4), (11.4, 3.4), arrowstyle='->', mutation_scale=15,
                               color='#555', linewidth=2)
     _ax_anneal.add_patch(_arrow2)
-    _ax_anneal.text(10.75, 3.8, '1500\niters', ha='center', fontsize=8, color='#555')
+    _ax_anneal.text(10.75, 3.8, f'{SA_ITERATIONS}\niters', ha='center', fontsize=8, color='#555')
     
     # Low T box
     _low_t_box = FancyBboxPatch((11.5, 2.5), 2.2, 1.8, boxstyle="round,pad=0.1",
@@ -1029,14 +1061,14 @@ def _(mo):
 
 
 @app.cell
-def _(fig_to_image, mo, np, plt):
+def _(SA_COOLING_RATE, SA_INITIAL_TEMP, SA_ITERATIONS, fig_to_image, mo, np, plt):
     # Visual diagram: Metropolis Acceptance Probability
     _fig_metro, (_ax_m1, _ax_m2) = plt.subplots(1, 2, figsize=(12, 5))
     _fig_metro.suptitle('Metropolis Criterion in Action: When Do We Accept Worse Assignments?', fontsize=14, fontweight='bold')
 
     # Left: Acceptance probability vs ΔE for different temperatures
-    _delta_e = np.linspace(0, 50, 200)
-    _temps = [100, 50, 20, 5, 1]
+    _delta_e = np.linspace(0, 5000, 200)
+    _temps = [2000, 1000, 500, 100, 10]
     _colors = plt.cm.coolwarm(np.linspace(0.1, 0.9, len(_temps)))
 
     for _T, _c in zip(_temps, _colors):
@@ -1048,33 +1080,35 @@ def _(fig_to_image, mo, np, plt):
     _ax_m1.set_title('Higher T → More Likely to Accept Worse Solutions', fontsize=11)
     _ax_m1.legend(loc='upper right', fontsize=9)
     _ax_m1.grid(True, alpha=0.3)
-    _ax_m1.set_xlim(0, 50)
+    _ax_m1.set_xlim(0, 5000)
     _ax_m1.set_ylim(0, 1.05)
 
     # Right: Temperature schedule over iterations
-    _iterations = np.arange(0, 1501)
-    _T0 = 100
-    _alpha = 0.995
-    _temp_schedule = _T0 * (_alpha ** _iterations)
+    _iterations = np.arange(0, SA_ITERATIONS + 1)
+    _temp_schedule = SA_INITIAL_TEMP * (SA_COOLING_RATE ** _iterations)
 
     _ax_m2.plot(_iterations, _temp_schedule, color='#E74C3C', linewidth=2)
     _ax_m2.fill_between(_iterations, 0, _temp_schedule, alpha=0.2, color='#E74C3C')
 
     # Annotate phases
-    _ax_m2.axvspan(0, 200, alpha=0.1, color='red', label='Exploration')
-    _ax_m2.axvspan(1200, 1500, alpha=0.1, color='blue', label='Exploitation')
+    _exploration_end = int(SA_ITERATIONS * 0.15)
+    _exploitation_start = int(SA_ITERATIONS * 0.8)
+    _ax_m2.axvspan(0, _exploration_end, alpha=0.1, color='red', label='Exploration')
+    _ax_m2.axvspan(_exploitation_start, SA_ITERATIONS, alpha=0.1, color='blue', label='Exploitation')
 
     _ax_m2.set_xlabel('Iteration', fontsize=11)
     _ax_m2.set_ylabel('Temperature', fontsize=11)
-    _ax_m2.set_title('Exponential Cooling: T(t) = T₀ · αᵗ (α=0.995)', fontsize=11)
-    _ax_m2.set_xlim(0, 1500)
+    _ax_m2.set_title(f'Exponential Cooling: T(t) = T₀ · αᵗ (α={SA_COOLING_RATE})', fontsize=11)
+    _ax_m2.set_xlim(0, SA_ITERATIONS)
     _ax_m2.grid(True, alpha=0.3)
     _ax_m2.legend(loc='upper right', fontsize=9)
 
     # Add annotations
-    _ax_m2.annotate('High T: Explore', xy=(100, 90), fontsize=10, color='#C0392B',
+    _high_t_val = SA_INITIAL_TEMP * (SA_COOLING_RATE ** _exploration_end) * 0.9
+    _low_t_val = SA_INITIAL_TEMP * (SA_COOLING_RATE ** _exploitation_start) * 0.5
+    _ax_m2.annotate('High T: Explore', xy=(_exploration_end // 2, _high_t_val), fontsize=10, color='#C0392B',
                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-    _ax_m2.annotate('Low T: Exploit', xy=(1200, 5), fontsize=10, color='#2980B9',
+    _ax_m2.annotate('Low T: Exploit', xy=(_exploitation_start, _low_t_val), fontsize=10, color='#2980B9',
                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
     _fig_metro.tight_layout()
@@ -1083,21 +1117,21 @@ def _(fig_to_image, mo, np, plt):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
-    *Figure 8: Metropolis criterion visualization. Left panel shows acceptance probability curves for different temperatures — at high T (red), worse solutions are readily accepted; at low T (blue), only small cost increases are tolerated. Right panel shows the exponential cooling schedule T(t) = T₀·αᵗ over 1500 iterations, transitioning from exploration phase (high T, red region) to exploitation phase (low T, blue region).*
+def _(SA_COOLING_RATE, SA_INITIAL_TEMP, SA_ITERATIONS, mo):
+    mo.md(f"""
+    *Figure 8: Metropolis criterion visualization. Left panel shows acceptance probability curves for different temperatures — at high T (red), worse solutions are readily accepted; at low T (blue), only small cost increases are tolerated. Right panel shows the exponential cooling schedule T(t) = T₀·αᵗ over {SA_ITERATIONS} iterations (T₀={SA_INITIAL_TEMP}, α={SA_COOLING_RATE}), transitioning from exploration phase (high T, red region) to exploitation phase (low T, blue region).*
     """)
     return
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
+def _(SA_COOLING_RATE, SA_INITIAL_TEMP, SA_ITERATIONS, mo):
+    mo.md(f"""
     ### 5.4 Algorithm Description
 
     ```
     Algorithm: SimulatedAnnealingAssignment
-    Input: Players P, Courts C, InitialTemp T₀=100, CoolingRate α=0.995, MaxIter=1500
+    Input: Players P, Courts C, InitialTemp T₀={SA_INITIAL_TEMP}, CoolingRate α={SA_COOLING_RATE}, MaxIter={SA_ITERATIONS}
     Output: Assignment A* with minimum cost
 
     1. Generate initial random assignment A
@@ -1120,21 +1154,21 @@ def _(mo):
     **Variable definitions**:
     - $P$ = set of all players
     - $C$ = number of courts
-    - $T_0$ = initial temperature (controls initial exploration, default 100)
-    - $\alpha$ = cooling rate (how fast temperature decreases, default 0.995)
+    - $T_0$ = initial temperature (controls initial exploration, default {SA_INITIAL_TEMP})
+    - $\\alpha$ = cooling rate (how fast temperature decreases, default {SA_COOLING_RATE})
     - $A$ = current court assignment
     - $A'$ = proposed new assignment (neighbor)
-    - $\Delta E$ = change in cost when switching from $A$ to $A'$
+    - $\\Delta E$ = change in cost when switching from $A$ to $A'$
 
     ### 5.5 Move Operators
 
     SA uses local perturbations to explore the solution space. A "move" is a small change to the current assignment:
 
-    | Move Type | Description | Effect |
-    |-----------|-------------|--------|
-    | **Player Swap** | Swap two players between different courts | Changes court composition |
-    | **Team Swap** | Swap players between teams on same court | Changes team balance |
-    | **Court Rotation** | Rotate players within a court | Maintains court composition |
+    | Move Type | Probability | Description | Effect |
+    |-----------|-------------|-------------|--------|
+    | **Swap Between Courts** | 50% | Swap one player from each of two different courts | Changes court composition |
+    | **Resplit Teams** | 30% | Shuffle players on a court and pick the best team split | Optimizes team balance |
+    | **Swap Within Court** | 20% | Swap one player between teams on the same court | Changes team composition |
 
     Each move generates a "neighbor" solution that differs minimally from the current state, enabling gradual exploration.
     """)
@@ -1268,52 +1302,54 @@ def _(mo):
 
 
 @app.cell
-def _(mo):
-    mo.md(r"""
+def _(SA_COOLING_RATE, SA_INITIAL_TEMP, SA_ITERATIONS, mo, np):
+    _T_final = SA_INITIAL_TEMP * SA_COOLING_RATE ** SA_ITERATIONS
+    _T_mid = SA_INITIAL_TEMP * SA_COOLING_RATE ** (SA_ITERATIONS // 2)
+    mo.md(f"""
     ### 5.6 Convergence Theory
 
     **Theorem (SA Asymptotic Convergence)** [[4]](#ref-4): If the cooling schedule satisfies:
 
     $$
-    T(t) \geq \frac{\Delta_{\max}}{\ln(t + 2)}
+    T(t) \\geq \\frac{{\\Delta_{{\\max}}}}{{\\ln(t + 2)}}
     $$
 
     **Variable definitions**:
     - $T(t)$ = temperature at iteration $t$
-    - $\Delta_{\max}$ = maximum possible cost difference between any two neighboring states
-    - $\ln$ = natural logarithm
+    - $\\Delta_{{\\max}}$ = maximum possible cost difference between any two neighboring states
+    - $\\ln$ = natural logarithm
     - $t$ = current iteration number
 
     **What this formula means**: The temperature must decrease slowly enough (at most logarithmically) for the algorithm to guarantee finding the global optimum.
 
-    If this condition is met, Simulated Annealing converges to the global optimum with probability 1 as $t \to \infty$.
+    If this condition is met, Simulated Annealing converges to the global optimum with probability 1 as $t \\to \\infty$.
 
-    **Practical Implication**: With exponential cooling $T(t) = T_0 \cdot \alpha^t$, we trade theoretical guarantees for practical speed. The algorithm may not find the true global optimum, but empirically achieves excellent results [[10]](#ref-10).
+    **Practical Implication**: With exponential cooling $T(t) = T_0 \\cdot \\alpha^t$, we trade theoretical guarantees for practical speed. The algorithm may not find the true global optimum, but empirically achieves excellent results [[10]](#ref-10).
 
     ### 5.7 Temperature Schedule Design
 
     Our implementation uses:
-    - **Initial temperature**: $T_0 = 100$ (allows ~63% acceptance of moves with $\Delta E = 100$)
-    - **Cooling rate**: $\alpha = 0.995$
-    - **Final temperature**: $T_{1500} = 100 \cdot 0.995^{1500} \approx 0.055$
-    - **Iterations**: 1500 (with early termination on perfect solution)
+    - **Initial temperature**: $T_0 = {SA_INITIAL_TEMP}$ (allows ~{100 * np.exp(-1):.0f}% acceptance of moves with $\\Delta E = {SA_INITIAL_TEMP}$)
+    - **Cooling rate**: $\\alpha = {SA_COOLING_RATE}$
+    - **Final temperature**: $T_{{{SA_ITERATIONS}}} = {SA_INITIAL_TEMP} \\cdot {SA_COOLING_RATE}^{{{SA_ITERATIONS}}} \\approx {_T_final:.1f}$
+    - **Iterations**: {SA_ITERATIONS} (with early termination on perfect solution)
 
     The exponential schedule:
 
     $$
-    T(t) = T_0 \cdot \alpha^t
+    T(t) = T_0 \\cdot \\alpha^t
     $$
 
     **Variable definitions**:
     - $T(t)$ = temperature at iteration $t$
-    - $T_0$ = initial temperature (100 in our implementation)
-    - $\alpha$ = cooling rate (0.995 in our implementation)
-    - $t$ = current iteration number (0 to 1500)
+    - $T_0$ = initial temperature ({SA_INITIAL_TEMP} in our implementation)
+    - $\\alpha$ = cooling rate ({SA_COOLING_RATE} in our implementation)
+    - $t$ = current iteration number (0 to {SA_ITERATIONS})
 
     **What this formula calculates**: The temperature value at any given iteration. For example:
-    - At $t=0$: $T = 100 \cdot 0.995^0 = 100$ (hot, exploratory)
-    - At $t=750$: $T = 100 \cdot 0.995^{750} ≈ 2.3$ (medium)
-    - At $t=1500$: $T = 100 \cdot 0.995^{1500} ≈ 0.055$ (cold, selective)
+    - At $t=0$: $T = {SA_INITIAL_TEMP} \\cdot {SA_COOLING_RATE}^0 = {SA_INITIAL_TEMP}$ (hot, exploratory)
+    - At $t={SA_ITERATIONS // 2}$: $T = {SA_INITIAL_TEMP} \\cdot {SA_COOLING_RATE}^{{{SA_ITERATIONS // 2}}} \\approx {_T_mid:.1f}$ (medium)
+    - At $t={SA_ITERATIONS}$: $T = {SA_INITIAL_TEMP} \\cdot {SA_COOLING_RATE}^{{{SA_ITERATIONS}}} \\approx {_T_final:.1f}$ (cold, selective)
 
     This provides a smooth transition from exploration to exploitation.
     """)
@@ -1321,23 +1357,23 @@ def _(mo):
 
 
 @app.cell
-def _(fig_to_image, mo, np, plt):
+def _(MC_SAMPLES, SA_ITERATIONS, fig_to_image, mo, np, plt):
     # Visual diagram: SA vs MC scaling
     _fig_scaling, _ax_scaling = plt.subplots(figsize=(10, 5))
 
     _players = np.array([8, 12, 16, 20, 24, 28, 32, 40, 50, 60])
 
-    # MC: O(K * n) where K=300
-    _mc_time = 300 * _players * 0.00001  # normalized
+    # MC: O(K * n) where K=MC_SAMPLES
+    _mc_time = MC_SAMPLES * _players * 0.00001  # normalized
 
-    # SA: O(I) where I=5000, roughly constant but with small n factor for neighbor generation
-    _sa_time = 5000 * 0.00001 + _players * 0.000001
+    # SA: O(I * C) where I=SA_ITERATIONS, with small n factor for court count
+    _sa_time = SA_ITERATIONS * (_players / 4) * 0.00001
 
     # CG: O(n^2 log n)
     _cg_time = _players**2 * np.log(_players) * 0.000001
 
     _ax_scaling.plot(_players, _mc_time * 1000, 'o-', color='#4C78A8', linewidth=2, markersize=8, label='Monte Carlo O(Kn)')
-    _ax_scaling.plot(_players, _sa_time * 1000, 's-', color='#54A24B', linewidth=2, markersize=8, label='Simulated Annealing O(I)')
+    _ax_scaling.plot(_players, _sa_time * 1000, 's-', color='#54A24B', linewidth=2, markersize=8, label=f'Simulated Annealing O(I·C)')
     _ax_scaling.plot(_players, _cg_time * 1000, '^-', color='#F58518', linewidth=2, markersize=8, label='Conflict Graph O(n² log n)')
 
     _ax_scaling.set_xlabel('Number of Players', fontsize=11)
@@ -1699,20 +1735,20 @@ def _(mo):
     | Fisher-Yates Shuffle | $O(n)$ | Single pass through player array [[7]](#ref-7) |
     | Single Court Cost | $O(1)$ | Fixed 4 players, constant operations |
     | Team Split Selection | $O(3) = O(1)$ | Always exactly 3 configurations |
-    | Full Algorithm | $O(K \cdot n)$ | K=300 iterations, each O(n) |
+    | Full Algorithm | $O(K \cdot n)$ | K iterations, each O(n) |
 
-    **Total**: $O(300n) = O(n)$ - linear in number of players.
+    **Total**: $O(Kn)$ - linear in number of players.
 
     #### Simulated Annealing
 
     | Operation | Complexity | Notes |
     |-----------|------------|-------|
-    | Generate neighbor | $O(1)$ | Single player swap |
-    | Evaluate cost change | $O(1)$ | Incremental update [[9]](#ref-9) |
-    | Single iteration | $O(1)$ | Constant work per iteration |
-    | Full algorithm | $O(I)$ | I=1500 iterations (with early termination) |
+    | Generate neighbor | $O(1)$ | Single player swap or resplit |
+    | Evaluate cost change | $O(C)$ | Re-evaluates all courts |
+    | Single iteration | $O(C)$ | Perturbation + full cost evaluation |
+    | Full algorithm | $O(I \cdot C)$ | I iterations, each evaluating C courts |
 
-    **Total**: $O(1500) = O(1)$ - constant time regardless of player count!
+    **Total**: $O(I \cdot C)$ where $I$ = iteration count and $C$ = number of courts. Scales linearly with both parameters.
 
     #### Conflict Graph Engine
 
@@ -1736,7 +1772,7 @@ def _(mo):
     | **Search type** | Global (random sampling) | Local → Global (iterative) | Randomized greedy |
     | **Optimality** | Probabilistic | Asymptotic [[4]](#ref-4) | None |
     | **Deterministic** | No | No | No (uses random shuffle) |
-    | **Time complexity** | $O(Kn)$ | $O(I)$ | $O(n^2 \log n)$ |
+    | **Time complexity** | $O(Kn)$ | $O(I \cdot C)$ | $O(n^2 \log n)$ |
     | **Space complexity** | $O(n^2)$ | $O(n^2)$ | $O(n^2)$ |
     | **Tuning required** | K iterations | T₀, α, iterations | None |
 

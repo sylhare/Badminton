@@ -69,10 +69,9 @@ def _(Path, json, pl):
     sl_config = json.loads((sl_dir / "config.json").read_text())
 
     shared_config = json.loads((data_dir / "config.json").read_text())
-    config = mc_config
     return (
         cg_config, cg_dir, cg_pair_events, cg_summary,
-        config, data_dir,
+        data_dir,
         mc_config, mc_dir, mc_pair_events, mc_summary,
         sa_config, sa_dir, sa_pair_events, sa_summary,
         shared_config,
@@ -80,24 +79,26 @@ def _(Path, json, pl):
     )
 
 @app.cell(hide_code=True)
-def _(config, mo, random_config):
+def _(mo, random_config, shared_config):
     _rand_double_bench = random_config.get("benchFairness", {}).get("doubleBenchRate", 31)
+    _mc_samples = shared_config.get("engines", {}).get("mc", {}).get("samplesPerRound", 300)
+    _num_courts = shared_config.get("numCourts", 4)
     mo.md(f"""
     # Badminton Engine Analysis
 
 
     **Comparing Five Algorithms:**
-    - **Monte Carlo (MC)**: Random sampling with greedy cost evaluation (300 candidates per round)
+    - **Monte Carlo (MC)**: Random sampling with greedy cost evaluation ({_mc_samples} candidates per round)
     - **Simulated Annealing (SA)**: Iterative improvement with temperature schedule
     - **Conflict Graph (CG)**: Greedy construction avoiding known teammate conflicts
     - **Smart Matching (SL)**: Simulated Annealing extended with gender/level-aware cost functions
     - **Random Baseline**: No optimization (pure random pairing)
 
     **Configuration**
-    - Runs: {config.get('runs', 2000)} per batch (5 batches each)
-    - Rounds: {config.get('rounds', 10)} (consecutive assignments per run)
-    - Players: {', '.join(map(str, config.get('playerCounts', [20])))} per batch (variable)
-    - Courts: 4 (Available courts for the players)
+    - Runs: {shared_config.get('runs', 2000)} per batch (5 batches each)
+    - Rounds: {shared_config.get('rounds', 10)} (consecutive assignments per run)
+    - Players: {', '.join(map(str, shared_config.get('playerCounts', [20])))} per batch (variable)
+    - Courts: {_num_courts} (Available courts for the players)
 
     > **Note**: We reduced the number of runs to speed up the notebook and analysis.
     """)
@@ -452,14 +453,14 @@ def _(ALGO_COLORS, ALGO_NAMES, baseline_summary, cg_summary, fig_to_image, mc_su
     return
 
 @app.cell(hide_code=True)
-def _(config, mo):
-    _player_counts = config.get("playerCounts", [20])
+def _(mo, shared_config):
+    _player_counts = shared_config.get("playerCounts", [20])
     mo.md(f"""
     ### Pair Frequency Heatmaps
-    
+
     These heatmaps show **repeat events** — which pairs repeated most often across all simulations.
-    
-    > **Note:** Simulations use variable player counts ({', '.join(map(str, _player_counts))} players per batch). 
+
+    > **Note:** Simulations use variable player counts ({', '.join(map(str, _player_counts))} players per batch).
     > Players P15-P20 only participate in larger batches, so they have fewer repeat opportunities overall.
     """)
     return
@@ -470,20 +471,19 @@ def _(
     baseline_pair_events,
     build_repeat_matrix,
     cg_pair_events,
-    config,
     fig_to_image,
     mc_pair_events,
     mo,
     np,
     plt,
     sa_pair_events,
+    shared_config,
     sl_pair_events,
 ):
     from matplotlib.gridspec import GridSpec
     from matplotlib.colors import PowerNorm
 
-    _player_counts = config.get("playerCounts", [20])
-    _num_players = max(_player_counts)
+    _num_players = len(shared_config.get("playerProfiles", {}))
     _players = [f"P{i + 1}" for i in range(_num_players)]
 
     _mc_matrix = build_repeat_matrix(mc_pair_events, _num_players)
@@ -685,16 +685,9 @@ def _(cg_match_events_div, mc_match_events_div, pl, random_match_events_div, sa_
     Results are consumed by both the chart cells and algo_metrics to avoid duplication."""
     def _court_freshness_fn(match_df):
         scores = []
-        groups = (
-            match_df.select(["simulationId", "numPlayers"])
-            .unique()
-            .sort(["simulationId", "numPlayers"])
-            .iter_rows()
-        )
-        for sid, npl in groups:
-            sim = match_df.filter(
-                (pl.col("simulationId") == sid) & (pl.col("numPlayers") == npl)
-            )
+        sim_ids = match_df.get_column("simulationId").unique().sort().to_list()
+        for sid in sim_ids:
+            sim = match_df.filter(pl.col("simulationId") == sid)
             hist: dict = {}
             for row in sim.iter_rows(named=True):
                 court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
@@ -708,16 +701,9 @@ def _(cg_match_events_div, mc_match_events_div, pl, random_match_events_div, sa_
 
     def _cooccurrence_fn(match_df):
         all_counts = []
-        groups = (
-            match_df.select(["simulationId", "numPlayers"])
-            .unique()
-            .sort(["simulationId", "numPlayers"])
-            .iter_rows()
-        )
-        for sid, npl in groups:
-            sim = match_df.filter(
-                (pl.col("simulationId") == sid) & (pl.col("numPlayers") == npl)
-            )
+        sim_ids = match_df.get_column("simulationId").unique().sort().to_list()
+        for sid in sim_ids:
+            sim = match_df.filter(pl.col("simulationId") == sid)
             pair_counts: dict = {}
             for row in sim.iter_rows(named=True):
                 court = sorted(set(row["team1Players"].split("|") + row["team2Players"].split("|")))
@@ -767,7 +753,7 @@ def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random
                   ha="center", va="bottom", fontsize=11, fontweight="bold")
     
     _data = [d["all_player_counts"] for d in _diversities]
-    _bp = _ax2.boxplot(_data, labels=_algo_names, patch_artist=True)
+    _bp = _ax2.boxplot(_data, tick_labels=_algo_names, patch_artist=True)
     for _patch, _color in zip(_bp['boxes'], _colors):
         _patch.set_facecolor(_color)
         _patch.set_alpha(0.7)
@@ -1165,18 +1151,19 @@ def _(aggregate_bench_stats, aggregate_by_player_count, data_dir, pl):
     )
 
 @app.cell
-def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats, sl_bench_stats):
+def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats, shared_config, sl_bench_stats):
     _algo_names = ["Random", "MC", "SA", "CG", "SL"]
     _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
     _bench_dfs = [random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats, sl_bench_stats]
-    
+    _max_courts = shared_config.get("numCourts", 4)
+
     _all_player_counts = set()
     for _algo in _algo_names:
         _all_player_counts.update(bench_by_players[_algo].keys())
     _player_counts = sorted(_all_player_counts) if _all_player_counts else [20]
-    
+
     def get_court_spots(num_players):
-        num_courts = min(4, num_players // 4)
+        num_courts = min(_max_courts, num_players // 4)
         return num_courts * 4
     
     _theoretical_max = []
@@ -1268,17 +1255,17 @@ def _(mo):
     return
 
 @app.cell(hide_code=True)
-def _(config, math, mc_config, mo, sa_config, sl_config):
-    _player_counts = config.get("playerCounts", [20])
+def _(math, mc_config, mo, sa_config, shared_config, sl_config):
+    _player_counts = shared_config.get("playerCounts", [20])
     _n = max(_player_counts)
-    _c = 4
-    _r = config.get("rounds", 10)
+    _c = shared_config.get("numCourts", 4)
+    _r = shared_config.get("rounds", 10)
     _playing_per_round = _c * 4
     _mc_samples = mc_config.get("algorithmParams", {}).get("samplesPerRound", 300)
-    _sa_iterations = sa_config.get("algorithmParams", {}).get("iterations", 5000)
+    _sa_iterations = sa_config.get("algorithmParams", {}).get("iterations", 500)
     _sa_initial_temp = sa_config.get("algorithmParams", {}).get("initialTemperature", 2000)
     _sa_cooling_rate = sa_config.get("algorithmParams", {}).get("coolingRate", 0.9995)
-    _sl_iterations = sl_config.get("algorithmParams", {}).get("iterations", 5000)
+    _sl_iterations = sl_config.get("algorithmParams", {}).get("iterations", 500)
     _pairs_per_round = _c * 2
     _total_possible_pairs = _n * (_n - 1) // 2
     
