@@ -622,20 +622,16 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    ## Consolidated Rules for 3rd Place
-
-    ### Summary
+    ## Consolidated Scenario for 3rd Place
 
     For any `n` players:
     - the bracket size is the next power of 2 after n (5 players -> a bracket of 8)
-    - the number of round is the exponent of the bracket's power of 2 (8 = 2^3 -> 3 rounds)
-    - the semi final losers is the team that loses in the before last round of the winning bracket
+    - the number of rounds is the exponent of the bracket's power of 2 (8 = 2^3 -> 3 rounds)
+    - the semi-final losers are the teams that lose in the round before the final of the winners bracket
 
-    | Semi-final losers | Rule | Cases |
-    |-------------------|------|-------|
-    | 0 (round 1 = semi-final) | CB winner = 3rd | B (n=3-4) |
-    | 1 | Semi-final loser vs CB winner for 3rd | D, E (n=5-6, 9-12, ...) |
-    | 2 | Two semi-final losers play for 3rd | F (n=7-8, 13-16, ...) |
+    Ignoring the trivial case where the first round is also the semi-final (where the two initial losers battle it for 3rd),
+    we can identify 2 scenario and define how the third place should be attributed.
+
     """)
     return
 
@@ -710,12 +706,7 @@ def _(analyze_tournament, classify_case, fig_to_image, next_power_of_2, plt):
         ax.text(1.5, 3.4, "WB Final", fontsize=8, ha="center", color="#666")
         ax.text(1.5, 3.0, f"S{info['wb_winner']} (1st)", fontsize=10, ha="center", fontweight="bold", bbox=dict(boxstyle="round,pad=0.2", facecolor="#c8e6c9", edgecolor="#2e7d32"))
         ax.text(1.5, 2.3, f"S{info['wb_loser']} (2nd)", fontsize=10, ha="center", bbox=dict(boxstyle="round,pad=0.2", facecolor="#ffcdd2", edgecolor="#c62828"))
-        if info["case"] == "B":
-            ax.text(5, 3.0, "CB Winner", fontsize=8, ha="center", color="#666")
-            ax.text(5, 2.5, f"S{_cb}", fontsize=10, ha="center", bbox=_box_blue)
-            ax.annotate("", xy=(7, 2.5), xytext=(5.8, 2.5), arrowprops=dict(arrowstyle="->", color="#1565c0", lw=2))
-            ax.text(8.5, 2.5, "3rd", fontsize=12, ha="center", fontweight="bold", bbox=_box_gold)
-        elif len(_sf) == 1:
+        if len(_sf) == 1:
             ax.text(4, 3.4, "WB Semi-final Loser", fontsize=8, ha="center", color="#666")
             ax.text(4, 3.0, f"S{_sf[0]}", fontsize=10, ha="center", bbox=_box_blue)
             ax.text(4, 1.6, "CB Winner", fontsize=8, ha="center", color="#666")
@@ -758,34 +749,16 @@ def _(analyze_tournament, classify_case, fig_to_image, next_power_of_2, plt):
 def _(draw_case_diagram, mo):
     mo.vstack([
         mo.md(r"""
-### Rule for semi finals as round 1
-
-*Applies to Case B (n=3-4).*
-        """),
-        mo.image(draw_case_diagram(4)),
-        mo.md(r"""
-When the bracket size is 4, round 1 *is* the semi-final.
-Every loser goes through the consolation bracket for its only round.
-The consolation bracket winner is automatically 3rd.
-        """),
-    ])
-    return
-
-
-@app.cell
-def _(draw_case_diagram, mo):
-    mo.vstack([
-        mo.md(r"""
-### Rule for 1 semi final match
+### Rule for 1 semi-final match
 
 *Applies to Cases D and E (n=5-6, 9-12, 17-24, ...).*
 
-When the number of players is in between two power of 2 with not enough to fill the two brackets.
+When the number of players is in between two powers of 2 with not enough to fill the two brackets.
         """),
         mo.image(draw_case_diagram(6)),
         mo.md(r"""
 When there is exactly **1 semi-final loser**, it means one team is a "bye" and advance to the final,
-while the other teams battle it in a single semi-final.
+while the other teams compete in a single semi-final.
 
 So the battle for third place becomes a match between the consolation bracket latest winner and the winner bracket's semi-final loser.
 This match can happen during the winner bracket finale.
@@ -798,7 +771,7 @@ This match can happen during the winner bracket finale.
 def _(draw_case_diagram, mo):
     mo.vstack([
         mo.md(r"""
-### Rule for 2 semi final match
+### Rule for 2 semi-final matches
 
 *Applies to Case F (n=7-8, 13-16, 25-32, ...).*
 
@@ -806,12 +779,50 @@ When the number of players is close but below the next power of 2.
         """),
         mo.image(draw_case_diagram(8)),
         mo.md(r"""
-When there are **2 semi-final losers**, they can battle it out for the third place,
+When there are **2 semi-final losers**, they play each other for third place,
 while the consolation bracket finale is a battle for 5th place.
 All matches can happen during the winner bracket finale.
         """),
     ])
     return
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Conclusion
+
+    A single-elimination tournament for `n` players uses a bracket of size `B = 2^k`,
+    where `B` is the smallest power of 2 greater than or equal to `n`. The tournament
+    has `k = log2(B)` rounds. When `n < B`, some first-round slots are byes (automatic advances).
+
+    **Winners Bracket (WB):** Standard single-elimination. Each round halves the field.
+    The semi-final is round `k-1` (the penultimate round). The final is round `k`.
+
+    **Consolation Bracket (CB):** Seeded exclusively by first-round losers from the WB.
+    There are `floor(n/2)` first-round losers. The CB begins at round 2 of the tournament
+    (since round-1 results are needed to determine its seeds). If the number of CB seeds
+    is odd, one seed receives a bye in the CB's first round.
+
+    **Semi-final losers** are teams eliminated in the WB semi-final (round `k-1`).
+    Their count depends on how many players fill the bracket:
+
+    - **0 semi-final losers** when `B = 4` (round 1 is the semi-final).
+    - **1 semi-final loser** when `n <= 3/4 * B` (one semi-final slot is a bye-advance).
+    - **2 semi-final losers** when `n > 3/4 * B` (both semi-final slots have real matches).
+
+    **3rd-place determination:**
+
+    | Semi-final losers | Rule | Standings |
+    |-------------------|------|-----------|
+    | 0 | CB winner is 3rd | 1st: WB winner, 2nd: WB final loser, 3rd: CB winner |
+    | 1 | Semi-final loser plays CB winner for 3rd | Winner of that match is 3rd, loser is 4th |
+    | 2 | Two semi-final losers play each other for 3rd | Winner is 3rd, loser is 4th, CB winner is 5th |
+
+    All 3rd-place matches occur during the final round (round `k`), alongside the WB final
+    and CB final. No additional round beyond the WB final is required.
+    """)
+    return
+
 
 if __name__ == "__main__":
     app.run()
