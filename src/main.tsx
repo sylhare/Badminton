@@ -10,9 +10,7 @@ const StatsPage        = React.lazy(() => import('./pages/StatsPage.tsx'));
 const AlgorithmPage    = React.lazy(() => import('./pages/AlgorithmPage.tsx'));
 const EnginePage       = React.lazy(() => import('./pages/EnginePage.tsx'));
 const LevelTrackerPage = React.lazy(() => import('./pages/LevelTrackerPage.tsx'));
-const TournamentPage   = React.lazy(() =>
-  import('./pages/TournamentPage.tsx').then(m => ({ default: m.TournamentPage })),
-);
+const TournamentPage   = React.lazy(() => import('./pages/TournamentPage.tsx'));
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
