@@ -11,6 +11,7 @@ const AlgorithmPage    = React.lazy(() => import('./pages/AlgorithmPage.tsx'));
 const EnginePage       = React.lazy(() => import('./pages/EnginePage.tsx'));
 const LevelTrackerPage = React.lazy(() => import('./pages/LevelTrackerPage.tsx'));
 const TournamentPage   = React.lazy(() => import('./pages/TournamentPage.tsx'));
+const NotFoundPage     = React.lazy(() => import('./pages/NotFoundPage.tsx'));
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -24,6 +25,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/engine" element={<EnginePage />} />
             <Route path="/level-tracker" element={<LevelTrackerPage />} />
             <Route path="/tournament" element={<TournamentPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </AppStateProvider>

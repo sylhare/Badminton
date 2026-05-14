@@ -5,7 +5,7 @@ import { countExpectedSemiFinalLosers, nextPowerOf2 } from '../../src/tournament
 import { createMockPlayer, createTournamentTeam, createTournamentTeams } from '../data/testFactories';
 import { BracketKind } from '../../src/tournament/types';
 import type { TournamentTeam } from '../../src/tournament/types';
-import { playAllCBRounds, playAllWBRounds, playFullTournament, playWBRound } from '../data/tournamentTestHelpers';
+import { playAllCBRounds, playFullTournament, playWBRound } from '../data/tournamentTestHelpers';
 
 describe('nextPowerOf2', () => {
   it.each([
