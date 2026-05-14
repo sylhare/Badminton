@@ -28,6 +28,11 @@ describe('App', () => {
       });
     });
 
+    it('renders the shared footer', () => {
+      renderWithProvider(<App />);
+      expect(screen.getByTestId('app-footer')).toBeInTheDocument();
+    });
+
     it('shows player list after adding players', async () => {
       renderWithProvider(<App />);
       await addPlayers(user, 'Alice');

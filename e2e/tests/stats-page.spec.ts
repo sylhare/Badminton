@@ -39,7 +39,7 @@ test.describe('Stats Page', () => {
     });
 
     await test.step('app footer has GitHub feedback link', async () => {
-      const footer = page.locator('.app-footer');
+      const footer = page.getByTestId('app-footer');
       await expect(footer).toBeVisible();
       await expect(footer.locator('a[href*="github.com"]')).toBeVisible();
     });
@@ -82,7 +82,7 @@ test.describe('Stats Page', () => {
     });
 
     await test.step('GitHub feedback link in footer', async () => {
-      const footer = page.locator('.stats-footer');
+      const footer = page.getByTestId('app-footer');
       await expect(footer).toBeVisible();
       await expect(footer.getByText('Let us know on GitHub')).toBeVisible();
       const githubLink = footer.locator('a[href*="github.com"]');

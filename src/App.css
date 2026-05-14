@@ -2205,6 +2205,25 @@ h1 {
     background: #f7fafc;
 }
 
+/* Shared primary action link (pill button) */
+
+.primary-action-link {
+    display: inline-block;
+    padding: 0.6rem 1.4rem;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: opacity 0.2s;
+}
+
+.primary-action-link:hover {
+    opacity: 0.85;
+    color: white;
+}
+
 .app-footer {
     max-width: 1200px;
     margin: 20px auto 0;
@@ -2231,12 +2250,7 @@ h1 {
 }
 
 .app-footer .analysis-link {
-    text-decoration: underline;
     padding: 15px;
-}
-
-.app-footer .analysis-link:hover {
-    opacity: 0.8;
 }
 
 @media (max-width: 768px) {

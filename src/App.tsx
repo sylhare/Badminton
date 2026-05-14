@@ -9,6 +9,7 @@ import ImportStateModal from './components/modals/ImportStateModal';
 import { CourtAssignments } from './components/court';
 import { useShareState } from './hooks/useShareState';
 import Leaderboard from './components/players/Leaderboard';
+import Footer from './components/Footer';
 import { storageManager } from './utils/StorageManager';
 import { useAppState } from './providers/AppStateProvider';
 import { benchedPlayers } from './utils/playerUtils';
@@ -268,28 +269,7 @@ function App(): React.ReactElement {
         onDecline={handleImportDecline}
       />
 
-      <footer className="app-footer">
-        <p>
-          Have feedback? Found a bug or want to suggest a feature?
-          {' '}
-          <a
-            href="https://github.com/sylhare/Badminton/issues/new/choose"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Let us know on GitHub
-          </a>
-        </p>
-        <p>
-          <Link
-            to="/stats"
-            className="analysis-link"
-            data-testid="stats-link"
-          >
-            View Statistics & Analysis
-          </Link>
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 }
