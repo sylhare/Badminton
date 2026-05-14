@@ -7,6 +7,7 @@ import SinglesGraph from '../components/graphs/SinglesGraph';
 import BenchGraph from '../components/graphs/BenchGraph';
 import PairsGraph from '../components/graphs/PairsGraph';
 import LevelHistoryGraph from '../components/graphs/LevelHistoryGraph';
+import Footer from '../components/Footer';
 import './StatsPage.css';
 
 type CountMap = Record<string, number>;
@@ -526,19 +527,7 @@ function StatsPage(): React.ReactElement {
           </div>
         </section>
 
-        <footer className="stats-footer">
-          <p>
-            Have feedback? Found a bug or want to suggest a feature?
-            {' '}
-            <a
-              href="https://github.com/sylhare/Badminton/issues/new/choose"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Let us know on GitHub
-            </a>
-          </p>
-        </footer>
+        <Footer showStatsLink={false} />
       </div>
     </div>
   );
