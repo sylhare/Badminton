@@ -5,6 +5,7 @@ export type TournamentFormat = 'singles' | 'doubles';
 export enum BracketKind {
   Winners = 'winners',
   Consolation = 'consolation',
+  ThirdPlace = 'third-place',
 }
 export type TournamentType = 'round-robin' | 'elimination';
 export type TournamentPhase = 'setup' | 'active' | 'completed';

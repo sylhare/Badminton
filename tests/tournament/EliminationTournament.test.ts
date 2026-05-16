@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
-import { nextPowerOf2 } from '../../src/tournament/bracketTree';
+import { countExpectedSemiFinalLosers, nextPowerOf2 } from '../../src/tournament/bracketTree';
 import { createMockPlayer, createTournamentTeam, createTournamentTeams } from '../data/testFactories';
 import { BracketKind } from '../../src/tournament/types';
 import type { TournamentTeam } from '../../src/tournament/types';
+import { playAllCBRounds, playFullTournament, playWBRound } from '../data/tournamentTestHelpers';
 
 describe('nextPowerOf2', () => {
   it.each([
@@ -191,6 +192,11 @@ describe('EliminationTournament', () => {
       const [wbFinal] = t.winners.matchesForRound(3);
       t = t.withMatchResult(wbFinal.id, 1);
 
+      expect(t.thirdPlaceMatch).toBeDefined();
+      expect(t.isComplete()).toBe(false);
+
+      t = t.withMatchResult(t.thirdPlaceMatch!.id, 1);
+
       expect(t.isComplete()).toBe(true);
       expect(t.phase()).toBe('completed');
       expect(t.calculateStandings()).toHaveLength(5);
@@ -279,6 +285,95 @@ describe('EliminationTournament', () => {
       const [m0] = t.winners.matchesForRound(1);
       t = t.withMatchResult(m0.id, 1);
       expect(t.completedRounds()).toBe(0);
+    });
+  });
+
+  describe('3rd-place match', () => {
+    it('3 teams (Case B): no 3rd-place match', () => {
+      const [A, B, C] = createTournamentTeams(['A', 'B', 'C']);
+      const t = playFullTournament(EliminationTournament.create().start([A, B, C], 4));
+      expect(t.thirdPlaceMatch).toBeUndefined();
+      expect(t.isComplete()).toBe(true);
+    });
+
+    it('4 teams (Case B): no 3rd-place match, CB winner is 3rd', () => {
+      const [A, B, C, D] = createTournamentTeams(['A', 'B', 'C', 'D']);
+      const t = playFullTournament(EliminationTournament.create().start([A, B, C, D], 4));
+
+      expect(t.thirdPlaceMatch).toBeUndefined();
+      expect(t.isComplete()).toBe(true);
+      const standings = t.calculateStandings();
+      expect(standings[0].team.id).toBe(A.id);
+      expect(standings[1].team.id).toBe(C.id);
+      expect(standings[2].team.id).toBe(B.id);
+    });
+
+    it('6 teams (Case E): semi-final loser vs CB winner for 3rd', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F']);
+      let t = EliminationTournament.create().start(teams, 4);
+
+      t = playWBRound(t, 1);
+      t = playAllCBRounds(t);
+      t = playWBRound(t, 2);
+      t = playAllCBRounds(t);
+      t = playWBRound(t, 3);
+      t = playAllCBRounds(t);
+
+      expect(t.thirdPlaceMatch).toBeDefined();
+      expect(t.thirdPlaceMatch!.bracket).toBe(BracketKind.ThirdPlace);
+      expect(t.isComplete()).toBe(false);
+
+      t = t.withMatchResult(t.thirdPlaceMatch!.id, 1);
+      expect(t.isComplete()).toBe(true);
+
+      const names = t.calculateStandings().map(r => r.team.players[0].name);
+      expect(names[0]).toBe('A');
+      expect(names[1]).toBe('E');
+      expect(names.indexOf(t.thirdPlaceMatch!.team1.players[0].name)).toBe(2);
+    });
+
+    it('8 teams (Case F): two semi-final losers play for 3rd, CB winner is 5th', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+      let t = EliminationTournament.create().start(teams, 4);
+
+      t = playWBRound(t, 1);
+      t = playAllCBRounds(t);
+      t = playWBRound(t, 2);
+      t = playAllCBRounds(t);
+
+      expect(t.thirdPlaceMatch).toBeDefined();
+      expect(t.thirdPlaceMatch!.bracket).toBe(BracketKind.ThirdPlace);
+
+      t = t.withMatchResult(t.thirdPlaceMatch!.id, 1);
+      t = playWBRound(t, 3);
+      t = playAllCBRounds(t);
+
+      expect(t.isComplete()).toBe(true);
+      const standings = t.calculateStandings();
+      const tpWinner = t.thirdPlaceMatch!.winner === 1 ? t.thirdPlaceMatch!.team1 : t.thirdPlaceMatch!.team2;
+      const tpLoser = t.thirdPlaceMatch!.winner === 1 ? t.thirdPlaceMatch!.team2 : t.thirdPlaceMatch!.team1;
+
+      expect(standings[0].team.players[0].name).toBe('A');
+      expect(standings[1].team.players[0].name).toBe('E');
+      expect(standings[2].team.id).toBe(tpWinner.id);
+      expect(standings[3].team.id).toBe(tpLoser.id);
+    });
+  });
+
+  describe('countExpectedSemiFinalLosers', () => {
+    it.each([
+      [3, 4, 0],
+      [4, 4, 0],
+      [5, 8, 1],
+      [6, 8, 1],
+      [7, 8, 2],
+      [8, 8, 2],
+      [9, 16, 1],
+      [12, 16, 1],
+      [13, 16, 2],
+      [16, 16, 2],
+    ])('n=%i, bracket=%i → %i', (n, bracket, expected) => {
+      expect(countExpectedSemiFinalLosers(n, bracket)).toBe(expected);
     });
   });
 

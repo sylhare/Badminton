@@ -92,6 +92,10 @@ test.describe('Tournament Page - Elimination', () => {
 
       await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(3).click();
       await page.getByTestId('score-modal-confirm').click();
+
+      const tpSection = page.getByTestId('tp-section');
+      await tpSection.locator('[data-testid^="bracket-team-2-"]').nth(0).click();
+      await page.getByTestId('score-modal-confirm').click();
     });
 
     await test.step('final results: gold medal visible, CB winner ranked 3rd, WB finalist 2nd', async () => {

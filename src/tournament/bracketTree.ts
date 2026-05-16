@@ -94,6 +94,26 @@ export function getWinnersFirstRoundLoser(
   return match.winner === 1 ? match.team2 : match.team1;
 }
 
+export function getWBSemiFinalLosers(
+  winnersMatches: TournamentMatch[],
+  totalWBRounds: number,
+): TournamentTeam[] {
+  const semiFinalRound = totalWBRounds - 1;
+  if (semiFinalRound < 1) return [];
+  return winnersMatches
+    .filter(m => m.round === semiFinalRound && m.winner !== undefined)
+    .map(m => m.winner === 1 ? m.team2 : m.team1);
+}
+
+export function countExpectedSemiFinalLosers(
+  teamCount: number,
+  bracketSize: number,
+): 0 | 1 | 2 {
+  if (bracketSize <= 4) return 0;
+  if (teamCount <= (3 / 4) * bracketSize) return 1;
+  return 2;
+}
+
 export function roundLabel(roundNumber: number, totalRounds: number): string {
   const roundsFromFinal = totalRounds - roundNumber;
   if (roundsFromFinal === 0) return 'Final';

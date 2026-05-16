@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { TournamentPage } from '../../src/pages/TournamentPage';
+import TournamentPage from '../../src/pages/TournamentPage';
 import { storageManager } from '../../src/utils/StorageManager';
 import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 import { MOCK_PLAYERS } from '../data/testFactories';
@@ -27,6 +27,7 @@ describe('TournamentPage', () => {
   it('renders the tournament page heading', () => {
     renderWithProvider(<TournamentPage />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tournament');
+    expect(screen.getByTestId('app-footer')).toBeInTheDocument();
   });
 
   it('shows TournamentSetup with present players pre-selected', async () => {

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { storageManager } from '../utils/StorageManager';
 import { useAppState } from '../providers/AppStateProvider';
 import { Tournament } from '../components/tournament/Tournament';
+import Footer from '../components/Footer';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../tournament/EliminationTournament';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
@@ -10,7 +11,7 @@ import './TournamentPage.css';
 
 type AnyTournament = RoundRobinTournament | EliminationTournament;
 
-export const TournamentPage: React.FC = () => {
+const TournamentPage = (): React.ReactElement => {
   const { players, isLoaded, handleAddPlayers, handlePlayerToggle } = useAppState();
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
   const [tournament, setTournament] = useState<AnyTournament | null>(null);
@@ -77,7 +78,10 @@ export const TournamentPage: React.FC = () => {
           onTogglePlayer={handlePlayerToggle}
         />
       </div>
+      <Footer />
     </div>
   );
 };
+
+export default TournamentPage;
 

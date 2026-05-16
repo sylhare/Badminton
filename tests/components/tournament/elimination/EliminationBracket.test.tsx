@@ -7,6 +7,7 @@ import { EliminationBracket } from '../../../../src/components/tournament/elimin
 import { EliminationTournament } from '../../../../src/tournament/EliminationTournament';
 import type { TournamentTeam } from '../../../../src/tournament/types';
 import { createMockPlayer } from '../../../data/testFactories';
+import { playAllCBRounds, playFullTournament, playWBRound } from '../../../data/tournamentTestHelpers';
 
 function makeTeam(id: string): TournamentTeam {
   return { id, players: [createMockPlayer({ id: `${id}-p0`, name: id })] };
@@ -122,6 +123,23 @@ describe('EliminationBracket', () => {
 
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getByTestId('cb-section')).toBeInTheDocument();
+    });
+  });
+
+  describe('3rd place section', () => {
+    it('shows 3rd Place section for 6 teams after SF and CB final complete', () => {
+      let t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F']), 4);
+      for (let r = 1; r <= 3; r++) { t = playWBRound(t, r); t = playAllCBRounds(t); }
+
+      render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
+      expect(screen.getByTestId('tp-section')).toBeInTheDocument();
+    });
+
+    it('does not show 3rd Place section for 4 teams', () => {
+      const t = playFullTournament(EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4));
+
+      render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
+      expect(screen.queryByTestId('tp-section')).not.toBeInTheDocument();
     });
   });
 

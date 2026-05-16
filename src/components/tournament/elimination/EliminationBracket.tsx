@@ -71,6 +71,8 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
     return [cb.computeTree(), cb.seeds().length];
   }, [tournament]);
 
+  const thirdPlaceMatch = tournament.thirdPlaceMatch;
+
   const wbHeight = (bracketSize / 2) * CARD_HEIGHT + HEADER_HEIGHT;
   const consolationBracketSize = consolationSeedsLength > 0 ? nextPowerOf2(consolationSeedsLength) : 0;
   const extraRoundHeight = cbTree.length > 0 ? CARD_HEIGHT * (Math.pow(2, cbTree.length - 1) + 1) / 2 : 0;
@@ -105,6 +107,27 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
             }}
           >
             {renderBracketRounds(cbTree, cbHeight, handleTeamClick)}
+          </div>
+        </div>
+      )}
+
+      {thirdPlaceMatch && (
+        <div className="bracket-section" data-testid="tp-section">
+          <h3 className="bracket-section-title">3rd Place</h3>
+          <div
+            className="bracket-tree"
+            style={{
+              position: 'relative',
+              height: CARD_HEIGHT + HEADER_HEIGHT,
+              width: COLUMN_WIDTH,
+            }}
+          >
+            <BracketColumn
+              nodes={[{ type: 'match', match: thirdPlaceMatch, slotIndex: 0 }]}
+              round={1}
+              label="3rd Place"
+              onTeamClick={handleTeamClick}
+            />
           </div>
         </div>
       )}

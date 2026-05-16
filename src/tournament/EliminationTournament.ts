@@ -13,6 +13,8 @@ import { RoundRobinTournament } from './RoundRobinTournament';
 import {
   ConsolationBracket,
   WinnersBracket,
+  countExpectedSemiFinalLosers,
+  getWBSemiFinalLosers,
   getWinnersFirstRoundLoser,
   nextPowerOf2,
   resolvePosition,
@@ -170,6 +172,33 @@ export class EliminationTournament extends Tournament {
       break;
     }
 
+    const expectedSFLosers = countExpectedSemiFinalLosers(teams.length, bracketSize);
+    const thirdPlaceExists = allMatches.some(m => m.bracket === BracketKind.ThirdPlace)
+      || newMatches.some(m => m.bracket === BracketKind.ThirdPlace);
+    const semiFinalRound = totalWBRounds - 1;
+    const allWB = [...winnersMatches, ...newMatches.filter(m => m.bracket === BracketKind.Winners)];
+
+    if (!thirdPlaceExists && expectedSFLosers > 0 && roundComplete(allWB, semiFinalRound)) {
+      const sfLosers = getWBSemiFinalLosers(allWB, totalWBRounds);
+
+      if (expectedSFLosers === 1 && sfLosers.length === 1) {
+        const allCB = [...consolationMatches, ...newMatches.filter(m => m.bracket === BracketKind.Consolation)];
+        const cbFinal = this.highestRoundMatch(allCB);
+        if (cbFinal?.winner !== undefined) {
+          const cbWinner = cbFinal.winner === 1 ? cbFinal.team1 : cbFinal.team2;
+          newMatches.push(this.makeMatch(
+            BracketKind.ThirdPlace, 1, sfLosers[0], cbWinner,
+            allMatches.length + newMatches.length,
+          ));
+        }
+      } else if (expectedSFLosers === 2 && sfLosers.length === 2) {
+        newMatches.push(this.makeMatch(
+          BracketKind.ThirdPlace, 1, sfLosers[0], sfLosers[1],
+          allMatches.length + newMatches.length,
+        ));
+      }
+    }
+
     return newMatches;
   }
 
@@ -200,6 +229,10 @@ export class EliminationTournament extends Tournament {
       this._state.matches.filter(m => m.bracket === BracketKind.Winners),
       this.bracketSize(),
     );
+  }
+
+  get thirdPlaceMatch(): TournamentMatch | undefined {
+    return this._state.matches.find(m => m.bracket === BracketKind.ThirdPlace);
   }
 
   get consolation(): ConsolationBracket {
@@ -243,19 +276,29 @@ export class EliminationTournament extends Tournament {
 
     const wbMatches = matches.filter(m => m.bracket === BracketKind.Winners);
     const cbMatches = matches.filter(m => m.bracket === BracketKind.Consolation);
+    const tpMatches = matches.filter(m => m.bracket === BracketKind.ThirdPlace);
     const wbFinal = this.highestRoundMatch(wbMatches);
     const cbFinal = this.highestRoundMatch(cbMatches);
+    const tpMatch = tpMatches.length > 0 ? tpMatches[0] : undefined;
 
     const placed: TournamentStandingRow[] = [];
     const placedIds = new Set<string>();
-    for (const final of [wbFinal, cbFinal]) {
-      if (!final?.winner) continue;
-      const winner = final.winner === 1 ? final.team1 : final.team2;
-      const loser = final.winner === 1 ? final.team2 : final.team1;
-      placed.push(standings.get(winner.id)!, standings.get(loser.id)!);
-      placedIds.add(winner.id);
-      placedIds.add(loser.id);
-    }
+    const placeTeam = (teamId: string) => {
+      if (placedIds.has(teamId)) return;
+      const row = standings.get(teamId);
+      if (!row) return;
+      placed.push(row);
+      placedIds.add(teamId);
+    };
+    const placeMatchResult = (match: TournamentMatch | undefined) => {
+      if (!match?.winner) return;
+      placeTeam((match.winner === 1 ? match.team1 : match.team2).id);
+      placeTeam((match.winner === 1 ? match.team2 : match.team1).id);
+    };
+
+    placeMatchResult(wbFinal);
+    placeMatchResult(tpMatch);
+    placeMatchResult(cbFinal);
 
     const unplaced = Array.from(standings.values())
       .filter(r => !placedIds.has(r.team.id))
