@@ -539,8 +539,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const unsubscribe = engine.onStateChange(listener);
 
       const players = mockPlayers(4);
-      const court: Court = createMockCourt(1, players, 1);
-      engine.recordWins([court]);
+      const assignments: Court[] = [createMockCourt(1, players)];
+      engine.updateWinner({ courtNumber: 1, winner: 1, currentAssignments: assignments });
 
       expect(listener).toHaveBeenCalled();
 
@@ -554,8 +554,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       unsubscribe();
 
       const players = mockPlayers(4);
-      const court: Court = createMockCourt(1, players, 1);
-      engine.recordWins([court]);
+      const assignments: Court[] = [createMockCourt(1, players)];
+      engine.updateWinner({ courtNumber: 1, winner: 1, currentAssignments: assignments });
 
       expect(listener).not.toHaveBeenCalled();
     });

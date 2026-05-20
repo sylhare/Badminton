@@ -343,7 +343,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
     if (stateChanged) {
       CourtAssignmentTracker.globalCounter++;
-      this.notifyStateChange();
     }
   }
 
@@ -378,8 +377,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         this.updateTimestamp(k);
       });
     }
-
-    this.notifyStateChange();
   }
 
   /**
