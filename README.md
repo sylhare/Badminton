@@ -2,6 +2,10 @@
 
 A React TypeScript application that helps organize badminton players into court assignments using manual or image-based player list extraction.
 
+[**Try the app**](https://sylhare.github.io/Badminton/)
+
+![Badminton Court Manager](public/badminton-court-manager.png)
+
 ## Features
 
 - **📸 Image Upload & OCR**: Take a picture of a player list and automatically extract names using Tesseract.js
