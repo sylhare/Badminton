@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 
+import type { AssignmentAnomaly } from '../types';
+
 declare global {
   interface Window {
     gtag: (...args: any[]) => void;
@@ -19,6 +21,7 @@ export interface AnalyticsHook {
   trackCourtAction: (action: string, details?: { courtCount?: number }) => void;
   trackGameAction: (action: string, details?: { gameType?: string; courtNumber?: number }) => void;
   trackUIAction: (action: string, details?: { section?: string }) => void;
+  trackAssignmentAnomaly: (anomaly: AssignmentAnomaly) => void;
 }
 
 export const useAnalytics = (): AnalyticsHook => {
@@ -68,11 +71,21 @@ export const useAnalytics = (): AnalyticsHook => {
     });
   }, [trackEvent]);
 
+  const trackAssignmentAnomaly = useCallback((anomaly: AssignmentAnomaly) => {
+    trackEvent({
+      action: anomaly.type,
+      category: 'Assignment Anomaly',
+      label: `${anomaly.playerIds.length} players`,
+      value: anomaly.playerIds.length,
+    });
+  }, [trackEvent]);
+
   return {
     trackEvent,
     trackPlayerAction,
     trackCourtAction,
     trackGameAction,
     trackUIAction,
+    trackAssignmentAnomaly,
   };
 };
