@@ -76,6 +76,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     this.lastGeneratedAt = Date.now();
     if (replaceRound) this.undoLastRound();
     this.applyRoundStats(finalCourts, presentPlayers);
+    this.notifyStateChange();
 
     return Object.assign(finalCourts, { committed: !replaceRound });
   }
