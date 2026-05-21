@@ -174,6 +174,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
 
     benchedPlayers(courts, players).forEach(p => {
+      this.recordBenching(p.id);
       delta.bench.push(p.id);
     });
 
@@ -182,11 +183,13 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
       if (court.players.length === 2) {
         court.players.forEach(p => {
+          this.recordSingles(p.id);
           delta.singles.push(p.id);
         });
       }
 
       if (!this.pendingRotatedCourts.has(court.courtNumber)) {
+        this.updateCourtTeamStats(court);
         const { team1, team2 } = court.teams;
         for (const team of [team1, team2]) {
           delta.teammates.push(...teamPairs(team));
@@ -217,17 +220,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         anomalies.push({ type: 'consecutive_teammates', playerIds: [...affectedIds] });
       }
     }
-
-    delta.bench.forEach(id => this.recordBenching(id));
-    courts.forEach(court => {
-      if (!court.teams) return;
-      if (court.players.length === 2) {
-        court.players.forEach(p => this.recordSingles(p.id));
-      }
-      if (!this.pendingRotatedCourts.has(court.courtNumber)) {
-        this.updateCourtTeamStats(court);
-      }
-    });
 
     this.lastRoundDelta = delta;
     return anomalies;
