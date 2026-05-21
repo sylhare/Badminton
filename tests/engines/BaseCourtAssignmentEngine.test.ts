@@ -601,5 +601,18 @@ describe('BaseCourtAssignmentEngine', () => {
       const result2 = engine.generate(players, 1);
       expect(result2.anomalies).toEqual([]);
     });
+
+    it('compares only the previous round against the current round, not cumulative counts', () => {
+      const players = mockPlayers(6);
+      const courtA = createMockCourt(1, players.slice(0, 4));
+      const courtB = createMockCourt(1, players.slice(2, 6));
+
+      engine.applyRoundStats([courtA], players);
+      engine.applyRoundStats([courtB], players);
+      const anomalies = engine.applyRoundStats([courtA], players);
+
+      const benchAnomaly = anomalies.find(a => a.type === 'consecutive_bench');
+      expect(benchAnomaly).toBeUndefined();
+    });
   });
 });

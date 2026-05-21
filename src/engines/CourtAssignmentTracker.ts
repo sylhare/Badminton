@@ -198,30 +198,39 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       }
     });
 
+    this.lastRoundDelta = delta;
+    return this.detectAnomalies(prev, delta);
+  }
+
+  /** Detects anomalies where players are benched, play singles, or share teammates in two consecutive rounds. */
+  private detectAnomalies(
+    prev: { bench: string[]; singles: string[]; teammates: string[] } | null,
+    delta: { bench: string[]; singles: string[]; teammates: string[] },
+  ): AssignmentAnomaly[] {
+    if (!prev) return [];
+
     const anomalies: AssignmentAnomaly[] = [];
-    if (prev) {
-      const newBenchIds = new Set(delta.bench);
-      const consecutiveBench = prev.bench.filter(id => newBenchIds.has(id));
-      if (consecutiveBench.length > 0) {
-        anomalies.push({ type: 'consecutive_bench', playerIds: consecutiveBench });
-      }
 
-      const newSinglesIds = new Set(delta.singles);
-      const consecutiveSingles = prev.singles.filter(id => newSinglesIds.has(id));
-      if (consecutiveSingles.length > 0) {
-        anomalies.push({ type: 'consecutive_singles', playerIds: consecutiveSingles });
-      }
-
-      const newTeammateKeys = new Set(delta.teammates);
-      const consecutiveTeammates = prev.teammates.filter(k => newTeammateKeys.has(k));
-      if (consecutiveTeammates.length > 0) {
-        const affectedIds = new Set<string>();
-        consecutiveTeammates.forEach(k => k.split('|').forEach(id => affectedIds.add(id)));
-        anomalies.push({ type: 'consecutive_teammates', playerIds: [...affectedIds] });
-      }
+    const newBenchIds = new Set(delta.bench);
+    const consecutiveBench = prev.bench.filter(id => newBenchIds.has(id));
+    if (consecutiveBench.length > 0) {
+      anomalies.push({ type: 'consecutive_bench', playerIds: consecutiveBench });
     }
 
-    this.lastRoundDelta = delta;
+    const newSinglesIds = new Set(delta.singles);
+    const consecutiveSingles = prev.singles.filter(id => newSinglesIds.has(id));
+    if (consecutiveSingles.length > 0) {
+      anomalies.push({ type: 'consecutive_singles', playerIds: consecutiveSingles });
+    }
+
+    const newTeammateKeys = new Set(delta.teammates);
+    const consecutiveTeammates = prev.teammates.filter(k => newTeammateKeys.has(k));
+    if (consecutiveTeammates.length > 0) {
+      const affectedIds = new Set<string>();
+      consecutiveTeammates.forEach(k => k.split('|').forEach(id => affectedIds.add(id)));
+      anomalies.push({ type: 'consecutive_teammates', playerIds: [...affectedIds] });
+    }
+
     return anomalies;
   }
 

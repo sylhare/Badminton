@@ -77,6 +77,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     if (replaceRound) this.undoLastRound();
     const detectedAnomalies = this.applyRoundStats(finalCourts, presentPlayers);
     const anomalies = replaceRound ? [] : detectedAnomalies;
+    this.notifyStateChange();
 
     return { courts: finalCourts, committed: !replaceRound, anomalies };
   }
