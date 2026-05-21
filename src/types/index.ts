@@ -75,7 +75,8 @@ export interface AssignmentAnomaly {
   playerIds: string[];
 }
 
-export interface GenerateResult extends Array<Court> {
+export interface GenerateResult {
+  courts: Court[];
   committed: boolean;
   anomalies: AssignmentAnomaly[];
 }
@@ -85,7 +86,7 @@ export interface ICourtAssignmentTracker {
   resetHistory(): void;
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
-  applyRoundStats(courts: Court[], players: Player[]): void;
+  applyRoundStats(courts: Court[], players: Player[]): AssignmentAnomaly[];
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;

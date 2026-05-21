@@ -60,7 +60,7 @@ describe('Engine Selector', () => {
 
     it('should generate court assignments', () => {
       const players = mockPlayers(8);
-      const assignments = engine().generate(players, 2);
+      const { courts: assignments } = engine().generate(players, 2);
 
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
@@ -69,7 +69,7 @@ describe('Engine Selector', () => {
 
     it('should get benched players', () => {
       const players = mockPlayers(10);
-      const assignments = engine().generate(players, 2);
+      const { courts: assignments } = engine().generate(players, 2);
       const benched = benchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
@@ -84,7 +84,7 @@ describe('Engine Selector', () => {
 
     it('should generate court assignments', () => {
       const players = mockPlayers(8);
-      const assignments = engine().generate(players, 2);
+      const { courts: assignments } = engine().generate(players, 2);
 
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
@@ -93,7 +93,7 @@ describe('Engine Selector', () => {
 
     it('should get benched players', () => {
       const players = mockPlayers(10);
-      const assignments = engine().generate(players, 2);
+      const { courts: assignments } = engine().generate(players, 2);
       const benched = benchedPlayers(assignments, players);
 
       expect(benched).toHaveLength(2);
@@ -106,7 +106,7 @@ describe('Engine Selector', () => {
 
       setEngine('sa');
       engineSA.resetHistory();
-      const saAssignments = engine().generate(players, 3);
+      const { courts: saAssignments } = engine().generate(players, 3);
 
       expect(saAssignments).toHaveLength(3);
       expect(saAssignments.every(c => c.teams !== undefined)).toBe(true);
@@ -114,7 +114,7 @@ describe('Engine Selector', () => {
 
       setEngine('sl');
       engineSL.resetHistory();
-      const slAssignments = engine().generate(players, 3);
+      const { courts: slAssignments } = engine().generate(players, 3);
 
       expect(slAssignments).toHaveLength(3);
       expect(slAssignments.every(c => c.teams !== undefined)).toBe(true);
@@ -126,12 +126,12 @@ describe('Engine Selector', () => {
 
       setEngine('sa');
       engineSA.resetHistory();
-      const saAssignments = engine().generate(players, 2);
+      const { courts: saAssignments } = engine().generate(players, 2);
       const saBenched = benchedPlayers(saAssignments, players);
 
       setEngine('sl');
       engineSL.resetHistory();
-      const slAssignments = engine().generate(players, 2);
+      const { courts: slAssignments } = engine().generate(players, 2);
       const slBenched = benchedPlayers(slAssignments, players);
 
       expect(saBenched.length).toBe(1);
@@ -142,10 +142,10 @@ describe('Engine Selector', () => {
       const players: Player[] = [];
 
       setEngine('sa');
-      expect(engine().generate(players, 2)).toHaveLength(0);
+      expect(engine().generate(players, 2).courts).toHaveLength(0);
 
       setEngine('sl');
-      expect(engine().generate(players, 2)).toHaveLength(0);
+      expect(engine().generate(players, 2).courts).toHaveLength(0);
     });
   });
 });

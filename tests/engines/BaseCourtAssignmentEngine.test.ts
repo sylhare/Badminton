@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
-import type { AssignmentAnomaly, Court, Player } from '../../src/types';
+import type { Court, Player } from '../../src/types';
 
 /**
  * Test implementation of BaseCourtAssignmentEngine that exposes protected methods
@@ -75,10 +75,6 @@ class TestEngine extends BaseCourtAssignmentEngine {
 
   public testChooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
     return this.chooseBestTeamSplit(players);
-  }
-
-  public testDetectAnomalies(courts: Court[], players: Player[]): AssignmentAnomaly[] {
-    return this.detectAnomalies(courts, players);
   }
 }
 
@@ -500,7 +496,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const players = mockPlayers(8);
 
       for (let i = 0; i < 3; i++) {
-        const assignments = engine.generate(players, 2);
+        const { courts: assignments } = engine.generate(players, 2);
         assignments.forEach(court => {
           if (court.courtNumber === 1) {
             const courtWithWinner = { ...court, winner: 1 as const };
@@ -510,7 +506,7 @@ describe('BaseCourtAssignmentEngine', () => {
         engine.clearCurrentSession();
       }
 
-      const assignments = engine.generate(players, 2);
+      const { courts: assignments } = engine.generate(players, 2);
 
       expect(assignments).toHaveLength(2);
       assignments.forEach(court => {
@@ -523,7 +519,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const players = mockPlayers(4);
 
       for (let i = 0; i < 10; i++) {
-        const assignments = engine.generate(players, 1);
+        const { courts: assignments } = engine.generate(players, 1);
         if (assignments[0].teams) {
           const courtWithWinner = { ...assignments[0], winner: 1 as const };
           engine.recordWins([courtWithWinner]);
@@ -533,7 +529,7 @@ describe('BaseCourtAssignmentEngine', () => {
 
       const pairings: Record<string, number> = {};
       for (let i = 0; i < 20; i++) {
-        const assignments = engine.generate(players, 1);
+        const { courts: assignments } = engine.generate(players, 1);
         const court = assignments[0];
         if (court.teams) {
           const team1Ids = court.teams.team1.map(p => p.id).sort();
@@ -561,7 +557,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const court = createMockCourt(1, players.slice(0, 4));
       engine.applyRoundStats([court], players);
 
-      const anomalies = engine.testDetectAnomalies([court], players);
+      const anomalies = engine.applyRoundStats([court], players);
       expect(anomalies.some(a => a.type === 'consecutive_bench')).toBe(true);
       const benchAnomaly = anomalies.find(a => a.type === 'consecutive_bench')!;
       expect(benchAnomaly.playerIds).toContain(players[4].id);
@@ -573,7 +569,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const singlesCourt = { courtNumber: 1, players, teams: { team1: [players[0]], team2: [players[1]] } };
       engine.applyRoundStats([singlesCourt], players);
 
-      const anomalies = engine.testDetectAnomalies([singlesCourt], players);
+      const anomalies = engine.applyRoundStats([singlesCourt], players);
       expect(anomalies.some(a => a.type === 'consecutive_singles')).toBe(true);
       const singlesAnomaly = anomalies.find(a => a.type === 'consecutive_singles')!;
       expect(singlesAnomaly.playerIds).toContain(players[0].id);
@@ -585,7 +581,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const court = createMockCourt(1, players);
       engine.applyRoundStats([court], players);
 
-      const anomalies = engine.testDetectAnomalies([court], players);
+      const anomalies = engine.applyRoundStats([court], players);
       expect(anomalies.some(a => a.type === 'consecutive_teammates')).toBe(true);
     });
 
@@ -595,7 +591,7 @@ describe('BaseCourtAssignmentEngine', () => {
       engine.applyRoundStats([court1], players.slice(0, 4));
 
       const court2 = createMockCourt(1, players.slice(4, 8));
-      const anomalies = engine.testDetectAnomalies([court2], players.slice(4, 8));
+      const anomalies = engine.applyRoundStats([court2], players.slice(4, 8));
       expect(anomalies).toEqual([]);
     });
 

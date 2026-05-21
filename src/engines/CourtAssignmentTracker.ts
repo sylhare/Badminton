@@ -167,12 +167,13 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * Records bench/singles/teammate/opponent stats for a round.
    * Called from generate() so stats are immediately visible after generation.
    * Tracks a delta so undoLastRound() can reverse it on rapid re-generation.
+   * Returns anomalies detected by comparing against the previous round's delta.
    */
-  applyRoundStats(courts: Court[], players: Player[]): void {
+  applyRoundStats(courts: Court[], players: Player[]): AssignmentAnomaly[] {
+    const prev = this.lastRoundDelta;
     const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
 
     benchedPlayers(courts, players).forEach(p => {
-      this.recordBenching(p.id);
       delta.bench.push(p.id);
     });
 
@@ -181,13 +182,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
       if (court.players.length === 2) {
         court.players.forEach(p => {
-          this.recordSingles(p.id);
           delta.singles.push(p.id);
         });
       }
 
       if (!this.pendingRotatedCourts.has(court.courtNumber)) {
-        this.updateCourtTeamStats(court);
         const { team1, team2 } = court.teams;
         for (const team of [team1, team2]) {
           delta.teammates.push(...teamPairs(team));
@@ -196,44 +195,41 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       }
     });
 
-    this.lastRoundDelta = delta;
-  }
-
-  protected detectAnomalies(courts: Court[], players: Player[]): AssignmentAnomaly[] {
-    if (!this.lastRoundDelta) return [];
-
     const anomalies: AssignmentAnomaly[] = [];
-    const prev = this.lastRoundDelta;
+    if (prev) {
+      const newBenchIds = new Set(delta.bench);
+      const consecutiveBench = prev.bench.filter(id => newBenchIds.has(id));
+      if (consecutiveBench.length > 0) {
+        anomalies.push({ type: 'consecutive_bench', playerIds: consecutiveBench });
+      }
 
-    const newBenchIds = new Set(benchedPlayers(courts, players).map(p => p.id));
-    const consecutiveBench = prev.bench.filter(id => newBenchIds.has(id));
-    if (consecutiveBench.length > 0) {
-      anomalies.push({ type: 'consecutive_bench', playerIds: consecutiveBench });
+      const newSinglesIds = new Set(delta.singles);
+      const consecutiveSingles = prev.singles.filter(id => newSinglesIds.has(id));
+      if (consecutiveSingles.length > 0) {
+        anomalies.push({ type: 'consecutive_singles', playerIds: consecutiveSingles });
+      }
+
+      const newTeammateKeys = new Set(delta.teammates);
+      const consecutiveTeammates = prev.teammates.filter(k => newTeammateKeys.has(k));
+      if (consecutiveTeammates.length > 0) {
+        const affectedIds = new Set<string>();
+        consecutiveTeammates.forEach(k => k.split('|').forEach(id => affectedIds.add(id)));
+        anomalies.push({ type: 'consecutive_teammates', playerIds: [...affectedIds] });
+      }
     }
 
-    const newSinglesIds = new Set<string>();
-    courts.forEach(court => {
-      if (court.players.length === 2) court.players.forEach(p => newSinglesIds.add(p.id));
-    });
-    const consecutiveSingles = prev.singles.filter(id => newSinglesIds.has(id));
-    if (consecutiveSingles.length > 0) {
-      anomalies.push({ type: 'consecutive_singles', playerIds: consecutiveSingles });
-    }
-
-    const newTeammateKeys = new Set<string>();
+    delta.bench.forEach(id => this.recordBenching(id));
     courts.forEach(court => {
       if (!court.teams) return;
-      [court.teams.team1, court.teams.team2].forEach(team => {
-        teamPairs(team).forEach(k => newTeammateKeys.add(k));
-      });
+      if (court.players.length === 2) {
+        court.players.forEach(p => this.recordSingles(p.id));
+      }
+      if (!this.pendingRotatedCourts.has(court.courtNumber)) {
+        this.updateCourtTeamStats(court);
+      }
     });
-    const consecutiveTeammates = prev.teammates.filter(k => newTeammateKeys.has(k));
-    if (consecutiveTeammates.length > 0) {
-      const affectedIds = new Set<string>();
-      consecutiveTeammates.forEach(k => k.split('|').forEach(id => affectedIds.add(id)));
-      anomalies.push({ type: 'consecutive_teammates', playerIds: [...affectedIds] });
-    }
 
+    this.lastRoundDelta = delta;
     return anomalies;
   }
 

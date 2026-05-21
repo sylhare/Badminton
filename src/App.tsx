@@ -111,17 +111,17 @@ function App(): React.ReactElement {
   const generateAssignments = () => {
     setLastGeneratedAt(Date.now());
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
-    const courts = generate(players, numberOfCourts, assignments, manualCourtSelection, forceBenchPlayerIds);
+    const result = generate(players, numberOfCourts, assignments, manualCourtSelection, forceBenchPlayerIds);
 
     if (hadManualSelection) {
-      courts.forEach(court => {
+      result.courts.forEach(court => {
         if (court.courtNumber === 1) {
           court.wasManuallyAssigned = true;
         }
       });
     }
 
-    setAssignments(courts);
+    setAssignments(result.courts);
     if (!isManagePlayersCollapsed) {
       setIsManagePlayersCollapsed(true);
     }

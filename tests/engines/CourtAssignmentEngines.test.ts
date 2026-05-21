@@ -45,12 +45,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
   describe('Core Behaviour', () => {
     it('returns empty assignments when no present players', () => {
-      expect(engine.generate([], 4)).toHaveLength(0);
+      expect(engine.generate([], 4).courts).toHaveLength(0);
     });
 
     it('assigns everyone when capacity not exceeded', () => {
       const players = mockPlayers(8);
-      const assignments = engine.generate(players, 4);
+      const { courts: assignments } = engine.generate(players, 4);
       const benched = benchedPlayers(assignments, players);
 
       expect(benched.length).toBe(0);
@@ -60,7 +60,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('never places 3 players on a court', () => {
       const players = mockPlayers(14);
-      const assignments = engine.generate(players, 4);
+      const { courts: assignments } = engine.generate(players, 4);
       assignments.forEach(court => {
         expect([2, 4]).toContain(court.players.length);
       });
@@ -75,7 +75,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       players.forEach(p => (benchHistory[p.id] = 0));
 
       for (let r = 0; r < rounds; r++) {
-        const assignments = engine.generate(players, numberOfCourts);
+        const { courts: assignments } = engine.generate(players, numberOfCourts);
         vi.advanceTimersByTime(CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 60000);
         const benched = benchedPlayers(assignments, players);
         benched.forEach(p => (benchHistory[p.id] += 1));
@@ -115,7 +115,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const key = (a: string, b: string) => (a < b ? `${a}| ${b} ` : `${b}| ${a} `);
 
       for (let r = 0; r < rounds; r++) {
-        const assignments = engine.generate(players, numberOfCourts);
+        const { courts: assignments } = engine.generate(players, numberOfCourts);
         vi.advanceTimersByTime(CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 60000);
         assignments.forEach(court => {
           if (!court.teams) return;
@@ -287,7 +287,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('should save and load engine state correctly', async () => {
       const players = mockPlayers(8);
 
-      const assignments1 = engine.generate(players, 2);
+      const { courts: assignments1 } = engine.generate(players, 2);
       expect(assignments1).toHaveLength(2);
 
       const courtsWithWinners: Court[] = assignments1.map((court, index) => ({
@@ -401,7 +401,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0], players[1]],
       };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
 
       expect(assignments).toHaveLength(2);
 
@@ -420,7 +420,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0], players[1], players[2], players[3]],
       };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
 
       expect(assignments).toHaveLength(2);
 
@@ -438,7 +438,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0], players[1], players[2], players[3]],
       };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
 
       expect(assignments).toHaveLength(2);
 
@@ -456,7 +456,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0]],
       };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
 
       expect(assignments).toHaveLength(2);
       const allAssignedPlayers = assignments.flatMap(court => court.players);
@@ -469,7 +469,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0], players[1], players[2], players[3], players[4]],
       };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
 
       expect(assignments).toHaveLength(2);
       expect(assignments[0].courtNumber).toBe(1);
@@ -484,7 +484,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0], players[1], players[2]],
       };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
 
       expect(assignments).toHaveLength(2);
 
@@ -497,7 +497,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(8);
       const manualSelection: ManualCourtSelection = { players: [] };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
 
       expect(assignments).toHaveLength(2);
       expect(assignments[0].courtNumber).toBe(1);
@@ -507,7 +507,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('works with null manual selection', () => {
       const players = mockPlayers(8);
 
-      const assignments = engine.generate(players, 2, undefined);
+      const { courts: assignments } = engine.generate(players, 2, undefined);
 
       expect(assignments).toHaveLength(2);
       expect(assignments[0].courtNumber).toBe(1);
@@ -520,7 +520,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0], players[1], players[2], players[3]],
       };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
       const benched = benchedPlayers(assignments, players);
 
       expect(assignments).toHaveLength(2);
@@ -624,7 +624,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
   describe('Edge Cases', () => {
     it('should handle edge case with exactly 2 players', () => {
       const players = mockPlayers(2);
-      const assignments = engine.generate(players, 1);
+      const { courts: assignments } = engine.generate(players, 1);
 
       expect(assignments.length).toBe(1);
       expect(assignments[0].players.length).toBe(2);
@@ -638,7 +638,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
     it('should handle edge case with 5 players and 2 courts', () => {
       const players = mockPlayers(5);
-      const assignments = engine.generate(players, 2);
+      const { courts: assignments } = engine.generate(players, 2);
 
       const totalAssigned = assignments.reduce((sum, c) => sum + c.players.length, 0);
       expect(totalAssigned).toBe(4);
@@ -650,7 +650,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     it('should handle large player counts', () => {
       const players = mockPlayers(60);
 
-      const assignments = engine.generate(players, 15);
+      const { courts: assignments } = engine.generate(players, 15);
 
       expect(assignments.length).toBe(15);
       expect(assignments.every(c => c.players.length === 4)).toBe(true);
@@ -660,7 +660,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(60);
       const startTime = performance.now();
 
-      const assignments = engine.generate(players, 15);
+      const { courts: assignments } = engine.generate(players, 15);
 
       const endTime = performance.now();
       const duration = endTime - startTime;
@@ -697,7 +697,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const testRuns = 20;
 
       for (let run = 0; run < testRuns; run++) {
-        const assignments = selector.engine().generate(players, 1);
+        const { courts: assignments } = selector.engine().generate(players, 1);
         expect(assignments.length).toBe(1);
 
         const teams = assignments[0].teams!;
@@ -783,7 +783,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
   describe('Shared Edge Cases & Heuristics', () => {
     it('handles 3-player remainder specifically (odd total players)', () => {
       const players = mockPlayers(7);
-      const assignments = engine.generate(players, 2);
+      const { courts: assignments } = engine.generate(players, 2);
       expect(assignments).toHaveLength(2);
       expect(assignments[0].players).toHaveLength(4);
       expect(assignments[1].players).toHaveLength(2);
@@ -797,7 +797,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       engine.recordWins([initialCourt]);
       engine.clearCurrentSession();
 
-      const assignments = engine.generate(players, 1);
+      const { courts: assignments } = engine.generate(players, 1);
       expect(assignments).toHaveLength(1);
       expect(assignments[0].players).toHaveLength(4);
       expect(engine.stats()).toHaveProperty('teammateCountMap');
@@ -836,7 +836,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(8);
 
       const forceBench = new Set(['P0', 'P1']);
-      const assignments = engine.generate(players, 2, undefined, forceBench);
+      const { courts: assignments } = engine.generate(players, 2, undefined, forceBench);
 
       const onCourtIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
       expect(onCourtIds.has('P0')).toBeFalsy();
@@ -854,7 +854,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         players: [players[0], players[1], players[2]],
       };
 
-      const assignments = engine.generate(players, 2, manualSelection);
+      const { courts: assignments } = engine.generate(players, 2, manualSelection);
       expect(assignments.length).toBeGreaterThanOrEqual(1);
 
       const court1 = assignments.find(c => c.courtNumber === 1);

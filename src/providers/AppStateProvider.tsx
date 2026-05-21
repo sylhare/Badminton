@@ -22,7 +22,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const [counts, setCounts] = useState({ wins: new Map<string, number>(), losses: new Map<string, number>(), bench: new Map<string, number>() });
   const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
   const hasLoadedRef = useRef(false);
-  const { trackEvent } = useAnalytics();
+  const { trackAssignmentAnomaly } = useAnalytics();
 
   useEffect(() => {
     const load = async () => {
@@ -107,20 +107,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     manualCourtSelection?: ManualCourtSelection | null,
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult => {
-    const courts = engine().generate(players, numberOfCourts, manualCourtSelection || undefined, forceBenchPlayerIds);
-    if (courts.committed) applyCourtResults(previousAssignments);
+    const result = engine().generate(players, numberOfCourts, manualCourtSelection || undefined, forceBenchPlayerIds);
+    if (result.committed) applyCourtResults(previousAssignments);
 
-    courts.anomalies.forEach(anomaly => {
-      trackEvent({
-        action: anomaly.type,
-        category: 'Assignment Anomaly',
-        label: `${anomaly.playerIds.length} players`,
-        value: anomaly.playerIds.length,
-      });
-    });
+    result.anomalies.forEach(trackAssignmentAnomaly);
 
-    return courts;
-  }, [applyCourtResults, trackEvent]);
+    return result;
+  }, [applyCourtResults, trackAssignmentAnomaly]);
 
   const updateWinner = useCallback((params: UpdateWinnerParams): Court[] => {
     return engine().updateWinner(params);
