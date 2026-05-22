@@ -130,18 +130,14 @@ function App(): React.ReactElement {
   };
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
-    setAssignments(prevAssignments =>
-      updateWinner({ courtNumber, winner, currentAssignments: prevAssignments }),
-    );
+    setAssignments(updateWinner({ courtNumber, winner, currentAssignments: assignments }));
   };
 
   const handleRotateTeams = (courtNumber: number) => {
-    setAssignments(prevAssignments => {
-      const court = prevAssignments.find(c => c.courtNumber === courtNumber);
-      if (!court?.teams) return prevAssignments;
+    const court = assignments.find(c => c.courtNumber === courtNumber);
+    if (!court?.teams) return;
 
-      return updateWinner({ courtNumber, winner: undefined, currentAssignments: prevAssignments, rotatedCourt: rotateCourtTeams(court) });
-    });
+    setAssignments(updateWinner({ courtNumber, winner: undefined, currentAssignments: assignments, rotatedCourt: rotateCourtTeams(court) }));
   };
 
   const handleToggleForceBench = (playerId: string) => {
