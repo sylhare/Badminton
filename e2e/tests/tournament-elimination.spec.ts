@@ -65,6 +65,8 @@ test.describe('Tournament Page - Elimination', () => {
     await expect(page.getByTestId('cb-section')).not.toBeVisible();
 
     const wbSection = page.getByTestId('wb-section');
+    let wbFinalLoserName: string;
+    let tpWinnerName: string;
 
     await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
     await page.getByTestId('score-modal-confirm').click();
@@ -90,10 +92,14 @@ test.describe('Tournament Page - Elimination', () => {
       await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
       await page.getByTestId('score-modal-confirm').click();
 
-      await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(3).click();
+      const wbFinalBtn = wbSection.locator('[data-testid^="bracket-team-1-"]').nth(3);
+      const wbFinalMatchId = (await wbFinalBtn.getAttribute('data-testid'))!.replace('bracket-team-1-', '');
+      wbFinalLoserName = (await wbSection.locator(`[data-testid="bracket-team-2-${wbFinalMatchId}"]`).textContent())!.trim();
+      await wbFinalBtn.click();
       await page.getByTestId('score-modal-confirm').click();
 
       const tpSection = page.getByTestId('tp-section');
+      tpWinnerName = (await tpSection.locator('[data-testid^="bracket-team-2-"]').nth(0).textContent())!.trim();
       await tpSection.locator('[data-testid^="bracket-team-2-"]').nth(0).click();
       await page.getByTestId('score-modal-confirm').click();
     });
@@ -101,8 +107,8 @@ test.describe('Tournament Page - Elimination', () => {
     await test.step('final results: gold medal visible, CB winner ranked 3rd, WB finalist 2nd', async () => {
       await expect(page.getByTestId('standings-subtitle')).toHaveText('Final Results');
       await expect(page.getByTestId('standing-row-0')).toContainText('🥇');
-      await expect(page.getByTestId('standing-row-1')).toContainText('Eve');
-      await expect(page.getByTestId('standing-row-2')).toContainText('Bob');
+      await expect(page.getByTestId('standing-row-1')).toContainText(wbFinalLoserName);
+      await expect(page.getByTestId('standing-row-2')).toContainText(tpWinnerName);
     });
   });
 
