@@ -267,6 +267,5 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('score-modal-confirm'));
 
     expect(screen.getByTestId('score-diff-0')).toHaveTextContent('+11');
-    vi.restoreAllMocks();
   });
 });

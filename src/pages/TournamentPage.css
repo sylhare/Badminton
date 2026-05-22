@@ -331,10 +331,6 @@
     font-weight: 500;
 }
 
-.match-display {
-    /* Inherits team/singles match styles */
-}
-
 .match-result {
     display: flex;
     justify-content: center;

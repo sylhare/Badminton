@@ -1,6 +1,6 @@
 import type { Player } from '../types';
-
 import { shuffleArray } from '../utils/playerUtils';
+
 import { Tournament } from './Tournament';
 import { BracketKind, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {

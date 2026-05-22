@@ -1,6 +1,6 @@
 import type { Player } from '../types';
-
 import { shuffleArray } from '../utils/playerUtils';
+
 import { Tournament } from './Tournament';
 import type {
   TournamentFormat,
