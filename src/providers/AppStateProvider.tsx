@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { engine, getEngineType, setEngine } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
 import type { AppStateContextType, CourtEngineState, Court, GenerateResult, ManualCourtSelection, Player, UpdateWinnerParams } from '../types';
+import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
 
@@ -21,6 +22,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const [counts, setCounts] = useState({ wins: new Map<string, number>(), losses: new Map<string, number>(), bench: new Map<string, number>() });
   const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
   const hasLoadedRef = useRef(false);
+  const { trackAssignmentAnomaly } = useAnalytics();
 
   useEffect(() => {
     const load = async () => {
@@ -105,10 +107,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     manualCourtSelection?: ManualCourtSelection | null,
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult => {
-    const courts = engine().generate(players, numberOfCourts, manualCourtSelection || undefined, forceBenchPlayerIds);
-    if (courts.committed) applyCourtResults(previousAssignments);
-    return courts;
-  }, [applyCourtResults]);
+    const result = engine().generate(players, numberOfCourts, manualCourtSelection || undefined, forceBenchPlayerIds);
+    if (result.committed) applyCourtResults(previousAssignments);
+
+    result.anomalies.forEach(trackAssignmentAnomaly);
+
+    return result;
+  }, [applyCourtResults, trackAssignmentAnomaly]);
 
   const updateWinner = useCallback((params: UpdateWinnerParams): Court[] => {
     return engine().updateWinner(params);

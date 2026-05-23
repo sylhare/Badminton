@@ -169,7 +169,7 @@ describe('SmartEngine', () => {
         makePlayer('8', 'M', 35),
       ];
 
-      const courts = engine.generate(players, 2);
+      const { courts } = engine.generate(players, 2);
       expect(courts).toHaveLength(2);
       courts.forEach((court: Court) => {
         expect(court.teams).toBeDefined();
@@ -188,7 +188,7 @@ describe('SmartEngine', () => {
       let genderMismatchCount = 0;
       for (let i = 0; i < 5; i++) {
         engine.resetHistory();
-        const courts = engine.generate(players, 1);
+        const { courts } = engine.generate(players, 1);
         const court = courts[0];
         if (court?.teams) {
           const cost = engine.testCalculateGenderCost(court.teams.team1, court.teams.team2);
@@ -206,7 +206,7 @@ describe('SmartEngine', () => {
         makePlayer('4'),
       ];
 
-      const courts = engine.generate(players, 1);
+      const { courts } = engine.generate(players, 1);
       expect(courts).toHaveLength(1);
       expect(courts[0].teams).toBeDefined();
     });

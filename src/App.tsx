@@ -111,17 +111,17 @@ function App(): React.ReactElement {
   const generateAssignments = () => {
     setLastGeneratedAt(Date.now());
     const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
-    const courts = generate(players, numberOfCourts, assignments, manualCourtSelection, forceBenchPlayerIds);
+    const result = generate(players, numberOfCourts, assignments, manualCourtSelection, forceBenchPlayerIds);
 
     if (hadManualSelection) {
-      courts.forEach(court => {
+      result.courts.forEach(court => {
         if (court.courtNumber === 1) {
           court.wasManuallyAssigned = true;
         }
       });
     }
 
-    setAssignments(courts);
+    setAssignments(result.courts);
     if (!isManagePlayersCollapsed) {
       setIsManagePlayersCollapsed(true);
     }
@@ -130,18 +130,14 @@ function App(): React.ReactElement {
   };
 
   const handleWinnerChange = (courtNumber: number, winner: WinnerSelection) => {
-    setAssignments(prevAssignments =>
-      updateWinner({ courtNumber, winner, currentAssignments: prevAssignments }),
-    );
+    setAssignments(updateWinner({ courtNumber, winner, currentAssignments: assignments }));
   };
 
   const handleRotateTeams = (courtNumber: number) => {
-    setAssignments(prevAssignments => {
-      const court = prevAssignments.find(c => c.courtNumber === courtNumber);
-      if (!court?.teams) return prevAssignments;
+    const court = assignments.find(c => c.courtNumber === courtNumber);
+    if (!court?.teams) return;
 
-      return updateWinner({ courtNumber, winner: undefined, currentAssignments: prevAssignments, rotatedCourt: rotateCourtTeams(court) });
-    });
+    setAssignments(updateWinner({ courtNumber, winner: undefined, currentAssignments: assignments, rotatedCourt: rotateCourtTeams(court) }));
   };
 
   const handleToggleForceBench = (playerId: string) => {

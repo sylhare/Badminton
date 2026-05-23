@@ -496,7 +496,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const players = mockPlayers(8);
 
       for (let i = 0; i < 3; i++) {
-        const assignments = engine.generate(players, 2);
+        const { courts: assignments } = engine.generate(players, 2);
         assignments.forEach(court => {
           if (court.courtNumber === 1) {
             const courtWithWinner = { ...court, winner: 1 as const };
@@ -506,7 +506,7 @@ describe('BaseCourtAssignmentEngine', () => {
         engine.clearCurrentSession();
       }
 
-      const assignments = engine.generate(players, 2);
+      const { courts: assignments } = engine.generate(players, 2);
 
       expect(assignments).toHaveLength(2);
       assignments.forEach(court => {
@@ -519,7 +519,7 @@ describe('BaseCourtAssignmentEngine', () => {
       const players = mockPlayers(4);
 
       for (let i = 0; i < 10; i++) {
-        const assignments = engine.generate(players, 1);
+        const { courts: assignments } = engine.generate(players, 1);
         if (assignments[0].teams) {
           const courtWithWinner = { ...assignments[0], winner: 1 as const };
           engine.recordWins([courtWithWinner]);
@@ -529,7 +529,7 @@ describe('BaseCourtAssignmentEngine', () => {
 
       const pairings: Record<string, number> = {};
       for (let i = 0; i < 20; i++) {
-        const assignments = engine.generate(players, 1);
+        const { courts: assignments } = engine.generate(players, 1);
         const court = assignments[0];
         if (court.teams) {
           const team1Ids = court.teams.team1.map(p => p.id).sort();
@@ -542,6 +542,77 @@ describe('BaseCourtAssignmentEngine', () => {
       }
 
       expect(Object.keys(pairings).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('detectAnomalies', () => {
+    it('returns empty on first generation (no previous delta)', () => {
+      const players = mockPlayers(4);
+      const result = engine.generate(players, 1);
+      expect(result.anomalies).toEqual([]);
+    });
+
+    it('detects consecutive bench', () => {
+      const players = mockPlayers(6);
+      const court = createMockCourt(1, players.slice(0, 4));
+      engine.applyRoundStats([court], players);
+
+      const anomalies = engine.applyRoundStats([court], players);
+      expect(anomalies.some(a => a.type === 'consecutive_bench')).toBe(true);
+      const benchAnomaly = anomalies.find(a => a.type === 'consecutive_bench')!;
+      expect(benchAnomaly.playerIds).toContain(players[4].id);
+      expect(benchAnomaly.playerIds).toContain(players[5].id);
+    });
+
+    it('detects consecutive singles', () => {
+      const players = mockPlayers(2);
+      const singlesCourt = { courtNumber: 1, players, teams: { team1: [players[0]], team2: [players[1]] } };
+      engine.applyRoundStats([singlesCourt], players);
+
+      const anomalies = engine.applyRoundStats([singlesCourt], players);
+      expect(anomalies.some(a => a.type === 'consecutive_singles')).toBe(true);
+      const singlesAnomaly = anomalies.find(a => a.type === 'consecutive_singles')!;
+      expect(singlesAnomaly.playerIds).toContain(players[0].id);
+      expect(singlesAnomaly.playerIds).toContain(players[1].id);
+    });
+
+    it('detects consecutive teammates', () => {
+      const players = mockPlayers(4);
+      const court = createMockCourt(1, players);
+      engine.applyRoundStats([court], players);
+
+      const anomalies = engine.applyRoundStats([court], players);
+      expect(anomalies.some(a => a.type === 'consecutive_teammates')).toBe(true);
+    });
+
+    it('returns empty when no overlap between rounds', () => {
+      const players = mockPlayers(8);
+      const court1 = createMockCourt(1, players.slice(0, 4));
+      engine.applyRoundStats([court1], players.slice(0, 4));
+
+      const court2 = createMockCourt(1, players.slice(4, 8));
+      const anomalies = engine.applyRoundStats([court2], players.slice(4, 8));
+      expect(anomalies).toEqual([]);
+    });
+
+    it('returns empty anomalies on replaceRound (rapid regeneration)', () => {
+      const players = mockPlayers(4);
+      engine.generate(players, 1);
+      const result2 = engine.generate(players, 1);
+      expect(result2.anomalies).toEqual([]);
+    });
+
+    it('compares only the previous round against the current round, not cumulative counts', () => {
+      const players = mockPlayers(6);
+      const courtA = createMockCourt(1, players.slice(0, 4));
+      const courtB = createMockCourt(1, players.slice(2, 6));
+
+      engine.applyRoundStats([courtA], players);
+      engine.applyRoundStats([courtB], players);
+      const anomalies = engine.applyRoundStats([courtA], players);
+
+      const benchAnomaly = anomalies.find(a => a.type === 'consecutive_bench');
+      expect(benchAnomaly).toBeUndefined();
     });
   });
 });

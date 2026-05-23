@@ -1,4 +1,5 @@
 import type {
+  AssignmentAnomaly,
   Court,
   CourtEngineState,
   EngineType,
@@ -166,8 +167,10 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * Records bench/singles/teammate/opponent stats for a round.
    * Called from generate() so stats are immediately visible after generation.
    * Tracks a delta so undoLastRound() can reverse it on rapid re-generation.
+   * Returns anomalies detected by comparing against the previous round's delta.
    */
-  applyRoundStats(courts: Court[], players: Player[]): void {
+  applyRoundStats(courts: Court[], players: Player[]): AssignmentAnomaly[] {
+    const prev = this.lastRoundDelta;
     const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
 
     benchedPlayers(courts, players).forEach(p => {
@@ -196,6 +199,39 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     });
 
     this.lastRoundDelta = delta;
+    return this.detectAnomalies(prev, delta);
+  }
+
+  /** Detects anomalies where players are benched, play singles, or share teammates in two consecutive rounds. */
+  private detectAnomalies(
+    prev: { bench: string[]; singles: string[]; teammates: string[] } | null,
+    delta: { bench: string[]; singles: string[]; teammates: string[] },
+  ): AssignmentAnomaly[] {
+    if (!prev) return [];
+
+    const anomalies: AssignmentAnomaly[] = [];
+
+    const newBenchIds = new Set(delta.bench);
+    const consecutiveBench = prev.bench.filter(id => newBenchIds.has(id));
+    if (consecutiveBench.length > 0) {
+      anomalies.push({ type: 'consecutive_bench', playerIds: consecutiveBench });
+    }
+
+    const newSinglesIds = new Set(delta.singles);
+    const consecutiveSingles = prev.singles.filter(id => newSinglesIds.has(id));
+    if (consecutiveSingles.length > 0) {
+      anomalies.push({ type: 'consecutive_singles', playerIds: consecutiveSingles });
+    }
+
+    const newTeammateKeys = new Set(delta.teammates);
+    const consecutiveTeammates = prev.teammates.filter(k => newTeammateKeys.has(k));
+    if (consecutiveTeammates.length > 0) {
+      const affectedIds = new Set<string>();
+      consecutiveTeammates.forEach(k => k.split('|').forEach(id => affectedIds.add(id)));
+      anomalies.push({ type: 'consecutive_teammates', playerIds: [...affectedIds] });
+    }
+
+    return anomalies;
   }
 
   /** Reverses the stats recorded by the most recent applyRoundStats call. */

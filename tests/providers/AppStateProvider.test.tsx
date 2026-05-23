@@ -25,11 +25,11 @@ describe('AppStateProvider', () => {
       renderWithProvider(<Capture />);
       await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
 
-      let courts: GenerateResult;
-      act(() => { courts = appState.current!.generate([], 2, [], null); });
+      let result: GenerateResult;
+      act(() => { result = appState.current!.generate([], 2, [], null); });
 
-      expect(Array.isArray(courts!)).toBe(true);
-      expect(typeof courts!.committed).toBe('boolean');
+      expect(Array.isArray(result!.courts)).toBe(true);
+      expect(typeof result!.committed).toBe('boolean');
     });
 
     it('updates player levels when previous courts had winners', async () => {
