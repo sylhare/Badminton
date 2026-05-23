@@ -1,4 +1,5 @@
 import type { Player } from '../types';
+import { shuffleArray } from '../utils/playerUtils';
 
 import { Tournament } from './Tournament';
 import type {
@@ -89,12 +90,13 @@ export class RoundRobinTournament extends Tournament {
   }
 
   start(teams: TournamentTeam[], numberOfCourts: number): RoundRobinTournament {
+    const shuffled = shuffleArray(teams);
     return new RoundRobinTournament({
       ...this._state,
       phase: 'active',
-      teams,
+      teams: shuffled,
       numberOfCourts,
-      matches: generateMatches(teams, numberOfCourts),
+      matches: generateMatches(shuffled, numberOfCourts),
     });
   }
 

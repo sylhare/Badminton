@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { storageManager } from '../utils/StorageManager';
 import { useAppState } from '../providers/AppStateProvider';
@@ -16,6 +17,7 @@ const TournamentPage = (): React.ReactElement => {
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
   const [tournament, setTournament] = useState<AnyTournament | null>(null);
   const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
 
   useEffect(() => {
     Promise.all([storageManager.loadApp(), storageManager.loadTournament()]).then(
@@ -49,6 +51,7 @@ const TournamentPage = (): React.ReactElement => {
     } else {
       setTournament(RoundRobinTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
     }
+    setShowSetup(false);
   };
 
   const handleMatchResult = (
@@ -61,10 +64,16 @@ const TournamentPage = (): React.ReactElement => {
 
   const handleReset = () => {
     setTournament(null);
+    setShowSetup(false);
   };
 
   return (
     <div className="app tournament-page" data-loaded={isLoaded}>
+      <nav className="tournament-banner" data-testid="tournament-banner">
+        <Link to="/" className="banner-back-link" data-testid="back-to-app">
+          ← Back to Court Manager
+        </Link>
+      </nav>
       <div className="container main-container">
         <h1><span className="title-emoji">🏆 </span>Tournament</h1>
         <Tournament
@@ -76,6 +85,9 @@ const TournamentPage = (): React.ReactElement => {
           onReset={handleReset}
           onAddPlayers={handleAddPlayers}
           onTogglePlayer={handlePlayerToggle}
+          showSetup={showSetup}
+          onShowSetup={() => setShowSetup(true)}
+          onShowTournament={() => setShowSetup(false)}
         />
       </div>
       <Footer />

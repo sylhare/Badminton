@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createPlayersFromNames, validatePlayerNames } from '../../src/utils/playerUtils';
+import { createPlayersFromNames, shuffleArray, validatePlayerNames } from '../../src/utils/playerUtils';
 
 describe('Player Utils', () => {
   describe('createPlayersFromNames', () => {
@@ -69,6 +69,39 @@ describe('Player Utils', () => {
       const secondCall = createPlayersFromNames(['Player 2']);
 
       expect(firstCall[0].id).not.toBe(secondCall[0].id);
+    });
+  });
+
+  describe('shuffleArray', () => {
+    it('returns a new array with the same elements', () => {
+      const input = [1, 2, 3, 4, 5];
+      const result = shuffleArray(input);
+      expect(result).not.toBe(input);
+      expect(result).toHaveLength(input.length);
+      expect(result.sort()).toEqual(input.sort());
+    });
+
+    it('does not mutate the original array', () => {
+      const input = ['a', 'b', 'c', 'd'];
+      const copy = [...input];
+      shuffleArray(input);
+      expect(input).toEqual(copy);
+    });
+
+    it('returns an empty array for empty input', () => {
+      expect(shuffleArray([])).toEqual([]);
+    });
+
+    it('returns a single-element array unchanged', () => {
+      expect(shuffleArray([42])).toEqual([42]);
+    });
+
+    it('produces different orderings over multiple runs', () => {
+      const input = [1, 2, 3, 4, 5, 6, 7, 8];
+      const orderings = new Set(
+        Array.from({ length: 20 }, () => shuffleArray(input).join(',')),
+      );
+      expect(orderings.size).toBeGreaterThan(1);
     });
   });
 

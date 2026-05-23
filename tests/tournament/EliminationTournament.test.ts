@@ -62,22 +62,28 @@ describe('EliminationTournament', () => {
       expect(t.winners.matchesForRound(1)).toHaveLength(1);
     });
 
-    it('seeding matches adjacent pairs from teams array', () => {
+    it('all teams appear in first round matches with no duplicates', () => {
       const [A, B, C, D] = createTournamentTeams(['A', 'B', 'C', 'D']);
       const t = EliminationTournament.create().start([A, B, C, D], 4);
       const r1 = t.winners.matchesForRound(1);
-      const pair0 = r1[0];
-      const pair1 = r1[1];
-      expect([pair0.team1.id, pair0.team2.id]).toContain(A.id);
-      expect([pair0.team1.id, pair0.team2.id]).toContain(B.id);
-      expect([pair1.team1.id, pair1.team2.id]).toContain(C.id);
-      expect([pair1.team1.id, pair1.team2.id]).toContain(D.id);
+      const allTeamIds = r1.flatMap(m => [m.team1.id, m.team2.id]);
+      expect(new Set(allTeamIds)).toEqual(new Set([A.id, B.id, C.id, D.id]));
     });
 
     it('starts in active phase', () => {
       const teams = createTournamentTeams(['A', 'B']);
       const t = EliminationTournament.create().start(teams, 2);
       expect(t.phase()).toBe('active');
+    });
+
+    it('shuffles team order so repeated starts can produce different brackets', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+      const brackets = new Set<string>();
+      for (let i = 0; i < 20; i++) {
+        const t = EliminationTournament.create().start(teams, 4);
+        brackets.add(t.winners.matchesForRound(1).map(m => `${m.team1.id}-${m.team2.id}`).join(','));
+      }
+      expect(brackets.size).toBeGreaterThan(1);
     });
   });
 
@@ -202,19 +208,21 @@ describe('EliminationTournament', () => {
       expect(t.calculateStandings()).toHaveLength(5);
     });
 
-    it('3 teams: 1 WB R1 match; C (slot 2) gets bye-advance', () => {
+    it('3 teams: 1 WB R1 match; bye team advances to R2', () => {
       const [A, B, C] = createTournamentTeams(['A', 'B', 'C']);
       let t = EliminationTournament.create().start([A, B, C], 4);
       expect(t.winners.matchesForRound(1)).toHaveLength(1);
 
       const [m0] = t.winners.matchesForRound(1);
+      const r1TeamIds = new Set([m0.team1.id, m0.team2.id]);
+      const byeTeam = [A, B, C].find(team => !r1TeamIds.has(team.id))!;
       t = t.withMatchResult(m0.id, 1);
 
       const r2 = t.winners.matchesForRound(2);
       expect(r2).toHaveLength(1);
-      const teamIds = [r2[0].team1.id, r2[0].team2.id];
-      expect(teamIds).toContain(A.id);
-      expect(teamIds).toContain(C.id);
+      const r2TeamIds = [r2[0].team1.id, r2[0].team2.id];
+      expect(r2TeamIds).toContain(m0.team1.id);
+      expect(r2TeamIds).toContain(byeTeam.id);
     });
   });
 
@@ -224,7 +232,7 @@ describe('EliminationTournament', () => {
       expect(t.winners.firstRoundLosers()).toHaveLength(0);
     });
 
-    it('returns losers in position order after WB R1 complete', () => {
+    it('returns losers after WB R1 complete', () => {
       const [A, B, C, D] = createTournamentTeams(['A', 'B', 'C', 'D']);
       let t = EliminationTournament.create().start([A, B, C, D], 4);
       const [m0, m1] = t.winners.matchesForRound(1);
@@ -232,8 +240,8 @@ describe('EliminationTournament', () => {
       t = t.withMatchResult(m1.id, 1);
       const losers = t.winners.firstRoundLosers();
       expect(losers).toHaveLength(2);
-      expect(losers[0].id).toBe(B.id);
-      expect(losers[1].id).toBe(D.id);
+      const loserIds = new Set(losers.map(l => l.id));
+      expect(loserIds).toEqual(new Set([m0.team2.id, m1.team2.id]));
     });
   });
 
@@ -253,16 +261,16 @@ describe('EliminationTournament', () => {
       t = t.withMatchResult(m1.id, 1);
 
       const standings = t.calculateStandings();
-      const byId = Object.fromEntries(standings.map(r => [r.team.id, r]));
+      const winnerIds = new Set([m0.team1.id, m1.team1.id]);
+      const loserIds = new Set([m0.team2.id, m1.team2.id]);
 
-      expect(byId[A.id].lost).toBe(0);
-      expect(byId[C.id].lost).toBe(0);
-      expect(byId[B.id].lost).toBe(1);
-      expect(byId[D.id].lost).toBe(1);
+      for (const row of standings) {
+        if (winnerIds.has(row.team.id)) expect(row.lost).toBe(0);
+        if (loserIds.has(row.team.id)) expect(row.lost).toBe(1);
+      }
 
-      const topTwo = standings.slice(0, 2).map(r => r.team.id);
-      expect(topTwo).toContain(A.id);
-      expect(topTwo).toContain(C.id);
+      const topTwoIds = new Set(standings.slice(0, 2).map(r => r.team.id));
+      expect(topTwoIds).toEqual(winnerIds);
     });
   });
 
@@ -297,15 +305,17 @@ describe('EliminationTournament', () => {
     });
 
     it('4 teams (Case B): no 3rd-place match, CB winner is 3rd', () => {
-      const [A, B, C, D] = createTournamentTeams(['A', 'B', 'C', 'D']);
-      const t = playFullTournament(EliminationTournament.create().start([A, B, C, D], 4));
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D']);
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
 
       expect(t.thirdPlaceMatch).toBeUndefined();
       expect(t.isComplete()).toBe(true);
       const standings = t.calculateStandings();
-      expect(standings[0].team.id).toBe(A.id);
-      expect(standings[1].team.id).toBe(C.id);
-      expect(standings[2].team.id).toBe(B.id);
+      const wbFinal = t.winners.matchesForRound(2)[0];
+      const cbFinal = t.consolation.matchesForRound(1)[0];
+      expect(standings[0].team.id).toBe(wbFinal.team1.id);
+      expect(standings[1].team.id).toBe(wbFinal.team2.id);
+      expect(standings[2].team.id).toBe(cbFinal.team1.id);
     });
 
     it('6 teams (Case E): semi-final loser vs CB winner for 3rd', () => {
@@ -326,10 +336,11 @@ describe('EliminationTournament', () => {
       t = t.withMatchResult(t.thirdPlaceMatch!.id, 1);
       expect(t.isComplete()).toBe(true);
 
-      const names = t.calculateStandings().map(r => r.team.players[0].name);
-      expect(names[0]).toBe('A');
-      expect(names[1]).toBe('E');
-      expect(names.indexOf(t.thirdPlaceMatch!.team1.players[0].name)).toBe(2);
+      const standings = t.calculateStandings();
+      const wbFinal = t.winners.matchesForRound(t.totalRounds())[0];
+      expect(standings[0].team.id).toBe(wbFinal.team1.id);
+      expect(standings[1].team.id).toBe(wbFinal.team2.id);
+      expect(standings[2].team.id).toBe(t.thirdPlaceMatch!.team1.id);
     });
 
     it('8 teams (Case F): two semi-final losers play for 3rd, CB winner is 5th', () => {
@@ -350,11 +361,12 @@ describe('EliminationTournament', () => {
 
       expect(t.isComplete()).toBe(true);
       const standings = t.calculateStandings();
-      const tpWinner = t.thirdPlaceMatch!.winner === 1 ? t.thirdPlaceMatch!.team1 : t.thirdPlaceMatch!.team2;
-      const tpLoser = t.thirdPlaceMatch!.winner === 1 ? t.thirdPlaceMatch!.team2 : t.thirdPlaceMatch!.team1;
+      const wbFinal = t.winners.matchesForRound(t.totalRounds())[0];
+      const tpWinner = t.thirdPlaceMatch!.team1;
+      const tpLoser = t.thirdPlaceMatch!.team2;
 
-      expect(standings[0].team.players[0].name).toBe('A');
-      expect(standings[1].team.players[0].name).toBe('E');
+      expect(standings[0].team.id).toBe(wbFinal.team1.id);
+      expect(standings[1].team.id).toBe(wbFinal.team2.id);
       expect(standings[2].team.id).toBe(tpWinner.id);
       expect(standings[3].team.id).toBe(tpLoser.id);
     });

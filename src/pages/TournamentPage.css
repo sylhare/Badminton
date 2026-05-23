@@ -4,17 +4,62 @@
     max-width: 1200px;
 }
 
-.back-link {
-    display: inline-block;
+/* Full-width banner */
+
+.tournament-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    margin: -15px -15px 15px;
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.banner-back-link {
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.banner-back-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* In-page navigation links */
+
+.tournament-page .back-link {
+    display: block;
+    text-align: left;
+    position: static;
     margin-bottom: 1.5rem;
     color: var(--color-primary);
     text-decoration: none;
     font-weight: 500;
+    background: none;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    font-size: inherit;
+    padding: 0;
 }
 
-.back-link:hover {
+.tournament-page .back-link:hover {
     color: var(--color-primary-hover);
     text-decoration: underline;
+}
+
+.tournament-page .back-link-right {
+    width: 100%;
+    text-align: right;
 }
 
 /* Setup */
@@ -286,10 +331,6 @@
     font-weight: 500;
 }
 
-.match-display {
-    /* Inherits team/singles match styles */
-}
-
 .match-result {
     display: flex;
     justify-content: center;
@@ -370,10 +411,10 @@
 /* On mobile, keep the tournament container white (main app uses gradient there) */
 
 @media (max-width: 768px) {
-    .tournament-page h1 {
-        font-size: 1.6rem;
-        white-space: nowrap;
-        color: #2d3748;
+    .tournament-banner {
+        margin: -15px -15px 0;
+        padding: 10px 15px;
+        gap: 10px;
     }
 
     .tournament-page .main-container {
