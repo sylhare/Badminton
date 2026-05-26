@@ -1,4 +1,5 @@
 import { fixupPluginRules } from '@eslint/compat';
+import stylisticPlugin from '@stylistic/eslint-plugin';
 import importPlugin from 'eslint-plugin-import-x';
 import unusedImportsPlugin from 'eslint-plugin-unused-imports';
 import reactPlugin from 'eslint-plugin-react';
@@ -22,6 +23,7 @@ export default [
       },
     },
     plugins: {
+      '@stylistic': stylisticPlugin,
       'import-x': importPlugin,
       'unused-imports': unusedImportsPlugin,
       'react': fixupPluginRules(reactPlugin),
@@ -33,17 +35,17 @@ export default [
       },
     },
     rules: {
-      'semi': ['error', 'always'],
-      'no-extra-semi': 'error',
+      '@stylistic/semi': ['error', 'always'],
+      '@stylistic/no-extra-semi': 'error',
+      '@stylistic/no-trailing-spaces': 'error',
+      '@stylistic/no-multiple-empty-lines': ['error', { 'max': 1, 'maxEOF': 1, 'maxBOF': 0 }],
+      '@stylistic/array-bracket-spacing': ['error', 'never'],
+      '@stylistic/object-curly-spacing': ['error', 'always'],
+      '@stylistic/comma-dangle': ['error', 'always-multiline'],
+      '@stylistic/quotes': ['error', 'single', { 'allowTemplateLiterals': 'always' }],
       'no-unneeded-ternary': 'error',
       'no-nested-ternary': 'error',
-      'no-trailing-spaces': 'error',
       'no-irregular-whitespace': 'error',
-      'no-multiple-empty-lines': ['error', { 'max': 1, 'maxEOF': 1, 'maxBOF': 0 }],
-      'array-bracket-spacing': ['error', 'never'],
-      'object-curly-spacing': ['error', 'always'],
-      'comma-dangle': ['error', 'always-multiline'],
-      'quotes': ['error', 'single', { 'allowTemplateLiterals': true }],
       '@typescript-eslint/explicit-module-boundary-types': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'error',
