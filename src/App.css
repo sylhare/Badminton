@@ -2250,13 +2250,38 @@ h1 {
 }
 
 .app-footer .analysis-link {
-    padding: 15px;
+    flex: 1;
+    min-width: 0;
+    padding: 10px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    text-decoration: none;
+    text-align: center;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.app-footer .analysis-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+    opacity: 1;
+}
+
+.app-footer .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 @media (max-width: 768px) {
     .app-footer {
         margin: 0;
         padding: 15px 0;
+    }
+
+    .app-footer .footer-links {
+        margin: 0 15px;
     }
 }
 
