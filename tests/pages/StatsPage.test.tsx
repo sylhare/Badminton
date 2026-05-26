@@ -79,7 +79,7 @@ describe('StatsPage Component', () => {
 
     const backLink = screen.getByTestId('back-to-app');
     expect(backLink).toBeInTheDocument();
-    expect(backLink).toHaveTextContent('Back to App');
+    expect(backLink).toHaveTextContent('Court Manager');
   });
 
   it('renders notebook links section', () => {

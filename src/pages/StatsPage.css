@@ -1,8 +1,37 @@
 .stats-page {
     min-height: 100vh;
     background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #21262d 100%);
-    padding: 20px;
+    padding: 0 20px 20px;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.stats-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    margin: 0 -20px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+}
+
+.stats-banner-link {
+    color: #c9d1d9;
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: rgba(139, 148, 158, 0.15);
+    border: 1px solid rgba(139, 148, 158, 0.2);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.stats-banner-link:hover {
+    background: rgba(139, 148, 158, 0.3);
+    color: #f0f6fc;
+    border-color: rgba(139, 148, 158, 0.4);
 }
 
 .stats-container {
@@ -13,27 +42,6 @@
 .stats-header {
     text-align: center;
     margin-bottom: 50px;
-    position: relative;
-}
-
-.back-link {
-    position: absolute;
-    left: 0;
-    top: 0;
-    color: #8b949e;
-    text-decoration: none;
-    font-size: 0.95rem;
-    padding: 8px 16px;
-    border-radius: 8px;
-    background: rgba(139, 148, 158, 0.1);
-    border: 1px solid rgba(139, 148, 158, 0.2);
-    transition: all 0.2s ease;
-}
-
-.back-link:hover {
-    background: rgba(139, 148, 158, 0.2);
-    color: #c9d1d9;
-    border-color: rgba(139, 148, 158, 0.4);
 }
 
 .stats-header h1 {
@@ -516,17 +524,16 @@
 /* Responsive */
 @media (max-width: 768px) {
     .stats-page {
-        padding: 15px;
+        padding: 0 15px 15px;
+    }
+
+    .stats-banner {
+        margin: 0 -15px 15px;
+        padding: 10px 15px;
     }
 
     .stats-header {
         margin-bottom: 30px;
-    }
-
-    .back-link {
-        position: relative;
-        display: inline-block;
-        margin-bottom: 20px;
     }
 
     .stats-header h1 {
