@@ -8,30 +8,44 @@
 
 .tournament-banner {
     display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 20px;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 12px;
     margin: -15px -15px 15px;
     background: rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(10px);
 }
 
-.banner-back-link {
+.banner-nav-link {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: white;
     text-decoration: none;
-    font-size: 0.9rem;
-    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    padding: 8px 10px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.2);
     transition: all 0.2s ease;
-    white-space: nowrap;
+    cursor: pointer;
+    text-align: center;
 }
 
-.banner-back-link:hover {
+.banner-nav-link:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.25);
     color: white;
     border-color: rgba(255, 255, 255, 0.4);
+}
+
+.banner-nav-link:disabled {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.4);
+    cursor: default;
+    font-weight: 600;
 }
 
 /* In-page navigation links */
@@ -412,9 +426,14 @@
 
 @media (max-width: 768px) {
     .tournament-banner {
-        margin: -15px -15px 0;
-        padding: 10px 15px;
-        gap: 10px;
+        margin: 0;
+        padding: 8px;
+        gap: 6px;
+    }
+
+    .banner-nav-link {
+        font-size: 0.8rem;
+        padding: 8px 6px;
     }
 
     .tournament-page .main-container {
@@ -424,5 +443,16 @@
         margin: 0;
         width: 100%;
         box-shadow: none;
+    }
+
+    .tournament-page h1 {
+        color: #2d3748;
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 450px) {
+    .tournament-banner {
+        margin: -5px -5px 0;
     }
 }
