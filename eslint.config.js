@@ -1,4 +1,5 @@
-import importPlugin from 'eslint-plugin-import';
+import { fixupPluginRules } from '@eslint/compat';
+import importPlugin from 'eslint-plugin-import-x';
 import unusedImportsPlugin from 'eslint-plugin-unused-imports';
 import reactPlugin from 'eslint-plugin-react';
 import typescriptEslint from 'typescript-eslint';
@@ -21,9 +22,9 @@ export default [
       },
     },
     plugins: {
-      'import': importPlugin,
+      'import-x': importPlugin,
       'unused-imports': unusedImportsPlugin,
-      'react': reactPlugin,
+      'react': fixupPluginRules(reactPlugin),
       '@typescript-eslint': typescriptEslint.plugin,
     },
     settings: {
@@ -68,14 +69,14 @@ export default [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      'import/order': [
+      'import-x/order': [
         'error',
         {
           'groups': ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
           'newlines-between': 'always',
         },
       ],
-      'import/newline-after-import': ['error', { 'count': 1 }],
+      'import-x/newline-after-import': ['error', { 'count': 1 }],
       ...reactPlugin.configs.recommended.rules,
       'react/jsx-tag-spacing': ['error', { 'beforeSelfClosing': 'always' }],
     },
