@@ -24,17 +24,31 @@ describe('TournamentPage', () => {
     await clearTestState();
   });
 
-  it('renders the tournament page heading', () => {
+  it('renders "Tournament Setup" heading on setup page', () => {
     renderWithProvider(<TournamentPage />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tournament');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tournament Setup');
     expect(screen.getByTestId('app-footer')).toBeInTheDocument();
+  });
+
+  it('renders "Tournament" heading on active tournament page', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<TournamentPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
+    }, { timeout: 3000 });
+
+    await user.click(screen.getByTestId('start-tournament-button'));
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^(🏆\s*)?Tournament$/);
+    expect(screen.getByRole('heading', { level: 1 })).not.toHaveTextContent('Setup');
   });
 
   it('renders a back-to-app banner link', () => {
     renderWithProvider(<TournamentPage />);
     expect(screen.getByTestId('tournament-banner')).toBeInTheDocument();
     const link = screen.getByTestId('back-to-app');
-    expect(link).toHaveTextContent('← Back to Court Manager');
+    expect(link).toHaveTextContent('← Court Manager');
     expect(link).toHaveAttribute('href', '/');
   });
 

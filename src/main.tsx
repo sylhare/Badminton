@@ -1,10 +1,16 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 import App from './App.tsx';
 import { AppStateProvider } from './providers/AppStateProvider.tsx';
 import './index.css';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
 
 const StatsPage        = React.lazy(() => import('./pages/StatsPage.tsx'));
 const AlgorithmPage    = React.lazy(() => import('./pages/AlgorithmPage.tsx'));
@@ -16,6 +22,7 @@ const NotFoundPage     = React.lazy(() => import('./pages/NotFoundPage.tsx'));
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Router basename={import.meta.env.BASE_URL || '/'}>
+      <ScrollToTop />
       <AppStateProvider>
         <Suspense fallback={null}>
           <Routes>

@@ -275,11 +275,13 @@ function StatsPage(): React.ReactElement {
 
   return (
     <div className="stats-page">
+      <nav className="stats-banner" data-testid="stats-banner">
+        <Link to="/" className="stats-banner-link" data-testid="back-to-app">
+          ← Court Manager
+        </Link>
+      </nav>
       <div className="stats-container">
         <header className="stats-header">
-          <Link to="/" className="back-link" data-testid="back-to-app">
-            ← Back to App
-          </Link>
           <h1>{engineName} Diagnostics</h1>
           <p className="stats-subtitle">
             {engineDescription}

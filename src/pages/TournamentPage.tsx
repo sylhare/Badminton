@@ -67,15 +67,37 @@ const TournamentPage = (): React.ReactElement => {
     setShowSetup(false);
   };
 
+  const hasTournament = tournament !== null && tournament.phase() !== 'setup';
+  const isSetupView = !hasTournament || showSetup;
+
   return (
     <div className="app tournament-page" data-loaded={isLoaded}>
       <nav className="tournament-banner" data-testid="tournament-banner">
-        <Link to="/" className="banner-back-link" data-testid="back-to-app">
-          ← Back to Court Manager
+        <Link to="/" className="banner-nav-link" data-testid="back-to-app">
+          ← Court Manager
         </Link>
+        <button
+          className="banner-nav-link"
+          onClick={() => setShowSetup(true)}
+          disabled={isSetupView}
+          data-testid="back-to-setup"
+        >
+          Tournament Setup
+        </button>
+        <button
+          className="banner-nav-link"
+          onClick={() => setShowSetup(false)}
+          disabled={!hasTournament || !isSetupView}
+          data-testid="back-to-tournament"
+        >
+          Current Tournament
+        </button>
       </nav>
       <div className="container main-container">
-        <h1><span className="title-emoji">🏆 </span>Tournament</h1>
+        <h1>
+          <span className="title-emoji">{isSetupView ? '⚙️ ' : '🏆 '}</span>
+          {isSetupView ? 'Tournament Setup' : 'Tournament'}
+        </h1>
         <Tournament
           tournament={tournament}
           initialPlayers={players}
@@ -86,8 +108,6 @@ const TournamentPage = (): React.ReactElement => {
           onAddPlayers={handleAddPlayers}
           onTogglePlayer={handlePlayerToggle}
           showSetup={showSetup}
-          onShowSetup={() => setShowSetup(true)}
-          onShowTournament={() => setShowSetup(false)}
         />
       </div>
       <Footer />

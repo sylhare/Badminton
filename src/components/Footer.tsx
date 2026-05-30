@@ -20,7 +20,7 @@ const Footer: React.FC<FooterProps> = ({ showStatsLink = true, showTournamentLin
       </a>
     </p>
     {(showStatsLink || showTournamentLink) && (
-      <p>
+      <div className="footer-links">
         {showStatsLink && (
           <Link
             to="/stats"
@@ -39,7 +39,7 @@ const Footer: React.FC<FooterProps> = ({ showStatsLink = true, showTournamentLin
             Try Tournament Mode
           </Link>
         )}
-      </p>
+      </div>
     )}
   </footer>
 );
