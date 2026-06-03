@@ -111,6 +111,50 @@ describe('EliminationBracket', () => {
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getAllByTestId('bracket-node-bye').length).toBeGreaterThan(0);
     });
+
+    it('bye-advance node has no buttons — winner cannot be changed or unselected via click', async () => {
+      const user = userEvent.setup();
+      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C']), 4);
+      render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
+
+      const byeNodes = screen.getAllByTestId('bracket-node-bye');
+      for (const node of byeNodes) {
+        expect(node.querySelector('button')).toBeNull();
+      }
+      await user.click(byeNodes[0]);
+      expect(onMatchResult).not.toHaveBeenCalled();
+    });
+
+    it('CB bye-passer (L4) remains visible as bye-advance in CB R2 after CB R1 is complete (10-team)', () => {
+      const teamNames = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+      let t = EliminationTournament.create('singles').start(makeTeams(teamNames), 4);
+      for (const m of t.winners.matchesForRound(1)) {
+        t = t.withMatchResult(m.id, 1);
+      }
+      render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
+      const cbSection = screen.getByTestId('cb-section');
+      expect(cbSection.querySelectorAll('[data-testid="bracket-node-bye"]').length).toBeGreaterThan(0);
+    });
+
+    it('CB R3 final is visible as a match node for 10 teams after all prior rounds complete', async () => {
+      const teamNames = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+      let t = EliminationTournament.create('singles').start(makeTeams(teamNames), 4);
+
+      for (const m of t.winners.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.consolation.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.consolation.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.winners.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.winners.matchesForRound(3)) t = t.withMatchResult(m.id, 1);
+
+      render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
+      const cbSection = screen.getByTestId('cb-section');
+
+      const tbdNodes = cbSection.querySelectorAll('[data-testid="bracket-node-tbd"]');
+      expect(tbdNodes.length).toBe(0);
+
+      const matchNodes = cbSection.querySelectorAll('[data-testid="bracket-node-match"]');
+      expect(matchNodes.length).toBe(4);
+    });
   });
 
   describe('consolation bracket', () => {

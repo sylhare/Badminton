@@ -410,6 +410,55 @@ describe('EliminationTournament', () => {
     });
   });
 
+  describe('10-team tournament — CB final (odd CB seeds: 5 losers)', () => {
+    function setup10Teams() {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
+      let t = EliminationTournament.create().start(teams, 4);
+      t = playWBRound(t, 1);
+      return t;
+    }
+
+    it('CB R1 seeds 2 matches leaving one bye-passer (L4)', () => {
+      const t = setup10Teams();
+      expect(t.consolation.matchesForRound(1)).toHaveLength(2);
+      const cbR1Ids = new Set(
+        t.consolation.matchesForRound(1).flatMap(m => [m.team1.id, m.team2.id]),
+      );
+      const byePasser = t.winners.firstRoundLosers().find(l => !cbR1Ids.has(l.id));
+      expect(byePasser).toBeDefined();
+    });
+
+    it('CB R3 final pairs the CB R2 winner with the CB R1 bye-passer (not the WB SF loser)', () => {
+      let t = setup10Teams();
+      for (const m of t.consolation.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.consolation.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
+      t = playWBRound(t, 2);
+      t = playWBRound(t, 3);
+
+      const cbR1Ids = new Set(
+        t.consolation.matchesForRound(1).flatMap(m => [m.team1.id, m.team2.id]),
+      );
+      const byePasser = t.winners.firstRoundLosers().find(l => !cbR1Ids.has(l.id))!;
+      const sfLoser = t.winners
+        .matchesForRound(3)
+        .map(m => (m.winner === 1 ? m.team2 : m.team1))[0];
+
+      const cbR3 = t.consolation.matchesForRound(3);
+      expect(cbR3).toHaveLength(1);
+
+      const cbR3TeamIds = [cbR3[0].team1.id, cbR3[0].team2.id];
+      expect(cbR3TeamIds).toContain(byePasser.id);
+      expect(cbR3TeamIds).not.toContain(sfLoser.id);
+    });
+
+    it('10-team tournament completes correctly via normal play-through', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
+      expect(t.isComplete()).toBe(true);
+      expect(t.calculateStandings()).toHaveLength(10);
+    });
+  });
+
   describe('fromState roundtrip', () => {
     it('restores an in-progress tournament from state', () => {
       const [A, B, C, D] = createTournamentTeams(['A', 'B', 'C', 'D']);

@@ -15,6 +15,7 @@ import {
   ConsolationBracket,
   WinnersBracket,
   countExpectedSemiFinalLosers,
+  getCBExpectedPool,
   getWBSemiFinalLosers,
   getWinnersFirstRoundLoser,
   nextPowerOf2,
@@ -151,12 +152,14 @@ export class EliminationTournament extends Tournament {
         .filter(m => m.winner !== undefined)
         .map(m => m.winner === 1 ? m.team1 : m.team2);
 
-      if (n === 1) {
-        const cbR1TeamIds = new Set(consolationMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
-        for (let pos = 0; pos < bracketSize / 2; pos++) {
-          const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
-          if (loser && !cbR1TeamIds.has(loser.id)) advancers.push(loser);
-        }
+      const allCBSoFar = [
+        ...consolationMatches,
+        ...newMatches.filter(m => m.bracket === BracketKind.Consolation),
+      ];
+      const cbRnParticipantIds = new Set(consolationMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
+      const expectedPool = getCBExpectedPool(n, teams, allCBSoFar, winnersMatches, bracketSize);
+      for (const team of expectedPool) {
+        if (!cbRnParticipantIds.has(team.id)) advancers.push(team);
       }
 
       if (advancers.length < 2 && n + 1 < totalWBRounds && roundComplete(winnersMatches, n + 1)) {

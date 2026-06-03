@@ -219,4 +219,48 @@ describe('ConsolationBracket.computeTree', () => {
       expect(tree[1][0].type).toBe('match');
     });
   });
+
+  describe('5 CB seeds (bracketSize=16, from 10-team WB R1)', () => {
+    it('produces 3 rounds', () => {
+      const seeds = createTournamentTeams(['L0', 'L1', 'L2', 'L3', 'L4']);
+      expect(new ConsolationBracket(seeds, [], 16).computeTree()).toHaveLength(3);
+    });
+
+    it('round 1 has 4 nodes: 2 tbd matches + 1 bye-advance (L4) + 1 empty', () => {
+      const seeds = createTournamentTeams(['L0', 'L1', 'L2', 'L3', 'L4']);
+      const r1 = new ConsolationBracket(seeds, [], 16).computeTree()[0];
+      expect(r1).toHaveLength(4);
+      const types = r1.map(n => n.type);
+      expect(types.filter(t => t === 'tbd')).toHaveLength(2);
+      expect(types.filter(t => t === 'bye-advance')).toHaveLength(1);
+      expect(types.filter(t => t === 'empty')).toHaveLength(1);
+      expect(r1.find(n => n.type === 'bye-advance')?.team?.id).toBe('L4');
+    });
+
+    it('round 2 has 2 nodes: 1 tbd match + 1 bye-advance (L4 still advancing)', () => {
+      const seeds = createTournamentTeams(['L0', 'L1', 'L2', 'L3', 'L4']);
+      const r2 = new ConsolationBracket(seeds, [], 16).computeTree()[1];
+      expect(r2).toHaveLength(2);
+      const types = r2.map(n => n.type);
+      expect(types).toContain('bye-advance');
+      expect(types).toContain('tbd');
+      expect(r2.find(n => n.type === 'bye-advance')?.team?.id).toBe('L4');
+    });
+
+    it('round 3 (CB final) shows as a match node after CB R2 winner and L4 advance', () => {
+      let t = EliminationTournament.create().start(
+        createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']), 4,
+      );
+      for (const m of t.winners.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.consolation.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.consolation.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.winners.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
+      for (const m of t.winners.matchesForRound(3)) t = t.withMatchResult(m.id, 1);
+
+      const cbSeeds = t.winners.firstRoundLosers();
+      const tree = new ConsolationBracket(cbSeeds, t.consolation.matches(), 16).computeTree();
+      expect(tree).toHaveLength(3);
+      expect(tree[2][0].type).toBe('match');
+    });
+  });
 });
