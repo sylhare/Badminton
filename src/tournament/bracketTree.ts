@@ -106,27 +106,17 @@ export function getWBSemiFinalLosers(
 }
 
 /**
- * Returns all teams that should be active in a given CB round — either via winning
- * their previous-round match, or by having had a bye (no match) in that round.
- * Round 1 seed pool = all WB R1 losers.
+ * Teams active in a given CB round: previous-round winners plus any that had a bye.
+ * Round 1 is seeded by `cbSeeds` (the WB first-round losers).
  */
 export function getCBExpectedPool(
   round: number,
-  teams: TournamentTeam[],
+  cbSeeds: TournamentTeam[],
   consolationMatches: TournamentMatch[],
-  winnersMatches: TournamentMatch[],
-  bracketSize: number,
 ): TournamentTeam[] {
-  if (round === 1) {
-    const losers: TournamentTeam[] = [];
-    for (let pos = 0; pos < bracketSize / 2; pos++) {
-      const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
-      if (loser) losers.push(loser);
-    }
-    return losers;
-  }
+  if (round === 1) return cbSeeds;
 
-  const prevPool = getCBExpectedPool(round - 1, teams, consolationMatches, winnersMatches, bracketSize);
+  const prevPool = getCBExpectedPool(round - 1, cbSeeds, consolationMatches);
   const prevMatches = consolationMatches.filter(m => m.round === round - 1);
   const prevParticipantIds = new Set(prevMatches.flatMap(m => [m.team1.id, m.team2.id]));
 
@@ -138,15 +128,6 @@ export function getCBExpectedPool(
     if (!prevParticipantIds.has(team.id)) result.push(team);
   }
   return result;
-}
-
-export function countExpectedSemiFinalLosers(
-  teamCount: number,
-  bracketSize: number,
-): 0 | 1 | 2 {
-  if (bracketSize <= 4) return 0;
-  if (teamCount <= (3 / 4) * bracketSize) return 1;
-  return 2;
 }
 
 export function roundLabel(roundNumber: number, totalRounds: number): string {

@@ -7,6 +7,8 @@ import { BracketKind } from '../../src/tournament/types';
 import type { TournamentTeam } from '../../src/tournament/types';
 import { playAllCBRounds, playFullTournament, playWBRound } from '../data/tournamentTestHelpers';
 
+const NAMES = Array.from({ length: 32 }, (_, i) => `T${i + 1}`);
+
 describe('nextPowerOf2', () => {
   it.each([
     [1, 1],
@@ -340,6 +342,32 @@ describe('EliminationTournament', () => {
       expect(standings[2].team.id).toBe(sfLoser.id);
     });
 
+    it.each(Array.from({ length: 28 }, (_, i) => i + 5))(
+      '%i teams (size >= 8 has a real semi-final): finalists outrank eliminated semi-final losers before the final is played',
+      (teamCount) => {
+        const teams = createTournamentTeams(NAMES.slice(0, teamCount));
+        let t = EliminationTournament.create().start(teams, 4);
+        for (let r = 1; r < t.totalRounds(); r++) {
+          t = playWBRound(t, r);
+          t = playAllCBRounds(t);
+        }
+
+        const final = t.winners.matchesForRound(t.totalRounds())[0];
+        expect(final.winner).toBeUndefined();
+
+        const cbTeamIds = new Set(t.consolation.matches().flatMap(m => [m.team1.id, m.team2.id]));
+        const eliminatedSfLosers = t.winners
+          .matchesForRound(t.totalRounds() - 1)
+          .map(m => (m.winner === 1 ? m.team2 : m.team1))
+          .filter(team => !cbTeamIds.has(team.id));
+
+        const standings = t.calculateStandings();
+        const rank = (id: string) => standings.findIndex(r => r.team.id === id);
+        const worstFinalist = Math.max(rank(final.team1.id), rank(final.team2.id));
+        expect(eliminatedSfLosers.every(team => rank(team.id) > worstFinalist)).toBe(true);
+      },
+    );
+
     it('8 teams (Case F): two semi-final losers play for 3rd, CB winner is 5th', () => {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
       let t = EliminationTournament.create().start(teams, 4);
@@ -398,7 +426,6 @@ describe('EliminationTournament', () => {
   });
 
   describe('3rd-place invariant across bracket sizes', () => {
-    const NAMES = Array.from({ length: 32 }, (_, i) => `T${i + 1}`);
     const COURT_COUNTS = [1, 2, 3, 4];
     const CASES = Array.from({ length: 31 }, (_, i) => i + 2)
       .flatMap(teamCount => COURT_COUNTS.map(courts => [teamCount, courts] as const));
@@ -412,6 +439,7 @@ describe('EliminationTournament', () => {
         expect(t.isComplete()).toBe(true);
         const standings = t.calculateStandings();
         expect(standings).toHaveLength(teamCount);
+
         for (const m of t.matches()) {
           expect(m.courtNumber).toBeGreaterThanOrEqual(1);
           expect(m.courtNumber).toBeLessThanOrEqual(courts);
