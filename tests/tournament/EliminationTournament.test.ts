@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
-import { countExpectedSemiFinalLosers, nextPowerOf2 } from '../../src/tournament/bracketTree';
+import { nextPowerOf2 } from '../../src/tournament/bracketTree';
 import { createMockPlayer, createTournamentTeam, createTournamentTeams } from '../data/testFactories';
 import { BracketKind } from '../../src/tournament/types';
 import type { TournamentTeam } from '../../src/tournament/types';
@@ -198,11 +198,7 @@ describe('EliminationTournament', () => {
       const [wbFinal] = t.winners.matchesForRound(3);
       t = t.withMatchResult(wbFinal.id, 1);
 
-      expect(t.thirdPlaceMatch).toBeDefined();
-      expect(t.isComplete()).toBe(false);
-
-      t = t.withMatchResult(t.thirdPlaceMatch!.id, 1);
-
+      expect(t.thirdPlaceMatch).toBeUndefined();
       expect(t.isComplete()).toBe(true);
       expect(t.phase()).toBe('completed');
       expect(t.calculateStandings()).toHaveLength(5);
@@ -318,7 +314,7 @@ describe('EliminationTournament', () => {
       expect(standings[2].team.id).toBe(cbFinal.team1.id);
     });
 
-    it('6 teams (Case E): semi-final loser vs CB winner for 3rd', () => {
+    it('6 teams (Case E): single semi-final loser is 3rd, no 3rd-place match', () => {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F']);
       let t = EliminationTournament.create().start(teams, 4);
 
@@ -326,21 +322,22 @@ describe('EliminationTournament', () => {
       t = playAllCBRounds(t);
       t = playWBRound(t, 2);
       t = playAllCBRounds(t);
+
+      const semiFinal = t.winners.matchesForRound(t.totalRounds() - 1);
+      expect(semiFinal).toHaveLength(1);
+      const sfLoser = semiFinal[0].winner === 1 ? semiFinal[0].team2 : semiFinal[0].team1;
+
       t = playWBRound(t, 3);
       t = playAllCBRounds(t);
 
-      expect(t.thirdPlaceMatch).toBeDefined();
-      expect(t.thirdPlaceMatch!.bracket).toBe(BracketKind.ThirdPlace);
-      expect(t.isComplete()).toBe(false);
-
-      t = t.withMatchResult(t.thirdPlaceMatch!.id, 1);
+      expect(t.thirdPlaceMatch).toBeUndefined();
       expect(t.isComplete()).toBe(true);
 
       const standings = t.calculateStandings();
       const wbFinal = t.winners.matchesForRound(t.totalRounds())[0];
       expect(standings[0].team.id).toBe(wbFinal.team1.id);
       expect(standings[1].team.id).toBe(wbFinal.team2.id);
-      expect(standings[2].team.id).toBe(t.thirdPlaceMatch!.team1.id);
+      expect(standings[2].team.id).toBe(sfLoser.id);
     });
 
     it('8 teams (Case F): two semi-final losers play for 3rd, CB winner is 5th', () => {
@@ -370,23 +367,77 @@ describe('EliminationTournament', () => {
       expect(standings[2].team.id).toBe(tpWinner.id);
       expect(standings[3].team.id).toBe(tpLoser.id);
     });
+
+    it('10 teams: single semi-final loser is 3rd, no 3rd-place match for CB winner', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
+      let t = EliminationTournament.create().start(teams, 4);
+
+      t = playWBRound(t, 1);
+      t = playAllCBRounds(t);
+      t = playWBRound(t, 2);
+      t = playAllCBRounds(t);
+      t = playWBRound(t, 3);
+      t = playAllCBRounds(t);
+
+      expect(t.winners.matchesForRound(t.totalRounds() - 1)).toHaveLength(1);
+      const semiFinal = t.winners.matchesForRound(t.totalRounds() - 1)[0];
+      const sfLoser = semiFinal.winner === 1 ? semiFinal.team2 : semiFinal.team1;
+
+      t = playWBRound(t, 4);
+      t = playAllCBRounds(t);
+
+      expect(t.thirdPlaceMatch).toBeUndefined();
+      expect(t.isComplete()).toBe(true);
+
+      const standings = t.calculateStandings();
+      const wbFinal = t.winners.matchesForRound(t.totalRounds())[0];
+      expect(standings[0].team.id).toBe(wbFinal.team1.id);
+      expect(standings[1].team.id).toBe(wbFinal.team2.id);
+      expect(standings[2].team.id).toBe(sfLoser.id);
+    });
   });
 
-  describe('countExpectedSemiFinalLosers', () => {
-    it.each([
-      [3, 4, 0],
-      [4, 4, 0],
-      [5, 8, 1],
-      [6, 8, 1],
-      [7, 8, 2],
-      [8, 8, 2],
-      [9, 16, 1],
-      [12, 16, 1],
-      [13, 16, 2],
-      [16, 16, 2],
-    ])('n=%i, bracket=%i → %i', (n, bracket, expected) => {
-      expect(countExpectedSemiFinalLosers(n, bracket)).toBe(expected);
-    });
+  describe('3rd-place invariant across bracket sizes', () => {
+    const NAMES = Array.from({ length: 32 }, (_, i) => `T${i + 1}`);
+    const COURT_COUNTS = [1, 2, 3, 4];
+    const CASES = Array.from({ length: 31 }, (_, i) => i + 2)
+      .flatMap(teamCount => COURT_COUNTS.map(courts => [teamCount, courts] as const));
+
+    it.each(CASES)(
+      '%i teams on %i courts: a 3rd-place match exists iff the semi-final round has two matches',
+      (teamCount, courts) => {
+        const teams = createTournamentTeams(NAMES.slice(0, teamCount));
+        const t = playFullTournament(EliminationTournament.create().start(teams, courts));
+
+        expect(t.isComplete()).toBe(true);
+        const standings = t.calculateStandings();
+        expect(standings).toHaveLength(teamCount);
+        for (const m of t.matches()) {
+          expect(m.courtNumber).toBeGreaterThanOrEqual(1);
+          expect(m.courtNumber).toBeLessThanOrEqual(courts);
+        }
+
+        const semiFinalRound = t.totalRounds() - 1;
+        const sfMatches = semiFinalRound >= 1 ? t.winners.matchesForRound(semiFinalRound) : [];
+
+        const expectThirdPlace = semiFinalRound >= 2 && sfMatches.length === 2;
+        expect(t.thirdPlaceMatch !== undefined).toBe(expectThirdPlace);
+
+        const wbFinal = t.winners.matchesForRound(t.totalRounds())[0];
+        if (wbFinal?.winner !== undefined) {
+          const champion = wbFinal.winner === 1 ? wbFinal.team1 : wbFinal.team2;
+          const runnerUp = wbFinal.winner === 1 ? wbFinal.team2 : wbFinal.team1;
+          expect(standings[0].team.id).toBe(champion.id);
+          expect(standings[1].team.id).toBe(runnerUp.id);
+        }
+
+        if (semiFinalRound >= 2 && sfMatches.length === 1) {
+          const sf = sfMatches[0];
+          const sfLoser = sf.winner === 1 ? sf.team2 : sf.team1;
+          expect(standings[2].team.id).toBe(sfLoser.id);
+        }
+      },
+    );
   });
 
   describe('validate', () => {

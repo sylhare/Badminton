@@ -171,12 +171,20 @@ describe('EliminationBracket', () => {
   });
 
   describe('3rd place section', () => {
-    it('shows 3rd Place section for 6 teams after SF and CB final complete', () => {
+    it('shows 3rd Place section for 8 teams (two semi-final losers)', () => {
+      let t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4);
+      for (let r = 1; r <= 2; r++) { t = playWBRound(t, r); t = playAllCBRounds(t); }
+
+      render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
+      expect(screen.getByTestId('tp-section')).toBeInTheDocument();
+    });
+
+    it('does not show 3rd Place section for 6 teams (single semi-final loser)', () => {
       let t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F']), 4);
       for (let r = 1; r <= 3; r++) { t = playWBRound(t, r); t = playAllCBRounds(t); }
 
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
-      expect(screen.getByTestId('tp-section')).toBeInTheDocument();
+      expect(screen.queryByTestId('tp-section')).not.toBeInTheDocument();
     });
 
     it('does not show 3rd Place section for 4 teams', () => {
