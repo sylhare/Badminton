@@ -14,7 +14,7 @@ import { RoundRobinTournament } from './RoundRobinTournament';
 import {
   ConsolationBracket,
   WinnersBracket,
-  countExpectedSemiFinalLosers,
+  getCBExpectedPool,
   getWBSemiFinalLosers,
   getWinnersFirstRoundLoser,
   nextPowerOf2,
@@ -97,6 +97,11 @@ export class EliminationTournament extends Tournament {
     return matches;
   }
 
+  /**
+   * Builds the matches unlocked by the latest result: the next winners round,
+   * consolation rounds, and a 3rd-place match only when the semi-final round has
+   * two real matches — a lone semi-final loser is 3rd automatically.
+   */
   private generateFollowUpMatches(allMatches: TournamentMatch[]): TournamentMatch[] {
     const { teams } = this._state;
     const bracketSize = this.bracketSize();
@@ -123,17 +128,16 @@ export class EliminationTournament extends Tournament {
       break;
     }
 
-    if (roundComplete(winnersMatches, 1) && !this.roundExists(consolationMatches, 1)) {
-      const losers: TournamentTeam[] = [];
-      for (let pos = 0; pos < bracketSize / 2; pos++) {
-        const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
-        if (loser) losers.push(loser);
-      }
-      if (losers.length >= 2) {
-        newMatches.push(...this.pairTeamsIntoMatches(
-          BracketKind.Consolation, 1, losers, allMatches.length + newMatches.length,
-        ));
-      }
+    const cbSeeds: TournamentTeam[] = [];
+    for (let pos = 0; pos < bracketSize / 2; pos++) {
+      const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
+      if (loser) cbSeeds.push(loser);
+    }
+
+    if (roundComplete(winnersMatches, 1) && !this.roundExists(consolationMatches, 1) && cbSeeds.length >= 2) {
+      newMatches.push(...this.pairTeamsIntoMatches(
+        BracketKind.Consolation, 1, cbSeeds, allMatches.length + newMatches.length,
+      ));
     }
 
     const maxCBRound = consolationMatches.length > 0 ? Math.max(...consolationMatches.map(m => m.round)) : 0;
@@ -151,12 +155,14 @@ export class EliminationTournament extends Tournament {
         .filter(m => m.winner !== undefined)
         .map(m => m.winner === 1 ? m.team1 : m.team2);
 
-      if (n === 1) {
-        const cbR1TeamIds = new Set(consolationMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
-        for (let pos = 0; pos < bracketSize / 2; pos++) {
-          const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
-          if (loser && !cbR1TeamIds.has(loser.id)) advancers.push(loser);
-        }
+      const allCBSoFar = [
+        ...consolationMatches,
+        ...newMatches.filter(m => m.bracket === BracketKind.Consolation),
+      ];
+      const cbRnParticipantIds = new Set(consolationMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
+      const expectedPool = getCBExpectedPool(n, cbSeeds, allCBSoFar);
+      for (const team of expectedPool) {
+        if (!cbRnParticipantIds.has(team.id)) advancers.push(team);
       }
 
       if (advancers.length < 2 && n + 1 < totalWBRounds && roundComplete(winnersMatches, n + 1)) {
@@ -173,26 +179,14 @@ export class EliminationTournament extends Tournament {
       break;
     }
 
-    const expectedSFLosers = countExpectedSemiFinalLosers(teams.length, bracketSize);
     const thirdPlaceExists = allMatches.some(m => m.bracket === BracketKind.ThirdPlace)
       || newMatches.some(m => m.bracket === BracketKind.ThirdPlace);
     const semiFinalRound = totalWBRounds - 1;
     const allWB = [...winnersMatches, ...newMatches.filter(m => m.bracket === BracketKind.Winners)];
 
-    if (!thirdPlaceExists && expectedSFLosers > 0 && roundComplete(allWB, semiFinalRound)) {
+    if (!thirdPlaceExists && semiFinalRound >= 2 && roundComplete(allWB, semiFinalRound)) {
       const sfLosers = getWBSemiFinalLosers(allWB, totalWBRounds);
-
-      if (expectedSFLosers === 1 && sfLosers.length === 1) {
-        const allCB = [...consolationMatches, ...newMatches.filter(m => m.bracket === BracketKind.Consolation)];
-        const cbFinal = this.highestRoundMatch(allCB);
-        if (cbFinal?.winner !== undefined) {
-          const cbWinner = cbFinal.winner === 1 ? cbFinal.team1 : cbFinal.team2;
-          newMatches.push(this.makeMatch(
-            BracketKind.ThirdPlace, 1, sfLosers[0], cbWinner,
-            allMatches.length + newMatches.length,
-          ));
-        }
-      } else if (expectedSFLosers === 2 && sfLosers.length === 2) {
+      if (sfLosers.length === 2) {
         newMatches.push(this.makeMatch(
           BracketKind.ThirdPlace, 1, sfLosers[0], sfLosers[1],
           allMatches.length + newMatches.length,
@@ -245,6 +239,11 @@ export class EliminationTournament extends Tournament {
     );
   }
 
+  /**
+   * Ranks teams by bracket outcome — winners final, 3rd-place match or lone
+   * semi-final loser, consolation final — then by fewest losses. Semi-final losers
+   * are only ranked once the final is decided, so a pending finalist stays ahead.
+   */
   calculateStandings(): TournamentStandingRow[] {
     const { teams, matches } = this._state;
     const standings = new Map<string, TournamentStandingRow>();
@@ -298,8 +297,14 @@ export class EliminationTournament extends Tournament {
       placeTeam((match.winner === 1 ? match.team2 : match.team1).id);
     };
 
+    const totalRounds = this.totalRounds();
     placeMatchResult(wbFinal);
     placeMatchResult(tpMatch);
+    if (wbFinal?.winner !== undefined && totalRounds - 1 >= 2) {
+      for (const loser of getWBSemiFinalLosers(wbMatches, totalRounds)) {
+        placeTeam(loser.id);
+      }
+    }
     placeMatchResult(cbFinal);
 
     const unplaced = Array.from(standings.values())

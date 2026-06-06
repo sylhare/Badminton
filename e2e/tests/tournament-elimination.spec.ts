@@ -66,7 +66,7 @@ test.describe('Tournament Page - Elimination', () => {
 
     const wbSection = page.getByTestId('wb-section');
     let wbFinalLoserName: string;
-    let tpWinnerName: string;
+    let wbSemiLoserName: string;
 
     await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
     await page.getByTestId('score-modal-confirm').click();
@@ -84,7 +84,10 @@ test.describe('Tournament Page - Elimination', () => {
       await page.getByTestId('score-modal-confirm').click();
       await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
 
-      await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(2).click();
+      const wbSemiBtn = wbSection.locator('[data-testid^="bracket-team-1-"]').nth(2);
+      const wbSemiMatchId = (await wbSemiBtn.getAttribute('data-testid'))!.replace('bracket-team-1-', '');
+      wbSemiLoserName = (await wbSection.locator(`[data-testid="bracket-team-2-${wbSemiMatchId}"]`).textContent())!.trim();
+      await wbSemiBtn.click();
       await page.getByTestId('score-modal-confirm').click();
       await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(0);
       await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(2);
@@ -97,18 +100,13 @@ test.describe('Tournament Page - Elimination', () => {
       wbFinalLoserName = (await wbSection.locator(`[data-testid="bracket-team-2-${wbFinalMatchId}"]`).textContent())!.trim();
       await wbFinalBtn.click();
       await page.getByTestId('score-modal-confirm').click();
-
-      const tpSection = page.getByTestId('tp-section');
-      tpWinnerName = (await tpSection.locator('[data-testid^="bracket-team-2-"]').nth(0).textContent())!.trim();
-      await tpSection.locator('[data-testid^="bracket-team-2-"]').nth(0).click();
-      await page.getByTestId('score-modal-confirm').click();
     });
 
-    await test.step('final results: gold medal visible, CB winner ranked 3rd, WB finalist 2nd', async () => {
+    await test.step('final results: gold medal visible, WB finalist 2nd, lone semi-final loser auto-3rd', async () => {
       await expect(page.getByTestId('standings-subtitle')).toHaveText('Final Results');
       await expect(page.getByTestId('standing-row-0')).toContainText('🥇');
       await expect(page.getByTestId('standing-row-1')).toContainText(wbFinalLoserName);
-      await expect(page.getByTestId('standing-row-2')).toContainText(tpWinnerName);
+      await expect(page.getByTestId('standing-row-2')).toContainText(wbSemiLoserName);
     });
   });
 
