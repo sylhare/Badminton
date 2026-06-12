@@ -75,7 +75,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
     <div className="tournament-matches" data-testid="tournament-matches">
       {roundNums.map(round => {
         const roundMatches = tournament.matchesForRound(round);
-        const isExpanded = expandedRounds.has(round) || (!allComplete && round === currentRound);
+        const isExpanded = expandedRounds.has(round);
         const roundDone = tournament.isRoundComplete(round);
 
         return (

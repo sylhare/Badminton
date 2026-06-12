@@ -58,7 +58,7 @@ export const useAnalytics = (): AnalyticsHook => {
     trackEvent({
       action,
       category: 'Game Management',
-      label: details?.gameType || details?.courtNumber ? `Court ${details.courtNumber}` : undefined,
+      label: details?.gameType ?? (details?.courtNumber !== undefined ? `Court ${details.courtNumber}` : undefined),
       value: details?.courtNumber,
     });
   }, [trackEvent]);

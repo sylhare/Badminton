@@ -76,6 +76,27 @@ describe('RoundRobinMatches', () => {
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.getByText('Bob')).toBeInTheDocument();
     });
+
+    it('clicking the current round header collapses it', async () => {
+      const user = userEvent.setup();
+      render(<RoundRobinMatches tournament={threeMatchSingles} onMatchResult={onMatchResult} />);
+
+      expect(screen.getByTestId('round-matches')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('round-header-1'));
+
+      expect(screen.queryByTestId('round-matches')).not.toBeInTheDocument();
+    });
+
+    it('a collapsed current round can be expanded again', async () => {
+      const user = userEvent.setup();
+      render(<RoundRobinMatches tournament={threeMatchSingles} onMatchResult={onMatchResult} />);
+
+      await user.click(screen.getByTestId('round-header-1'));
+      await user.click(screen.getByTestId('round-header-1'));
+
+      expect(screen.getByTestId('round-matches')).toBeInTheDocument();
+    });
   });
 
   describe('score modal', () => {

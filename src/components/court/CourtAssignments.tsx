@@ -161,7 +161,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
         <>
           <div className="courts-grid">
             {assignments.map((court) => {
-              const isManualCourt = (court as any).wasManuallyAssigned || (hasManualCourtSelection && court.courtNumber === 1);
+              const isManualCourt = court.wasManuallyAssigned || (hasManualCourtSelection && court.courtNumber === 1);
               return (
                 <CourtCard
                   key={court.courtNumber}
