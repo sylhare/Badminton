@@ -68,13 +68,13 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   static readonly REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000;
 
   /** Court numbers whose team-pair stats were already updated via rotation this round */
-  private pendingRotatedCourts = new Set<number>();
+  private static pendingRotatedCourts = new Set<number>();
 
   /** Delta of stats recorded in the most recent generate() call, used to undo on replace */
-  private lastRoundDelta: { bench: string[]; singles: string[]; teammates: string[]; opponents: string[] } | null = null;
+  private static lastRoundDelta: { bench: string[]; singles: string[]; teammates: string[]; opponents: string[] } | null = null;
 
   /** Timestamp of the most recent generate() call, used to detect rapid regeneration */
-  protected lastGeneratedAt: number | undefined = undefined;
+  protected static lastGeneratedAt: number | undefined = undefined;
 
   protected get teammateCountMap(): Map<string, number> {
     return CourtAssignmentTracker.teammateCountMap;
@@ -122,8 +122,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.levelHistoryMap.clear();
     CourtAssignmentTracker.globalCounter = 0;
     CourtAssignmentTracker.roundsPlayed = 0;
-    this.lastRoundDelta = null;
-    this.lastGeneratedAt = undefined;
+    CourtAssignmentTracker.lastRoundDelta = null;
+    CourtAssignmentTracker.lastGeneratedAt = undefined;
     this.notifyStateChange();
   }
 
@@ -141,8 +141,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    */
   protected shouldCommitRound(): boolean {
     const isRapidRegeneration =
-      this.lastGeneratedAt !== undefined &&
-      Date.now() - this.lastGeneratedAt < CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS;
+      CourtAssignmentTracker.lastGeneratedAt !== undefined &&
+      Date.now() - CourtAssignmentTracker.lastGeneratedAt < CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS;
     const hasWinners = CourtAssignmentTracker.recordedWinsMap.size > 0;
     return !isRapidRegeneration || hasWinners;
   }
@@ -153,14 +153,25 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lossCountMap.delete(playerId);
     CourtAssignmentTracker.benchCountMap.delete(playerId);
     CourtAssignmentTracker.singleCountMap.delete(playerId);
+    CourtAssignmentTracker.levelHistoryMap.delete(playerId);
+    const pairMaps = [
+      CourtAssignmentTracker.teammateCountMap,
+      CourtAssignmentTracker.opponentCountMap,
+      CourtAssignmentTracker.lastUpdatedMap,
+    ];
+    for (const map of pairMaps) {
+      for (const key of [...map.keys()]) {
+        if (key.split('|').includes(playerId)) map.delete(key);
+      }
+    }
     this.notifyStateChange();
   }
 
   /** Clears only the current session's recorded match outcomes. */
   clearCurrentSession(): void {
     CourtAssignmentTracker.recordedWinsMap.clear();
-    this.pendingRotatedCourts.clear();
-    this.lastGeneratedAt = undefined;
+    CourtAssignmentTracker.pendingRotatedCourts.clear();
+    CourtAssignmentTracker.lastGeneratedAt = undefined;
   }
 
   /**
@@ -170,7 +181,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
    * Returns anomalies detected by comparing against the previous round's delta.
    */
   applyRoundStats(courts: Court[], players: Player[]): AssignmentAnomaly[] {
-    const prev = this.lastRoundDelta;
+    const prev = CourtAssignmentTracker.lastRoundDelta;
     const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
 
     benchedPlayers(courts, players).forEach(p => {
@@ -188,7 +199,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         });
       }
 
-      if (!this.pendingRotatedCourts.has(court.courtNumber)) {
+      if (!CourtAssignmentTracker.pendingRotatedCourts.has(court.courtNumber)) {
         this.updateCourtTeamStats(court);
         const { team1, team2 } = court.teams;
         for (const team of [team1, team2]) {
@@ -198,7 +209,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       }
     });
 
-    this.lastRoundDelta = delta;
+    CourtAssignmentTracker.lastRoundDelta = delta;
     return this.detectAnomalies(prev, delta);
   }
 
@@ -236,13 +247,13 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Reverses the stats recorded by the most recent applyRoundStats call. */
   protected undoLastRound(): void {
-    if (!this.lastRoundDelta) return;
-    const { bench, singles, teammates, opponents } = this.lastRoundDelta;
+    if (!CourtAssignmentTracker.lastRoundDelta) return;
+    const { bench, singles, teammates, opponents } = CourtAssignmentTracker.lastRoundDelta;
     bench.forEach(id => this.decrementMapCount(CourtAssignmentTracker.benchCountMap, id));
     singles.forEach(id => this.decrementMapCount(CourtAssignmentTracker.singleCountMap, id));
     teammates.forEach(key => this.decrementMapCount(CourtAssignmentTracker.teammateCountMap, key));
     opponents.forEach(key => this.decrementMapCount(CourtAssignmentTracker.opponentCountMap, key));
-    this.lastRoundDelta = null;
+    CourtAssignmentTracker.lastRoundDelta = null;
   }
 
   /** Prepares the internal maps for persistence. Filters and prunes old data. */
@@ -447,7 +458,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
 
     if (rotatedCourt) {
-      this.pendingRotatedCourts.add(courtNumber);
+      CourtAssignmentTracker.pendingRotatedCourts.add(courtNumber);
       this.updateCourtTeamStats(rotatedCourt, court);
     }
 

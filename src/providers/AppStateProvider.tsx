@@ -17,6 +17,9 @@ export function useAppState(): AppStateContextType {
 
 export function AppStateProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
+  const [assignments, setAssignments] = useState<Court[]>([]);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<number | undefined>();
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState(false);
   const [counts, setCounts] = useState({ wins: new Map<string, number>(), losses: new Map<string, number>(), bench: new Map<string, number>() });
@@ -30,6 +33,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
       if (loadedState.players?.length) {
         setPlayers(loadedState.players);
       }
+      if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
+      if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
+      if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
       const smart = loadedState.isSmartEngineEnabled ?? false;
       if (smart) setIsSmartEngineEnabled(true);
       const engineType = smart ? 'sl' : 'sa';
@@ -52,8 +58,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
   useEffect(() => {
     if (!hasLoadedRef.current) return;
-    storageManager.saveApp({ players, isSmartEngineEnabled });
-  }, [players, isSmartEngineEnabled]);
+    storageManager.saveApp({ players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt });
+  }, [players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt]);
+
+  useEffect(() => {
+    if (!hasLoadedRef.current || !engineState) return;
+    void storageManager.saveEngine(engineState);
+  }, [engineState]);
 
   const handleAddPlayers = (names: string[]) => {
     const newPlayers = createPlayersFromNames(names, 'manual');
@@ -93,10 +104,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     const courtsWithWinners = courts.filter(c => c.winner);
     if (courtsWithWinners.length > 0) {
       const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners, players);
-      engine().recordLevelSnapshot(nextPlayers);
+      engine().recordLevelSnapshot(nextPlayers.filter(p => p.isPresent));
       setPlayers(nextPlayers);
     } else {
-      engine().recordLevelSnapshot(players);
+      engine().recordLevelSnapshot(players.filter(p => p.isPresent));
     }
   }, [players]);
 
@@ -132,6 +143,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
   const value: AppStateContextType = {
     players,
+    numberOfCourts,
+    setNumberOfCourts,
+    assignments,
+    setAssignments,
+    lastGeneratedAt,
+    setLastGeneratedAt,
     isLoaded,
     handlePlayerToggle,
     handleAddPlayers,

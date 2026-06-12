@@ -79,6 +79,20 @@ describe('rotateCourtTeams', () => {
       expect(rotated.winner).toBeUndefined();
     });
 
+    it('clears score on rotation', () => {
+      const court: Court = {
+        courtNumber: 1,
+        players: [A, B, C, D],
+        teams: { team1: [A, B], team2: [C, D] },
+        winner: 1,
+        score: { team1: 21, team2: 15 },
+      };
+
+      const rotated = rotateCourtTeams(court);
+
+      expect(rotated.score).toBeUndefined();
+    });
+
     it('preserves court number and players array', () => {
       const court: Court = {
         courtNumber: 3,
@@ -107,6 +121,20 @@ describe('rotateCourtTeams', () => {
   });
 
   describe('singles (2 players)', () => {
+    it('clears score on rotation', () => {
+      const court: Court = {
+        courtNumber: 1,
+        players: [A, B],
+        teams: { team1: [A], team2: [B] },
+        winner: 1,
+        score: { team1: 21, team2: 12 },
+      };
+
+      const rotated = rotateCourtTeams(court);
+
+      expect(rotated.score).toBeUndefined();
+    });
+
     it('swaps team1 and team2', () => {
       const court: Court = {
         courtNumber: 1,

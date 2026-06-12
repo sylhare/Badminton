@@ -104,6 +104,12 @@ export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
 
 export interface AppStateContextType {
   players: Player[];
+  numberOfCourts: number;
+  setNumberOfCourts: React.Dispatch<React.SetStateAction<number>>;
+  assignments: Court[];
+  setAssignments: React.Dispatch<React.SetStateAction<Court[]>>;
+  lastGeneratedAt?: number;
+  setLastGeneratedAt: React.Dispatch<React.SetStateAction<number | undefined>>;
   isLoaded: boolean;
   handlePlayerToggle: (id: string) => void;
   handleAddPlayers: (names: string[]) => void;

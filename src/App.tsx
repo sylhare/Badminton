@@ -9,7 +9,6 @@ import { CourtAssignments } from './components/court';
 import { useShareState } from './hooks/useShareState';
 import Leaderboard from './components/players/Leaderboard';
 import Footer from './components/Footer';
-import { storageManager } from './utils/StorageManager';
 import { useAppState } from './providers/AppStateProvider';
 import { benchedPlayers } from './utils/playerUtils';
 import type { Court, ManualCourtSelection, WinnerSelection } from './types';
@@ -18,25 +17,33 @@ export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
   if (!teams) return court;
 
+  const cleared = { ...court, winner: undefined, score: undefined };
+
   if (players.length === 4) {
     const [p0, p1, p2, p3] = players;
     const team1Ids = new Set(teams.team1.map(p => p.id));
 
     if (team1Ids.has(p0.id) && team1Ids.has(p1.id)) {
-      return { ...court, teams: { team1: [p0, p2], team2: [p1, p3] }, winner: undefined };
+      return { ...cleared, teams: { team1: [p0, p2], team2: [p1, p3] } };
     } else if (team1Ids.has(p0.id) && team1Ids.has(p2.id)) {
-      return { ...court, teams: { team1: [p0, p3], team2: [p1, p2] }, winner: undefined };
+      return { ...cleared, teams: { team1: [p0, p3], team2: [p1, p2] } };
     } else {
-      return { ...court, teams: { team1: [p0, p1], team2: [p2, p3] }, winner: undefined };
+      return { ...cleared, teams: { team1: [p0, p1], team2: [p2, p3] } };
     }
   }
 
-  return { ...court, teams: { team1: teams.team2, team2: teams.team1 }, winner: undefined };
+  return { ...cleared, teams: { team1: teams.team2, team2: teams.team1 } };
 }
 
 function App(): React.ReactElement {
   const {
     players,
+    numberOfCourts,
+    setNumberOfCourts,
+    assignments,
+    setAssignments,
+    lastGeneratedAt,
+    setLastGeneratedAt,
     isLoaded,
     handlePlayerToggle,
     handleAddPlayers,
@@ -50,41 +57,23 @@ function App(): React.ReactElement {
     benchCounts,
     generate,
     updateWinner,
-    saveState,
     resetAlgorithm,
   } = useAppState();
 
-  const [numberOfCourts, setNumberOfCourts] = useState<number>(4);
-  const [assignments, setAssignments] = useState<Court[]>([]);
   const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(false);
   const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(null);
-  const [lastGeneratedAt, setLastGeneratedAt] = useState<number | undefined>();
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
 
   const { shareUrl, setShareUrl, importState, handleShare, handleImportAccept, handleImportDecline } = useShareState();
 
-  const hasLocalLoadedRef = useRef(false);
+  const hasInitialisedCollapseRef = useRef(false);
   const managePlayersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const load = async () => {
-      const loadedState = await storageManager.loadApp();
-      if (loadedState.players?.length) {
-        setIsManagePlayersCollapsed(true);
-      }
-      if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
-      if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
-      if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
-      hasLocalLoadedRef.current = true;
-    };
-    load();
-  }, []);
-
-  useEffect(() => {
-    if (!hasLocalLoadedRef.current) return;
-    storageManager.saveApp({ numberOfCourts, assignments, lastGeneratedAt });
-    void saveState();
-  }, [numberOfCourts, assignments, lastGeneratedAt]);
+    if (!isLoaded || hasInitialisedCollapseRef.current) return;
+    hasInitialisedCollapseRef.current = true;
+    if (players.length > 0) setIsManagePlayersCollapsed(true);
+  }, [isLoaded, players]);
 
   const handleClearAllPlayers = () => {
     clearPlayers();
@@ -154,10 +143,9 @@ function App(): React.ReactElement {
 
   const handleViewBenchCounts = () => {
     setIsManagePlayersCollapsed(false);
-    const timerId = setTimeout(() => {
+    setTimeout(() => {
       managePlayersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
-    return () => clearTimeout(timerId);
   };
 
   const toggleManagePlayers = (event?: React.MouseEvent) => {
@@ -176,7 +164,6 @@ function App(): React.ReactElement {
       <div className="container main-container">
         <h1><span className="title-emoji">🏸 </span>Badminton Court Manager</h1>
 
-        {/* Manage Players Section - Collapsible */}
         <div
           ref={managePlayersRef}
           className={`section ${isManagePlayersCollapsed ? 'collapsed' : ''}`}
@@ -214,7 +201,6 @@ function App(): React.ReactElement {
           )}
         </div>
 
-        {/* Court Assignments Section - Never collapsed */}
         <div className="section" data-testid="court-assignments-section">
           <div className="section-header no-collapse">
             <h2>Court Assignments</h2>
@@ -232,7 +218,7 @@ function App(): React.ReactElement {
               onScoreChange={handleScoreChange}
               hasHistoricalWinners={winCounts.size > 0}
               onRotateTeams={handleRotateTeams}
-              hasManualCourtSelection={assignments.some(court => (court as any).wasManuallyAssigned)}
+              hasManualCourtSelection={assignments.some(court => court.wasManuallyAssigned)}
               onViewBenchCounts={handleViewBenchCounts}
               manualCourtSelection={manualCourtSelection}
               onManualCourtSelectionChange={setManualCourtSelection}

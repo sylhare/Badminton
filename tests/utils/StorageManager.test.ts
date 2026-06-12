@@ -144,6 +144,14 @@ describe('StorageManager', () => {
       expect(loaded).toEqual({});
     });
 
+    it('should round-trip roundsPlayed through the compact format', async () => {
+      await storageManager.saveEngine({ ...mockEngineState, roundsPlayed: 7 });
+
+      const loaded = await storageManager.loadEngine();
+
+      expect(loaded.roundsPlayed).toBe(7);
+    });
+
     it('should handle localStorage save errors gracefully', async () => {
       vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('Storage quota exceeded');

@@ -21,6 +21,7 @@ vi.mock('../../src/engines/engineSelector', () => ({
     description: 'Test engine description',
     stats: vi.fn(() => ({ winCountMap: new Map(), lossCountMap: new Map(), benchCountMap: new Map(), singleCountMap: new Map(), teammateCountMap: new Map(), opponentCountMap: new Map(), roundsPlayed: 0 })),
     levelTrend: vi.fn(() => null),
+    saveState: vi.fn(() => Promise.resolve()),
   }),
   getEngineType: vi.fn(() => 'sa'),
   setEngine: vi.fn(),
