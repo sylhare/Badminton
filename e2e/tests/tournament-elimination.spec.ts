@@ -32,10 +32,10 @@ test.describe('Tournament Page - Elimination', () => {
       await expect(page.locator('[data-testid="bracket-node-tbd"]').first()).toBeVisible();
     });
 
-    await expect(page.getByTestId('bracket-round-label-Semi-Final')).toBeVisible();
+    await expect(page.getByTestId('wb-section').getByTestId('bracket-round-label-Semi-Final')).toBeVisible();
     await expect(page.getByTestId('wb-section')).toBeVisible();
 
-    await expect(page.getByTestId('cb-section')).not.toBeVisible();
+    await expect(page.getByTestId('cb-section')).toBeVisible();
 
     const wbR1Teams = await page.locator('[data-testid^="bracket-team-1-"]').all();
     expect(wbR1Teams.length).toBeGreaterThanOrEqual(2);
@@ -62,7 +62,7 @@ test.describe('Tournament Page - Elimination', () => {
       await expect(page.locator('[data-testid="bracket-node-bye"]').first()).toBeVisible();
     });
 
-    await expect(page.getByTestId('cb-section')).not.toBeVisible();
+    await expect(page.getByTestId('cb-section')).toBeVisible();
 
     const wbSection = page.getByTestId('wb-section');
     let wbFinalLoserName: string;
@@ -116,8 +116,9 @@ test.describe('Tournament Page - Elimination', () => {
     await tournamentPage.selectType('elimination');
     await tournamentPage.startElimination();
 
-    await expect(page.getByTestId('bracket-round-label-4th-of-Final')).toBeVisible();
-    await expect(page.getByTestId('bracket-round-label-Semi-Final')).toBeVisible();
+    const wbSection = page.getByTestId('wb-section');
+    await expect(wbSection.getByTestId('bracket-round-label-4th-of-Final')).toBeVisible();
+    await expect(wbSection.getByTestId('bracket-round-label-Semi-Final')).toBeVisible();
   });
 
   test('elimination tournament state persists across reload', async ({ page }) => {

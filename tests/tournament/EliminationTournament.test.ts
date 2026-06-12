@@ -147,6 +147,47 @@ describe('EliminationTournament', () => {
       expect(t.consolation.matchesForRound(1)).toHaveLength(2);
     });
 
+    it('8 teams: a semi-final appears as soon as both of its feeder matches are decided', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+      let t = EliminationTournament.create().start(teams, 4);
+      const [m0, m1, m2, m3] = t.winners.matchesForRound(1);
+
+      t = t.withMatchResult(m0.id, 1);
+      expect(t.winners.matchesForRound(2)).toHaveLength(0);
+
+      t = t.withMatchResult(m1.id, 1);
+      const r2 = t.winners.matchesForRound(2);
+      expect(r2).toHaveLength(1);
+      expect(new Set([r2[0].team1.id, r2[0].team2.id])).toEqual(new Set([m0.team1.id, m1.team1.id]));
+      expect(t.consolation.matchesForRound(1)).toHaveLength(1);
+
+      t = t.withMatchResult(m2.id, 1);
+      expect(t.winners.matchesForRound(2)).toHaveLength(1);
+
+      t = t.withMatchResult(m3.id, 1);
+      expect(t.winners.matchesForRound(2)).toHaveLength(2);
+      expect(t.consolation.matchesForRound(1)).toHaveLength(2);
+    });
+
+    it('8 teams: a decided semi-final does not duplicate when later results come in', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+      let t = EliminationTournament.create().start(teams, 4);
+      const [m0, m1, m2, m3] = t.winners.matchesForRound(1);
+
+      t = t.withMatchResult(m0.id, 1);
+      t = t.withMatchResult(m1.id, 1);
+      const [sf0] = t.winners.matchesForRound(2);
+      t = t.withMatchResult(sf0.id, 1);
+
+      t = t.withMatchResult(m2.id, 1);
+      t = t.withMatchResult(m3.id, 1);
+
+      const r2 = t.winners.matchesForRound(2);
+      expect(r2).toHaveLength(2);
+      expect(r2.filter(m => m.id === sf0.id)).toHaveLength(1);
+      expect(t.winners.matchesForRound(3)).toHaveLength(0);
+    });
+
     it('8 teams: WB R2 complete → WB R3 (1 match) + CB R2 (1 match)', () => {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
       let t = EliminationTournament.create().start(teams, 4);
@@ -221,6 +262,78 @@ describe('EliminationTournament', () => {
       const r2TeamIds = [r2[0].team1.id, r2[0].team2.id];
       expect(r2TeamIds).toContain(m0.team1.id);
       expect(r2TeamIds).toContain(byeTeam.id);
+    });
+  });
+
+  describe('consolation bracket — per-pair seeding and stable tree', () => {
+    function start8() {
+      return EliminationTournament.create().start(
+        createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4,
+      );
+    }
+
+    it('8 teams: a CB R1 match appears as soon as both paired WB R1 losers are known', () => {
+      let t = start8();
+      const [m0, m1, m2] = t.winners.matchesForRound(1);
+
+      t = t.withMatchResult(m0.id, 1);
+      expect(t.consolation.matchesForRound(1)).toHaveLength(0);
+
+      t = t.withMatchResult(m1.id, 1);
+      const cb1 = t.consolation.matchesForRound(1);
+      expect(cb1).toHaveLength(1);
+      expect(new Set([cb1[0].team1.id, cb1[0].team2.id])).toEqual(new Set([m0.team2.id, m1.team2.id]));
+
+      t = t.withMatchResult(m2.id, 1);
+      expect(t.consolation.matchesForRound(1)).toHaveLength(1);
+    });
+
+    it('8 teams: CB does not advance to R2 before WB R1 is fully decided', () => {
+      let t = start8();
+      const [m0, m1] = t.winners.matchesForRound(1);
+      t = t.withMatchResult(m0.id, 1);
+      t = t.withMatchResult(m1.id, 1);
+
+      const [cb0] = t.consolation.matchesForRound(1);
+      t = t.withMatchResult(cb0.id, 1);
+
+      expect(t.consolation.matchesForRound(2)).toHaveLength(0);
+    });
+
+    it('8 teams: finishing WB R1 after early CB play completes CB R1 and unlocks CB R2', () => {
+      let t = start8();
+      const [m0, m1, m2, m3] = t.winners.matchesForRound(1);
+      t = t.withMatchResult(m0.id, 1);
+      t = t.withMatchResult(m1.id, 1);
+      t = t.withMatchResult(t.consolation.matchesForRound(1)[0].id, 1);
+
+      t = t.withMatchResult(m2.id, 1);
+      t = t.withMatchResult(m3.id, 1);
+      expect(t.consolation.matchesForRound(1)).toHaveLength(2);
+
+      const pending = t.consolation.matchesForRound(1).find(m => m.winner === undefined)!;
+      t = t.withMatchResult(pending.id, 1);
+      const cb2 = t.consolation.matchesForRound(2);
+      expect(cb2).toHaveLength(1);
+      const cb1Winners = t.consolation.matchesForRound(1).map(m => m.winner === 1 ? m.team1.id : m.team2.id);
+      expect(new Set([cb2[0].team1.id, cb2[0].team2.id])).toEqual(new Set(cb1Winners));
+    });
+
+    it('8 teams: CB tree keeps its final 2-round shape while WB R1 is partially decided', () => {
+      let t = start8();
+      const [m0, m1, m2] = t.winners.matchesForRound(1);
+
+      t = t.withMatchResult(m0.id, 1);
+      let tree = t.consolation.computeTree();
+      expect(tree).toHaveLength(2);
+      expect(tree[0].every(n => n.type === 'tbd')).toBe(true);
+
+      t = t.withMatchResult(m1.id, 1);
+      t = t.withMatchResult(m2.id, 1);
+      tree = t.consolation.computeTree();
+      expect(tree).toHaveLength(2);
+      expect(tree[0][0].type).toBe('match');
+      expect(tree[0][1].type).toBe('tbd');
     });
   });
 
@@ -535,6 +648,89 @@ describe('EliminationTournament', () => {
       const t = playFullTournament(EliminationTournament.create().start(teams, 4));
       expect(t.isComplete()).toBe(true);
       expect(t.calculateStandings()).toHaveLength(10);
+    });
+  });
+
+  describe('withMatchResult — changing a decided result', () => {
+    function playWBRound1(teams: TournamentTeam[]) {
+      let t = EliminationTournament.create().start(teams, 4);
+      const [m0, m1] = t.winners.matchesForRound(1);
+      t = t.withMatchResult(m0.id, 1);
+      t = t.withMatchResult(m1.id, 1);
+      return { t, m0, m1 };
+    }
+
+    it('regenerates the next WB round with the corrected winner', () => {
+      const { t: played, m0 } = playWBRound1(createTournamentTeams(['A', 'B', 'C', 'D']));
+      expect(played.winners.matchesForRound(2)).toHaveLength(1);
+
+      const t = played.withMatchResult(m0.id, 2);
+
+      const r2 = t.winners.matchesForRound(2);
+      expect(r2).toHaveLength(1);
+      const r2TeamIds = [r2[0].team1.id, r2[0].team2.id];
+      expect(r2TeamIds).toContain(m0.team2.id);
+      expect(r2TeamIds).not.toContain(m0.team1.id);
+    });
+
+    it('moves the new loser into the consolation bracket', () => {
+      const { t: played, m0 } = playWBRound1(createTournamentTeams(['A', 'B', 'C', 'D']));
+
+      const t = played.withMatchResult(m0.id, 2);
+
+      const cb1 = t.consolation.matchesForRound(1);
+      expect(cb1).toHaveLength(1);
+      const cbTeamIds = [cb1[0].team1.id, cb1[0].team2.id];
+      expect(cbTeamIds).toContain(m0.team1.id);
+      expect(cbTeamIds).not.toContain(m0.team2.id);
+    });
+
+    it('discards dependent results so the tournament is no longer complete', () => {
+      const { t: played, m0 } = playWBRound1(createTournamentTeams(['A', 'B', 'C', 'D']));
+      let t = playAllCBRounds(playWBRound(played, 2));
+      expect(t.isComplete()).toBe(true);
+
+      t = t.withMatchResult(m0.id, 2);
+
+      expect(t.isComplete()).toBe(false);
+      expect(t.phase()).toBe('active');
+      expect(t.winners.matchesForRound(2)[0].winner).toBeUndefined();
+      expect(t.calculateStandings()).toHaveLength(4);
+    });
+
+    it('re-confirming the same winner keeps downstream matches intact', () => {
+      const { t: played, m0 } = playWBRound1(createTournamentTeams(['A', 'B', 'C', 'D']));
+      let t = playWBRound(played, 2);
+      const r2Before = t.winners.matchesForRound(2)[0];
+
+      t = t.withMatchResult(m0.id, 1);
+
+      const r2After = t.winners.matchesForRound(2)[0];
+      expect(r2After.id).toBe(r2Before.id);
+      expect(r2After.winner).toBe(r2Before.winner);
+    });
+
+    it('changing a WB R2 result in an 8-team bracket keeps CB R1 results but resets later rounds', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+      let t = EliminationTournament.create().start(teams, 4);
+      t = playWBRound(t, 1);
+      t = playAllCBRounds(t);
+      const cb1Before = t.consolation.matchesForRound(1);
+      t = playWBRound(t, 2);
+      const [sf0] = t.winners.matchesForRound(2);
+      t = playWBRound(t, 3);
+      expect(t.winners.matchesForRound(3)).toHaveLength(1);
+
+      t = t.withMatchResult(sf0.id, 2);
+
+      const cb1After = t.consolation.matchesForRound(1);
+      expect(cb1After.map(m => m.winner)).toEqual(cb1Before.map(m => m.winner));
+      const final = t.winners.matchesForRound(3);
+      expect(final).toHaveLength(1);
+      const finalTeamIds = [final[0].team1.id, final[0].team2.id];
+      expect(finalTeamIds).toContain(sf0.team2.id);
+      expect(finalTeamIds).not.toContain(sf0.team1.id);
+      expect(final[0].winner).toBeUndefined();
     });
   });
 

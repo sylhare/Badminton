@@ -11,9 +11,11 @@ import type {
   TournamentTeam,
 } from './types';
 import { RoundRobinTournament } from './RoundRobinTournament';
+import type { SeedSlots } from './bracketTree';
 import {
   ConsolationBracket,
   WinnersBracket,
+  findMatchBetween,
   getCBExpectedPool,
   getWBSemiFinalLosers,
   getWinnersFirstRoundLoser,
@@ -98,74 +100,126 @@ export class EliminationTournament extends Tournament {
   }
 
   /**
-   * Builds the matches unlocked by the latest result: the next winners round,
-   * consolation rounds, and a 3rd-place match only when the semi-final round has
-   * two real matches — a lone semi-final loser is 3rd automatically.
+   * Builds the matches unlocked by the latest result: winners matches whose
+   * participants are known, consolation rounds, and a 3rd-place match only when
+   * the semi-final round has two real matches — a lone semi-final loser is 3rd
+   * automatically.
    */
   private generateFollowUpMatches(allMatches: TournamentMatch[]): TournamentMatch[] {
-    const { teams } = this._state;
-    const bracketSize = this.bracketSize();
-    const newMatches: TournamentMatch[] = [];
     const winnersMatches = allMatches.filter(m => m.bracket === BracketKind.Winners);
     const consolationMatches = allMatches.filter(m => m.bracket === BracketKind.Consolation);
-    const totalWBRounds = Math.log2(bracketSize);
+    const thirdPlaceExists = allMatches.some(m => m.bracket === BracketKind.ThirdPlace);
 
-    for (let n = 1; n < totalWBRounds; n++) {
-      if (!roundComplete(winnersMatches, n)) break;
-      if (this.roundExists(winnersMatches, n + 1)) continue;
+    const newWB = this.nextWinnersRoundMatches(winnersMatches, allMatches.length);
+    const newCB = this.nextConsolationMatches(
+      winnersMatches, consolationMatches, allMatches.length + newWB.length,
+    );
+    const newTP = thirdPlaceExists ? [] : this.nextThirdPlaceMatches(
+      [...winnersMatches, ...newWB], allMatches.length + newWB.length + newCB.length,
+    );
 
-      const nextRoundPositions = bracketSize / Math.pow(2, n + 1);
-      let courtIndex = allMatches.length + newMatches.length;
-      const winnersMatchesSoFar = [...winnersMatches, ...newMatches.filter(m => m.bracket === BracketKind.Winners)];
-      for (let pos = 0; pos < nextRoundPositions; pos++) {
-        const teamA = resolvePosition(n, 2 * pos, teams, winnersMatchesSoFar);
-        const teamB = resolvePosition(n, 2 * pos + 1, teams, winnersMatchesSoFar);
-        if (teamA !== 'bye' && teamA !== 'tbd' && teamB !== 'bye' && teamB !== 'tbd') {
-          newMatches.push(this.makeMatch(BracketKind.Winners, n + 1, teamA, teamB, courtIndex));
-          courtIndex++;
-        }
+    return [...newWB, ...newCB, ...newTP];
+  }
+
+  /**
+   * Generates each winners match as soon as both of its feeder slots are
+   * decided — without waiting for the rest of the round to finish.
+   */
+  private nextWinnersRoundMatches(
+    winnersMatches: TournamentMatch[],
+    startCourtIndex: number,
+  ): TournamentMatch[] {
+    const { teams } = this._state;
+    const bracketSize = this.bracketSize();
+    const totalWBRounds = this.totalRounds();
+    const newMatches: TournamentMatch[] = [];
+    let courtIndex = startCourtIndex;
+
+    for (let round = 2; round <= totalWBRounds; round++) {
+      const positions = bracketSize / Math.pow(2, round);
+      for (let pos = 0; pos < positions; pos++) {
+        const teamA = resolvePosition(round - 1, 2 * pos, teams, winnersMatches);
+        const teamB = resolvePosition(round - 1, 2 * pos + 1, teams, winnersMatches);
+        if (teamA === 'bye' || teamA === 'tbd' || teamB === 'bye' || teamB === 'tbd') continue;
+        if (findMatchBetween(round, teamA, teamB, winnersMatches)) continue;
+        newMatches.push(this.makeMatch(BracketKind.Winners, round, teamA, teamB, courtIndex));
+        courtIndex++;
       }
-      break;
     }
 
-    const cbSeeds: TournamentTeam[] = [];
-    for (let pos = 0; pos < bracketSize / 2; pos++) {
-      const loser = getWinnersFirstRoundLoser(pos, teams, winnersMatches);
-      if (loser) cbSeeds.push(loser);
-    }
+    return newMatches;
+  }
 
-    if (roundComplete(winnersMatches, 1) && !this.roundExists(consolationMatches, 1) && cbSeeds.length >= 2) {
-      newMatches.push(...this.pairTeamsIntoMatches(
-        BracketKind.Consolation, 1, cbSeeds, allMatches.length + newMatches.length,
+  /** True once every slot of the WB round has resolved to a team or a bye. */
+  private wbRoundFullyDecided(winnersMatches: TournamentMatch[], round: number): boolean {
+    const positions = this.bracketSize() / Math.pow(2, round);
+    for (let pos = 0; pos < positions; pos++) {
+      if (resolvePosition(round, pos, this._state.teams, winnersMatches) === 'tbd') return false;
+    }
+    return true;
+  }
+
+  /**
+   * One seed slot per real WB first-round match, in position order: the
+   * match's loser once decided, `null` until then. Bye positions get no slot.
+   */
+  private cbSeedSlots(winnersMatches: TournamentMatch[]): SeedSlots {
+    const { teams } = this._state;
+    const slots: Array<TournamentTeam | null> = [];
+    for (let pos = 0; pos < this.bracketSize() / 2; pos++) {
+      if (!teams[2 * pos] || !teams[2 * pos + 1]) continue;
+      slots.push(getWinnersFirstRoundLoser(pos, teams, winnersMatches));
+    }
+    return slots;
+  }
+
+  /**
+   * Seeds each consolation first-round match as soon as both paired WB losers
+   * are known, then advances completed CB rounds. Advancement waits for the
+   * full WB first round: the advancer pool (and its bye-passers) is only
+   * meaningful once every seed slot is filled.
+   */
+  private nextConsolationMatches(
+    winnersMatches: TournamentMatch[],
+    consolationMatches: TournamentMatch[],
+    startCourtIndex: number,
+  ): TournamentMatch[] {
+    const totalWBRounds = this.totalRounds();
+    const newMatches: TournamentMatch[] = [];
+
+    const slots = this.cbSeedSlots(winnersMatches);
+    for (let pair = 0; 2 * pair + 1 < slots.length; pair++) {
+      const teamA = slots[2 * pair];
+      const teamB = slots[2 * pair + 1];
+      if (!teamA || !teamB || findMatchBetween(1, teamA, teamB, consolationMatches)) continue;
+      newMatches.push(this.makeMatch(
+        BracketKind.Consolation, 1, teamA, teamB, startCourtIndex + newMatches.length,
       ));
     }
 
-    const maxCBRound = consolationMatches.length > 0 ? Math.max(...consolationMatches.map(m => m.round)) : 0;
+    if (!this.wbRoundFullyDecided(winnersMatches, 1)) return newMatches;
+
+    const cbSeeds = slots.filter((s): s is TournamentTeam => s !== null);
+    const allCB = [...consolationMatches, ...newMatches];
+    const maxCBRound = allCB.length > 0 ? Math.max(...allCB.map(m => m.round)) : 0;
 
     for (let n = 1; n <= maxCBRound; n++) {
-      if (!roundComplete(consolationMatches, n)) break;
-      if (this.roundExists(consolationMatches, n + 1)) continue;
+      if (!roundComplete(allCB, n)) break;
+      if (this.roundExists(allCB, n + 1)) continue;
 
-      const consolationMatchesSoFar = [
-        ...consolationMatches.filter(m => m.round === n),
-        ...newMatches.filter(m => m.bracket === BracketKind.Consolation && m.round === n),
-      ];
+      const cbRoundN = allCB.filter(m => m.round === n);
 
-      const advancers: TournamentTeam[] = consolationMatchesSoFar
+      const advancers: TournamentTeam[] = cbRoundN
         .filter(m => m.winner !== undefined)
         .map(m => m.winner === 1 ? m.team1 : m.team2);
 
-      const allCBSoFar = [
-        ...consolationMatches,
-        ...newMatches.filter(m => m.bracket === BracketKind.Consolation),
-      ];
-      const cbRnParticipantIds = new Set(consolationMatchesSoFar.flatMap(m => [m.team1.id, m.team2.id]));
-      const expectedPool = getCBExpectedPool(n, cbSeeds, allCBSoFar);
+      const cbRnParticipantIds = new Set(cbRoundN.flatMap(m => [m.team1.id, m.team2.id]));
+      const expectedPool = getCBExpectedPool(n, cbSeeds, allCB);
       for (const team of expectedPool) {
         if (!cbRnParticipantIds.has(team.id)) advancers.push(team);
       }
 
-      if (advancers.length < 2 && n + 1 < totalWBRounds && roundComplete(winnersMatches, n + 1)) {
+      if (advancers.length < 2 && n + 1 < totalWBRounds && this.wbRoundFullyDecided(winnersMatches, n + 1)) {
         for (const m of winnersMatches.filter(m => m.round === n + 1 && m.winner !== undefined)) {
           advancers.push(m.winner === 1 ? m.team2 : m.team1);
         }
@@ -173,28 +227,24 @@ export class EliminationTournament extends Tournament {
 
       if (advancers.length >= 2) {
         newMatches.push(...this.pairTeamsIntoMatches(
-          BracketKind.Consolation, n + 1, advancers, allMatches.length + newMatches.length,
+          BracketKind.Consolation, n + 1, advancers, startCourtIndex + newMatches.length,
         ));
       }
       break;
     }
 
-    const thirdPlaceExists = allMatches.some(m => m.bracket === BracketKind.ThirdPlace)
-      || newMatches.some(m => m.bracket === BracketKind.ThirdPlace);
-    const semiFinalRound = totalWBRounds - 1;
-    const allWB = [...winnersMatches, ...newMatches.filter(m => m.bracket === BracketKind.Winners)];
-
-    if (!thirdPlaceExists && semiFinalRound >= 2 && roundComplete(allWB, semiFinalRound)) {
-      const sfLosers = getWBSemiFinalLosers(allWB, totalWBRounds);
-      if (sfLosers.length === 2) {
-        newMatches.push(this.makeMatch(
-          BracketKind.ThirdPlace, 1, sfLosers[0], sfLosers[1],
-          allMatches.length + newMatches.length,
-        ));
-      }
-    }
-
     return newMatches;
+  }
+
+  /** Creates the 3rd-place match once both semi-finals are decided. */
+  private nextThirdPlaceMatches(allWB: TournamentMatch[], courtIndex: number): TournamentMatch[] {
+    const totalWBRounds = this.totalRounds();
+    const semiFinalRound = totalWBRounds - 1;
+    if (semiFinalRound < 2 || !roundComplete(allWB, semiFinalRound)) return [];
+
+    const sfLosers = getWBSemiFinalLosers(allWB, totalWBRounds);
+    if (sfLosers.length !== 2) return [];
+    return [this.makeMatch(BracketKind.ThirdPlace, 1, sfLosers[0], sfLosers[1], courtIndex)];
   }
 
   start(teams: TournamentTeam[], numberOfCourts: number): EliminationTournament {
@@ -210,13 +260,39 @@ export class EliminationTournament extends Tournament {
     winner: 1 | 2,
     score?: { team1: number; team2: number },
   ): this {
-    const updatedMatches = this._state.matches.map(m =>
+    const existing = this._state.matches.find(m => m.id === matchId);
+    if (!existing) return this;
+
+    let updatedMatches = this._state.matches.map(m =>
       m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
     );
+    if (existing.winner !== undefined && existing.winner !== winner) {
+      updatedMatches = this.withoutDependentMatches(updatedMatches, existing);
+    }
     const followUp = this.generateFollowUpMatches(updatedMatches);
     const allMatches = [...updatedMatches, ...followUp];
     const phase = allMatches.length > 0 && allMatches.every(m => m.winner !== undefined) ? 'completed' : 'active';
     return new EliminationTournament({ ...this._state, matches: allMatches, phase }) as unknown as this;
+  }
+
+  /**
+   * Drops matches whose participants were derived from the changed match's old
+   * result, so generateFollowUpMatches can rebuild them with the corrected team:
+   * later rounds of the same bracket, and — for a winners-bracket change before
+   * the final — the consolation rounds fed by it and the 3rd-place match.
+   */
+  private withoutDependentMatches(
+    matches: TournamentMatch[],
+    changed: TournamentMatch,
+  ): TournamentMatch[] {
+    const { bracket, round } = changed;
+    const finalRound = this.totalRounds();
+    return matches.filter(m => {
+      if (m.bracket === bracket) return m.round <= round;
+      if (bracket !== BracketKind.Winners || round >= finalRound) return true;
+      if (m.bracket === BracketKind.Consolation) return m.round < round;
+      return false;
+    });
   }
 
   get winners(): WinnersBracket {
@@ -233,7 +309,7 @@ export class EliminationTournament extends Tournament {
 
   get consolation(): ConsolationBracket {
     return new ConsolationBracket(
-      this.winners.firstRoundLosers(),
+      this.cbSeedSlots(this._state.matches.filter(m => m.bracket === BracketKind.Winners)),
       this._state.matches.filter(m => m.bracket === BracketKind.Consolation),
       this.bracketSize(),
     );

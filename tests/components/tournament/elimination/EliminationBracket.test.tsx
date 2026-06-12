@@ -49,7 +49,7 @@ describe('EliminationBracket', () => {
       );
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getByTestId('bracket-round-label-4th-of-Final')).toBeInTheDocument();
-      expect(screen.getByTestId('bracket-round-label-Semi-Final')).toBeInTheDocument();
+      expect(screen.getAllByTestId('bracket-round-label-Semi-Final').length).toBeGreaterThan(0);
     });
   });
 
@@ -158,6 +158,21 @@ describe('EliminationBracket', () => {
   });
 
   describe('consolation bracket', () => {
+    it('shows CB slots as TBD (never as false byes) while WB R1 is partially decided', () => {
+      let t = EliminationTournament.create('singles').start(
+        makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4,
+      );
+      const [m0, , m2] = t.winners.matchesForRound(1);
+      t = t.withMatchResult(m0.id, 1);
+      t = t.withMatchResult(m2.id, 1);
+
+      render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
+      const cbSection = screen.getByTestId('cb-section');
+      expect(cbSection.querySelectorAll('[data-testid="bracket-node-tbd"]').length).toBeGreaterThan(0);
+      expect(cbSection.querySelectorAll('[data-testid="bracket-node-bye"]').length).toBe(0);
+      expect(cbSection.querySelectorAll('[data-testid="bracket-node-match"]').length).toBe(0);
+    });
+
     it('shows CB section after WB R1 is complete', async () => {
       const [A, B, C, D] = makeTeams(['A', 'B', 'C', 'D']);
       let t = EliminationTournament.create('singles').start([A, B, C, D], 4);
