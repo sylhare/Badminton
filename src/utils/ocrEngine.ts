@@ -22,49 +22,53 @@ export async function recognizePlayerNames(
   pushProgress(0.1);
 
   const { createWorker } = await import('tesseract.js');
-  const worker: any = await (createWorker as any)('eng', workerPath ? { workerPath } : undefined);
+  const worker: any = await (createWorker as any)('eng', 1, {
+    ...(workerPath ? { workerPath } : {}),
+    logger: (m: any) => {
+      if (m.status === 'recognizing text') {
+        pushProgress(0.6 + (m.progress * 0.4));
+      }
+    },
+  });
 
   pushProgress(0.2);
 
-  worker.logger = (m: any) => {
-    if (m.status === 'recognizing text') {
-      pushProgress(0.6 + (m.progress * 0.4));
+  try {
+    if (typeof worker.setParameters === 'function') {
+      await worker.setParameters({
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ',
+        preserve_interword_spaces: '1',
+        tessedit_pageseg_mode: '11',
+        user_defined_dpi: '300',
+      });
     }
-  };
 
-  if (typeof worker.setParameters === 'function') {
-    await worker.setParameters({
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ',
-      preserve_interword_spaces: '1',
-      tessedit_pageseg_mode: '11',
-      user_defined_dpi: '300',
-    });
-  }
+    pushProgress(0.3);
 
-  pushProgress(0.3);
+    let imageForOCR: any = image;
+    if (shouldPreprocess && image instanceof File) {
+      try {
+        pushProgress(0.35);
 
-  let imageForOCR: any = image;
-  if (shouldPreprocess && image instanceof File) {
-    try {
-      pushProgress(0.35);
+        imageForOCR = await preprocessImage(image);
 
-      imageForOCR = await preprocessImage(image);
-
-      pushProgress(0.6);
-    } catch (err) {
-      console.warn('Image preprocessing skipped:', err);
+        pushProgress(0.6);
+      } catch (err) {
+        console.warn('Image preprocessing skipped:', err);
+        pushProgress(0.6);
+      }
+    } else {
       pushProgress(0.6);
     }
-  } else {
-    pushProgress(0.6);
+
+    const {
+      data: { text },
+    } = await worker.recognize(imageForOCR);
+
+    return extractPlayerNames(text);
+  } finally {
+    await worker.terminate();
   }
-
-  const {
-    data: { text },
-  } = await worker.recognize(imageForOCR);
-  await worker.terminate();
-
-  return extractPlayerNames(text);
 }
 
 export function extractPlayerNames(text: string): string[] {
