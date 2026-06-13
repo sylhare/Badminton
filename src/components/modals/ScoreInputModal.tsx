@@ -47,14 +47,17 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     }
   };
 
+  const defaults = winnerTeam === 1 ? { team1: 21, team2: 18 } : { team1: 18, team2: 21 };
+
+  const parsed1 = parseInt(score1, 10);
+  const parsed2 = parseInt(score2, 10);
+  const resolvedScore = {
+    team1: isNaN(parsed1) ? defaults.team1 : parsed1,
+    team2: isNaN(parsed2) ? defaults.team2 : parsed2,
+  };
+
   const handleConfirm = () => {
-    const parsed1 = parseInt(score1, 10);
-    const parsed2 = parseInt(score2, 10);
-    const default1 = winnerTeam === 2 ? 18 : 21;
-    const default2 = winnerTeam === 1 ? 18 : 21;
-    const team1Score = isNaN(parsed1) ? default1 : parsed1;
-    const team2Score = isNaN(parsed2) ? default2 : parsed2;
-    onConfirm({ team1: team1Score, team2: team2Score });
+    onConfirm(resolvedScore);
     setScore1('');
     setScore2('');
   };
@@ -65,13 +68,9 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     onCancel();
   };
 
-  const n1 = parseInt(score1, 10);
-  const n2 = parseInt(score2, 10);
-  const effDefault1 = winnerTeam === 2 ? 18 : 21;
-  const effDefault2 = winnerTeam === 1 ? 18 : 21;
-  const eff1 = isNaN(n1) ? effDefault1 : n1;
-  const eff2 = isNaN(n2) ? effDefault2 : n2;
-  const isConfirmDisabled = (winnerTeam === 1 && eff1 < eff2) || (winnerTeam === 2 && eff2 < eff1);
+  const isConfirmDisabled =
+    (winnerTeam === 1 && resolvedScore.team1 < resolvedScore.team2) ||
+    (winnerTeam === 2 && resolvedScore.team2 < resolvedScore.team1);
 
   const teamNames = (players: Player[]) => players.map(p => p.name).join(' & ');
 
@@ -83,7 +82,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
       testId="score-input-modal"
     >
       <div className="modal-body">
-        <p>Optionally enter the score:</p>
+        <p>Enter the score (defaults to 21 – 18):</p>
         <div className="score-modal-teams">
           <span className="score-modal-team-name">{teamNames(team1Players)}</span>
           <span className="score-modal-vs">vs</span>
@@ -95,7 +94,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
             min="0"
             value={score1}
             onChange={(e) => handleScore1Change(e.target.value)}
-            placeholder={winnerTeam === 2 ? '18' : '21'}
+            placeholder={String(defaults.team1)}
             aria-label="Team 1 score"
             data-testid="score-input-team1"
           />
@@ -105,7 +104,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
             min="0"
             value={score2}
             onChange={(e) => handleScore2Change(e.target.value)}
-            placeholder={winnerTeam === 1 ? '18' : '21'}
+            placeholder={String(defaults.team2)}
             aria-label="Team 2 score"
             data-testid="score-input-team2"
           />

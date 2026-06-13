@@ -97,6 +97,15 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       className="image-upload-modal"
     >
       <div className="modal-body">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          className="file-input"
+          data-testid="image-file-input"
+        />
         {extractedPlayers.length === 0 ? (
           <>
             <div
@@ -117,15 +126,6 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                   Choose Image
                 </button>
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileSelect}
-                className="file-input"
-                data-testid="image-file-input"
-              />
             </div>
 
             {isProcessing && (

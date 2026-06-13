@@ -175,6 +175,25 @@ describe('ConsolationBracket.computeTree', () => {
     });
   });
 
+  describe('pending seed slots (WB R1 losers not yet known)', () => {
+    it('renders pending slots as tbd, never as bye-advance', () => {
+      const [L1, L3] = createTournamentTeams(['L1', 'L3']);
+      const tree = new ConsolationBracket([L1, null, L3, null], [], 8).computeTree();
+      expect(tree).toHaveLength(2);
+      expect(tree[0]).toHaveLength(2);
+      expect(tree[0][0].type).toBe('tbd');
+      expect(tree[0][1].type).toBe('tbd');
+      expect(tree[1][0].type).toBe('tbd');
+    });
+
+    it('a pending slot paired with a bye is tbd until the loser is known', () => {
+      const [L1, L2] = createTournamentTeams(['L1', 'L2']);
+      const tree = new ConsolationBracket([L1, L2, null], [], 16).computeTree();
+      expect(tree[0][0].type).toBe('tbd');
+      expect(tree[0][1].type).toBe('tbd');
+    });
+  });
+
   describe('2 CB seeds (from 4-team WB R1, bracketSize=4)', () => {
     const seeds = createTournamentTeams(['L1', 'L2']);
 

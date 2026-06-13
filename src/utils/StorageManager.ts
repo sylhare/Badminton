@@ -16,11 +16,12 @@ interface StorageData {
  *
  * Fields:
  *   v   — format version (3)
- *   et  — engine type ('sa' | 'mc' | 'cg' | 'sl')
+ *   et  — engine type ('sa' | 'sl')
  *   pi  — player ID index: pi[i] = playerId
  *   ps  — per-player stats, same order as pi: [bench, single, win, loss]
  *   pc  — pair counts keyed "i:j" (i < j): [teammate, opponent]
  *   lh  — level history per pi index (capped at MAX_LEVEL_HISTORY entries)
+ *   rp  — rounds played (rounds committed with at least one winner)
  */
 interface CompactEngineState {
   v: 3;
@@ -30,6 +31,7 @@ interface CompactEngineState {
   ps: Array<[number, number, number, number]>;
   pc: Record<string, [number, number]>;
   lh?: number[][];
+  rp?: number;
 }
 
 export async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
@@ -74,48 +76,8 @@ export async function decompress(data: string): Promise<string> {
 
 /**
  * Manages persistence of application and engine state using a single
- * gzip-compressed, base64-encoded localStorage entry.
- *
- * Stored JSON structure (after decompression):
- * ```json
- * {
- *   "app": {
- *     "players":        [{ "id": "uuid", "name": "Alice", "isPresent": true, "level": 72 }, ...],
- *     "numberOfCourts": 4,
- *     "assignments":    [...],
- *     "lastGeneratedAt": 1710000000000,
- *     "isSmartEngineEnabled": false
- *   },
- *   "tournament": {
- *     "phase": "active",
- *     "format": "singles",
- *     "type": "round-robin",
- *     "numberOfCourts": 2,
- *     "teams": [...],
- *     "matches": [...]
- *   },
- *   "engine": {
- *     "v":  3,
- *     "et": "sa",
- *     "pi": ["uuid-A", "uuid-B", "uuid-C"],
- *     "ps": [
- *       [bench, single, win, loss],   ←  pi[0] = uuid-A
- *       [bench, single, win, loss],   ←  pi[1] = uuid-B
- *       [bench, single, win, loss]    ←  pi[2] = uuid-C
- *     ],
- *     "pc": {
- *       "0:1": [teammate, opponent],  ←  uuid-A × uuid-B
- *       "0:2": [teammate, opponent],  ←  uuid-A × uuid-C
- *       "1:2": [teammate, opponent]   ←  uuid-B × uuid-C
- *     },
- *     "lh": [
- *       [55, 58, 61],   ←  pi[0] level history (capped at 10)
- *       [50, 49],       ←  pi[1]
- *       []              ←  pi[2] (no history yet)
- *     ]
- *   }
- * }
- * ```
+ * gzip-compressed, base64-encoded localStorage entry holding
+ * `{ app: AppState, engine: CompactEngineState, tournament?: TournamentState }`.
  *
  * All writes are serialised through an internal promise queue so that
  * concurrent `saveApp` / `saveEngine` calls never race on read→modify→write.
@@ -190,7 +152,7 @@ class StorageManager {
     if ((raw as CompactEngineState).v === 3) {
       try {
         return this.fromCompact(raw as CompactEngineState);
-      } catch { /* corrupt v3 — fall through to discard */ }
+      } catch {  }
     }
 
     const { engine: _, ...rest } = data;
@@ -321,7 +283,7 @@ class StorageManager {
       lh = pi.map(id => state.levelHistory![id] ?? []);
     }
 
-    return { v: 3, et: state.engineType, ts: state.savedAt, pi, ps, pc, lh };
+    return { v: 3, et: state.engineType, ts: state.savedAt, pi, ps, pc, lh, rp: state.roundsPlayed };
   }
 
   private fromCompact(c: CompactEngineState): CourtEngineState {
@@ -369,6 +331,7 @@ class StorageManager {
     return {
       engineType: c.et,
       savedAt: c.ts,
+      roundsPlayed: c.rp,
       benchCountMap, singleCountMap,
       teammateCountMap, opponentCountMap,
       winCountMap, lossCountMap,
@@ -414,7 +377,7 @@ class StorageManager {
 
     const allKeys = Object.keys(engine.pc ?? {});
     if (allKeys.length > 200) {
-      return rebuild({ ...engine, pc: Object.fromEntries(allKeys.slice(0, 200).map(k => [k, engine.pc[k]])) });
+      return rebuild({ ...engine, pc: Object.fromEntries(allKeys.slice(-200).map(k => [k, engine.pc[k]])) });
     }
 
     console.warn('StorageManager: pruneToFit could not reduce payload below MAX_SIZE');

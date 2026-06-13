@@ -73,7 +73,7 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
 
     if (!replaceRound) this.markRoundCompleted();
     this.clearCurrentSession();
-    this.lastGeneratedAt = Date.now();
+    CourtAssignmentTracker.lastGeneratedAt = Date.now();
     if (replaceRound) this.undoLastRound();
     const detectedAnomalies = this.applyRoundStats(finalCourts, presentPlayers);
     const anomalies = replaceRound ? [] : detectedAnomalies;

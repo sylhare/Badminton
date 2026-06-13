@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { recognizePlayerNames } from '../../src/utils/ocrEngine';
 
 const workerPath = (() => {
-  const root = path.resolve(__dirname, '../../../..');
+  const root = path.resolve(__dirname, '../..');
   return path.join(root, 'node_modules', 'tesseract.js', 'src', 'worker-script', 'node', 'index.js');
 })();
 

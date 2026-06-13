@@ -16,7 +16,7 @@ export function nextPowerOf2(n: number): number {
   return p;
 }
 
-function findMatchBetween(
+export function findMatchBetween(
   round: number,
   teamA: TournamentTeam,
   teamB: TournamentTeam,
@@ -30,6 +30,13 @@ function findMatchBetween(
 }
 
 type PositionResult = TournamentTeam | 'bye' | 'tbd';
+
+/**
+ * Seed slots of a bracket's first round: a team once known, `null` while the
+ * slot's feeder match is undecided (consolation only), `undefined` past the
+ * end of the array meaning no slot at all (a bye).
+ */
+export type SeedSlots = ReadonlyArray<TournamentTeam | null>;
 
 function resolveChildNode(
   round: number,
@@ -50,18 +57,19 @@ function resolveChildNode(
 export function resolvePosition(
   round: number,
   position: number,
-  seeds: TournamentTeam[],
+  seeds: SeedSlots,
   matches: TournamentMatch[],
 ): PositionResult {
   if (round === 1) {
-    const team1 = seeds[2 * position];
-    const team2 = seeds[2 * position + 1];
+    const slotA = seeds[2 * position];
+    const slotB = seeds[2 * position + 1];
 
-    if (!team1 && !team2) return 'bye';
-    if (!team1) return team2;
-    if (!team2) return team1;
+    if (slotA === undefined && slotB === undefined) return 'bye';
+    if (slotA === undefined) return slotB ?? 'tbd';
+    if (slotB === undefined) return slotA ?? 'tbd';
+    if (slotA === null || slotB === null) return 'tbd';
 
-    const match = findMatchBetween(1, team1, team2, matches);
+    const match = findMatchBetween(1, slotA, slotB, matches);
     if (!match || match.winner === undefined) return 'tbd';
     return match.winner === 1 ? match.team1 : match.team2;
   }
@@ -83,7 +91,7 @@ export function roundComplete(matches: TournamentMatch[], round: number): boolea
 
 export function getWinnersFirstRoundLoser(
   position: number,
-  teams: TournamentTeam[],
+  teams: SeedSlots,
   winnersMatches: TournamentMatch[],
 ): TournamentTeam | null {
   const team1 = teams[2 * position];
@@ -141,18 +149,23 @@ export function roundLabel(roundNumber: number, totalRounds: number): string {
 function buildNode(
   round: number,
   position: number,
-  seeds: TournamentTeam[],
+  seeds: SeedSlots,
   matches: TournamentMatch[],
 ): BracketNode {
   if (round === 1) {
-    const team1 = seeds[2 * position];
-    const team2 = seeds[2 * position + 1];
+    const slotA = seeds[2 * position];
+    const slotB = seeds[2 * position + 1];
 
-    if (!team1 && !team2) return { type: 'empty', slotIndex: position };
-    if (!team1) return { type: 'bye-advance', team: team2, slotIndex: position };
-    if (!team2) return { type: 'bye-advance', team: team1, slotIndex: position };
+    if (slotA === undefined && slotB === undefined) return { type: 'empty', slotIndex: position };
+    if (slotA === undefined) {
+      return slotB ? { type: 'bye-advance', team: slotB, slotIndex: position } : { type: 'tbd', slotIndex: position };
+    }
+    if (slotB === undefined) {
+      return slotA ? { type: 'bye-advance', team: slotA, slotIndex: position } : { type: 'tbd', slotIndex: position };
+    }
+    if (slotA === null || slotB === null) return { type: 'tbd', slotIndex: position };
 
-    const match = findMatchBetween(1, team1, team2, matches);
+    const match = findMatchBetween(1, slotA, slotB, matches);
     if (!match) return { type: 'tbd', slotIndex: position };
     return { type: 'match', match, slotIndex: position };
   }
@@ -178,7 +191,7 @@ function buildNode(
 
 export abstract class Bracket {
   constructor(
-    protected readonly _seeds: TournamentTeam[],
+    protected readonly _seeds: SeedSlots,
     protected readonly _matches: TournamentMatch[],
     protected readonly _bracketSize: number,
   ) {}
@@ -240,18 +253,23 @@ export class WinnersBracket extends Bracket {
   }
 }
 
-/** Consolation bracket — for teams eliminated in the winners bracket first round. */
+/**
+ * Consolation bracket — for teams eliminated in the winners bracket first
+ * round. Seeds are positional slots (one per real WB first-round match), with
+ * `null` marking a loser not yet known, so the tree shape is stable while the
+ * WB first round is still in progress.
+ */
 export class ConsolationBracket extends Bracket {
   private readonly cbBracketSize: number;
   private readonly cbSeedRounds: number;
 
-  constructor(seeds: TournamentTeam[], matches: TournamentMatch[], bracketSize: number) {
+  constructor(seeds: SeedSlots, matches: TournamentMatch[], bracketSize: number) {
     super(seeds, matches, bracketSize);
     this.cbBracketSize = nextPowerOf2(seeds.length);
     this.cbSeedRounds = Math.log2(this.cbBracketSize);
   }
 
-  seeds(): TournamentTeam[] {
+  seeds(): SeedSlots {
     return this._seeds;
   }
 

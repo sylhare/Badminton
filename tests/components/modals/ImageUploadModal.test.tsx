@@ -56,6 +56,28 @@ describe('ImageUploadModal', () => {
     );
   };
 
+  /** Renders the modal and simulates OCR extraction of the given player names. */
+  const renderWithExtractedPlayers = async (players: string[]) => {
+    let extractionCallback: ((players: string[]) => void) | undefined;
+
+    vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
+      extractionCallback = onPlayersExtracted;
+      return {
+        isProcessing: false,
+        progress: 0,
+        processImage: vi.fn(),
+      };
+    });
+
+    const result = renderModal();
+
+    await act(async () => {
+      extractionCallback!(players);
+    });
+
+    return result;
+  };
+
   describe('Modal visibility', () => {
     it('should not render when isOpen is false', () => {
       renderModal(false);
@@ -154,30 +176,7 @@ describe('ImageUploadModal', () => {
 
   describe('Extracted players list', () => {
     it('should display count of extracted players', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
-
-      vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
-        extractionCallback = onPlayersExtracted;
-        return {
-          isProcessing: false,
-          progress: 0,
-          processImage: vi.fn(),
-        };
-      });
-
-      const { rerender } = renderModal();
-
-      await act(async () => {
-        extractionCallback(['Alice', 'Bob']);
-      });
-
-      rerender(
-        <ImageUploadModal
-          isOpen={true}
-          onClose={mockOnClose}
-          onPlayersAdded={mockOnPlayersAdded}
-        />,
-      );
+      await renderWithExtractedPlayers(['Alice', 'Bob']);
 
       await waitFor(() => {
         expect(screen.getByText(/Found/)).toBeInTheDocument();
@@ -185,30 +184,7 @@ describe('ImageUploadModal', () => {
     });
 
     it('should have select all and deselect all buttons', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
-
-      vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
-        extractionCallback = onPlayersExtracted;
-        return {
-          isProcessing: false,
-          progress: 0,
-          processImage: vi.fn(),
-        };
-      });
-
-      const { rerender } = renderModal();
-
-      await act(async () => {
-        extractionCallback(['Alice', 'Bob']);
-      });
-
-      rerender(
-        <ImageUploadModal
-          isOpen={true}
-          onClose={mockOnClose}
-          onPlayersAdded={mockOnPlayersAdded}
-        />,
-      );
+      await renderWithExtractedPlayers(['Alice', 'Bob']);
 
       await waitFor(() => {
         expect(screen.getByText('Select all')).toBeInTheDocument();
@@ -216,31 +192,17 @@ describe('ImageUploadModal', () => {
       });
     });
 
+    it('should keep the file input mounted so "Try another image" can open the picker', async () => {
+      await renderWithExtractedPlayers(['Alice', 'Bob']);
+
+      await waitFor(() => {
+        expect(screen.getByText('📸 Try another image')).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('image-file-input')).toBeInTheDocument();
+    });
+
     it('should have a try another image button when players are extracted', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
-
-      vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
-        extractionCallback = onPlayersExtracted;
-        return {
-          isProcessing: false,
-          progress: 0,
-          processImage: vi.fn(),
-        };
-      });
-
-      const { rerender } = renderModal();
-
-      await act(async () => {
-        extractionCallback(['Alice']);
-      });
-
-      rerender(
-        <ImageUploadModal
-          isOpen={true}
-          onClose={mockOnClose}
-          onPlayersAdded={mockOnPlayersAdded}
-        />,
-      );
+      await renderWithExtractedPlayers(['Alice']);
 
       await waitFor(() => {
         expect(screen.getByText('📸 Try another image')).toBeInTheDocument();
@@ -250,30 +212,7 @@ describe('ImageUploadModal', () => {
 
   describe('Add players functionality', () => {
     it('should have an add players button when players are extracted', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
-
-      vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
-        extractionCallback = onPlayersExtracted;
-        return {
-          isProcessing: false,
-          progress: 0,
-          processImage: vi.fn(),
-        };
-      });
-
-      const { rerender } = renderModal();
-
-      await act(async () => {
-        extractionCallback(['Alice', 'Bob']);
-      });
-
-      rerender(
-        <ImageUploadModal
-          isOpen={true}
-          onClose={mockOnClose}
-          onPlayersAdded={mockOnPlayersAdded}
-        />,
-      );
+      await renderWithExtractedPlayers(['Alice', 'Bob']);
 
       await waitFor(() => {
         expect(screen.getByTestId('add-extracted-players-button')).toBeInTheDocument();
@@ -281,30 +220,7 @@ describe('ImageUploadModal', () => {
     });
 
     it('should call onPlayersAdded when clicking add button with selected players', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
-
-      vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
-        extractionCallback = onPlayersExtracted;
-        return {
-          isProcessing: false,
-          progress: 0,
-          processImage: vi.fn(),
-        };
-      });
-
-      const { rerender } = renderModal();
-
-      await act(async () => {
-        extractionCallback(['Alice', 'Bob']);
-      });
-
-      rerender(
-        <ImageUploadModal
-          isOpen={true}
-          onClose={mockOnClose}
-          onPlayersAdded={mockOnPlayersAdded}
-        />,
-      );
+      await renderWithExtractedPlayers(['Alice', 'Bob']);
 
       await waitFor(() => {
         expect(screen.getByTestId('add-extracted-players-button')).toBeInTheDocument();
@@ -317,30 +233,7 @@ describe('ImageUploadModal', () => {
     });
 
     it('should have cancel button in footer', async () => {
-      let extractionCallback: ((players: string[]) => void) | undefined;
-
-      vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
-        extractionCallback = onPlayersExtracted;
-        return {
-          isProcessing: false,
-          progress: 0,
-          processImage: vi.fn(),
-        };
-      });
-
-      const { rerender } = renderModal();
-
-      await act(async () => {
-        extractionCallback(['Alice']);
-      });
-
-      rerender(
-        <ImageUploadModal
-          isOpen={true}
-          onClose={mockOnClose}
-          onPlayersAdded={mockOnPlayersAdded}
-        />,
-      );
+      await renderWithExtractedPlayers(['Alice']);
 
       await waitFor(() => {
         expect(screen.getByText('Cancel')).toBeInTheDocument();
