@@ -67,6 +67,11 @@ const TournamentPage = (): React.ReactElement => {
     setShowSetup(false);
   };
 
+  const goToView = (setup: boolean) => {
+    setShowSetup(setup);
+    window.scrollTo(0, 0);
+  };
+
   const hasTournament = tournament !== null && tournament.phase() !== 'setup';
   const isSetupView = !hasTournament || showSetup;
 
@@ -78,7 +83,7 @@ const TournamentPage = (): React.ReactElement => {
         </Link>
         <button
           className="banner-nav-link"
-          onClick={() => setShowSetup(true)}
+          onClick={() => goToView(true)}
           disabled={isSetupView}
           data-testid="back-to-setup"
         >
@@ -86,7 +91,7 @@ const TournamentPage = (): React.ReactElement => {
         </button>
         <button
           className="banner-nav-link"
-          onClick={() => setShowSetup(false)}
+          onClick={() => goToView(false)}
           disabled={!hasTournament || !isSetupView}
           data-testid="back-to-tournament"
         >
