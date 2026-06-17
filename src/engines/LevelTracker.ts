@@ -55,6 +55,20 @@ export class LevelTracker {
   }
 
   /**
+   * Determine whether a player's most recent level moved up or down.
+   * Returns null when there is insufficient history or no change.
+   */
+  getLevelTrend(playerId: string, levelHistory: Map<string, number[]>): 'up' | 'down' | null {
+    const history = levelHistory.get(playerId);
+    if (!history || history.length < 2) return null;
+    const prev = history[history.length - 2];
+    const curr = history[history.length - 1];
+    if (curr > prev) return 'up';
+    if (curr < prev) return 'down';
+    return null;
+  }
+
+  /**
    * Apply Elo-style level updates to all players based on court results.
    * Only courts with both a winner and teams assigned are processed.
    *
@@ -67,16 +81,6 @@ export class LevelTracker {
    * Each team's K-factor is adjusted by a per-team balance factor [0.5, 1.0] based on
    * within-team level spread — the more unbalanced the team, the smaller the rating change.
    */
-  getLevelTrend(playerId: string, levelHistory: Map<string, number[]>): 'up' | 'down' | null {
-    const history = levelHistory.get(playerId);
-    if (!history || history.length < 2) return null;
-    const prev = history[history.length - 2];
-    const curr = history[history.length - 1];
-    if (curr > prev) return 'up';
-    if (curr < prev) return 'down';
-    return null;
-  }
-
   updatePlayersLevels(courts: Court[], players: Player[]): Player[] {
     const updatedPlayers = new Map<string, Player>(players.map(p => [p.id, { ...p }]));
 
