@@ -24,6 +24,8 @@ import {
   roundComplete,
 } from './bracketTree';
 
+let elimMatchCounter = 0;
+
 export class EliminationTournament extends Tournament {
   static create(
     format: TournamentFormat = 'doubles',
@@ -53,7 +55,7 @@ export class EliminationTournament extends Tournament {
     courtIndex: number,
   ): TournamentMatch {
     return {
-      id: `elim-match-${Date.now()}-${courtIndex}`,
+      id: `elim-match-${Date.now()}-${elimMatchCounter++}`,
       round,
       courtNumber: (courtIndex % this._state.numberOfCourts) + 1,
       team1,

@@ -78,6 +78,22 @@ describe('EliminationTournament', () => {
       expect(t.phase()).toBe('active');
     });
 
+    it('assigns unique match ids across a full tournament play-through', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
+      const ids = t.matches().map(m => m.id);
+      expect(ids.length).toBeGreaterThan(0);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('generates distinct ids for matches created within the same tick', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D']);
+      const t = EliminationTournament.create().start(teams, 4);
+      const r1 = t.winners.matchesForRound(1);
+      expect(r1).toHaveLength(2);
+      expect(r1[0].id).not.toBe(r1[1].id);
+    });
+
     it('shuffles team order so repeated starts can produce different brackets', () => {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
       const brackets = new Set<string>();
@@ -731,6 +747,41 @@ describe('EliminationTournament', () => {
       expect(finalTeamIds).toContain(sf0.team2.id);
       expect(finalTeamIds).not.toContain(sf0.team1.id);
       expect(final[0].winner).toBeUndefined();
+    });
+
+    it('changing a WB semifinal after a FULLY played 8-team bracket leaves no stale consolation/3rd-place state', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
+      const played = playFullTournament(EliminationTournament.create().start(teams, 4));
+      expect(played.isComplete()).toBe(true);
+
+      const sf0 = played.winners.matchesForRound(2)[0];
+      const oldLoserId = sf0.team2.id;
+      const newLoserId = sf0.team1.id;
+      const cb1WinnersBefore = played.consolation.matchesForRound(1).map(m => m.winner);
+      const cb2TeamsBefore = played.consolation
+        .matchesForRound(2)
+        .flatMap(m => [m.team1.id, m.team2.id])
+        .sort();
+      expect(cb2TeamsBefore.length).toBeGreaterThan(0);
+
+      const t = played.withMatchResult(sf0.id, 2);
+
+      expect(t.consolation.matchesForRound(1).map(m => m.winner)).toEqual(cb1WinnersBefore);
+      expect(
+        t.consolation.matchesForRound(2).flatMap(m => [m.team1.id, m.team2.id]).sort(),
+      ).toEqual(cb2TeamsBefore);
+
+      const thirdPlace = t.thirdPlaceMatch;
+      expect(thirdPlace).toBeDefined();
+      const thirdPlaceIds = [thirdPlace!.team1.id, thirdPlace!.team2.id];
+      expect(thirdPlaceIds).toContain(newLoserId);
+      expect(thirdPlaceIds).not.toContain(oldLoserId);
+      expect(thirdPlace!.winner).toBeUndefined();
+
+      const ids = t.matches().map(m => m.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(t.isComplete()).toBe(false);
+      expect(t.calculateStandings()).toHaveLength(8);
     });
   });
 
