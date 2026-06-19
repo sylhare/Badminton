@@ -82,6 +82,9 @@ tmp/
 temp/ 
 eng.traineddata
 
+# Tesseract assets vendored from node_modules (regenerated on predev/prebuild)
+/public/tesseract/
+
 # Playwright
 /test-results/
 /playwright-report/
