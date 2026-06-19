@@ -97,3 +97,25 @@ if (typeof window !== 'undefined') {
     value: 768,
   });
 }
+
+/**
+ * jsdom has no matchMedia. Default to a non-matching (desktop) stub so
+ * responsive hooks like useIsMobile render the desktop layout in tests;
+ * individual tests can override window.matchMedia to simulate mobile.
+ */
+if (typeof window !== 'undefined' && typeof window.matchMedia === 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
