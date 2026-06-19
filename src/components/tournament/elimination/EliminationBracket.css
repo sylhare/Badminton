@@ -136,3 +136,35 @@
     stroke: var(--color-border, #ccc);
     stroke-width: 1.5;
 }
+
+/* Mobile paged carousel (World Cup style): one round per snap page */
+.bracket-carousel {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+}
+
+.bracket-carousel-page {
+    /* ~88% width leaves a ~12% peek of the next round to hint the swipe */
+    flex: 0 0 88%;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 240px;
+}
+
+.bracket-carousel-matches {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    gap: 12px;
+    flex: 1;
+}
+
+.bracket-carousel-matches .bracket-node {
+    width: 100%;
+}

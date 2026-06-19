@@ -2,48 +2,22 @@ import React, { useMemo } from 'react';
 
 import type { BracketNode } from '../../../tournament/bracketTree';
 import { nextPowerOf2, roundLabel } from '../../../tournament/bracketTree';
-import type { TournamentMatch } from '../../../tournament/types';
 import { EliminationTournament } from '../../../tournament/EliminationTournament';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 import { useMatchModal } from '../useMatchModal';
 
-import { BracketColumn, CARD_HEIGHT, COLUMN_GAP, COLUMN_WIDTH, HEADER_HEIGHT } from './BracketColumn';
-import { BracketConnectors } from './BracketConnectors';
+import { CARD_HEIGHT, HEADER_HEIGHT } from './BracketColumn';
+import { BracketSection } from './BracketSection';
 
 import './EliminationBracket.css';
 
-function renderBracketRounds(
-  tree: BracketNode[][],
-  height: number,
-  onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void,
-): React.ReactNode {
-  return tree.map((nodes, roundIdx) => {
-    const round = roundIdx + 1;
-    const label = roundLabel(round, tree.length);
-    return (
-      <div
-        key={round}
-        style={{
-          position: 'absolute',
-          left: roundIdx * (COLUMN_WIDTH + COLUMN_GAP),
-          top: 0,
-          height,
-        }}
-      >
-        <BracketColumn nodes={nodes} round={round} label={label} onTeamClick={onTeamClick} />
-        {roundIdx < tree.length - 1 && (
-          <BracketConnectors
-            fromNodes={nodes}
-            toNodes={tree[roundIdx + 1]}
-            fromRound={round}
-            toRound={round + 1}
-            totalHeight={height - HEADER_HEIGHT}
-            headerOffset={HEADER_HEIGHT}
-          />
-        )}
-      </div>
-    );
-  });
+interface BracketSectionConfig {
+  key: string;
+  testId: string;
+  title: string;
+  tree: BracketNode[][];
+  height: number;
+  roundLabel: (round: number, totalRounds: number) => string;
 }
 
 interface EliminationBracketProps {
@@ -79,58 +53,52 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
   const cbCardAreaHeight = consolationBracketSize > 0 ? Math.max((consolationBracketSize / 2) * CARD_HEIGHT, extraRoundHeight) : 0;
   const cbHeight = cbCardAreaHeight > 0 ? cbCardAreaHeight + HEADER_HEIGHT : 0;
 
+  const sections: BracketSectionConfig[] = [
+    {
+      key: 'wb',
+      testId: 'wb-section',
+      title: 'Winners Bracket',
+      tree: wbTree,
+      height: wbHeight,
+      roundLabel,
+    },
+  ];
+
+  if (cbTree.length > 0) {
+    sections.push({
+      key: 'cb',
+      testId: 'cb-section',
+      title: 'Consolation Bracket',
+      tree: cbTree,
+      height: cbHeight,
+      roundLabel,
+    });
+  }
+
+  if (thirdPlaceMatch) {
+    sections.push({
+      key: 'tp',
+      testId: 'tp-section',
+      title: '3rd Place',
+      tree: [[{ type: 'match', match: thirdPlaceMatch, slotIndex: 0 }]],
+      height: CARD_HEIGHT + HEADER_HEIGHT,
+      roundLabel: () => '3rd Place',
+    });
+  }
+
   return (
     <div className="elimination-bracket" data-testid="elimination-bracket">
-      <div className="bracket-section" data-testid="wb-section">
-        <h3 className="bracket-section-title">Winners Bracket</h3>
-        <div
-          className="bracket-tree"
-          style={{
-            position: 'relative',
-            height: wbHeight,
-            width: wbTree.length * (COLUMN_WIDTH + COLUMN_GAP),
-          }}
-        >
-          {renderBracketRounds(wbTree, wbHeight, handleTeamClick)}
-        </div>
-      </div>
-
-      {cbTree.length > 0 && (
-        <div className="bracket-section" data-testid="cb-section">
-          <h3 className="bracket-section-title">Consolation Bracket</h3>
-          <div
-            className="bracket-tree"
-            style={{
-              position: 'relative',
-              height: cbHeight,
-              width: cbTree.length * (COLUMN_WIDTH + COLUMN_GAP),
-            }}
-          >
-            {renderBracketRounds(cbTree, cbHeight, handleTeamClick)}
-          </div>
-        </div>
-      )}
-
-      {thirdPlaceMatch && (
-        <div className="bracket-section" data-testid="tp-section">
-          <h3 className="bracket-section-title">3rd Place</h3>
-          <div
-            className="bracket-tree"
-            style={{
-              position: 'relative',
-              height: CARD_HEIGHT + HEADER_HEIGHT,
-              width: COLUMN_WIDTH,
-            }}
-          >
-            <BracketColumn
-              nodes={[{ type: 'match', match: thirdPlaceMatch, slotIndex: 0 }]}
-              round={1}
-              label="3rd Place"
-              onTeamClick={handleTeamClick}
-            />
-          </div>
-        </div>
-      )}
+      {sections.map(section => (
+        <BracketSection
+          key={section.key}
+          title={section.title}
+          testId={section.testId}
+          tree={section.tree}
+          height={section.height}
+          roundLabel={section.roundLabel}
+          onTeamClick={handleTeamClick}
+        />
+      ))}
 
       {modalMatch && pendingWinner !== null && (
         <ScoreInputModal
@@ -145,4 +113,3 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
     </div>
   );
 };
-
