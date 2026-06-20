@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+
+import { useCopyToClipboard } from '../../hooks/useCopyToClipboard';
 
 import Modal from './Modal';
 
@@ -26,13 +28,9 @@ const ImportStateModal: React.FC<ImportStateModalProps> = ({
   onAccept,
   onDecline,
 }) => {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
 
-  const handleCopyBackup = async () => {
-    await navigator.clipboard.writeText(currentBackupUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const handleCopyBackup = () => copy(currentBackupUrl);
 
   return (
     <Modal

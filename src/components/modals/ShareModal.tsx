@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+
+import { useCopyToClipboard } from '../../hooks/useCopyToClipboard';
 
 import Modal from './Modal';
 
@@ -9,13 +11,9 @@ interface ShareModalProps {
 }
 
 const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, shareUrl }) => {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const handleCopy = () => copy(shareUrl);
 
   return (
     <Modal isOpen={isOpen} title="Share Session" onClose={onClose} testId="share-modal">
