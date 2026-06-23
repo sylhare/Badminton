@@ -160,7 +160,7 @@ function App(): React.ReactElement {
   const hasPlayers = players.length > 0;
 
   return (
-    <div className={`app${isSmartEngineEnabled ? ' night-theme' : ''}`} data-loaded={isLoaded}>
+    <div className={`app${isSmartEngineEnabled ? ' smart-mode' : ''}`} data-loaded={isLoaded}>
       <div className="container main-container">
         <h1><span className="title-emoji">🏸 </span>Badminton Court Manager</h1>
 

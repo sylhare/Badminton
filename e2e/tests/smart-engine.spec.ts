@@ -68,18 +68,18 @@ test.describe('Smart Engine', () => {
   });
 
   test.describe('Toggle & theme', () => {
-    test('theme toggle - on applies night-theme, off removes it', async ({ page }) => {
+    test('theme toggle - on applies smart-mode, off removes it', async ({ page }) => {
       await mainPage.addPlayer('Test Player');
 
-      await test.step('toggling on applies .night-theme', async () => {
-        await expect(page.locator('.app')).not.toHaveClass(/night-theme/);
+      await test.step('toggling on applies .smart-mode', async () => {
+        await expect(page.locator('.app')).not.toHaveClass(/smart-mode/);
         await mainPage.toggleSmartEngine();
-        await expect(page.locator('.app')).toHaveClass(/night-theme/);
+        await expect(page.locator('.app')).toHaveClass(/smart-mode/);
       });
 
-      await test.step('toggling off removes .night-theme', async () => {
+      await test.step('toggling off removes .smart-mode', async () => {
         await mainPage.toggleSmartEngine();
-        await expect(page.locator('.app')).not.toHaveClass(/night-theme/);
+        await expect(page.locator('.app')).not.toHaveClass(/smart-mode/);
       });
     });
   });
