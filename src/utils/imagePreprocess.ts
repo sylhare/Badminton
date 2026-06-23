@@ -54,7 +54,7 @@ export async function preprocessImage(file: File): Promise<HTMLCanvasElement> {
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = blobUrl;
-  });
+  }).finally(() => URL.revokeObjectURL(blobUrl));
 
   const src = cv.imread(imageEl);
 
@@ -99,7 +99,6 @@ export async function preprocessImage(file: File): Promise<HTMLCanvasElement> {
   src.delete();
   scaled.delete();
   bin.delete();
-  URL.revokeObjectURL(blobUrl);
 
   return outCanvas;
 }
