@@ -82,6 +82,22 @@ test.describe('Smart Engine', () => {
         await expect(page.locator('.app')).not.toHaveClass(/smart-mode/);
       });
     });
+
+    test('tournament page follows smart-mode skin when enabled', async ({ page }) => {
+      await mainPage.addPlayer('Test Player');
+      await mainPage.toggleSmartEngine();
+
+      await test.step('navigating to tournament keeps the smart-mode skin', async () => {
+        await page.getByTestId('tournament-link').click();
+        const tournamentApp = page.locator('.app.tournament-page');
+        await expect(tournamentApp).toBeVisible();
+        await expect(tournamentApp).toHaveClass(/smart-mode/);
+      });
+
+      await test.step('tournament background uses the smart-mode primary colour', async () => {
+        await expect(page.locator('.app.tournament-page')).toHaveCSS('--color-primary', '#5c8fd4');
+      });
+    });
   });
 
   test.describe('Score input modal', () => {

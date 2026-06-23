@@ -13,7 +13,7 @@ import './TournamentPage.css';
 type AnyTournament = RoundRobinTournament | EliminationTournament;
 
 const TournamentPage = (): React.ReactElement => {
-  const { players, isLoaded, handleAddPlayers, handlePlayerToggle } = useAppState();
+  const { players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled } = useAppState();
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
   const [tournament, setTournament] = useState<AnyTournament | null>(null);
   const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
@@ -76,7 +76,7 @@ const TournamentPage = (): React.ReactElement => {
   const isSetupView = !hasTournament || showSetup;
 
   return (
-    <div className="app tournament-page" data-loaded={isLoaded}>
+    <div className={`app tournament-page${isSmartEngineEnabled ? ' smart-mode' : ''}`} data-loaded={isLoaded}>
       <nav className="tournament-banner" data-testid="tournament-banner">
         <Link to="/" className="banner-nav-link" data-testid="back-to-app">
           ← Court Manager

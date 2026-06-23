@@ -110,6 +110,22 @@ test.describe('Tournament Page - Elimination', () => {
     });
   });
 
+  test('smart mode — winner row text is white for readability on the blue tint', async ({ page }) => {
+    await mainPage.addPlayers(DEFAULT_PLAYERS);
+    await mainPage.toggleSmartEngine();
+    await tournamentPage.goto();
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectType('elimination');
+    await tournamentPage.startElimination();
+
+    await expect(page.locator('.app.tournament-page')).toHaveClass(/smart-mode/);
+
+    await page.locator('[data-testid^="bracket-team-1-"]').first().click();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await expect(page.locator('.bracket-team-winner').first()).toHaveCSS('color', 'rgb(255, 255, 255)');
+  });
+
   test('8-player elimination — correct column headers', async ({ page }) => {
     await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry']);
     await page.getByTestId('format-pill-singles').click();

@@ -130,6 +130,13 @@
     flex-shrink: 0;
 }
 
+/* Smart mode tints the winner row dark blue (--color-primary-start), so the
+   winner text and badge switch to white to stay readable against it. */
+.app.smart-mode .bracket-team-winner,
+.app.smart-mode .bracket-team-winner .bracket-winner-badge {
+    color: #fff;
+}
+
 /* SVG connector paths */
 .bracket-connector-path {
     fill: none;
