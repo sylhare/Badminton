@@ -27,7 +27,7 @@
     font-size: 0.85rem;
     font-family: inherit;
     padding: 8px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.2);
     transition: all 0.2s ease;
@@ -104,7 +104,7 @@
 }
 
 .setup-error {
-    color: #e53e3e;
+    color: var(--danger-hover);
     font-size: 0.9rem;
     margin: 0;
 }
@@ -196,7 +196,7 @@
     gap: 0.4rem;
     padding: 0.35rem 0.75rem;
     border: 1px solid #eee;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-size: 0.9rem;
 }
@@ -211,7 +211,7 @@
     width: 5rem;
     padding: 0.4rem 0.6rem;
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-size: 1rem;
 }
 
@@ -249,7 +249,7 @@
     padding: 0.4rem 0.6rem;
     background: white;
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-size: 0.9rem;
     transition: border-color 0.15s, outline 0.15s;
@@ -356,7 +356,7 @@
     color: #444;
     background: #e8f4f8;
     padding: 0.2rem 0.6rem;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
 }
 
 .matches-footer {
@@ -395,7 +395,7 @@
     border: 2px solid var(--color-primary);
     color: var(--color-primary);
     padding: 0.6rem 1.2rem;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-size: 0.95rem;
     font-weight: 500;
@@ -446,7 +446,7 @@
     }
 
     .tournament-page h1 {
-        color: #2d3748;
+        color: var(--text);
         font-size: 1.5rem;
     }
 }

@@ -75,7 +75,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
     });
 
     return (
-      <div className="leaderboard step">
+      <div className="leaderboard panel">
         <h2>🏆 Leaderboard</h2>
         <div className="leaderboard-scroll">
           <table className="leaderboard-table">
@@ -129,7 +129,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
   if (ranked.length === 0) return null;
 
   return (
-    <div className="leaderboard step">
+    <div className="leaderboard panel">
       <h2>🏆 Leaderboard</h2>
       <div className="leaderboard-scroll">
         <table className="leaderboard-table">
