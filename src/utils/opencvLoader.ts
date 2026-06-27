@@ -1,12 +1,11 @@
 let cachedCv: any = null;
+let inFlight: Promise<any> | null = null;
 
 function isPromiseInstance(obj: any): obj is Promise<any> {
   return obj instanceof Promise;
 }
 
-export async function loadOpenCV(): Promise<any> {
-  if (cachedCv) return cachedCv;
-
+async function importOpenCV(): Promise<any> {
   const mod: any = await import('@techstark/opencv-js');
   const cvCandidate: any = mod?.default ?? mod;
 
@@ -34,4 +33,17 @@ export async function loadOpenCV(): Promise<any> {
   cachedCv = cv;
 
   return cachedCv;
+}
+
+export async function loadOpenCV(): Promise<any> {
+  if (cachedCv) return cachedCv;
+  if (inFlight) return inFlight;
+
+  inFlight = importOpenCV();
+
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = null;
+  }
 }

@@ -1,14 +1,28 @@
 import { preprocessImage } from './imagePreprocess';
 
 interface OcrOptions {
-  workerPath?: string;
   onProgress?: (progress: number) => void;
   preprocess?: boolean;
+  /**
+   * Override the Tesseract worker/core/lang asset paths. Defaults to the
+   * locally-served browser assets. Tests (and other non-browser callers) can
+   * pass Node-resolvable paths so the worker can actually start outside a DOM.
+   */
+  assetOptions?: Record<string, string>;
+}
+
+function localAssetOptions(): Record<string, string> {
+  const base = `${import.meta.env.BASE_URL}tesseract`;
+  return {
+    workerPath: `${base}/worker.min.js`,
+    corePath: `${base}/`,
+    langPath: `${base}/`,
+  };
 }
 
 export async function recognizePlayerNames(
   image: File | Blob | Uint8Array,
-  { workerPath, onProgress, preprocess }: OcrOptions = {},
+  { onProgress, preprocess, assetOptions }: OcrOptions = {},
 ): Promise<string[]> {
   const pushProgress = (progress: number) => {
     if (onProgress) {
@@ -23,7 +37,7 @@ export async function recognizePlayerNames(
 
   const { createWorker } = await import('tesseract.js');
   const worker: any = await (createWorker as any)('eng', 1, {
-    ...(workerPath ? { workerPath } : {}),
+    ...(assetOptions ?? localAssetOptions()),
     logger: (m: any) => {
       if (m.status === 'recognizing text') {
         pushProgress(0.6 + (m.progress * 0.4));

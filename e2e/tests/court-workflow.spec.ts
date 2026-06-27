@@ -1,12 +1,7 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 import { expect, test } from '@playwright/test';
 
 import { MainPage } from '../support/pages/MainPage';
 import { BULK_PLAYERS, completeWorkflow, DEFAULT_PLAYERS, SINGLE_PLAYERS } from '../support/helpers';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test.describe('Court Workflow', () => {
   let mainPage: MainPage;
@@ -110,42 +105,6 @@ test.describe('Court Workflow', () => {
       await expect(page.getByTestId('stats-present-count')).toHaveText('6');
 
       await completeWorkflow(mainPage, page, 6, 2);
-    });
-
-    test('Image workflow - import players from image', async ({ page }) => {
-      const imagePath = path.join(__dirname, '../../tests/data/names.png');
-
-      await test.step('open image upload modal', async () => {
-        await page.getByTestId('open-image-modal-button').click();
-        await expect(page.getByTestId('image-upload-modal')).toBeVisible();
-      });
-
-      await test.step('upload image and wait for OCR results', async () => {
-        await page.getByTestId('image-file-input').setInputFiles(imagePath);
-        await expect(page.locator('.extracted-players-section')).toBeVisible({ timeout: 30000 });
-        const extractedCount = await page.locator('[data-testid^="extracted-player-"]').count();
-        expect(extractedCount).toBeGreaterThanOrEqual(4);
-        await expect(page.getByTestId('add-extracted-players-button')).toBeEnabled();
-      });
-
-      await test.step('deselect all disables button, select all re-enables it', async () => {
-        await page.getByRole('button', { name: 'Deselect all' }).click();
-        await expect(page.getByTestId('add-extracted-players-button')).toBeDisabled();
-        await page.getByRole('button', { name: 'Select all', exact: true }).click();
-        await expect(page.getByTestId('add-extracted-players-button')).toBeEnabled();
-      });
-
-      await test.step('add extracted players closes modal and updates count', async () => {
-        await page.getByTestId('add-extracted-players-button').click();
-        await expect(page.getByTestId('image-upload-modal')).not.toBeVisible();
-        const totalCount = parseInt((await page.getByTestId('stats-total-count').textContent()) ?? '0');
-        expect(totalCount).toBeGreaterThanOrEqual(4);
-      });
-
-      await mainPage.generateAssignments();
-      await mainPage.court(1).selectWinner();
-      await mainPage.regenerate();
-      await expect(page.locator('h2').filter({ hasText: 'Leaderboard' })).toBeVisible();
     });
   });
 

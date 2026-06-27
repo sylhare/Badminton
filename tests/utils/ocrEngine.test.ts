@@ -7,10 +7,12 @@ import { describe, expect, it } from 'vitest';
 
 import { recognizePlayerNames } from '../../src/utils/ocrEngine';
 
-const workerPath = (() => {
+function nodeOcrAssetOptions(): Record<string, string> {
   const root = path.resolve(__dirname, '../..');
-  return path.join(root, 'node_modules', 'tesseract.js', 'src', 'worker-script', 'node', 'index.js');
-})();
+  return {
+    workerPath: path.join(root, 'node_modules', 'tesseract.js', 'src', 'worker-script', 'node', 'index.js'),
+  };
+}
 
 const SAMPLES: Array<{
   filename: string;
@@ -41,7 +43,7 @@ describe('OCR integration', () => {
     it(`should detect most expected names ${path.basename(sample.filename)}`, async () => {
         const imgBuf = fs.readFileSync(sample.filename);
 
-        const extracted = await recognizePlayerNames(imgBuf, { workerPath });
+        const extracted = await recognizePlayerNames(imgBuf, { assetOptions: nodeOcrAssetOptions() });
 
         const matches = sample.expected.filter((name) =>
           extracted.some((e) =>
