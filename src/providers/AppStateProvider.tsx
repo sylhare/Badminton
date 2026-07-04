@@ -27,7 +27,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const hasLoadedRef = useRef(false);
   const { trackAssignmentAnomaly } = useAnalytics();
 
+  const refreshCounts = useCallback(() => {
+    const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
+    setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
+    setEngineState(engine().prepareStateForSaving(getEngineType()));
+  }, []);
+
   useEffect(() => {
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
     const load = async () => {
       const loadedState = await storageManager.loadApp();
       if (loadedState.players?.length) {
@@ -41,20 +49,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
       const engineType = smart ? 'sl' : 'sa';
       setEngine(engineType);
       await engine().loadState(engineType);
-      const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
-      setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
-      setEngineState(engine().prepareStateForSaving(engineType));
+      if (cancelled) return;
+      refreshCounts();
+      cleanup = engine().onStateChange(refreshCounts);
       hasLoadedRef.current = true;
       setIsLoaded(true);
     };
     load();
 
-    return engine().onStateChange(() => {
-      const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
-      setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
-      setEngineState(engine().prepareStateForSaving(getEngineType()));
-    });
-  }, []);
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [refreshCounts]);
 
   useEffect(() => {
     if (!hasLoadedRef.current) return;
@@ -98,6 +105,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     const next = !isSmartEngineEnabled;
     setIsSmartEngineEnabled(next);
     setEngine(next ? 'sl' : 'sa');
+    refreshCounts();
   };
 
   const applyCourtResults = useCallback((courts: Court[]) => {

@@ -137,10 +137,12 @@ describe('StatsPage Component', () => {
     });
   });
 
-  it('subscribes to engine state changes', () => {
+  it('subscribes to engine state changes after loading completes', async () => {
     renderWithProvider(<StatsPage />);
 
-    expect(mockOnStateChange).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockOnStateChange).toHaveBeenCalled();
+    });
   });
 
   it('renders bench distribution summary', async () => {
