@@ -1,15 +1,16 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 
 import StatsPage from '../../src/pages/StatsPage';
 import { renderWithProvider } from '../shared';
 
-const { mockLoadState, mockPrepareStateForSaving, mockOnStateChange, mockLoadApp } = vi.hoisted(() => ({
+const { mockLoadState, mockPrepareStateForSaving, mockOnStateChange, mockLoadApp, mockSaveEngine } = vi.hoisted(() => ({
   mockLoadState: vi.fn(),
   mockPrepareStateForSaving: vi.fn(),
   mockOnStateChange: vi.fn(() => vi.fn()),
   mockLoadApp: vi.fn(),
+  mockSaveEngine: vi.fn(),
 }));
 
 vi.mock('../../src/engines/engineSelector', () => ({
@@ -33,7 +34,7 @@ vi.mock('../../src/utils/StorageManager', () => ({
     loadApp: mockLoadApp,
     loadEngine: vi.fn(),
     saveApp: vi.fn(),
-    saveEngine: vi.fn(),
+    saveEngine: mockSaveEngine,
     clearAll: vi.fn(),
     waitForQueue: vi.fn(() => Promise.resolve()),
     onStateChange: vi.fn(() => vi.fn()),
@@ -62,9 +63,11 @@ describe('StatsPage Component', () => {
   beforeEach(() => {
     mockPrepareStateForSaving.mockReturnValue(mockEngineState);
     mockLoadApp.mockResolvedValue({ players: mockPlayers });
+    mockOnStateChange.mockImplementation(() => vi.fn());
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
@@ -143,6 +146,35 @@ describe('StatsPage Component', () => {
     await waitFor(() => {
       expect(mockOnStateChange).toHaveBeenCalled();
     });
+  });
+
+  it('still subscribes and finishes loading when engine state fails to load', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockLoadState.mockRejectedValueOnce(new Error('storage unavailable'));
+
+    renderWithProvider(<StatsPage />);
+
+    await waitFor(() => {
+      expect(mockOnStateChange).toHaveBeenCalled();
+    });
+    expect(mockSaveEngine).not.toHaveBeenCalled();
+  });
+
+  it('persists on an engine change but not on load alone', async () => {
+    const listeners: Array<() => void> = [];
+    mockOnStateChange.mockImplementation((cb: () => void) => {
+      listeners.push(cb);
+      return () => {};
+    });
+
+    renderWithProvider(<StatsPage />);
+
+    await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
+    expect(mockSaveEngine).not.toHaveBeenCalled();
+
+    act(() => listeners.forEach(cb => cb()));
+
+    await waitFor(() => expect(mockSaveEngine).toHaveBeenCalled());
   });
 
   it('renders bench distribution summary', async () => {

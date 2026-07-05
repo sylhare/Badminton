@@ -27,7 +27,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const hasLoadedRef = useRef(false);
   const { trackAssignmentAnomaly } = useAnalytics();
 
-  const refreshCounts = useCallback(() => {
+  const syncFromEngine = useCallback(() => {
     const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
     setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
     setEngineState(engine().prepareStateForSaving(getEngineType()));
@@ -36,32 +36,37 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   useEffect(() => {
     let cancelled = false;
     let cleanup: (() => void) | undefined;
-    const load = async () => {
-      const loadedState = await storageManager.loadApp();
-      if (loadedState.players?.length) {
-        setPlayers(loadedState.players);
+
+    const hydrate = async () => {
+      try {
+        const loadedState = await storageManager.loadApp();
+        if (loadedState.players?.length) setPlayers(loadedState.players);
+        if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
+        if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
+        if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
+        const smart = loadedState.isSmartEngineEnabled ?? false;
+        if (smart) setIsSmartEngineEnabled(true);
+        const engineType = smart ? 'sl' : 'sa';
+        setEngine(engineType);
+        await engine().loadState(engineType);
+      } catch (error) {
+        console.warn('AppStateProvider: failed to load persisted state:', error);
       }
-      if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
-      if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
-      if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
-      const smart = loadedState.isSmartEngineEnabled ?? false;
-      if (smart) setIsSmartEngineEnabled(true);
-      const engineType = smart ? 'sl' : 'sa';
-      setEngine(engineType);
-      await engine().loadState(engineType);
+    };
+
+    hydrate().then(() => {
       if (cancelled) return;
-      refreshCounts();
-      cleanup = engine().onStateChange(refreshCounts);
+      cleanup = engine().onStateChange(syncFromEngine);
       hasLoadedRef.current = true;
       setIsLoaded(true);
-    };
-    load();
+      syncFromEngine();
+    });
 
     return () => {
       cancelled = true;
       cleanup?.();
     };
-  }, [refreshCounts]);
+  }, [syncFromEngine]);
 
   useEffect(() => {
     if (!hasLoadedRef.current) return;
@@ -69,9 +74,20 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   }, [players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt]);
 
   useEffect(() => {
-    if (!hasLoadedRef.current || !engineState) return;
-    void storageManager.saveEngine(engineState);
-  }, [engineState]);
+    if (!isLoaded) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const persist = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        void storageManager.saveEngine(engine().prepareStateForSaving(getEngineType()));
+      });
+    };
+    const unsubscribe = engine().onStateChange(persist);
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [isLoaded]);
 
   const handleAddPlayers = (names: string[]) => {
     const newPlayers = createPlayersFromNames(names, 'manual');
@@ -102,10 +118,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   };
 
   const handleToggleSmartEngine = () => {
+    if (!isLoaded) return;
     const next = !isSmartEngineEnabled;
     setIsSmartEngineEnabled(next);
     setEngine(next ? 'sl' : 'sa');
-    refreshCounts();
+    syncFromEngine();
   };
 
   const applyCourtResults = useCallback((courts: Court[]) => {
