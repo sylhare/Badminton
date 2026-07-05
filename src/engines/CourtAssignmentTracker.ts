@@ -2,6 +2,7 @@ import type {
   AssignmentAnomaly,
   Court,
   CourtEngineState,
+  EngineSnapshot,
   EngineType,
   ICourtAssignmentTracker,
   Player,
@@ -64,6 +65,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
+
+  /** Cached render snapshot; invalidated whenever tracker state changes. */
+  private static snapshotCache: EngineSnapshot | null = null;
 
   static readonly REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000;
 
@@ -256,13 +260,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lastRoundDelta = null;
   }
 
-  /** Prepares the internal maps for persistence. Filters and prunes old data. */
-  prepareStateForSaving(engineType: EngineType): CourtEngineState {
-    const MAX_ENTRIES = 500;
-    this.pruneHistoricalData(MAX_ENTRIES);
-
+  /** Serializes the current maps into a plain state object. Pure — no mutation. */
+  private buildEngineState(): EngineSnapshot {
     return {
-      engineType,
       benchCountMap: Object.fromEntries(CourtAssignmentTracker.benchCountMap),
       singleCountMap: Object.fromEntries(CourtAssignmentTracker.singleCountMap),
       teammateCountMap: Object.fromEntries(CourtAssignmentTracker.teammateCountMap),
@@ -272,6 +272,26 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       levelHistory: Object.fromEntries(CourtAssignmentTracker.levelHistoryMap),
       roundsPlayed: CourtAssignmentTracker.roundsPlayed,
     };
+  }
+
+  /**
+   * Returns a read-only snapshot of tracker state for rendering.
+   * Never prunes or mutates state. The result is cached, so the reference stays
+   * stable until the next state change — safe to use as a React memo dependency.
+   */
+  snapshot(): EngineSnapshot {
+    if (!CourtAssignmentTracker.snapshotCache) {
+      CourtAssignmentTracker.snapshotCache = this.buildEngineState();
+    }
+    return CourtAssignmentTracker.snapshotCache;
+  }
+
+  /** Prepares the internal maps for persistence. Prunes old data — mutates state. */
+  prepareStateForSaving(engineType: EngineType): CourtEngineState {
+    const MAX_ENTRIES = 500;
+    this.pruneHistoricalData(MAX_ENTRIES);
+    CourtAssignmentTracker.snapshotCache = null;
+    return { ...this.buildEngineState(), engineType };
   }
 
   /** Saves the current state to persistent storage. */
@@ -323,6 +343,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         this.clearPairHistory();
       }
     }
+    CourtAssignmentTracker.snapshotCache = null;
   }
 
   private clearPairHistory(): void {
@@ -483,6 +504,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Notifies all subscribed listeners of a state change. */
   protected notifyStateChange(): void {
+    CourtAssignmentTracker.snapshotCache = null;
     CourtAssignmentTracker.stateChangeListeners.forEach(listener => listener());
   }
 

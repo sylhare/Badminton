@@ -40,9 +40,11 @@ export interface AppState {
   sessionId?: string;
 }
 
-export interface CourtEngineState {
-  engineType?: EngineType;
-  savedAt?: number;
+/**
+ * Read-only view of engine state for rendering. Structurally the counts the
+ * stats view needs, with no persistence-only concerns (engine type, savedAt).
+ */
+export interface EngineSnapshot {
   benchCountMap: Record<string, number>;
   singleCountMap: Record<string, number>;
   teammateCountMap: Record<string, number>;
@@ -51,6 +53,12 @@ export interface CourtEngineState {
   lossCountMap: Record<string, number>;
   levelHistory?: Record<string, number[]>;
   roundsPlayed?: number;
+}
+
+/** Engine state as persisted to storage: a snapshot plus persistence metadata. */
+export interface CourtEngineState extends EngineSnapshot {
+  engineType?: EngineType;
+  savedAt?: number;
 }
 
 export interface TrackerStats {
@@ -87,6 +95,7 @@ export interface ICourtAssignmentTracker {
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
   applyRoundStats(courts: Court[], players: Player[]): AssignmentAnomaly[];
+  snapshot(): EngineSnapshot;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;
@@ -122,7 +131,7 @@ export interface AppStateContextType {
   winCounts: Map<string, number>;
   lossCounts: Map<string, number>;
   benchCounts: Map<string, number>;
-  engineState: CourtEngineState | null;
+  engineState: EngineSnapshot | null;
   levelTrend: (playerId: string) => 'up' | 'down' | null;
   generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], manualCourtSelection?: ManualCourtSelection | null, forceBenchPlayerIds?: Set<string>): GenerateResult;
   updateWinner(params: UpdateWinnerParams): Court[];

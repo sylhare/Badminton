@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 
 import { engine, getEngineType, setEngine } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
-import type { AppStateContextType, CourtEngineState, Court, GenerateResult, ManualCourtSelection, Player, UpdateWinnerParams } from '../types';
+import type { AppStateContextType, Court, EngineSnapshot, GenerateResult, ManualCourtSelection, Player, UpdateWinnerParams } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
@@ -23,19 +23,20 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState(false);
   const [counts, setCounts] = useState({ wins: new Map<string, number>(), losses: new Map<string, number>(), bench: new Map<string, number>() });
-  const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
+  const [engineState, setEngineState] = useState<EngineSnapshot | null>(null);
   const hasLoadedRef = useRef(false);
   const { trackAssignmentAnomaly } = useAnalytics();
 
   const syncFromEngine = useCallback(() => {
     const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
     setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
-    setEngineState(engine().prepareStateForSaving(getEngineType()));
+    setEngineState(engine().snapshot());
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     let cleanup: (() => void) | undefined;
+    let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
     const hydrate = async () => {
       try {
@@ -56,7 +57,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
     hydrate().then(() => {
       if (cancelled) return;
-      cleanup = engine().onStateChange(syncFromEngine);
+      cleanup = engine().onStateChange(() => {
+        syncFromEngine();
+        // Coalesce bursts of engine notifications into a single debounced write.
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          void engine().saveState(getEngineType());
+        });
+      });
       hasLoadedRef.current = true;
       setIsLoaded(true);
       syncFromEngine();
@@ -64,6 +72,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
     return () => {
       cancelled = true;
+      clearTimeout(saveTimer);
       cleanup?.();
     };
   }, [syncFromEngine]);
@@ -72,22 +81,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     if (!hasLoadedRef.current) return;
     storageManager.saveApp({ players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt });
   }, [players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const persist = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        void storageManager.saveEngine(engine().prepareStateForSaving(getEngineType()));
-      });
-    };
-    const unsubscribe = engine().onStateChange(persist);
-    return () => {
-      clearTimeout(timer);
-      unsubscribe();
-    };
-  }, [isLoaded]);
 
   const handleAddPlayers = (names: string[]) => {
     const newPlayers = createPlayersFromNames(names, 'manual');
