@@ -50,6 +50,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
         const engineType = smart ? 'sl' : 'sa';
         setEngine(engineType);
         await engine().loadState(engineType);
+        // Re-persist after a successful load to refresh the stored savedAt, so the
+        // engine's pair-history TTL (see loadState) measures time since the last
+        // app open rather than the last game played.
+        await engine().saveState(engineType);
       } catch (error) {
         console.warn('AppStateProvider: failed to load persisted state:', error);
       }
@@ -62,7 +66,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
         // Coalesce bursts of engine notifications into a single debounced write.
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
+          // saveState() prunes history synchronously before persisting; re-sync
+          // so the rendered snapshot reflects any pruning rather than showing
+          // entries that were just dropped from storage.
           void engine().saveState(getEngineType());
+          syncFromEngine();
         });
       });
       hasLoadedRef.current = true;

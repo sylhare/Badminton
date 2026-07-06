@@ -5,13 +5,12 @@ import { act, screen, waitFor } from '@testing-library/react';
 import StatsPage from '../../src/pages/StatsPage';
 import { renderWithProvider } from '../shared';
 
-const { mockLoadState, mockSnapshot, mockSaveState, mockOnStateChange, mockLoadApp, mockSaveEngine } = vi.hoisted(() => ({
+const { mockLoadState, mockSnapshot, mockSaveState, mockOnStateChange, mockLoadApp } = vi.hoisted(() => ({
   mockLoadState: vi.fn(),
   mockSnapshot: vi.fn(),
   mockSaveState: vi.fn(() => Promise.resolve()),
   mockOnStateChange: vi.fn(() => vi.fn()),
   mockLoadApp: vi.fn(),
-  mockSaveEngine: vi.fn(),
 }));
 
 vi.mock('../../src/engines/engineSelector', () => ({
@@ -35,7 +34,7 @@ vi.mock('../../src/utils/StorageManager', () => ({
     loadApp: mockLoadApp,
     loadEngine: vi.fn(),
     saveApp: vi.fn(),
-    saveEngine: mockSaveEngine,
+    saveEngine: vi.fn(),
     clearAll: vi.fn(),
     waitForQueue: vi.fn(() => Promise.resolve()),
     onStateChange: vi.fn(() => vi.fn()),
@@ -65,6 +64,9 @@ describe('StatsPage Component', () => {
     mockSnapshot.mockReturnValue(mockEngineState);
     mockLoadApp.mockResolvedValue({ players: mockPlayers });
     mockOnStateChange.mockImplementation(() => vi.fn());
+    // Re-establish async resolutions stripped by afterEach's restoreAllMocks.
+    mockLoadState.mockResolvedValue(undefined);
+    mockSaveState.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -107,11 +109,14 @@ describe('StatsPage Component', () => {
     });
   });
 
-  it('shows no data message when engine state is empty', () => {
+  it('shows no data message when engine state is empty', async () => {
     mockSnapshot.mockReturnValue(null);
 
     renderWithProvider(<StatsPage />);
 
+    // Wait for hydration to finish so the null snapshot is actually consumed,
+    // then confirm the no-data branch still renders.
+    await waitFor(() => expect(mockOnStateChange).toHaveBeenCalled());
     expect(screen.getByText('No session data yet. Start playing to see diagnostics!')).toBeInTheDocument();
     expect(screen.getByText('Start a Game →')).toBeInTheDocument();
   });
@@ -161,7 +166,7 @@ describe('StatsPage Component', () => {
     expect(mockSaveState).not.toHaveBeenCalled();
   });
 
-  it('persists on an engine change but not on load alone', async () => {
+  it('persists once on load (to refresh savedAt) and again on each engine change', async () => {
     const listeners: Array<() => void> = [];
     mockOnStateChange.mockImplementation((cb: () => void) => {
       listeners.push(cb);
@@ -170,9 +175,11 @@ describe('StatsPage Component', () => {
 
     renderWithProvider(<StatsPage />);
 
+    // One save on load refreshes the pair-history TTL's savedAt.
+    await waitFor(() => expect(mockSaveState).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
-    expect(mockSaveState).not.toHaveBeenCalled();
 
+    mockSaveState.mockClear();
     act(() => listeners.forEach(cb => cb()));
 
     await waitFor(() => expect(mockSaveState).toHaveBeenCalled());

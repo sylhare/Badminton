@@ -66,9 +66,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
 
-  /** Cached render snapshot; invalidated whenever tracker state changes. */
-  private static snapshotCache: EngineSnapshot | null = null;
-
   static readonly REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000;
 
   /** Court numbers whose team-pair stats were already updated via rotation this round */
@@ -260,7 +257,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lastRoundDelta = null;
   }
 
-  /** Serializes the current maps into a plain state object. Pure — no mutation. */
+  /**
+   * Serializes the current maps into a fresh, independent state object.
+   * Pure — never mutates tracker state. Level-history arrays are copied so the
+   * result never aliases the live maps and is safe to hold in React state.
+   */
   private buildEngineState(): EngineSnapshot {
     return {
       benchCountMap: Object.fromEntries(CourtAssignmentTracker.benchCountMap),
@@ -269,28 +270,22 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       opponentCountMap: Object.fromEntries(CourtAssignmentTracker.opponentCountMap),
       winCountMap: Object.fromEntries(CourtAssignmentTracker.winCountMap),
       lossCountMap: Object.fromEntries(CourtAssignmentTracker.lossCountMap),
-      levelHistory: Object.fromEntries(CourtAssignmentTracker.levelHistoryMap),
+      levelHistory: Object.fromEntries(
+        [...CourtAssignmentTracker.levelHistoryMap].map(([id, history]) => [id, [...history]]),
+      ),
       roundsPlayed: CourtAssignmentTracker.roundsPlayed,
     };
   }
 
-  /**
-   * Returns a read-only snapshot of tracker state for rendering.
-   * Never prunes or mutates state. The result is cached, so the reference stays
-   * stable until the next state change — safe to use as a React memo dependency.
-   */
+  /** Returns a read-only render snapshot of tracker state. Pure — no mutation. */
   snapshot(): EngineSnapshot {
-    if (!CourtAssignmentTracker.snapshotCache) {
-      CourtAssignmentTracker.snapshotCache = this.buildEngineState();
-    }
-    return CourtAssignmentTracker.snapshotCache;
+    return this.buildEngineState();
   }
 
   /** Prepares the internal maps for persistence. Prunes old data — mutates state. */
   prepareStateForSaving(engineType: EngineType): CourtEngineState {
     const MAX_ENTRIES = 500;
     this.pruneHistoricalData(MAX_ENTRIES);
-    CourtAssignmentTracker.snapshotCache = null;
     return { ...this.buildEngineState(), engineType };
   }
 
@@ -343,7 +338,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         this.clearPairHistory();
       }
     }
-    CourtAssignmentTracker.snapshotCache = null;
   }
 
   private clearPairHistory(): void {
@@ -504,7 +498,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Notifies all subscribed listeners of a state change. */
   protected notifyStateChange(): void {
-    CourtAssignmentTracker.snapshotCache = null;
     CourtAssignmentTracker.stateChangeListeners.forEach(listener => listener());
   }
 
