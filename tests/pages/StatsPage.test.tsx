@@ -5,13 +5,13 @@ import { screen, waitFor } from '@testing-library/react';
 import StatsPage from '../../src/pages/StatsPage';
 import { renderWithProvider } from '../shared';
 
-const { mockLoadState, mockSnapshot, mockSaveState, mockOnStateChange, mockLoadApp, mockStartPersistence } = vi.hoisted(() => ({
+const { mockLoadState, mockSnapshot, mockSaveState, mockOnStateChange, mockLoadApp, mockStart } = vi.hoisted(() => ({
   mockLoadState: vi.fn(),
   mockSnapshot: vi.fn(),
   mockSaveState: vi.fn(() => Promise.resolve()),
   mockOnStateChange: vi.fn(() => vi.fn()),
   mockLoadApp: vi.fn(),
-  mockStartPersistence: vi.fn(() => vi.fn()),
+  mockStart: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('../../src/engines/engineSelector', () => ({
@@ -27,7 +27,7 @@ vi.mock('../../src/engines/engineSelector', () => ({
   }),
   getEngineType: vi.fn(() => 'sa'),
   setEngine: vi.fn(),
-  startEnginePersistence: mockStartPersistence,
+  enginePersistence: { start: mockStart, stop: vi.fn() },
 }));
 
 vi.mock('../../src/utils/StorageManager', () => ({
@@ -68,7 +68,7 @@ describe('StatsPage Component', () => {
     mockOnStateChange.mockImplementation(() => vi.fn());
     mockLoadState.mockResolvedValue(undefined);
     mockSaveState.mockResolvedValue(undefined);
-    mockStartPersistence.mockReturnValue(() => {});
+    mockStart.mockReturnValue(() => {});
   });
 
   afterEach(() => {
@@ -170,7 +170,7 @@ describe('StatsPage Component', () => {
     renderWithProvider(<StatsPage />);
 
     await waitFor(() => expect(mockSaveState).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(mockStartPersistence).toHaveBeenCalled());
+    await waitFor(() => expect(mockStart).toHaveBeenCalled());
   });
 
   it('renders bench distribution summary', async () => {

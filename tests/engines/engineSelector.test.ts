@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { engine, getEngineType, setEngine, startEnginePersistence, stopEnginePersistence } from '../../src/engines/engineSelector';
+import { engine, getEngineType, setEngine, EnginePersistence } from '../../src/engines/engineSelector';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import { engineSL } from '../../src/engines/SmartEngine';
 import type { Player } from '../../src/types';
@@ -151,15 +151,21 @@ describe('Engine Selector', () => {
   });
 
   describe('Engine Persistence', () => {
+    let persistence: EnginePersistence;
+
+    beforeEach(() => {
+      persistence = new EnginePersistence();
+    });
+
     afterEach(() => {
-      stopEnginePersistence();
+      persistence.stop();
       vi.restoreAllMocks();
     });
 
     it('saves engine state on change while running, and stops after teardown', async () => {
       const saveSpy = vi.spyOn(storageManager, 'saveEngine').mockResolvedValue();
 
-      const stop = startEnginePersistence();
+      const stop = persistence.start();
       engine().recordLevelSnapshot(mockPlayers(2));
       await vi.waitFor(() => expect(saveSpy).toHaveBeenCalled());
 

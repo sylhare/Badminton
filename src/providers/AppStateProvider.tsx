@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-import { engine, getEngineType, setEngine, startEnginePersistence } from '../engines/engineSelector';
+import { engine, getEngineType, setEngine, enginePersistence } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
 import type { AppStateContextType, Court, EngineSnapshot, GenerateResult, ManualCourtSelection, Player, UpdateWinnerParams } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -71,7 +71,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
   useEffect(() => {
     if (!isLoaded) return;
-    return startEnginePersistence();
+    return enginePersistence.start();
   }, [isLoaded]);
 
   useEffect(() => {

@@ -72,28 +72,32 @@ export const engine = (): ICourtAssignmentEngine => {
   return getEngineInstance(currentEngineType);
 };
 
-let persistUnsubscribe: (() => void) | undefined;
-let persistTimer: ReturnType<typeof setTimeout> | undefined;
+export class EnginePersistence {
+  private unsubscribe?: () => void;
+  private timer?: ReturnType<typeof setTimeout>;
 
-/**
- * Starts persisting engine state to storage on every engine change, debounced.
- * Must be called only after initial load, so an early save can't clobber stored
- * data. Idempotent; returns a stop function.
- */
-export function startEnginePersistence(): () => void {
-  stopEnginePersistence();
-  persistUnsubscribe = engine().onStateChange(() => {
-    clearTimeout(persistTimer);
-    persistTimer = setTimeout(() => void engine().saveState(getEngineType()));
-  });
-  return stopEnginePersistence;
+  /**
+   * Starts persisting engine state to storage on every engine change, debounced.
+   * Must be called only after initial load, so an early save can't clobber stored
+   * data. Idempotent; returns a stop function.
+   */
+  start(): () => void {
+    this.stop();
+    this.unsubscribe = engine().onStateChange(() => {
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => void engine().saveState(getEngineType()));
+    });
+    return () => this.stop();
+  }
+
+  /** Stops persisting engine state and cancels any pending debounced write. */
+  stop(): void {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
+  }
 }
 
-/** Stops persisting engine state and cancels any pending debounced write. */
-export function stopEnginePersistence(): void {
-  clearTimeout(persistTimer);
-  persistTimer = undefined;
-  persistUnsubscribe?.();
-  persistUnsubscribe = undefined;
-}
+export const enginePersistence = new EnginePersistence();
 
