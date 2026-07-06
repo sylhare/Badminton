@@ -64,7 +64,6 @@ describe('StatsPage Component', () => {
     mockSnapshot.mockReturnValue(mockEngineState);
     mockLoadApp.mockResolvedValue({ players: mockPlayers });
     mockOnStateChange.mockImplementation(() => vi.fn());
-    // Re-establish async resolutions stripped by afterEach's restoreAllMocks.
     mockLoadState.mockResolvedValue(undefined);
     mockSaveState.mockResolvedValue(undefined);
   });
@@ -114,8 +113,6 @@ describe('StatsPage Component', () => {
 
     renderWithProvider(<StatsPage />);
 
-    // Wait for hydration to finish so the null snapshot is actually consumed,
-    // then confirm the no-data branch still renders.
     await waitFor(() => expect(mockOnStateChange).toHaveBeenCalled());
     expect(screen.getByText('No session data yet. Start playing to see diagnostics!')).toBeInTheDocument();
     expect(screen.getByText('Start a Game →')).toBeInTheDocument();
@@ -175,7 +172,6 @@ describe('StatsPage Component', () => {
 
     renderWithProvider(<StatsPage />);
 
-    // One save on load refreshes the pair-history TTL's savedAt.
     await waitFor(() => expect(mockSaveState).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
 

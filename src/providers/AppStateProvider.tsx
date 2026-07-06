@@ -36,7 +36,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   useEffect(() => {
     let cancelled = false;
     let cleanup: (() => void) | undefined;
-    let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
     const hydrate = async () => {
       try {
@@ -50,9 +49,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
         const engineType = smart ? 'sl' : 'sa';
         setEngine(engineType);
         await engine().loadState(engineType);
-        // Re-persist after a successful load to refresh the stored savedAt, so the
-        // engine's pair-history TTL (see loadState) measures time since the last
-        // app open rather than the last game played.
         await engine().saveState(engineType);
       } catch (error) {
         console.warn('AppStateProvider: failed to load persisted state:', error);
@@ -61,18 +57,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
     hydrate().then(() => {
       if (cancelled) return;
-      cleanup = engine().onStateChange(() => {
-        syncFromEngine();
-        // Coalesce bursts of engine notifications into a single debounced write.
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => {
-          // saveState() prunes history synchronously before persisting; re-sync
-          // so the rendered snapshot reflects any pruning rather than showing
-          // entries that were just dropped from storage.
-          void engine().saveState(getEngineType());
-          syncFromEngine();
-        });
-      });
+      cleanup = engine().onStateChange(syncFromEngine);
       hasLoadedRef.current = true;
       setIsLoaded(true);
       syncFromEngine();
@@ -80,10 +65,22 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
     return () => {
       cancelled = true;
-      clearTimeout(saveTimer);
       cleanup?.();
     };
   }, [syncFromEngine]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    let saveTimer: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = engine().onStateChange(() => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => void engine().saveState(getEngineType()));
+    });
+    return () => {
+      clearTimeout(saveTimer);
+      cleanup();
+    };
+  }, [isLoaded]);
 
   useEffect(() => {
     if (!hasLoadedRef.current) return;

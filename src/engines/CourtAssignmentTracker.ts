@@ -257,11 +257,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lastRoundDelta = null;
   }
 
-  /**
-   * Serializes the current maps into a fresh, independent state object.
-   * Pure — never mutates tracker state. Level-history arrays are copied so the
-   * result never aliases the live maps and is safe to hold in React state.
-   */
+  /** Serializes the current maps into a fresh, independent state object. */
   private buildEngineState(): EngineSnapshot {
     return {
       benchCountMap: Object.fromEntries(CourtAssignmentTracker.benchCountMap),
@@ -277,12 +273,12 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     };
   }
 
-  /** Returns a read-only render snapshot of tracker state. Pure — no mutation. */
+  /** Returns a read-only snapshot of tracker state for rendering. */
   snapshot(): EngineSnapshot {
     return this.buildEngineState();
   }
 
-  /** Prepares the internal maps for persistence. Prunes old data — mutates state. */
+  /** Prepares the internal maps for persistence. Filters and prunes old data. */
   prepareStateForSaving(engineType: EngineType): CourtEngineState {
     const MAX_ENTRIES = 500;
     this.pruneHistoricalData(MAX_ENTRIES);
@@ -582,6 +578,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         CourtAssignmentTracker.lastUpdatedMap.delete(key);
       }
     });
+
+    this.notifyStateChange();
   }
 
   /**
