@@ -72,3 +72,28 @@ export const engine = (): ICourtAssignmentEngine => {
   return getEngineInstance(currentEngineType);
 };
 
+let persistUnsubscribe: (() => void) | undefined;
+let persistTimer: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * Starts persisting engine state to storage on every engine change, debounced.
+ * Must be called only after initial load, so an early save can't clobber stored
+ * data. Idempotent; returns a stop function.
+ */
+export function startEnginePersistence(): () => void {
+  stopEnginePersistence();
+  persistUnsubscribe = engine().onStateChange(() => {
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => void engine().saveState(getEngineType()));
+  });
+  return stopEnginePersistence;
+}
+
+/** Stops persisting engine state and cancels any pending debounced write. */
+export function stopEnginePersistence(): void {
+  clearTimeout(persistTimer);
+  persistTimer = undefined;
+  persistUnsubscribe?.();
+  persistUnsubscribe = undefined;
+}
+

@@ -1,16 +1,17 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 
 import StatsPage from '../../src/pages/StatsPage';
 import { renderWithProvider } from '../shared';
 
-const { mockLoadState, mockSnapshot, mockSaveState, mockOnStateChange, mockLoadApp } = vi.hoisted(() => ({
+const { mockLoadState, mockSnapshot, mockSaveState, mockOnStateChange, mockLoadApp, mockStartPersistence } = vi.hoisted(() => ({
   mockLoadState: vi.fn(),
   mockSnapshot: vi.fn(),
   mockSaveState: vi.fn(() => Promise.resolve()),
   mockOnStateChange: vi.fn(() => vi.fn()),
   mockLoadApp: vi.fn(),
+  mockStartPersistence: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('../../src/engines/engineSelector', () => ({
@@ -26,6 +27,7 @@ vi.mock('../../src/engines/engineSelector', () => ({
   }),
   getEngineType: vi.fn(() => 'sa'),
   setEngine: vi.fn(),
+  startEnginePersistence: mockStartPersistence,
 }));
 
 vi.mock('../../src/utils/StorageManager', () => ({
@@ -66,6 +68,7 @@ describe('StatsPage Component', () => {
     mockOnStateChange.mockImplementation(() => vi.fn());
     mockLoadState.mockResolvedValue(undefined);
     mockSaveState.mockResolvedValue(undefined);
+    mockStartPersistence.mockReturnValue(() => {});
   });
 
   afterEach(() => {
@@ -163,22 +166,11 @@ describe('StatsPage Component', () => {
     expect(mockSaveState).not.toHaveBeenCalled();
   });
 
-  it('persists once on load (to refresh savedAt) and again on each engine change', async () => {
-    const listeners: Array<() => void> = [];
-    mockOnStateChange.mockImplementation((cb: () => void) => {
-      listeners.push(cb);
-      return () => {};
-    });
-
+  it('saves once on load to refresh savedAt and starts engine persistence', async () => {
     renderWithProvider(<StatsPage />);
 
     await waitFor(() => expect(mockSaveState).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(listeners.length).toBeGreaterThan(0));
-
-    mockSaveState.mockClear();
-    act(() => listeners.forEach(cb => cb()));
-
-    await waitFor(() => expect(mockSaveState).toHaveBeenCalled());
+    await waitFor(() => expect(mockStartPersistence).toHaveBeenCalled());
   });
 
   it('renders bench distribution summary', async () => {

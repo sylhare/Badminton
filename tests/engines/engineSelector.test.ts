@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { engine, getEngineType, setEngine } from '../../src/engines/engineSelector';
+import { engine, getEngineType, setEngine, startEnginePersistence, stopEnginePersistence } from '../../src/engines/engineSelector';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import { engineSL } from '../../src/engines/SmartEngine';
 import type { Player } from '../../src/types';
+import { storageManager } from '../../src/utils/StorageManager';
 import { benchedPlayers } from '../../src/utils/playerUtils';
 
 function mockPlayers(count: number): Player[] {
@@ -146,6 +147,27 @@ describe('Engine Selector', () => {
 
       setEngine('sl');
       expect(engine().generate(players, 2).courts).toHaveLength(0);
+    });
+  });
+
+  describe('Engine Persistence', () => {
+    afterEach(() => {
+      stopEnginePersistence();
+      vi.restoreAllMocks();
+    });
+
+    it('saves engine state on change while running, and stops after teardown', async () => {
+      const saveSpy = vi.spyOn(storageManager, 'saveEngine').mockResolvedValue();
+
+      const stop = startEnginePersistence();
+      engine().recordLevelSnapshot(mockPlayers(2));
+      await vi.waitFor(() => expect(saveSpy).toHaveBeenCalled());
+
+      stop();
+      saveSpy.mockClear();
+      engine().recordLevelSnapshot(mockPlayers(2));
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(saveSpy).not.toHaveBeenCalled();
     });
   });
 });
