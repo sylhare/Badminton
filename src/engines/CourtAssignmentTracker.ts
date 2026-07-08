@@ -556,10 +556,10 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Prunes historical pairings and counts based on recency. */
   private pruneHistoricalData(maxEntries: number): void {
-    const pairingKeys = [
+    const pairingKeys = [...new Set([
       ...CourtAssignmentTracker.teammateCountMap.keys(),
       ...CourtAssignmentTracker.opponentCountMap.keys(),
-    ];
+    ])];
 
     if (pairingKeys.length <= maxEntries) return;
 

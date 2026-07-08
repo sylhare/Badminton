@@ -28,9 +28,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const { trackAssignmentAnomaly } = useAnalytics();
 
   const syncFromEngine = useCallback(() => {
-    const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
-    setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
-    setEngineState(engine().snapshot());
+    const snapshot = engine().snapshot();
+    setEngineState(snapshot);
+    setCounts({
+      wins: new Map(Object.entries(snapshot.winCountMap)),
+      losses: new Map(Object.entries(snapshot.lossCountMap)),
+      bench: new Map(Object.entries(snapshot.benchCountMap)),
+    });
   }, []);
 
   useEffect(() => {
@@ -49,7 +53,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
         const engineType = smart ? 'sl' : 'sa';
         setEngine(engineType);
         await engine().loadState(engineType);
-        await engine().saveState(engineType);
       } catch (error) {
         console.warn('AppStateProvider: failed to load persisted state:', error);
       }

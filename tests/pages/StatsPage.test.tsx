@@ -112,7 +112,14 @@ describe('StatsPage Component', () => {
   });
 
   it('shows no data message when engine state is empty', async () => {
-    mockSnapshot.mockReturnValue(null);
+    mockSnapshot.mockReturnValue({
+      benchCountMap: {},
+      singleCountMap: {},
+      teammateCountMap: {},
+      opponentCountMap: {},
+      winCountMap: {},
+      lossCountMap: {},
+    });
 
     renderWithProvider(<StatsPage />);
 
@@ -166,11 +173,11 @@ describe('StatsPage Component', () => {
     expect(mockSaveState).not.toHaveBeenCalled();
   });
 
-  it('saves once on load to refresh savedAt and starts engine persistence', async () => {
+  it('starts engine persistence after loading, without saving on load', async () => {
     renderWithProvider(<StatsPage />);
 
-    await waitFor(() => expect(mockSaveState).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(mockStart).toHaveBeenCalled());
+    expect(mockSaveState).not.toHaveBeenCalled();
   });
 
   it('renders bench distribution summary', async () => {

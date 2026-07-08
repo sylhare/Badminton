@@ -948,6 +948,31 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(Object.keys(stateBefore.lossCountMap).length).toBeGreaterThan(0);
     });
 
+    it('does not prune or notify when distinct pairs are within the cap despite duplicate keys across both maps', () => {
+      engine.resetHistory();
+      const players = mockPlayers(208);
+
+      for (let g = 0; g < players.length; g += 4) {
+        const [a, b, c, d] = players.slice(g, g + 4);
+        const group = [a, b, c, d];
+        engine.applyRoundStats([{ courtNumber: 1, players: group, teams: { team1: [a, b], team2: [c, d] } }], group);
+        engine.applyRoundStats([{ courtNumber: 1, players: group, teams: { team1: [a, c], team2: [b, d] } }], group);
+      }
+
+      const state = engine.prepareStateForSaving(type);
+      const rawCount = Object.keys(state.teammateCountMap).length + Object.keys(state.opponentCountMap).length;
+      const distinctCount = new Set([...Object.keys(state.teammateCountMap), ...Object.keys(state.opponentCountMap)]).size;
+      expect(rawCount).toBeGreaterThan(500);
+      expect(distinctCount).toBeLessThanOrEqual(500);
+
+      let notified = 0;
+      const unsubscribe = engine.onStateChange(() => { notified++; });
+      engine.prepareStateForSaving(type);
+      unsubscribe();
+
+      expect(notified).toBe(0);
+    });
+
     it('persists and restores engineType correctly', async () => {
       engine.resetHistory();
       const players = mockPlayers(8);
