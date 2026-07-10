@@ -20,14 +20,22 @@ export interface UseSwapSelection {
 export function useSwapSelection(onSwap: (from: SlotAddr, to: SlotAddr) => void): UseSwapSelection {
   const [selected, setSelected] = useState<SlotAddr | null>(null);
 
+  // onSwap is a side effect, so it must run outside the state updater (which
+  // React's StrictMode intentionally double-invokes) — otherwise a swap fires
+  // twice and cancels itself out. Taps are user-paced, so reading `selected`
+  // from the closure is safe here.
   const handleTap = useCallback((addr: SlotAddr) => {
-    setSelected(prev => {
-      if (!prev) return addr;
-      if (sameSlot(prev, addr)) return null;
-      onSwap(prev, addr);
-      return null;
-    });
-  }, [onSwap]);
+    if (selected === null) {
+      setSelected(addr);
+      return;
+    }
+    if (sameSlot(selected, addr)) {
+      setSelected(null);
+      return;
+    }
+    onSwap(selected, addr);
+    setSelected(null);
+  }, [selected, onSwap]);
 
   const isSelected = useCallback(
     (addr: SlotAddr) => selected !== null && sameSlot(selected, addr),
