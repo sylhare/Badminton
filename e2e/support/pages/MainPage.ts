@@ -104,6 +104,29 @@ export class MainPage {
     return new CourtCard(this.page.getByTestId(`court-${number}`), this.page);
   }
 
+  /** Text of the player chip at a data-slot address (e.g. "0:0" = court 1, team 1, slot 0). */
+  async playerAtSlot(slot: string): Promise<string> {
+    return (await this.page.locator(`[data-slot="${slot}"]`).textContent()) ?? '';
+  }
+
+  /**
+   * Drag the player chip at `fromSlot` onto the chip at `toSlot` to swap them.
+   * Uses a pointer-move sequence, matching the app's pointer-based drag.
+   */
+  async dragPlayer(fromSlot: string, toSlot: string): Promise<void> {
+    const src = this.page.locator(`[data-slot="${fromSlot}"]`);
+    const dst = this.page.locator(`[data-slot="${toSlot}"]`);
+    await src.scrollIntoViewIfNeeded();
+    const sb = await src.boundingBox();
+    const tb = await dst.boundingBox();
+    if (!sb || !tb) throw new Error(`Missing slot box for ${fromSlot} -> ${toSlot}`);
+    await this.page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
+    await this.page.mouse.down();
+    await this.page.mouse.move(sb.x + sb.width / 2 + 15, sb.y + sb.height / 2, { steps: 3 });
+    await this.page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2, { steps: 8 });
+    await this.page.mouse.up();
+  }
+
   /** True if the Leaderboard heading is currently visible. */
   async isLeaderboardVisible(): Promise<boolean> {
     return this.page.locator('h2').filter({ hasText: 'Leaderboard' }).isVisible();
