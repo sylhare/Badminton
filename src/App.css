@@ -948,45 +948,6 @@ h1 {
     color: var(--text);
 }
 
-/* Drag-to-swap affordances for player chips (courts + bench). */
-.player-slot-draggable {
-    cursor: grab;
-    touch-action: manipulation;
-    transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease, opacity 0.12s ease;
-    outline: 2px solid transparent;
-    outline-offset: 1px;
-}
-
-.player-slot-draggable:hover {
-    box-shadow: var(--shadow-card);
-    transform: translateY(-1px);
-}
-
-.player-slot-draggable:active {
-    cursor: grabbing;
-}
-
-.slot-dragging {
-    opacity: 0.4;
-}
-
-.slot-drop-target {
-    outline-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(255, 184, 77, 0.25);
-}
-
-/* Touch long-press has armed this chip: shake to signal it is now draggable. */
-.slot-armed {
-    animation: slotShake 0.4s ease-in-out infinite;
-    outline-color: var(--color-primary-hover);
-}
-
-@keyframes slotShake {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-2.5deg); }
-    75% { transform: rotate(2.5deg); }
-}
-
 .vs-divider {
     font-size: 1.5rem;
     font-weight: bold;

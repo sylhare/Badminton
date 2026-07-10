@@ -246,22 +246,19 @@
 }
 
 .player-slot {
-    padding: 0.4rem 0.6rem;
-    background: white;
-    border: 1px solid #ddd;
+    padding: 8px 12px;
+    background: var(--surface-accent);
     border-radius: var(--radius-md);
-    cursor: pointer;
+    color: var(--text);
     font-size: 0.9rem;
-    transition: border-color 0.15s, outline 0.15s;
 }
 
-.player-slot:hover {
-    border-color: var(--color-primary);
-}
-
+/* The draggable/selection affordances (.player-slot-draggable, .slot-dragging,
+   .slot-drop-target, .slot-armed) are shared with the court chips in App.css. */
 .player-slot.swap-selected {
     outline: 2px solid var(--color-primary);
-    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(255, 184, 77, 0.25);
+    transform: scale(1.03);
 }
 
 /* Active layout: single column, standings always below rounds */
