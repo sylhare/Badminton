@@ -117,13 +117,19 @@ export class MainPage {
     const src = this.page.locator(`[data-slot="${fromSlot}"]`);
     const dst = this.page.locator(`[data-slot="${toSlot}"]`);
     await src.scrollIntoViewIfNeeded();
+    await dst.scrollIntoViewIfNeeded();
     const sb = await src.boundingBox();
     const tb = await dst.boundingBox();
     if (!sb || !tb) throw new Error(`Missing slot box for ${fromSlot} -> ${toSlot}`);
+    const tx = tb.x + tb.width / 2;
+    const ty = tb.y + tb.height / 2;
     await this.page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
     await this.page.mouse.down();
-    await this.page.mouse.move(sb.x + sb.width / 2 + 15, sb.y + sb.height / 2, { steps: 3 });
-    await this.page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2, { steps: 8 });
+    await this.page.mouse.move(sb.x + sb.width / 2 + 15, sb.y + sb.height / 2, { steps: 4 });
+    await this.page.mouse.move(tx, ty, { steps: 12 });
+    // Settle on the target so the drop-target detection registers before release.
+    await this.page.mouse.move(tx, ty);
+    await this.page.waitForTimeout(50);
     await this.page.mouse.up();
   }
 
