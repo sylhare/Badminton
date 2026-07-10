@@ -24,8 +24,8 @@ describe('App Leaderboard Persistence', () => {
       renderWithProvider(<App />);
       await addPlayersAndGenerate('Alice,Bob,Charlie,Diana,Eve,Frank,Grace,Hank');
 
-      const initialWinCounts = engine().stats().winCountMap;
-      expect(initialWinCounts.size).toBe(0);
+      const initialWinCounts = engine().snapshot().winCountMap;
+      expect(Object.keys(initialWinCounts).length).toBe(0);
 
       const team1Elements = screen.getAllByText('Team 1');
       await act(async () => {
@@ -33,8 +33,8 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      const updatedWinCounts = engine().stats().winCountMap;
-      const totalWins = Array.from(updatedWinCounts.values()).reduce((sum, wins) => sum + wins, 0);
+      const updatedWinCounts = engine().snapshot().winCountMap;
+      const totalWins = Object.values(updatedWinCounts).reduce((sum, wins) => sum + wins, 0);
       expect(totalWins).toBeGreaterThan(0);
     });
 
@@ -65,8 +65,8 @@ describe('App Leaderboard Persistence', () => {
       });
 
       expect(screen.getByText('🏆 Leaderboard')).toBeInTheDocument();
-      const winCountsAfterSelection = engine().stats().winCountMap;
-      const totalWinsAfterSelection = Array.from(winCountsAfterSelection.values()).reduce((sum, wins) => sum + wins, 0);
+      const winCountsAfterSelection = engine().snapshot().winCountMap;
+      const totalWinsAfterSelection = Object.values(winCountsAfterSelection).reduce((sum, wins) => sum + wins, 0);
       expect(totalWinsAfterSelection).toBeGreaterThan(0);
 
       await act(async () => {
@@ -74,8 +74,8 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 100));
       });
 
-      const winCountsAfterRemoval = engine().stats().winCountMap;
-      const totalWinsAfterRemoval = Array.from(winCountsAfterRemoval.values()).reduce((sum, wins) => sum + wins, 0);
+      const winCountsAfterRemoval = engine().snapshot().winCountMap;
+      const totalWinsAfterRemoval = Object.values(winCountsAfterRemoval).reduce((sum, wins) => sum + wins, 0);
       expect(totalWinsAfterRemoval).toBe(0);
 
       expect(screen.queryByText('🏆 Leaderboard')).not.toBeInTheDocument();
@@ -124,8 +124,8 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      const winCounts = engine().stats().winCountMap;
-      const totalWins = Array.from(winCounts.values()).reduce((sum, wins) => sum + wins, 0);
+      const winCounts = engine().snapshot().winCountMap;
+      const totalWins = Object.values(winCounts).reduce((sum, wins) => sum + wins, 0);
       expect(totalWins).toBe(2);
     });
 
@@ -145,8 +145,8 @@ describe('App Leaderboard Persistence', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
 
-      const winCounts = engine().stats().winCountMap;
-      const totalWins = Array.from(winCounts.values()).reduce((sum, wins) => sum + wins, 0);
+      const winCounts = engine().snapshot().winCountMap;
+      const totalWins = Object.values(winCounts).reduce((sum, wins) => sum + wins, 0);
       expect(totalWins).toBe(2);
     });
 

@@ -65,7 +65,7 @@ export const getEngineType = (): EngineType => currentEngineType;
  * import { engine } from './engineSelector';
  *
  * const assignments = engine.generateCourtAssignments(players, 2);
- * const stats = engine.stats();
+ * const snapshot = engine.snapshot();
  * ```
  */
 export const engine = (): ICourtAssignmentEngine => {
@@ -77,9 +77,10 @@ export class EnginePersistence {
   private timer?: ReturnType<typeof setTimeout>;
 
   /**
-   * Starts persisting engine state to storage on every engine change, debounced.
-   * Must be called only after initial load, so an early save can't clobber stored
-   * data. Idempotent; returns a stop function.
+   * Starts persisting engine state to storage on every engine change. A pending
+   * zero-delay timer coalesces a synchronous burst of notifications into a single
+   * save. Must be called only after initial load, so an early save can't clobber
+   * stored data. Idempotent; returns a stop function.
    */
   start(): () => void {
     this.stop();

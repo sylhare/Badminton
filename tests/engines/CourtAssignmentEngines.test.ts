@@ -89,9 +89,9 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const counts = Object.values(benchHistory);
       expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
 
-      const engineBenchCounts = engine.stats().benchCountMap;
+      const engineBenchCounts = engine.snapshot().benchCountMap;
       players.forEach(p => {
-        expect(engineBenchCounts.get(p.id) || 0).toBe(benchHistory[p.id]);
+        expect(engineBenchCounts[p.id] || 0).toBe(benchHistory[p.id]);
       });
     });
 
@@ -99,10 +99,10 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(12);
       engine.generate(players, 2);
 
-      expect(engine.stats().benchCountMap.size).toBeGreaterThan(0);
+      expect(Object.keys(engine.snapshot().benchCountMap).length).toBeGreaterThan(0);
 
       engine.resetHistory();
-      expect(engine.stats().benchCountMap.size).toBe(0);
+      expect(Object.keys(engine.snapshot().benchCountMap).length).toBe(0);
     });
 
     it('statistical check: teammate pairs are reasonably balanced over many rounds', () => {
@@ -150,12 +150,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const courts: Court[] = [createMockCourt(1, players, 1)];
 
       engine.recordWins(courts);
-      const winCounts = engine.stats().winCountMap;
+      const winCounts = engine.snapshot().winCountMap;
 
-      expect(winCounts.get('P0')).toBe(1);
-      expect(winCounts.get('P1')).toBe(1);
-      expect(winCounts.get('P2')).toBe(undefined);
-      expect(winCounts.get('P3')).toBe(undefined);
+      expect(winCounts['P0']).toBe(1);
+      expect(winCounts['P1']).toBe(1);
+      expect(winCounts['P2']).toBe(undefined);
+      expect(winCounts['P3']).toBe(undefined);
     });
 
     it('should record wins for team2 when they win', () => {
@@ -163,12 +163,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const courts: Court[] = [createMockCourt(1, players, 2)];
 
       engine.recordWins(courts);
-      const winCounts = engine.stats().winCountMap;
+      const winCounts = engine.snapshot().winCountMap;
 
-      expect(winCounts.get('P0')).toBe(undefined);
-      expect(winCounts.get('P1')).toBe(undefined);
-      expect(winCounts.get('P2')).toBe(1);
-      expect(winCounts.get('P3')).toBe(1);
+      expect(winCounts['P0']).toBe(undefined);
+      expect(winCounts['P1']).toBe(undefined);
+      expect(winCounts['P2']).toBe(1);
+      expect(winCounts['P3']).toBe(1);
     });
 
     it('should not record wins when no winner is set', () => {
@@ -176,9 +176,9 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const courts: Court[] = [createMockCourt(1, players)];
 
       engine.recordWins(courts);
-      const winCounts = engine.stats().winCountMap;
+      const winCounts = engine.snapshot().winCountMap;
 
-      expect(winCounts.size).toBe(0);
+      expect(Object.keys(winCounts).length).toBe(0);
     });
 
     it('should accumulate wins across multiple courts', () => {
@@ -189,12 +189,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       ];
 
       engine.recordWins(courts);
-      const winCounts = engine.stats().winCountMap;
+      const winCounts = engine.snapshot().winCountMap;
 
-      expect(winCounts.get('P0')).toBe(1);
-      expect(winCounts.get('P1')).toBe(1);
-      expect(winCounts.get('P6')).toBe(1);
-      expect(winCounts.get('P7')).toBe(1);
+      expect(winCounts['P0']).toBe(1);
+      expect(winCounts['P1']).toBe(1);
+      expect(winCounts['P6']).toBe(1);
+      expect(winCounts['P7']).toBe(1);
     });
 
     it('should accumulate wins across multiple rounds', () => {
@@ -207,12 +207,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const courts2: Court[] = [createMockCourt(1, players, 2)];
       engine.recordWins(courts2);
 
-      const winCounts = engine.stats().winCountMap;
+      const winCounts = engine.snapshot().winCountMap;
 
-      expect(winCounts.get('P0')).toBe(1);
-      expect(winCounts.get('P1')).toBe(1);
-      expect(winCounts.get('P2')).toBe(1);
-      expect(winCounts.get('P3')).toBe(1);
+      expect(winCounts['P0']).toBe(1);
+      expect(winCounts['P1']).toBe(1);
+      expect(winCounts['P2']).toBe(1);
+      expect(winCounts['P3']).toBe(1);
     });
 
     it('should handle courts without teams', () => {
@@ -220,9 +220,9 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const courts: Court[] = [{ courtNumber: 1, players, winner: 1 }];
 
       engine.recordWins(courts);
-      const winCounts = engine.stats().winCountMap;
+      const winCounts = engine.snapshot().winCountMap;
 
-      expect(winCounts.size).toBe(0);
+      expect(Object.keys(winCounts).length).toBe(0);
     });
 
     it('should reset win counts when history is reset', () => {
@@ -230,12 +230,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const courts: Court[] = [createMockCourt(1, players, 1)];
 
       engine.recordWins(courts);
-      let winCounts = engine.stats().winCountMap;
-      expect(winCounts.size).toBeGreaterThan(0);
+      let winCounts = engine.snapshot().winCountMap;
+      expect(Object.keys(winCounts).length).toBeGreaterThan(0);
 
       engine.resetHistory();
-      winCounts = engine.stats().winCountMap;
-      expect(winCounts.size).toBe(0);
+      winCounts = engine.snapshot().winCountMap;
+      expect(Object.keys(winCounts).length).toBe(0);
     });
 
     it('should return copy of win counts map to prevent external modification', () => {
@@ -243,11 +243,11 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const courts: Court[] = [createMockCourt(1, players, 1)];
 
       engine.recordWins(courts);
-      const winCounts1 = engine.stats().winCountMap;
-      const winCounts2 = engine.stats().winCountMap;
+      const winCounts1 = engine.snapshot().winCountMap;
+      const winCounts2 = engine.snapshot().winCountMap;
 
       expect(winCounts1).not.toBe(winCounts2);
-      expect(winCounts1.get('P0')).toBe(winCounts2.get('P0'));
+      expect(winCounts1['P0']).toBe(winCounts2['P0']);
     });
 
     it('should handle players with same name but different IDs', () => {
@@ -260,12 +260,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       const courts: Court[] = [createMockCourt(1, players, 1)];
       engine.recordWins(courts);
-      const winCounts = engine.stats().winCountMap;
+      const winCounts = engine.snapshot().winCountMap;
 
-      expect(winCounts.get('A1')).toBe(1);
-      expect(winCounts.get('A2')).toBe(1);
-      expect(winCounts.get('B1')).toBe(undefined);
-      expect(winCounts.get('B2')).toBe(undefined);
+      expect(winCounts['A1']).toBe(1);
+      expect(winCounts['A2']).toBe(1);
+      expect(winCounts['B1']).toBe(undefined);
+      expect(winCounts['B2']).toBe(undefined);
     });
 
     it('getWinCounts should maintain correct totals across multiple recordWins calls', () => {
@@ -277,9 +277,9 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       engine.clearCurrentSession();
       engine.recordWins(court2);
 
-      const winCounts = engine.stats().winCountMap;
-      expect(winCounts.get('P0')).toBe(2);
-      expect(winCounts.get('P1')).toBe(2);
+      const winCounts = engine.snapshot().winCountMap;
+      expect(winCounts['P0']).toBe(2);
+      expect(winCounts['P1']).toBe(2);
     });
   });
 
@@ -298,22 +298,22 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 2);
 
-      const winCountsBeforeSave = engine.stats().winCountMap;
-      expect(winCountsBeforeSave.size).toBeGreaterThan(0);
+      const winCountsBeforeSave = engine.snapshot().winCountMap;
+      expect(Object.keys(winCountsBeforeSave).length).toBeGreaterThan(0);
 
       await engine.saveState(type);
       engine.resetHistory();
 
-      const emptyWinCounts = engine.stats().winCountMap;
-      expect(emptyWinCounts.size).toBe(0);
+      const emptyWinCounts = engine.snapshot().winCountMap;
+      expect(Object.keys(emptyWinCounts).length).toBe(0);
 
       await engine.loadState(type);
 
-      const winCountsAfterLoad = engine.stats().winCountMap;
-      expect(winCountsAfterLoad.size).toBe(winCountsBeforeSave.size);
+      const winCountsAfterLoad = engine.snapshot().winCountMap;
+      expect(Object.keys(winCountsAfterLoad).length).toBe(Object.keys(winCountsBeforeSave).length);
 
-      for (const [playerId, winCount] of winCountsBeforeSave) {
-        expect(winCountsAfterLoad.get(playerId)).toBe(winCount);
+      for (const [playerId, winCount] of Object.entries(winCountsBeforeSave)) {
+        expect(winCountsAfterLoad[playerId]).toBe(winCount);
       }
     });
 
@@ -322,8 +322,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       await expect(engine.loadState(type)).resolves.not.toThrow();
 
-      const winCounts = engine.stats().winCountMap;
-      expect(winCounts.size).toBe(0);
+      const winCounts = engine.snapshot().winCountMap;
+      expect(Object.keys(winCounts).length).toBe(0);
     });
 
     it('should handle corrupted localStorage data gracefully', async () => {
@@ -331,8 +331,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       await expect(engine.loadState(type)).resolves.not.toThrow();
 
-      const winCounts = engine.stats().winCountMap;
-      expect(winCounts.size).toBe(0);
+      const winCounts = engine.snapshot().winCountMap;
+      expect(Object.keys(winCounts).length).toBe(0);
     });
 
     it('should handle localStorage save errors gracefully', async () => {
@@ -367,16 +367,16 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       await engine.saveState(type);
       savedAtSpy.mockRestore();
 
-      const winCountsBefore = new Map(engine.stats().winCountMap);
-      expect(engine.stats().teammateCountMap.size).toBeGreaterThan(0);
+      const winCountsBefore = new Map(Object.entries(engine.snapshot().winCountMap));
+      expect(Object.keys(engine.snapshot().teammateCountMap).length).toBeGreaterThan(0);
 
       engine.resetHistory();
       await engine.loadState(type);
 
-      expect(engine.stats().teammateCountMap.size).toBe(0);
-      expect(engine.stats().opponentCountMap.size).toBe(0);
+      expect(Object.keys(engine.snapshot().teammateCountMap).length).toBe(0);
+      expect(Object.keys(engine.snapshot().opponentCountMap).length).toBe(0);
       for (const [id, count] of winCountsBefore) {
-        expect(engine.stats().winCountMap.get(id)).toBe(count);
+        expect(engine.snapshot().winCountMap[id]).toBe(count);
       }
     });
 
@@ -385,12 +385,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 1);
       await engine.saveState(type);
-      expect(engine.stats().teammateCountMap.size).toBeGreaterThan(0);
+      expect(Object.keys(engine.snapshot().teammateCountMap).length).toBeGreaterThan(0);
 
       engine.resetHistory();
       await engine.loadState(type);
 
-      expect(engine.stats().teammateCountMap.size).toBeGreaterThan(0);
+      expect(Object.keys(engine.snapshot().teammateCountMap).length).toBeGreaterThan(0);
     });
   });
 
@@ -579,9 +579,9 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       expect(updated[0].winner).toBe(1);
 
-      const winCounts = engine.stats().winCountMap;
-      expect(winCounts.get('P0')).toBe(1);
-      expect(winCounts.get('P1')).toBe(1);
+      const winCounts = engine.snapshot().winCountMap;
+      expect(winCounts['P0']).toBe(1);
+      expect(winCounts['P1']).toBe(1);
     });
 
     it('should reverse previous win when winner changes', () => {
@@ -590,15 +590,15 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       assignments = engine.updateWinner({ courtNumber: 1, winner: 1, currentAssignments: assignments });
 
-      let winCounts = engine.stats().winCountMap;
-      expect(winCounts.get('P0')).toBe(1);
-      expect(winCounts.get('P2')).toBe(undefined);
+      let winCounts = engine.snapshot().winCountMap;
+      expect(winCounts['P0']).toBe(1);
+      expect(winCounts['P2']).toBe(undefined);
 
       engine.updateWinner({ courtNumber: 1, winner: 2, currentAssignments: assignments });
 
-      winCounts = engine.stats().winCountMap;
-      expect(winCounts.get('P0')).toBe(0);
-      expect(winCounts.get('P2')).toBe(1);
+      winCounts = engine.snapshot().winCountMap;
+      expect(winCounts['P0']).toBe(0);
+      expect(winCounts['P2']).toBe(1);
     });
 
     it('should handle clearing winner', () => {
@@ -701,10 +701,10 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         expect(assignments.length).toBe(1);
 
         const teams = assignments[0].teams!;
-        const winCounts = selector.engine().stats().winCountMap;
+        const winCounts = selector.engine().snapshot().winCountMap;
 
-        const team1WinSum = teams.team1.reduce((acc, p) => acc + (winCounts.get(p.id) ?? 0), 0);
-        const team2WinSum = teams.team2.reduce((acc, p) => acc + (winCounts.get(p.id) ?? 0), 0);
+        const team1WinSum = teams.team1.reduce((acc, p) => acc + (winCounts[p.id] ?? 0), 0);
+        const team2WinSum = teams.team2.reduce((acc, p) => acc + (winCounts[p.id] ?? 0), 0);
         totalDiff += Math.abs(team1WinSum - team2WinSum);
       }
 
@@ -800,7 +800,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const { courts: assignments } = engine.generate(players, 1);
       expect(assignments).toHaveLength(1);
       expect(assignments[0].players).toHaveLength(4);
-      expect(engine.stats()).toHaveProperty('teammateCountMap');
+      expect(engine.snapshot()).toHaveProperty('teammateCountMap');
     });
 
     it('reverses win if a second recordWins call for the same court has a different winner', () => {
@@ -808,22 +808,22 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const court1 = createMockCourt(1, players, 1);
 
       engine.recordWins([court1]);
-      expect(engine.stats().winCountMap.get('P0')).toBe(1);
+      expect(engine.snapshot().winCountMap['P0']).toBe(1);
 
       const court2 = createMockCourt(1, players, 2);
       engine.recordWins([court2]);
 
-      const winCounts = engine.stats().winCountMap;
-      expect(winCounts.get('P0')).toBe(0);
-      expect(winCounts.get('P1')).toBe(0);
-      expect(winCounts.get('P2')).toBe(1);
-      expect(winCounts.get('P3')).toBe(1);
+      const winCounts = engine.snapshot().winCountMap;
+      expect(winCounts['P0']).toBe(0);
+      expect(winCounts['P1']).toBe(0);
+      expect(winCounts['P2']).toBe(1);
+      expect(winCounts['P3']).toBe(1);
     });
 
     it('provides consistent telemetry stats', () => {
       const players = mockPlayers(8);
       engine.generate(players, 2);
-      const stats = engine.stats();
+      const stats = engine.snapshot();
       expect(stats).toHaveProperty('teammateCountMap');
       expect(stats).toHaveProperty('opponentCountMap');
       expect(stats).toHaveProperty('winCountMap');
@@ -881,10 +881,10 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       const court = createMockCourt(1, players, 1);
       selector.engine().recordWins([court]);
-      expect(selector.engine().stats().winCountMap.get('P0')).toBe(1);
+      expect(selector.engine().snapshot().winCountMap['P0']).toBe(1);
 
       selector.engine().updateWinner({ courtNumber: 1, winner: undefined, currentAssignments: [court] });
-      expect(selector.engine().stats().winCountMap.get('P0')).toBe(0);
+      expect(selector.engine().snapshot().winCountMap['P0']).toBe(0);
 
       const state = selector.engine().prepareStateForSaving(type);
       expect(state).toHaveProperty('winCountMap');
@@ -999,14 +999,14 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       engine.recordWins([court]);
       await engine.saveState(type);
 
-      const winCountsBeforeSave = engine.stats().winCountMap;
-      expect(winCountsBeforeSave.size).toBeGreaterThan(0);
+      const winCountsBeforeSave = engine.snapshot().winCountMap;
+      expect(Object.keys(winCountsBeforeSave).length).toBeGreaterThan(0);
 
       const differentType = type === 'sa' ? 'sl' : 'sa';
       await engine.loadState(differentType);
 
-      const winCountsAfterLoad = engine.stats().winCountMap;
-      expect(winCountsAfterLoad.size).toBeGreaterThan(0);
+      const winCountsAfterLoad = engine.snapshot().winCountMap;
+      expect(Object.keys(winCountsAfterLoad).length).toBeGreaterThan(0);
     });
   });
 

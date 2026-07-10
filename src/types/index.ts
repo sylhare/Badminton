@@ -61,16 +61,6 @@ export interface CourtEngineState extends EngineSnapshot {
   savedAt?: number;
 }
 
-export interface TrackerStats {
-  winCountMap: Map<string, number>;
-  lossCountMap: Map<string, number>;
-  teammateCountMap: Map<string, number>;
-  opponentCountMap: Map<string, number>;
-  benchCountMap: Map<string, number>;
-  singleCountMap: Map<string, number>;
-  roundsPlayed: number;
-}
-
 export interface UpdateWinnerParams {
   courtNumber: number;
   winner: 1 | 2 | undefined;
@@ -101,7 +91,6 @@ export interface ICourtAssignmentTracker {
   loadState(engineType: EngineType): Promise<void>;
   recordLevelSnapshot(players: Player[]): void;
   updateWinner(params: UpdateWinnerParams): Court[];
-  stats(): TrackerStats;
   levelTrend(playerId: string): 'up' | 'down' | null;
 }
 

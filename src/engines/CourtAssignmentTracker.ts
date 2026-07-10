@@ -6,7 +6,6 @@ import type {
   EngineType,
   ICourtAssignmentTracker,
   Player,
-  TrackerStats,
   UpdateWinnerParams,
 } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
@@ -343,23 +342,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.benchCountMap.clear();
   }
 
-  /**
-   * Returns tracking statistics as Maps.
-   */
+  /** Returns the level trend (up/down/null) for a player based on level history. */
   levelTrend(playerId: string): 'up' | 'down' | null {
     return levelTracker.getLevelTrend(playerId, CourtAssignmentTracker.levelHistoryMap);
-  }
-
-  stats(): TrackerStats {
-    return {
-      winCountMap: new Map(CourtAssignmentTracker.winCountMap),
-      lossCountMap: new Map(CourtAssignmentTracker.lossCountMap),
-      teammateCountMap: new Map(CourtAssignmentTracker.teammateCountMap),
-      opponentCountMap: new Map(CourtAssignmentTracker.opponentCountMap),
-      benchCountMap: new Map(CourtAssignmentTracker.benchCountMap),
-      singleCountMap: new Map(CourtAssignmentTracker.singleCountMap),
-      roundsPlayed: CourtAssignmentTracker.roundsPlayed,
-    };
   }
 
   recordWins(courts: Court[]): void {
@@ -578,8 +563,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         CourtAssignmentTracker.lastUpdatedMap.delete(key);
       }
     });
-
-    this.notifyStateChange();
   }
 
   /**
