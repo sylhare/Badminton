@@ -2,10 +2,14 @@ import React, { useEffect, useState } from 'react';
 
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { useSlotDragSwap } from '../../hooks/useSlotDragSwap';
+import type { SlotAddr } from '../../utils/slotSwap';
+import { benchSlot, courtSlot } from '../../utils/courtSwap';
 import ManualCourtModal from '../modals/ManualCourtModal';
 
 import { CourtCard } from './card';
 import { TeamPlayerList } from './team';
+import { makeBinding } from './edit/slotBinding';
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
 
@@ -32,6 +36,7 @@ interface CourtAssignmentsProps {
   onWinnerChange?: (courtNumber: number, winner: WinnerSelection) => void;
   onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
   onRotateTeams?: (courtNumber: number) => void;
+  onSwapPlayers?: (from: SlotAddr, to: SlotAddr) => void;
   hasManualCourtSelection?: boolean;
   onViewBenchCounts?: () => void;
   hasHistoricalWinners?: boolean;
@@ -51,6 +56,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   onWinnerChange,
   onScoreChange,
   onRotateTeams,
+  onSwapPlayers,
   hasManualCourtSelection = false,
   onViewBenchCounts,
   hasHistoricalWinners = false,
@@ -78,6 +84,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
   const hasPlayers = players.some(p => p.isPresent);
   const hasAssignments = assignments.length > 0;
+
+  const drag = useSlotDragSwap({
+    onSwap: (from, to) => onSwapPlayers?.(from, to),
+    enabled: !!onSwapPlayers && hasAssignments,
+  });
   const isRecentAssignment = lastGeneratedAt !== undefined && (Date.now() - lastGeneratedAt) < TWO_DAYS_MS;
   const presentPlayerCount = players.filter(p => p.isPresent).length;
   const hasManualSelection = manualCourtSelection && manualCourtSelection.players.length > 0;
@@ -160,8 +171,9 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
       {hasAssignments && (
         <>
           <div className="courts-grid">
-            {assignments.map((court) => {
+            {assignments.map((court, courtIndex) => {
               const isManualCourt = court.wasManuallyAssigned || (hasManualCourtSelection && court.courtNumber === 1);
+              const editable = !!onSwapPlayers && !!court.teams;
               return (
                 <CourtCard
                   key={court.courtNumber}
@@ -172,6 +184,8 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
                   isManualCourt={isManualCourt}
                   isAnimating={isAnimating}
                   isSmartEngineEnabled={isSmartEngineEnabled}
+                  team1Binding={editable ? makeBinding(drag, i => courtSlot(courtIndex, 1, i)) : undefined}
+                  team2Binding={editable ? makeBinding(drag, i => courtSlot(courtIndex, 2, i)) : undefined}
                 />
               );
             })}
@@ -183,7 +197,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
                 🪑 Bench ({benchedPlayers.length} player{benchedPlayers.length !== 1 ? 's' : ''})
               </div>
               <div className="bench-players">
-                <TeamPlayerList players={benchedPlayers} className="bench-player" />
+                <TeamPlayerList
+                  players={benchedPlayers}
+                  className="bench-player"
+                  slotBinding={onSwapPlayers ? makeBinding(drag, i => benchSlot(assignments.length, i)) : undefined}
+                />
               </div>
               {onViewBenchCounts && (
                 <button

@@ -49,6 +49,15 @@ export interface SlotGestureState {
   isArmed: boolean;
 }
 
+/** Maps a slot's gesture state to the CSS affordance classes. */
+export function slotStateClass(state: SlotGestureState): string {
+  return [
+    state.isDragging && 'slot-dragging',
+    state.isDropTarget && 'slot-drop-target',
+    state.isArmed && 'slot-armed',
+  ].filter(Boolean).join(' ');
+}
+
 export interface UseSlotDragSwapOptions {
   onSwap: (from: SlotAddr, to: SlotAddr) => void;
   onTap?: (addr: SlotAddr) => void;
@@ -74,6 +83,7 @@ export interface UseSlotDragSwap {
   getSlotProps: (addr: SlotAddr) => {
     [SLOT_ATTR]: string;
     onPointerDown: (event: React.PointerEvent) => void;
+    onClickCapture: (event: React.MouseEvent) => void;
     style?: React.CSSProperties;
   };
   slotState: (addr: SlotAddr) => SlotGestureState;
@@ -90,6 +100,9 @@ export function useSlotDragSwap({
 }: UseSlotDragSwapOptions): UseSlotDragSwap {
   const gestureRef = useRef<Gesture | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set when a drag just finished, so the synthetic click that some browsers
+  // fire afterwards is swallowed instead of being treated as a winner tap.
+  const justDraggedRef = useRef(false);
   const [draggingAddr, setDraggingAddr] = useState<SlotAddr | null>(null);
   const [armedAddr, setArmedAddr] = useState<SlotAddr | null>(null);
   const [dropAddr, setDropAddr] = useState<SlotAddr | null>(null);
@@ -149,6 +162,7 @@ export function useSlotDragSwap({
       if (!gesture) return;
 
       if (gesture.dragging) {
+        justDraggedRef.current = true;
         const target = slotFromPoint(event.clientX, event.clientY);
         if (target && !sameSlot(target, gesture.source)) {
           onSwap(gesture.source, target);
@@ -173,6 +187,7 @@ export function useSlotDragSwap({
     if (!enabled) return;
     if (event.button !== undefined && event.button !== 0) return; // primary button only
 
+    justDraggedRef.current = false;
     gestureRef.current = {
       source: addr,
       pointerType: event.pointerType || 'mouse',
@@ -194,11 +209,20 @@ export function useSlotDragSwap({
     }
   }, [enabled, longPressMs, clearLongPress]);
 
+  const onClickCapture = useCallback((event: React.MouseEvent) => {
+    if (justDraggedRef.current) {
+      event.stopPropagation();
+      event.preventDefault();
+      justDraggedRef.current = false;
+    }
+  }, []);
+
   const getSlotProps = useCallback((addr: SlotAddr) => ({
     [SLOT_ATTR]: encodeSlot(addr),
     onPointerDown: (event: React.PointerEvent) => onPointerDown(addr, event),
+    onClickCapture,
     style: enabled ? ({ touchAction: 'manipulation' } as React.CSSProperties) : undefined,
-  }), [enabled, onPointerDown]);
+  }), [enabled, onPointerDown, onClickCapture]);
 
   const slotState = useCallback((addr: SlotAddr): SlotGestureState => ({
     isDragging: draggingAddr !== null && sameSlot(addr, draggingAddr),
