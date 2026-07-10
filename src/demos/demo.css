@@ -1,0 +1,177 @@
+/* Styling specific to the team-editing demo sandbox. Layout of courts/teams
+   reuses App.css classes; this file only adds the demo affordances. */
+
+.demo-intro {
+  color: var(--text-soft);
+  max-width: 640px;
+  margin: 0 auto 20px;
+  text-align: center;
+}
+
+.demo-hint {
+  text-align: center;
+  color: var(--text-soft);
+  font-weight: 500;
+  margin-bottom: 16px;
+  min-height: 1.2em;
+}
+
+/* Mode toggle -------------------------------------------------------------- */
+.demo-mode-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.demo-mode-pill {
+  padding: 10px 20px;
+  border: 2px solid var(--border-strong);
+  background: white;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.demo-mode-pill:hover {
+  border-color: var(--color-primary);
+}
+
+.demo-mode-pill-active {
+  background: linear-gradient(135deg, var(--color-primary-start), var(--color-primary-end));
+  border-color: transparent;
+  color: white;
+}
+
+/* Editable slots ---------------------------------------------------------- */
+.demo-slot {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease;
+  outline: 2px solid transparent;
+}
+
+.demo-slot:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+}
+
+.demo-selected {
+  outline-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(255, 184, 77, 0.25);
+  transform: scale(1.03);
+}
+
+.demo-dragging {
+  opacity: 0.4;
+}
+
+.demo-drag-over {
+  outline-color: var(--color-primary-end);
+  box-shadow: 0 0 0 4px rgba(255, 95, 126, 0.25);
+}
+
+.demo-bench-empty {
+  color: var(--placeholder);
+  font-style: italic;
+}
+
+/* Suggestions ------------------------------------------------------------- */
+.demo-suggestions {
+  margin-top: 36px;
+  border-top: 2px solid var(--border);
+  padding-top: 24px;
+}
+
+.demo-suggestions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.demo-suggestions-header h2 {
+  margin: 0;
+  color: var(--text);
+}
+
+.demo-regen {
+  width: auto;
+  padding: 10px 18px;
+}
+
+.demo-suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.demo-suggestion-card {
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.demo-suggestion-title {
+  font-weight: 700;
+  color: var(--color-primary-hover);
+  text-align: center;
+}
+
+.demo-mini-courts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.demo-mini-court {
+  background: var(--surface-accent);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+}
+
+.demo-mini-court-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.demo-mini-teams {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.demo-mini-team {
+  flex: 1;
+  text-align: center;
+}
+
+.demo-mini-vs {
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+}
+
+.demo-mini-bench {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.demo-use-button {
+  width: 100%;
+}
