@@ -60,7 +60,7 @@ describe('CourtAssignments drag-and-drop editing', () => {
     const props = renderCourts();
     const source = document.querySelector('[data-slot="0:0"]')!;
 
-    pointFrom('2:0'); 
+    pointFrom('2:0');
     fireEvent.pointerDown(source, { pointerType: 'mouse', button: 0, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(source, { pointerType: 'mouse', clientX: 100, clientY: 0 });
     fireEvent.pointerUp(source, { pointerType: 'mouse', clientX: 100, clientY: 0 });

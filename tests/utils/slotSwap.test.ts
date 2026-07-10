@@ -35,7 +35,7 @@ describe('swapInGroups', () => {
     const next = swapInGroups(groups, { group: 0, index: 0 }, { group: 1, index: 0 });
     expect(next[0]).not.toBe(groups[0]);
     expect(next[1]).not.toBe(groups[1]);
-    expect(next[2]).toBe(groups[2]); // untouched group keeps its reference
+    expect(next[2]).toBe(groups[2]);
   });
 
   it('returns the same reference when addresses are equal (no-op)', () => {

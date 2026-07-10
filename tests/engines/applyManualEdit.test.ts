@@ -23,16 +23,15 @@ describe('CourtAssignmentTracker.applyManualEdit', () => {
     const all = [A, B, C, D, E, F, G, H];
     tracker.applyRoundStats(prev, all);
 
-    // swap A (court1 team1[0]) with E (court2 team1[0])
     const { courts: next } = applyCourtSwap(prev, [], courtSlot(0, 1, 0), courtSlot(1, 1, 0));
     tracker.applyManualEdit(prev, next, all);
 
     const { teammateCountMap } = tracker.snapshot();
-    expect(teammateCountMap[pk(A, B)] ?? 0).toBe(0); // old pair gone
+    expect(teammateCountMap[pk(A, B)] ?? 0).toBe(0);
     expect(teammateCountMap[pk(E, F)] ?? 0).toBe(0);
-    expect(teammateCountMap[pk(E, B)]).toBe(1); // new pairs
+    expect(teammateCountMap[pk(E, B)]).toBe(1);
     expect(teammateCountMap[pk(A, F)]).toBe(1);
-    expect(teammateCountMap[pk(C, D)]).toBe(1); // untouched team unchanged
+    expect(teammateCountMap[pk(C, D)]).toBe(1);
     expect(teammateCountMap[pk(G, H)]).toBe(1);
   });
 
@@ -44,7 +43,6 @@ describe('CourtAssignmentTracker.applyManualEdit', () => {
 
     expect(tracker.snapshot().winCountMap[A.id]).toBe(1);
 
-    // sub X in for A on the winning court -> win is void
     const { courts: next } = applyCourtSwap(prev, [X], courtSlot(0, 1, 0), benchSlot(2, 0));
     tracker.applyManualEdit(prev, next, all);
 
@@ -61,29 +59,27 @@ describe('CourtAssignmentTracker.applyManualEdit', () => {
     tracker.applyRoundStats(prev, all);
     tracker.recordWins(prev);
 
-    // edit only court 1
     const { courts: next } = applyCourtSwap(prev, [], courtSlot(0, 1, 0), courtSlot(0, 2, 0));
     tracker.applyManualEdit(prev, next, all);
 
     const snap = tracker.snapshot();
-    expect(snap.winCountMap[G.id]).toBe(1); // court 2 win preserved
+    expect(snap.winCountMap[G.id]).toBe(1);
     expect(snap.winCountMap[H.id]).toBe(1);
   });
 
   it('reconciles bench counts when a player is subbed off the court', () => {
     const prev = [court1()];
-    const all = [A, B, C, D, X]; // X is benched
+    const all = [A, B, C, D, X];
     tracker.applyRoundStats(prev, all);
     expect(tracker.snapshot().benchCountMap[X.id]).toBe(1);
 
-    // swap A (court) with X (bench)
     const { courts: next, bench } = applyCourtSwap(prev, [X], courtSlot(0, 1, 0), benchSlot(1, 0));
     expect(bench.map(p => p.id)).toEqual([A.id]);
     tracker.applyManualEdit(prev, next, all);
 
     const snap = tracker.snapshot();
-    expect(snap.benchCountMap[A.id]).toBe(1); // A now benched
-    expect(snap.benchCountMap[X.id] ?? 0).toBe(0); // X no longer benched
+    expect(snap.benchCountMap[A.id]).toBe(1);
+    expect(snap.benchCountMap[X.id] ?? 0).toBe(0);
   });
 
   it('returns the next assignments', () => {

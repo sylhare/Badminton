@@ -25,7 +25,6 @@ describe('address helpers', () => {
 describe('applyCourtSwap', () => {
   it('swaps two players across courts and rebuilds players + teams', () => {
     const courts = [doubles(1, [A, B], [C, D]), doubles(2, [E, F], [G, H])];
-    // court 0 team1[0] = A  <->  court 1 team2[0] = G
     const res = applyCourtSwap(courts, [], courtSlot(0, 1, 0), courtSlot(1, 2, 0));
     expect(res.courts[0].teams!.team1.map(x => x.id)).toEqual(['g', 'b']);
     expect(res.courts[1].teams!.team2.map(x => x.id)).toEqual(['a', 'h']);
@@ -51,7 +50,6 @@ describe('applyCourtSwap', () => {
 
   it('clears winner even for an in-court swap that keeps the roster but changes teams', () => {
     const courts = [doubles(1, [A, B], [C, D], { winner: 2 })];
-    // swap A (team1[0]) with C (team2[0]) -> same 4 players, different teams
     const res = applyCourtSwap(courts, [], courtSlot(0, 1, 0), courtSlot(0, 2, 0));
     expect(res.courts[0].teams!.team1.map(x => x.id)).toEqual(['c', 'b']);
     expect(res.courts[0].teams!.team2.map(x => x.id)).toEqual(['a', 'd']);
@@ -62,12 +60,12 @@ describe('applyCourtSwap', () => {
   it('preserves a singles waiting player when swapping the active players', () => {
     const court: Court = {
       courtNumber: 1,
-      players: [A, B, C], // C is the waiting player (index 2)
+      players: [A, B, C],
       teams: { team1: [A], team2: [B] },
     };
     const res = applyCourtSwap([court], [X], courtSlot(0, 1, 0), benchSlot(1, 0));
     expect(res.courts[0].teams!.team1.map(x => x.id)).toEqual(['x']);
-    expect(res.courts[0].players.map(x => x.id)).toContain('c'); // waiting player kept
+    expect(res.courts[0].players.map(x => x.id)).toContain('c');
     expect(res.bench.map(x => x.id)).toEqual(['a']);
   });
 

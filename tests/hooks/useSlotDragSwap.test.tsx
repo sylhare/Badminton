@@ -23,7 +23,6 @@ interface HarnessProps {
   onTap?: (addr: SlotAddr) => void;
 }
 
-// Two groups of two items: a,b | c,d
 const GROUPS = [['a', 'b'], ['c', 'd']];
 
 const Harness: React.FC<HarnessProps> = ({ onSwap, onTap }) => {
@@ -53,7 +52,6 @@ describe('useSlotDragSwap gestures', () => {
 
   beforeEach(() => {
     const mock = vi.fn<(x: number, y: number) => Element | null>(() => null);
-    // jsdom does not implement elementFromPoint; define it, then steer per-test.
     (document as unknown as { elementFromPoint: unknown }).elementFromPoint = mock;
     elementFromPoint = (id: string) => mock.mockImplementation(() => screen.getByTestId(id));
   });
@@ -97,7 +95,6 @@ describe('useSlotDragSwap gestures', () => {
 
     elementFromPoint('c');
     fireEvent.pointerDown(a, { pointerType: 'touch', button: 0, clientX: 0, clientY: 0 });
-    // Long press elapses -> armed.
     act(() => { vi.advanceTimersByTime(300); });
     expect(screen.getByTestId('a').textContent).toContain('armed');
 
@@ -115,7 +112,6 @@ describe('useSlotDragSwap gestures', () => {
     const a = screen.getByTestId('a');
 
     fireEvent.pointerDown(a, { pointerType: 'touch', button: 0, clientX: 0, clientY: 0 });
-    // Move before the long press fires -> scroll, gesture cancelled.
     fireEvent.pointerMove(a, { pointerType: 'touch', clientX: 100, clientY: 0 });
     vi.advanceTimersByTime(300);
     fireEvent.pointerUp(a, { pointerType: 'touch', clientX: 100, clientY: 0 });
