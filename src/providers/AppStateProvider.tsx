@@ -148,6 +148,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     return engine().updateWinner(params);
   }, []);
 
+  const applyManualEdit = useCallback((previous: Court[], next: Court[]): Court[] => {
+    return engine().applyManualEdit(previous, next, players);
+  }, [players]);
+
   const saveState = useCallback(async (): Promise<void> => {
     await engine().saveState(getEngineType());
   }, []);
@@ -183,6 +187,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     levelTrend,
     generate,
     updateWinner,
+    applyManualEdit,
     saveState,
     resetAlgorithm,
     engineName: engine().name,

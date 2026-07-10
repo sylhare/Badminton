@@ -463,6 +463,66 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /**
+   * Reconciles tracker stats after a manual team edit (drag-and-drop or a
+   * rotation) that produced `next` from `previous`. For every court whose team
+   * composition changed it: reverses any recorded win (the result is void once
+   * the line-up differs), swaps that court's teammate/opponent pair stats
+   * (reverse old, apply new), and marks it pending so the next generate does
+   * not double-count. Bench membership changes are reconciled too. Incremental
+   * by design, so it composes correctly with prior edits/rotations this round.
+   */
+  applyManualEdit(previous: Court[], next: Court[], players: Player[]): Court[] {
+    const prevByNumber = new Map(previous.map(c => [c.courtNumber, c]));
+
+    for (const nextCourt of next) {
+      const prevCourt = prevByNumber.get(nextCourt.courtNumber);
+      if (!prevCourt?.teams || !nextCourt.teams) continue;
+      if (this.teamsUnchanged(prevCourt.teams, nextCourt.teams)) continue;
+
+      this.reverseWinForCourt(nextCourt.courtNumber);
+      this.updateCourtTeamStats(nextCourt, prevCourt);
+      CourtAssignmentTracker.pendingRotatedCourts.add(nextCourt.courtNumber);
+    }
+
+    this.reconcileBench(previous, next, players);
+    this.notifyStateChange();
+    return next;
+  }
+
+  /** True when both teams have the same members (order within a team ignored). */
+  private teamsUnchanged(a: NonNullable<Court['teams']>, b: NonNullable<Court['teams']>): boolean {
+    const sameTeam = (t1: Player[], t2: Player[]): boolean => {
+      if (t1.length !== t2.length) return false;
+      const ids = new Set(t1.map(p => p.id));
+      return t2.every(p => ids.has(p.id));
+    };
+    return sameTeam(a.team1, b.team1) && sameTeam(a.team2, b.team2);
+  }
+
+  /** Adjusts bench counts (and the undo delta) when an edit moves players on/off the bench. */
+  private reconcileBench(previous: Court[], next: Court[], players: Player[]): void {
+    const prevBench = new Set(benchedPlayers(previous, players).map(p => p.id));
+    const nextBench = benchedPlayers(next, players);
+    const nextBenchIds = new Set(nextBench.map(p => p.id));
+    const delta = CourtAssignmentTracker.lastRoundDelta;
+
+    nextBench.forEach(p => {
+      if (prevBench.has(p.id)) return;
+      this.recordBenching(p.id);
+      delta?.bench.push(p.id);
+    });
+
+    prevBench.forEach(id => {
+      if (nextBenchIds.has(id)) return;
+      this.decrementMapCount(CourtAssignmentTracker.benchCountMap, id);
+      if (delta) {
+        const i = delta.bench.indexOf(id);
+        if (i > -1) delta.bench.splice(i, 1);
+      }
+    });
+  }
+
+  /**
    * Records the benching of a player.
    */
   recordBenching(playerId: string): void {
