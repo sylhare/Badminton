@@ -97,6 +97,11 @@ input:focus {
 .player-slot-draggable {
     cursor: grab;
     touch-action: manipulation;
+    /* Stop the touch long-press from selecting text or opening the iOS callout
+       menu before the drag arms. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease, opacity 0.12s ease;
     outline: 2px solid transparent;
     outline-offset: 1px;

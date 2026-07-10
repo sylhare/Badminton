@@ -2,6 +2,7 @@ import type { Court, Player } from '../types';
 
 import type { SlotAddr } from './slotSwap';
 import { swapInGroups } from './slotSwap';
+import { samePlayers } from './playerUtils';
 
 /**
  * Court-domain adapter over the generic slot-swap primitive.
@@ -52,12 +53,6 @@ function buildGroups(courts: Court[], bench: Player[]): Player[][] {
   return groups;
 }
 
-function sameMembers(a: Player[], b: Player[]): boolean {
-  if (a.length !== b.length) return false;
-  const ids = new Set(a.map(p => p.id));
-  return b.every(p => ids.has(p.id));
-}
-
 /**
  * Swaps the two addressed players and rebuilds the court layout, keeping each
  * court's `players` list in sync with its `teams` and clearing `winner`/`score`
@@ -81,7 +76,7 @@ export function applyCourtSwap(
     if (!court.teams) return court; // no editable slots on this court
     const team1 = swapped[courtTeamGroup(ci, 1)];
     const team2 = swapped[courtTeamGroup(ci, 2)];
-    const changed = !sameMembers(court.teams.team1, team1) || !sameMembers(court.teams.team2, team2);
+    const changed = !samePlayers(court.teams.team1, team1) || !samePlayers(court.teams.team2, team2);
 
     // Preserve any player not on a team (e.g. a singles waiting player); swaps
     // only move players between team/bench slots, so extras are untouched.

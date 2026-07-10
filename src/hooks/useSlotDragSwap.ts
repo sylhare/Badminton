@@ -103,6 +103,12 @@ export function useSlotDragSwap({
   // Set when a drag just finished, so the synthetic click that some browsers
   // fire afterwards is swallowed instead of being treated as a winner tap.
   const justDraggedRef = useRef(false);
+  // Held in refs so the global-listener effect below does not re-subscribe on
+  // every render (callers commonly pass fresh inline callbacks).
+  const onSwapRef = useRef(onSwap);
+  const onTapRef = useRef(onTap);
+  onSwapRef.current = onSwap;
+  onTapRef.current = onTap;
   const [draggingAddr, setDraggingAddr] = useState<SlotAddr | null>(null);
   const [armedAddr, setArmedAddr] = useState<SlotAddr | null>(null);
   const [dropAddr, setDropAddr] = useState<SlotAddr | null>(null);
@@ -165,10 +171,10 @@ export function useSlotDragSwap({
         justDraggedRef.current = true;
         const target = slotFromPoint(event.clientX, event.clientY);
         if (target && !sameSlot(target, gesture.source)) {
-          onSwap(gesture.source, target);
+          onSwapRef.current(gesture.source, target);
         }
       } else if (!gesture.moved) {
-        onTap?.(gesture.source);
+        onTapRef.current?.(gesture.source);
       }
       endGesture();
     };
@@ -181,7 +187,7 @@ export function useSlotDragSwap({
       window.removeEventListener('pointerup', handleUp);
       window.removeEventListener('pointercancel', endGesture);
     };
-  }, [enabled, moveTolerancePx, onSwap, onTap, endGesture]);
+  }, [enabled, moveTolerancePx, endGesture]);
 
   const onPointerDown = useCallback((addr: SlotAddr, event: React.PointerEvent) => {
     if (!enabled) return;

@@ -9,7 +9,7 @@ import type {
   UpdateWinnerParams,
 } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
-import { benchedPlayers, opponentPairs, shuffleArray, teamPairs } from '../utils/playerUtils';
+import { benchedPlayers, opponentPairs, samePlayers, shuffleArray, teamPairs } from '../utils/playerUtils';
 
 import { levelTracker } from './LevelTracker';
 
@@ -491,12 +491,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** True when both teams have the same members (order within a team ignored). */
   private teamsUnchanged(a: NonNullable<Court['teams']>, b: NonNullable<Court['teams']>): boolean {
-    const sameTeam = (t1: Player[], t2: Player[]): boolean => {
-      if (t1.length !== t2.length) return false;
-      const ids = new Set(t1.map(p => p.id));
-      return t2.every(p => ids.has(p.id));
-    };
-    return sameTeam(a.team1, b.team1) && sameTeam(a.team2, b.team2);
+    return samePlayers(a.team1, b.team1) && samePlayers(a.team2, b.team2);
   }
 
   /** Adjusts bench counts (and the undo delta) when an edit moves players on/off the bench. */
