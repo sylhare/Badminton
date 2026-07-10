@@ -29,7 +29,6 @@ describe('applyCourtSwap', () => {
     expect(res.courts[0].teams!.team1.map(x => x.id)).toEqual(['g', 'b']);
     expect(res.courts[1].teams!.team2.map(x => x.id)).toEqual(['a', 'h']);
     expect(res.courts[0].players.map(x => x.id)).toEqual(['g', 'b', 'c', 'd']);
-    expect(res.changedCourtNumbers).toEqual([1, 2]);
   });
 
   it('swaps a court player with a bench player (sub in)', () => {
@@ -38,7 +37,6 @@ describe('applyCourtSwap', () => {
     const res = applyCourtSwap(courts, bench, courtSlot(0, 1, 0), benchSlot(1, 0));
     expect(res.courts[0].teams!.team1.map(x => x.id)).toEqual(['x', 'b']);
     expect(res.bench.map(x => x.id)).toEqual(['a', 'y']);
-    expect(res.changedCourtNumbers).toEqual([1]);
   });
 
   it('clears winner and score on a court whose line-up changed', () => {
@@ -54,7 +52,6 @@ describe('applyCourtSwap', () => {
     expect(res.courts[0].teams!.team1.map(x => x.id)).toEqual(['c', 'b']);
     expect(res.courts[0].teams!.team2.map(x => x.id)).toEqual(['a', 'd']);
     expect(res.courts[0].winner).toBeUndefined();
-    expect(res.changedCourtNumbers).toEqual([1]);
   });
 
   it('preserves a singles waiting player when swapping the active players', () => {
@@ -73,7 +70,7 @@ describe('applyCourtSwap', () => {
     const courts = [doubles(1, [A, B], [C, D])];
     const res = applyCourtSwap(courts, [], courtSlot(0, 1, 0), courtSlot(0, 1, 0));
     expect(res.courts).toBe(courts);
-    expect(res.changedCourtNumbers).toEqual([]);
+    expect(res.bench).toEqual([]);
   });
 
   it('does not mutate the input courts', () => {

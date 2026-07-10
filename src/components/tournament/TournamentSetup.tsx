@@ -6,8 +6,9 @@ import { formatTeamName } from '../../tournament/types';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import type { SlotAddr } from '../../utils/slotSwap';
 import { swapInGroups } from '../../utils/slotSwap';
-import { slotStateClass, useSlotDragSwap } from '../../hooks/useSlotDragSwap';
+import { useSlotDragSwap } from '../../hooks/useSlotDragSwap';
 import { useSwapSelection } from '../../hooks/useSwapSelection';
+import { makeBinding } from '../court/edit/slotBinding';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 
 interface TournamentSetupProps {
@@ -132,21 +133,23 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
                 <div className="team-card-title">Team {teamIdx + 1}</div>
                 {format === 'doubles' ? (
                   <div className="team-players-slots">
-                    {team.players.map((player, playerIdx) => {
-                      const addr = { group: teamIdx, index: playerIdx };
-                      const selectedCls = selection.isSelected(addr) ? ' swap-selected' : '';
-                      const stateCls = slotStateClass(drag.slotState(addr));
-                      return (
-                        <div
-                          key={player.id}
-                          className={`player-slot player-slot-draggable${selectedCls}${stateCls ? ` ${stateCls}` : ''}`}
-                          data-testid={`player-slot-${teamIdx}-${playerIdx}`}
-                          {...drag.getSlotProps(addr)}
-                        >
-                          {player.name}
-                        </div>
-                      );
-                    })}
+                    {(() => {
+                      const binding = makeBinding(drag, index => ({ group: teamIdx, index }));
+                      return team.players.map((player, playerIdx) => {
+                        const selectedCls = selection.isSelected({ group: teamIdx, index: playerIdx }) ? ' swap-selected' : '';
+                        const stateCls = binding.stateClass(playerIdx);
+                        return (
+                          <div
+                            key={player.id}
+                            className={`player-slot player-slot-draggable${selectedCls}${stateCls ? ` ${stateCls}` : ''}`}
+                            data-testid={`player-slot-${teamIdx}-${playerIdx}`}
+                            {...binding.getProps(playerIdx)}
+                          >
+                            {player.name}
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <div className="team-players-slots">

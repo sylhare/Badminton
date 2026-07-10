@@ -112,6 +112,9 @@ export function useSlotDragSwap({
   const [draggingAddr, setDraggingAddr] = useState<SlotAddr | null>(null);
   const [armedAddr, setArmedAddr] = useState<SlotAddr | null>(null);
   const [dropAddr, setDropAddr] = useState<SlotAddr | null>(null);
+  // Flips true on pointer-down so the global listeners (below) are subscribed
+  // only while a gesture is live, not for the whole time the hook is mounted.
+  const [pointerActive, setPointerActive] = useState(false);
 
   const clearLongPress = useCallback(() => {
     if (longPressTimerRef.current !== null) {
@@ -123,6 +126,7 @@ export function useSlotDragSwap({
   const endGesture = useCallback(() => {
     clearLongPress();
     gestureRef.current = null;
+    setPointerActive(false);
     setDraggingAddr(null);
     setArmedAddr(null);
     setDropAddr(null);
@@ -130,7 +134,7 @@ export function useSlotDragSwap({
 
   // Global move/up listeners are attached only while a gesture is live.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !pointerActive) return;
 
     const handleMove = (event: PointerEvent) => {
       const gesture = gestureRef.current;
@@ -160,7 +164,12 @@ export function useSlotDragSwap({
 
       event.preventDefault();
       const target = slotFromPoint(event.clientX, event.clientY);
-      setDropAddr(target && !sameSlot(target, gesture.source) ? target : null);
+      const next = target && !sameSlot(target, gesture.source) ? target : null;
+      // `slotFromPoint` allocates a fresh addr each move; only re-render when the
+      // hovered slot actually changes, otherwise every pointermove churns the grid.
+      setDropAddr(prev =>
+        prev === next || (prev && next && sameSlot(prev, next)) ? prev : next,
+      );
     };
 
     const handleUp = (event: PointerEvent) => {
@@ -187,7 +196,7 @@ export function useSlotDragSwap({
       window.removeEventListener('pointerup', handleUp);
       window.removeEventListener('pointercancel', endGesture);
     };
-  }, [enabled, moveTolerancePx, endGesture]);
+  }, [enabled, pointerActive, moveTolerancePx, endGesture]);
 
   const onPointerDown = useCallback((addr: SlotAddr, event: React.PointerEvent) => {
     if (!enabled) return;
@@ -203,6 +212,7 @@ export function useSlotDragSwap({
       dragging: false,
       moved: false,
     };
+    setPointerActive(true);
 
     if ((event.pointerType || 'mouse') === 'touch') {
       clearLongPress();

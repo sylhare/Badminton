@@ -13,14 +13,9 @@ import { samePlayers } from './playerUtils';
  * this reducer both use these helpers so slot addresses line up exactly.
  */
 
-export interface CourtLayout {
+export interface CourtSwapResult {
   courts: Court[];
   bench: Player[];
-}
-
-export interface CourtSwapResult extends CourtLayout {
-  /** Court numbers whose team composition changed (winner/score were cleared). */
-  changedCourtNumbers: number[];
 }
 
 /** Group index of a court's team. */
@@ -68,9 +63,7 @@ export function applyCourtSwap(
 ): CourtSwapResult {
   const groups = buildGroups(courts, bench);
   const swapped = swapInGroups(groups, a, b);
-  if (swapped === groups) return { courts, bench, changedCourtNumbers: [] };
-
-  const changedCourtNumbers: number[] = [];
+  if (swapped === groups) return { courts, bench };
 
   const nextCourts = courts.map((court, ci) => {
     if (!court.teams) return court; // no editable slots on this court
@@ -92,10 +85,9 @@ export function applyCourtSwap(
     if (changed) {
       next.winner = undefined;
       next.score = undefined;
-      changedCourtNumbers.push(court.courtNumber);
     }
     return next;
   });
 
-  return { courts: nextCourts, bench: swapped[benchGroup(courts.length)], changedCourtNumbers };
+  return { courts: nextCourts, bench: swapped[benchGroup(courts.length)] };
 }

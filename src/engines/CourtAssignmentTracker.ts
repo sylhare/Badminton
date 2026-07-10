@@ -256,8 +256,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lastRoundDelta = null;
   }
 
-  /** Serializes the current maps into a fresh, independent state object. */
-  private buildEngineState(): EngineSnapshot {
+  /** Serializes the current maps into a fresh, independent snapshot for rendering. */
+  snapshot(): EngineSnapshot {
     return {
       benchCountMap: Object.fromEntries(CourtAssignmentTracker.benchCountMap),
       singleCountMap: Object.fromEntries(CourtAssignmentTracker.singleCountMap),
@@ -272,16 +272,11 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     };
   }
 
-  /** Returns a read-only snapshot of tracker state for rendering. */
-  snapshot(): EngineSnapshot {
-    return this.buildEngineState();
-  }
-
   /** Prepares the internal maps for persistence. Filters and prunes old data. */
   prepareStateForSaving(engineType: EngineType): CourtEngineState {
     const MAX_ENTRIES = 500;
     this.pruneHistoricalData(MAX_ENTRIES);
-    return { ...this.buildEngineState(), engineType };
+    return { ...this.snapshot(), engineType };
   }
 
   /** Saves the current state to persistent storage. */
