@@ -1,8 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-import { engine, getEngineType, setEngine } from '../engines/engineSelector';
+import { engine, getEngineType, setEngine, enginePersistence } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
-import type { AppStateContextType, CourtEngineState, Court, GenerateResult, ManualCourtSelection, Player, UpdateWinnerParams } from '../types';
+import type { AppStateContextType, Court, EngineSnapshot, GenerateResult, ManualCourtSelection, Player, UpdateWinnerParams } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
@@ -23,48 +23,64 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState(false);
   const [counts, setCounts] = useState({ wins: new Map<string, number>(), losses: new Map<string, number>(), bench: new Map<string, number>() });
-  const [engineState, setEngineState] = useState<CourtEngineState | null>(null);
+  const [engineState, setEngineState] = useState<EngineSnapshot | null>(null);
   const hasLoadedRef = useRef(false);
   const { trackAssignmentAnomaly } = useAnalytics();
 
-  useEffect(() => {
-    const load = async () => {
-      const loadedState = await storageManager.loadApp();
-      if (loadedState.players?.length) {
-        setPlayers(loadedState.players);
-      }
-      if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
-      if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
-      if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
-      const smart = loadedState.isSmartEngineEnabled ?? false;
-      if (smart) setIsSmartEngineEnabled(true);
-      const engineType = smart ? 'sl' : 'sa';
-      setEngine(engineType);
-      await engine().loadState(engineType);
-      const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
-      setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
-      setEngineState(engine().prepareStateForSaving(engineType));
-      hasLoadedRef.current = true;
-      setIsLoaded(true);
-    };
-    load();
-
-    return engine().onStateChange(() => {
-      const { winCountMap, lossCountMap, benchCountMap } = engine().stats();
-      setCounts({ wins: winCountMap, losses: lossCountMap, bench: benchCountMap });
-      setEngineState(engine().prepareStateForSaving(getEngineType()));
+  const syncFromEngine = useCallback(() => {
+    const snapshot = engine().snapshot();
+    setEngineState(snapshot);
+    setCounts({
+      wins: new Map(Object.entries(snapshot.winCountMap)),
+      losses: new Map(Object.entries(snapshot.lossCountMap)),
+      bench: new Map(Object.entries(snapshot.benchCountMap)),
     });
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
+
+    const hydrate = async () => {
+      try {
+        const loadedState = await storageManager.loadApp();
+        if (loadedState.players?.length) setPlayers(loadedState.players);
+        if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
+        if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
+        if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
+        const smart = loadedState.isSmartEngineEnabled ?? false;
+        if (smart) setIsSmartEngineEnabled(true);
+        const engineType = smart ? 'sl' : 'sa';
+        setEngine(engineType);
+        await engine().loadState(engineType);
+      } catch (error) {
+        console.warn('AppStateProvider: failed to load persisted state:', error);
+      }
+    };
+
+    hydrate().then(() => {
+      if (cancelled) return;
+      cleanup = engine().onStateChange(syncFromEngine);
+      hasLoadedRef.current = true;
+      setIsLoaded(true);
+      syncFromEngine();
+    });
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [syncFromEngine]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    return enginePersistence.start();
+  }, [isLoaded]);
 
   useEffect(() => {
     if (!hasLoadedRef.current) return;
     storageManager.saveApp({ players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt });
   }, [players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt]);
-
-  useEffect(() => {
-    if (!hasLoadedRef.current || !engineState) return;
-    void storageManager.saveEngine(engineState);
-  }, [engineState]);
 
   const handleAddPlayers = (names: string[]) => {
     const newPlayers = createPlayersFromNames(names, 'manual');
@@ -95,9 +111,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   };
 
   const handleToggleSmartEngine = () => {
+    if (!isLoaded) return;
     const next = !isSmartEngineEnabled;
     setIsSmartEngineEnabled(next);
     setEngine(next ? 'sl' : 'sa');
+    syncFromEngine();
   };
 
   const applyCourtResults = useCallback((courts: Court[]) => {

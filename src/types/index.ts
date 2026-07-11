@@ -40,9 +40,11 @@ export interface AppState {
   sessionId?: string;
 }
 
-export interface CourtEngineState {
-  engineType?: EngineType;
-  savedAt?: number;
+/**
+ * Read-only view of engine state for rendering. Structurally the counts the
+ * stats view needs, with no persistence-only concerns (engine type, savedAt).
+ */
+export interface EngineSnapshot {
   benchCountMap: Record<string, number>;
   singleCountMap: Record<string, number>;
   teammateCountMap: Record<string, number>;
@@ -53,14 +55,10 @@ export interface CourtEngineState {
   roundsPlayed?: number;
 }
 
-export interface TrackerStats {
-  winCountMap: Map<string, number>;
-  lossCountMap: Map<string, number>;
-  teammateCountMap: Map<string, number>;
-  opponentCountMap: Map<string, number>;
-  benchCountMap: Map<string, number>;
-  singleCountMap: Map<string, number>;
-  roundsPlayed: number;
+/** Engine state as persisted to storage: a snapshot plus persistence metadata. */
+export interface CourtEngineState extends EngineSnapshot {
+  engineType?: EngineType;
+  savedAt?: number;
 }
 
 export interface UpdateWinnerParams {
@@ -87,12 +85,12 @@ export interface ICourtAssignmentTracker {
   removePlayerHistory(playerId: string): void;
   clearCurrentSession(): void;
   applyRoundStats(courts: Court[], players: Player[]): AssignmentAnomaly[];
+  snapshot(): EngineSnapshot;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;
   recordLevelSnapshot(players: Player[]): void;
   updateWinner(params: UpdateWinnerParams): Court[];
-  stats(): TrackerStats;
   levelTrend(playerId: string): 'up' | 'down' | null;
 }
 
@@ -122,7 +120,7 @@ export interface AppStateContextType {
   winCounts: Map<string, number>;
   lossCounts: Map<string, number>;
   benchCounts: Map<string, number>;
-  engineState: CourtEngineState | null;
+  engineState: EngineSnapshot | null;
   levelTrend: (playerId: string) => 'up' | 'down' | null;
   generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], manualCourtSelection?: ManualCourtSelection | null, forceBenchPlayerIds?: Set<string>): GenerateResult;
   updateWinner(params: UpdateWinnerParams): Court[];

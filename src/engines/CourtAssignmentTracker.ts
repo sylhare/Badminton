@@ -2,10 +2,10 @@ import type {
   AssignmentAnomaly,
   Court,
   CourtEngineState,
+  EngineSnapshot,
   EngineType,
   ICourtAssignmentTracker,
   Player,
-  TrackerStats,
   UpdateWinnerParams,
 } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
@@ -256,22 +256,32 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.lastRoundDelta = null;
   }
 
-  /** Prepares the internal maps for persistence. Filters and prunes old data. */
-  prepareStateForSaving(engineType: EngineType): CourtEngineState {
-    const MAX_ENTRIES = 500;
-    this.pruneHistoricalData(MAX_ENTRIES);
-
+  /** Serializes the current maps into a fresh, independent state object. */
+  private buildEngineState(): EngineSnapshot {
     return {
-      engineType,
       benchCountMap: Object.fromEntries(CourtAssignmentTracker.benchCountMap),
       singleCountMap: Object.fromEntries(CourtAssignmentTracker.singleCountMap),
       teammateCountMap: Object.fromEntries(CourtAssignmentTracker.teammateCountMap),
       opponentCountMap: Object.fromEntries(CourtAssignmentTracker.opponentCountMap),
       winCountMap: Object.fromEntries(CourtAssignmentTracker.winCountMap),
       lossCountMap: Object.fromEntries(CourtAssignmentTracker.lossCountMap),
-      levelHistory: Object.fromEntries(CourtAssignmentTracker.levelHistoryMap),
+      levelHistory: Object.fromEntries(
+        [...CourtAssignmentTracker.levelHistoryMap].map(([id, history]) => [id, [...history]]),
+      ),
       roundsPlayed: CourtAssignmentTracker.roundsPlayed,
     };
+  }
+
+  /** Returns a read-only snapshot of tracker state for rendering. */
+  snapshot(): EngineSnapshot {
+    return this.buildEngineState();
+  }
+
+  /** Prepares the internal maps for persistence. Filters and prunes old data. */
+  prepareStateForSaving(engineType: EngineType): CourtEngineState {
+    const MAX_ENTRIES = 500;
+    this.pruneHistoricalData(MAX_ENTRIES);
+    return { ...this.buildEngineState(), engineType };
   }
 
   /** Saves the current state to persistent storage. */
@@ -332,23 +342,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     CourtAssignmentTracker.benchCountMap.clear();
   }
 
-  /**
-   * Returns tracking statistics as Maps.
-   */
+  /** Returns the level trend (up/down/null) for a player based on level history. */
   levelTrend(playerId: string): 'up' | 'down' | null {
     return levelTracker.getLevelTrend(playerId, CourtAssignmentTracker.levelHistoryMap);
-  }
-
-  stats(): TrackerStats {
-    return {
-      winCountMap: new Map(CourtAssignmentTracker.winCountMap),
-      lossCountMap: new Map(CourtAssignmentTracker.lossCountMap),
-      teammateCountMap: new Map(CourtAssignmentTracker.teammateCountMap),
-      opponentCountMap: new Map(CourtAssignmentTracker.opponentCountMap),
-      benchCountMap: new Map(CourtAssignmentTracker.benchCountMap),
-      singleCountMap: new Map(CourtAssignmentTracker.singleCountMap),
-      roundsPlayed: CourtAssignmentTracker.roundsPlayed,
-    };
   }
 
   recordWins(courts: Court[]): void {
@@ -545,10 +541,10 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   /** Prunes historical pairings and counts based on recency. */
   private pruneHistoricalData(maxEntries: number): void {
-    const pairingKeys = [
+    const pairingKeys = [...new Set([
       ...CourtAssignmentTracker.teammateCountMap.keys(),
       ...CourtAssignmentTracker.opponentCountMap.keys(),
-    ];
+    ])];
 
     if (pairingKeys.length <= maxEntries) return;
 
