@@ -14,6 +14,8 @@ export interface UseSwapSelection {
   selected: SlotAddr | null;
   handleTap: (addr: SlotAddr) => void;
   isSelected: (addr: SlotAddr) => boolean;
+  /** Force a slot to be the current selection (e.g. a long-press picks it up). */
+  select: (addr: SlotAddr) => void;
   clear: () => void;
 }
 
@@ -42,7 +44,8 @@ export function useSwapSelection(onSwap: (from: SlotAddr, to: SlotAddr) => void)
     [selected],
   );
 
+  const select = useCallback((addr: SlotAddr) => setSelected(addr), []);
   const clear = useCallback(() => setSelected(null), []);
 
-  return { selected, handleTap, isSelected, clear };
+  return { selected, handleTap, isSelected, select, clear };
 }

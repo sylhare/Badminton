@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { SlotAddr } from '../utils/slotSwap';
 import { sameSlot } from '../utils/slotSwap';
@@ -10,13 +11,18 @@ import { sameSlot } from '../utils/slotSwap';
  *
  * Gesture model (gesture-split, so a plain tap still selects a winner):
  * - Mouse/pen: a drag begins as soon as the pointer moves past a small
- *   threshold. A press with no movement is reported via `onTap`.
- * - Touch: a drag must be armed by a long press (the slot "shakes" once armed);
- *   moving before the long press fires is treated as a scroll and cancels the
- *   gesture. A quick tap is reported via `onTap`.
+ *   threshold; a floating label follows the cursor and the hovered slot is
+ *   outlined. A press with no movement is reported via `onTap`.
+ * - Touch: dragging with a finger is unreliable on small screens, so instead a
+ *   long press reports `onLongPress` (the caller flips into a tap-to-swap "edit
+ *   mode"). If no `onLongPress` handler is supplied the long press falls back to
+ *   arming a finger-drag (the slot "shakes" once armed). A quick tap is reported
+ *   via `onTap`.
  *
  * Drop targets are located with `document.elementFromPoint`, matched against
- * the `data-slot` attribute that `getSlotProps` stamps onto every slot.
+ * the `data-slot` attribute that `getSlotProps` stamps onto every slot. The
+ * floating drag label is `pointer-events: none` so it never shadows the slot
+ * beneath the cursor.
  */
 
 const SLOT_ATTR = 'data-slot';
@@ -40,6 +46,11 @@ function slotFromPoint(x: number, y: number): SlotAddr | null {
   return decodeSlot(slotEl?.getAttribute(SLOT_ATTR));
 }
 
+function labelForSlot(addr: SlotAddr): string {
+  const el = document.querySelector(`[${SLOT_ATTR}="${encodeSlot(addr)}"]`);
+  return el?.textContent?.trim() ?? '';
+}
+
 export interface SlotGestureState {
   /** This slot is currently being dragged. */
   isDragging: boolean;
@@ -58,10 +69,28 @@ export function slotStateClass(state: SlotGestureState): string {
   ].filter(Boolean).join(' ');
 }
 
+function ghostPortalTarget(): HTMLElement {
+  // Portal into the `.app` root (not `document.body`) so the ghost inherits the
+  // active `--color-primary` — the smart-mode blue override is scoped there, so
+  // a body-level ghost would always render in the default yellow.
+  if (typeof document !== 'undefined') {
+    const app = document.querySelector('.app');
+    if (app instanceof HTMLElement) return app;
+  }
+  return document.body;
+}
+
 export interface UseSlotDragSwapOptions {
   onSwap: (from: SlotAddr, to: SlotAddr) => void;
   onTap?: (addr: SlotAddr) => void;
-  /** Touch long-press duration before a drag arms, in ms. */
+  /**
+   * Fired when a touch long-press completes. When supplied it takes over the
+   * touch long-press (no finger-drag is armed): the caller is expected to enter
+   * a tap-to-swap "edit mode" instead. When omitted the long-press arms a
+   * finger-drag as before.
+   */
+  onLongPress?: (addr: SlotAddr) => void;
+  /** Touch long-press duration before a drag arms / edit mode engages, in ms. */
   longPressMs?: number;
   /** Movement (px) that starts a mouse drag / cancels a pending touch long-press. */
   moveTolerancePx?: number;
@@ -77,6 +106,8 @@ interface Gesture {
   armed: boolean;
   dragging: boolean;
   moved: boolean;
+  /** A long press has fired for this gesture, so pointerup must not also tap. */
+  longPressed: boolean;
 }
 
 export interface UseSlotDragSwap {
@@ -89,11 +120,17 @@ export interface UseSlotDragSwap {
   slotState: (addr: SlotAddr) => SlotGestureState;
   /** True while any drag gesture is in progress. */
   isDragging: boolean;
+  /**
+   * The floating label that follows the cursor mid-drag. Render it once near the
+   * root of the consuming surface (it portals itself to `document.body`).
+   */
+  dragGhost: React.ReactNode;
 }
 
 export function useSlotDragSwap({
   onSwap,
   onTap,
+  onLongPress,
   longPressMs = 350,
   moveTolerancePx = 8,
   enabled = true,
@@ -103,15 +140,22 @@ export function useSlotDragSwap({
   // Set when a drag just finished, so the synthetic click that some browsers
   // fire afterwards is swallowed instead of being treated as a winner tap.
   const justDraggedRef = useRef(false);
+  // The floating drag-label element, positioned imperatively on every move so a
+  // pointermove does not re-render the whole grid (see handleMove).
+  const ghostRef = useRef<HTMLDivElement | null>(null);
+  const ghostPosRef = useRef({ x: 0, y: 0 });
   // Held in refs so the global-listener effect below does not re-subscribe on
   // every render (callers commonly pass fresh inline callbacks).
   const onSwapRef = useRef(onSwap);
   const onTapRef = useRef(onTap);
+  const onLongPressRef = useRef(onLongPress);
   onSwapRef.current = onSwap;
   onTapRef.current = onTap;
+  onLongPressRef.current = onLongPress;
   const [draggingAddr, setDraggingAddr] = useState<SlotAddr | null>(null);
   const [armedAddr, setArmedAddr] = useState<SlotAddr | null>(null);
   const [dropAddr, setDropAddr] = useState<SlotAddr | null>(null);
+  const [ghostLabel, setGhostLabel] = useState<string | null>(null);
   // Flips true on pointer-down so the global listeners (below) are subscribed
   // only while a gesture is live, not for the whole time the hook is mounted.
   const [pointerActive, setPointerActive] = useState(false);
@@ -123,6 +167,13 @@ export function useSlotDragSwap({
     }
   }, []);
 
+  const positionGhost = useCallback((x: number, y: number) => {
+    ghostPosRef.current = { x, y };
+    if (ghostRef.current) {
+      ghostRef.current.style.transform = `translate(${x}px, ${y}px)`;
+    }
+  }, []);
+
   const endGesture = useCallback(() => {
     clearLongPress();
     gestureRef.current = null;
@@ -130,6 +181,7 @@ export function useSlotDragSwap({
     setDraggingAddr(null);
     setArmedAddr(null);
     setDropAddr(null);
+    setGhostLabel(null);
   }, [clearLongPress]);
 
   // Global move/up listeners are attached only while a gesture is live.
@@ -160,9 +212,12 @@ export function useSlotDragSwap({
         }
         gesture.dragging = true;
         setDraggingAddr(gesture.source);
+        positionGhost(event.clientX, event.clientY);
+        setGhostLabel(labelForSlot(gesture.source));
       }
 
       event.preventDefault();
+      positionGhost(event.clientX, event.clientY);
       const target = slotFromPoint(event.clientX, event.clientY);
       const next = target && !sameSlot(target, gesture.source) ? target : null;
       // `slotFromPoint` allocates a fresh addr each move; only re-render when the
@@ -182,6 +237,10 @@ export function useSlotDragSwap({
         if (target && !sameSlot(target, gesture.source)) {
           onSwapRef.current(gesture.source, target);
         }
+      } else if (gesture.longPressed) {
+        // The long-press already fired (edit mode / arm); the release that ends
+        // it must not double as a tap.
+        justDraggedRef.current = true;
       } else if (!gesture.moved) {
         onTapRef.current?.(gesture.source);
       }
@@ -211,6 +270,7 @@ export function useSlotDragSwap({
       armed: false,
       dragging: false,
       moved: false,
+      longPressed: false,
     };
     setPointerActive(true);
 
@@ -219,11 +279,25 @@ export function useSlotDragSwap({
       longPressTimerRef.current = setTimeout(() => {
         const gesture = gestureRef.current;
         if (!gesture || gesture.dragging) return;
-        gesture.armed = true;
-        setArmedAddr(gesture.source);
+        if (onLongPressRef.current) {
+          // Hand off to a tap-to-swap edit mode instead of arming a finger-drag
+          // (dragging with a finger is unreliable on small screens).
+          gesture.longPressed = true;
+          onLongPressRef.current(gesture.source);
+        } else {
+          gesture.armed = true;
+          setArmedAddr(gesture.source);
+        }
       }, longPressMs);
+    } else {
+      // Mouse/pen: pop the floating label the instant the chip is pressed so it
+      // reads as "picked up into the hand", not only once the cursor moves. The
+      // source chip is not lifted out of its team until an actual drag begins
+      // (see handleMove), so a plain click can still fall through as a tap.
+      positionGhost(event.clientX, event.clientY);
+      setGhostLabel(labelForSlot(addr));
     }
-  }, [enabled, longPressMs, clearLongPress]);
+  }, [enabled, longPressMs, clearLongPress, positionGhost]);
 
   const onClickCapture = useCallback((event: React.MouseEvent) => {
     if (justDraggedRef.current) {
@@ -246,5 +320,27 @@ export function useSlotDragSwap({
     isArmed: armedAddr !== null && sameSlot(addr, armedAddr),
   }), [draggingAddr, dropAddr, armedAddr]);
 
-  return { getSlotProps, slotState, isDragging: draggingAddr !== null };
+  const dragGhost = ghostLabel !== null
+    ? createPortal(
+        // Outer node carries the cursor position (imperative transform); the
+        // inner pill owns the visual + pop animation so the two transforms
+        // (translate vs. scale) never fight over the same property.
+        <div
+          ref={node => {
+            ghostRef.current = node;
+            if (node) {
+              const { x, y } = ghostPosRef.current;
+              node.style.transform = `translate(${x}px, ${y}px)`;
+            }
+          }}
+          className="slot-drag-ghost"
+          aria-hidden="true"
+        >
+          <span className="slot-drag-ghost-pill">{ghostLabel}</span>
+        </div>,
+        ghostPortalTarget(),
+      )
+    : null;
+
+  return { getSlotProps, slotState, isDragging: draggingAddr !== null, dragGhost };
 }
