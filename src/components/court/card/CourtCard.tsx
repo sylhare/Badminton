@@ -17,6 +17,8 @@ interface CourtCardProps {
   isManualCourt?: boolean;
   isAnimating?: boolean;
   isSmartEngineEnabled?: boolean;
+  /** While rearranging players (touch edit mode), the set-winner tap is off. */
+  isEditMode?: boolean;
   team1Binding?: SlotBinding;
   team2Binding?: SlotBinding;
 }
@@ -29,6 +31,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   isManualCourt = false,
   isAnimating = false,
   isSmartEngineEnabled = false,
+  isEditMode = false,
   team1Binding,
   team2Binding,
 }) => {
@@ -71,7 +74,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
 
   const onTeamClick = (event: React.MouseEvent, teamNumber: number) =>
     handleTeamClick(event, teamNumber as 1 | 2);
-  const isClickable = !!onWinnerChange;
+  const isClickable = !!onWinnerChange && !isEditMode;
 
   let matchType: string | undefined;
   let matchContent: React.ReactNode;
