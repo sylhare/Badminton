@@ -102,6 +102,9 @@ input:focus {
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    /* Suppress the browser's default (unthemed, blue-ish) tap flash so our own
+       themed selected/drop affordances are the only feedback on a tap. */
+    -webkit-tap-highlight-color: transparent;
     transition: transform 0.12s ease, box-shadow 0.12s ease, outline-color 0.12s ease, opacity 0.12s ease;
     outline: 2px solid transparent;
     outline-offset: 1px;
@@ -116,23 +119,89 @@ input:focus {
     cursor: grabbing;
 }
 
+/* The chip lifts "out of its team into the hand": it fades and shrinks so it
+   reads as no longer being on the court while the floating label carries it. */
 .slot-dragging {
-    opacity: 0.4;
+    opacity: 0.15;
+    transform: scale(0.9);
+}
+
+/* The drop target (mid-drag) and the picked-up chip (tap-to-swap) share one
+   affordance: a themed dashed outline + ring. The ring is derived from
+   --color-primary via color-mix so it stays on-theme (yellow normally, blue in
+   smart mode) instead of a fixed unthemed colour. */
+.slot-drop-target,
+.swap-selected {
+    outline: 2px dashed var(--color-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .slot-drop-target {
-    outline-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(255, 184, 77, 0.25);
+    transform: scale(1.04);
+}
+
+/* Selecting a chip reuses the same "pop" as a drag-drop landing, so tapping to
+   pick a player up feels the same as dragging one. */
+.swap-selected {
+    animation: slotBump 0.36s ease-out;
+}
+
+/* The label that follows the cursor while dragging. The outer node is only the
+   cursor-tracking positioner; `pointer-events: none` is essential so it never
+   shadows the slot underneath elementFromPoint. */
+.slot-drag-ghost {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* The visible pill. It uses --color-primary (yellow normally, blue in smart
+   mode — the ghost is portaled into `.app` so it inherits that override) and
+   pops into view on press. */
+.slot-drag-ghost-pill {
+    display: inline-block;
+    margin: 12px 0 0 12px;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-card);
+    white-space: nowrap;
+    transform-origin: top left;
+    animation: ghostPop 0.18s ease-out;
+}
+
+@keyframes ghostPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* A swapped-into slot briefly bumps as the dragged chip "lands" on it. */
+.slot-bumped {
+    animation: slotBump 0.36s ease-out;
+}
+
+@keyframes slotBump {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.18); }
+    70% { transform: scale(0.95); }
+    100% { transform: scale(1); }
 }
 
 /* Touch long-press has armed this chip: shake to signal it is now draggable. */
 .slot-armed {
-    animation: slotShake 0.4s ease-in-out infinite;
+    animation: slotShake 0.45s ease-in-out infinite;
     outline-color: var(--color-primary-hover);
 }
 
 @keyframes slotShake {
     0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-2.5deg); }
-    75% { transform: rotate(2.5deg); }
-} 
+    25% { transform: rotate(-1.2deg); }
+    75% { transform: rotate(1.2deg); }
+}

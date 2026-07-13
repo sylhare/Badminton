@@ -1054,6 +1054,57 @@ h1 {
     font-size: 0.9rem;
 }
 
+/* Touch "edit mode": long-press a player to rearrange. Every draggable chip
+   shakes gently to signal tap-to-swap is active; the set-winner tap is off. */
+.court-assignments-container.edit-mode .player-slot-draggable {
+    animation: slotShake 0.45s ease-in-out infinite;
+    cursor: pointer;
+}
+
+/* The picked-up chip (and a just-swapped one) pops instead of shaking, so the
+   selection reads the same as a drag-drop landing rather than as an odd chip
+   that keeps jittering. Higher specificity than the shake rule above so it wins
+   the `animation` slot. */
+.court-assignments-container.edit-mode .player-slot-draggable.swap-selected,
+.court-assignments-container.edit-mode .player-slot-draggable.slot-bumped {
+    animation: slotBump 0.36s ease-out;
+}
+
+.edit-mode-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-accent);
+    border: 1px solid var(--border-strong, var(--color-primary));
+    border-radius: var(--radius-md);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* The label takes the free space so the Done button stays pinned to the right
+   at a fixed size instead of stretching or wrapping under the text. */
+.edit-mode-banner > span {
+    flex: 1;
+}
+
+.edit-mode-done {
+    flex: none;
+    width: auto;
+    padding: 6px 18px;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.edit-mode-done:hover {
+    background: var(--color-primary-hover);
+}
+
 .team-clickable {
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;

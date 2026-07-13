@@ -254,12 +254,8 @@
 }
 
 /* The draggable/selection affordances (.player-slot-draggable, .slot-dragging,
-   .slot-drop-target, .slot-armed) are shared with the court chips in App.css. */
-.player-slot.swap-selected {
-    outline: 2px solid var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(255, 184, 77, 0.25);
-    transform: scale(1.03);
-}
+   .slot-drop-target, .slot-armed, .swap-selected, .slot-bumped) are shared with
+   the court chips — defined once in index.css. */
 
 /* Active layout: single column, standings always below rounds */
 
