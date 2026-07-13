@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 
 import { CourtAssignments } from '../../../src/components/court';
 import type { Court } from '../../../src/types';
@@ -92,5 +92,45 @@ describe('CourtAssignments drag-and-drop editing', () => {
     renderCourts({ benchedPlayers: createMockPlayers(2).map((p, i) => ({ ...p, id: `bench-${i}` })) });
     expect(document.querySelector('[data-slot="4:0"]')).not.toBeNull();
     expect(document.querySelector('[data-slot="4:1"]')).not.toBeNull();
+  });
+
+  describe('touch edit mode (tap-to-swap)', () => {
+    function longPress(slot: string) {
+      const chip = document.querySelector(`[data-slot="${slot}"]`)!;
+      fireEvent.pointerDown(chip, { pointerType: 'touch', button: 0, clientX: 0, clientY: 0 });
+      act(() => { vi.advanceTimersByTime(400); });
+      fireEvent.pointerUp(chip, { pointerType: 'touch', clientX: 0, clientY: 0 });
+    }
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('enters edit mode on a long press and swaps two tapped players', () => {
+      const props = renderCourts();
+
+      longPress('0:0');
+      expect(screen.getByTestId('edit-mode-banner')).toBeTruthy();
+
+      const target = document.querySelector('[data-slot="2:0"]')!;
+      fireEvent.pointerDown(target, { pointerType: 'touch', button: 0, clientX: 0, clientY: 0 });
+      fireEvent.pointerUp(target, { pointerType: 'touch', clientX: 0, clientY: 0 });
+
+      expect(props.onSwapPlayers).toHaveBeenCalledWith({ group: 0, index: 0 }, { group: 2, index: 0 });
+    });
+
+    it('suppresses the set-winner tap while in edit mode', () => {
+      const props = renderCourts();
+      longPress('0:0');
+
+      fireEvent.click(within(screen.getByTestId('court-1')).getByTestId('team-1'));
+      expect(props.onWinnerChange).not.toHaveBeenCalled();
+    });
+
+    it('leaves edit mode via Done', () => {
+      renderCourts();
+      longPress('0:0');
+      fireEvent.click(screen.getByTestId('edit-mode-done'));
+      expect(screen.queryByTestId('edit-mode-banner')).toBeNull();
+    });
   });
 });
