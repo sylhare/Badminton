@@ -66,13 +66,11 @@ export function applyCourtSwap(
   if (swapped === groups) return { courts, bench };
 
   const nextCourts = courts.map((court, ci) => {
-    if (!court.teams) return court; // no editable slots on this court
+    if (!court.teams) return court;
     const team1 = swapped[courtTeamGroup(ci, 1)];
     const team2 = swapped[courtTeamGroup(ci, 2)];
     const changed = !samePlayers(court.teams.team1, team1) || !samePlayers(court.teams.team2, team2);
 
-    // Preserve any player not on a team (e.g. a singles waiting player); swaps
-    // only move players between team/bench slots, so extras are untouched.
     const origTeamIds = new Set([...court.teams.team1, ...court.teams.team2].map(p => p.id));
     const extras = court.players.filter(p => !origTeamIds.has(p.id));
 

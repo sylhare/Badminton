@@ -75,6 +75,21 @@ describe('useSlotSwap', () => {
     });
   });
 
+  it('fires onSwap exactly once under StrictMode (no double-invoke cancel-out)', () => {
+    const onSwap = vi.fn();
+    render(
+      <React.StrictMode>
+        <Harness onSwap={onSwap} touch="tap" />
+      </React.StrictMode>,
+    );
+
+    tap('a');
+    tap('c');
+
+    expect(onSwap).toHaveBeenCalledTimes(1);
+    expect(onSwap).toHaveBeenCalledWith({ group: 0, index: 0 }, { group: 1, index: 0 });
+  });
+
   describe('touch mode: edit-mode', () => {
     it('ignores a plain touch tap until a long press opens edit mode', () => {
       const onSwap = vi.fn();

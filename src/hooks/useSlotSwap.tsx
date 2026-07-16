@@ -76,14 +76,10 @@ export function useSlotSwap({
     bumpTimerRef.current = setTimeout(() => setBumpAddrs([]), BUMP_MS);
   }, []);
 
-  // Clear the bump timer on unmount so a late fire can't touch a dead component.
   useEffect(() => () => {
     if (bumpTimerRef.current !== null) clearTimeout(bumpTimerRef.current);
   }, []);
 
-  // The one swap entry-point for BOTH gestures: play the shared bump, then apply
-  // the actual swap. Read `onSwap` through a ref so callers can pass a fresh
-  // inline callback without re-arming anything downstream.
   const onSwapRef = useRef(onSwap);
   onSwapRef.current = onSwap;
   const handleSwap = useCallback((from: SlotAddr, to: SlotAddr) => {
@@ -101,8 +97,6 @@ export function useSlotSwap({
 
   const drag = useSlotDragSwap({
     onSwap: handleSwap,
-    // A tap selects/swaps only where that is the intended meaning: always in
-    // `'tap'` mode, and in `'edit-mode'` only once the long-press has opened it.
     onTap: touch === 'tap' || isEditMode ? handleTap : undefined,
     onLongPress:
       touch === 'edit-mode'
