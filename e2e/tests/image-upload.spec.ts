@@ -58,7 +58,6 @@ test.describe('Image upload', () => {
 
       const body = await res.text();
       expect(body.toLowerCase()).not.toContain('<!doctype html');
-      // The real worker is ~111 KB; the SPA fallback index.html is a few KB.
       expect(body.length).toBeGreaterThan(50_000);
     });
 
@@ -68,9 +67,6 @@ test.describe('Image upload', () => {
       expect(res.status()).toBe(200);
       expect(res.headers()['content-type'] ?? '').not.toContain('text/html');
 
-      // The traineddata is multi-MB; the SPA fallback index.html is a few KB.
-      // (Don't assert gzip magic bytes: the dev server may send Content-Encoding:
-      // gzip, in which case the HTTP client transparently decompresses the body.)
       const buf = await res.body();
       expect(buf.length).toBeGreaterThan(1_000_000);
     });
@@ -162,7 +158,6 @@ test.describe('Image upload', () => {
       expect(dialog.message()).toContain('Failed to process image');
       await dialog.accept();
 
-      // No players extracted; the modal stays on its upload screen and the app lives.
       await expect(page.getByTestId('add-extracted-players-button')).toHaveCount(0);
       await expect(page.locator('.modal-upload-area')).toBeVisible();
       await expect(page.locator('h1')).toContainText('🏸 Badminton Court Manager');

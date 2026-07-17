@@ -144,8 +144,6 @@ test.describe('Stats Page', () => {
 
   test('teammate network graph and repeated pairs section', async ({ page }) => {
     await mainPage.setupGame(DEFAULT_PLAYERS);
-    // 4 rounds played: with 4 players in doubles there are only 6 unique teammate pairs,
-    // so 8 assignments across 4 rounds guarantees at least one repeated pair (pigeonhole).
     await mainPage.playRound();
     await mainPage.playRound();
     await mainPage.playRound();
