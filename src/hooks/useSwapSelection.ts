@@ -9,6 +9,10 @@ import { sameSlot } from '../utils/slotSwap';
  * `useSlotDragSwap` (whose `onTap` feeds `handleTap` here) so a surface can
  * offer both drag and tap-to-swap from a single shared core — used as the
  * accessible/touch-friendly fallback alongside dragging.
+ *
+ * `onSwap` is invoked outside the state updater on purpose: StrictMode
+ * double-invokes updaters, and a doubled swap of the same slots cancels itself
+ * out (guarded by a StrictMode test).
  */
 export interface UseSwapSelection {
   selected: SlotAddr | null;

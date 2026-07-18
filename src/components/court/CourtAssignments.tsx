@@ -84,9 +84,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   const hasPlayers = players.some(p => p.isPresent);
   const hasAssignments = assignments.length > 0;
 
-  // Touch swapping: a long press flips into "edit mode" (all chips shake) where
-  // tapping two players swaps them and the set-winner tap is suppressed —
-  // finger-dragging is unreliable on small screens. Desktop keeps drag-to-swap.
   const swap = useSlotSwap({
     onSwap: (from, to) => onSwapPlayers?.(from, to),
     enabled: !!onSwapPlayers && hasAssignments,

@@ -5,7 +5,7 @@ import { removeComments } from '../../script/remove_comments';
 describe('removeComments', () => {
   it('should remove single-line comments', () => {
     const input = 'const x = 1; // inline comment\n';
-    expect(removeComments(input)).toBe('const x = 1; \n');
+    expect(removeComments(input)).toBe('const x = 1;\n');
   });
 
   it('should remove comment-only lines entirely, not leave whitespace', () => {
@@ -51,5 +51,20 @@ describe('removeComments', () => {
   it('should collapse multiple blank lines to at most two', () => {
     const input = 'const a = 1;\n\n\n\nconst b = 2;\n';
     expect(removeComments(input)).toBe('const a = 1;\n\nconst b = 2;\n');
+  });
+
+  it('should not treat an apostrophe inside a comment as a string opener', () => {
+    const input = '// a slot\'s group\nconst mode = \'tap\';\nreturn mode;\n';
+    expect(removeComments(input)).toBe('\nconst mode = \'tap\';\nreturn mode;\n');
+  });
+
+  it('should keep code following a comment that contains quotes', () => {
+    const input = 'function f() {\n  // don\'t drop the "return" below\n  return 1;\n}\n';
+    expect(removeComments(input)).toBe('function f() {\n  return 1;\n}\n');
+  });
+
+  it('should keep code after a block comment containing an apostrophe', () => {
+    const input = '/* it\'s fine */\nconst x = \'a\';\nconst y = \'b\';\n';
+    expect(removeComments(input)).toBe('\nconst x = \'a\';\nconst y = \'b\';\n');
   });
 });

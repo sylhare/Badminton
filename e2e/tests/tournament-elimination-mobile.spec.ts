@@ -8,7 +8,6 @@ import { TournamentPage } from '../support/pages/TournamentPage';
  * desktop tree to a World Cup–style scroll-snap carousel (one round per page).
  */
 test.describe('Tournament Page - Elimination (mobile carousel)', () => {
-  // Below the 768px breakpoint used by useIsMobile.
   test.use({ viewport: { width: 390, height: 844 } });
 
   let mainPage: MainPage;
@@ -38,7 +37,6 @@ test.describe('Tournament Page - Elimination (mobile carousel)', () => {
     await tournamentPage.startElimination();
 
     const wbSection = page.getByTestId('wb-section');
-    // 8 teams → 3 WB rounds (4th of Final, Semi Final, Final).
     await expect(wbSection.getByTestId('bracket-carousel-page-1')).toBeVisible();
     await expect(wbSection.getByTestId('bracket-carousel-page-2')).toHaveCount(1);
     await expect(wbSection.getByTestId('bracket-carousel-page-3')).toHaveCount(1);

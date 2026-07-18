@@ -30,7 +30,6 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
     RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
 
-  // Each team is a group; a slot's { group, index } addresses a player within it.
   const handleSwap = useCallback((from: SlotAddr, to: SlotAddr) => {
     setTeams(prev => {
       const groups = prev.map(t => t.players);

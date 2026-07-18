@@ -127,7 +127,6 @@ export class MainPage {
     await this.page.mouse.down();
     await this.page.mouse.move(sb.x + sb.width / 2 + 15, sb.y + sb.height / 2, { steps: 4 });
     await this.page.mouse.move(tx, ty, { steps: 12 });
-    // Settle on the target so the drop-target detection registers before release.
     await this.page.mouse.move(tx, ty);
     await this.page.waitForTimeout(50);
     await this.page.mouse.up();
