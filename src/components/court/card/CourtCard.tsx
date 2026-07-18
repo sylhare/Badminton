@@ -5,6 +5,7 @@ import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from 
 import { triggerConfetti } from '../../../utils/confetti.ts';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 import { useAnalytics } from '../../../hooks/useAnalytics';
+import type { SlotBinding } from '../edit/slotBinding';
 
 import CourtHeader from './CourtHeader';
 
@@ -16,6 +17,10 @@ interface CourtCardProps {
   isManualCourt?: boolean;
   isAnimating?: boolean;
   isSmartEngineEnabled?: boolean;
+  /** While rearranging players (touch edit mode), the set-winner tap is off. */
+  isEditMode?: boolean;
+  team1Binding?: SlotBinding;
+  team2Binding?: SlotBinding;
 }
 
 const CourtCard: React.FC<CourtCardProps> = ({
@@ -26,6 +31,9 @@ const CourtCard: React.FC<CourtCardProps> = ({
   isManualCourt = false,
   isAnimating = false,
   isSmartEngineEnabled = false,
+  isEditMode = false,
+  team1Binding,
+  team2Binding,
 }) => {
   const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
   const clickCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -66,7 +74,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
 
   const onTeamClick = (event: React.MouseEvent, teamNumber: number) =>
     handleTeamClick(event, teamNumber as 1 | 2);
-  const isClickable = !!onWinnerChange;
+  const isClickable = !!onWinnerChange && !isEditMode;
 
   let matchType: string | undefined;
   let matchContent: React.ReactNode;
@@ -84,13 +92,27 @@ const CourtCard: React.FC<CourtCardProps> = ({
         isAnimating={isAnimating}
         onPlayerClick={onTeamClick}
         isClickable={isClickable}
+        team1Binding={team1Binding}
+        team2Binding={team2Binding}
+      />
+    );
+  } else if (isDoubles) {
+    matchType = 'Doubles';
+    matchContent = (
+      <DoublesMatch
+        team1Players={teams.team1}
+        team2Players={teams.team2}
+        winner={court.winner}
+        isAnimating={isAnimating}
+        onTeamClick={onTeamClick}
+        isClickable={isClickable}
+        team1Binding={team1Binding}
+        team2Binding={team2Binding}
       />
     );
   } else {
-    const MatchComponent = isDoubles ? DoublesMatch : GenericCourtDisplay;
-    matchType = isDoubles ? 'Doubles' : undefined;
     matchContent = (
-      <MatchComponent
+      <GenericCourtDisplay
         team1Players={teams.team1}
         team2Players={teams.team2}
         winner={court.winner}

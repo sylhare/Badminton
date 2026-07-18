@@ -11,6 +11,8 @@ import Leaderboard from './components/players/Leaderboard';
 import Footer from './components/Footer';
 import { useAppState } from './providers/AppStateProvider';
 import { benchedPlayers } from './utils/playerUtils';
+import { applyCourtSwap } from './utils/courtSwap';
+import type { SlotAddr } from './utils/slotSwap';
 import type { Court, ManualCourtSelection, WinnerSelection } from './types';
 
 export function rotateCourtTeams(court: Court): Court {
@@ -57,6 +59,7 @@ function App(): React.ReactElement {
     benchCounts,
     generate,
     updateWinner,
+    applyManualEdit,
     resetAlgorithm,
   } = useAppState();
 
@@ -127,6 +130,13 @@ function App(): React.ReactElement {
     if (!court?.teams) return;
 
     setAssignments(updateWinner({ courtNumber, winner: undefined, currentAssignments: assignments, rotatedCourt: rotateCourtTeams(court) }));
+  };
+
+  const handleSwapPlayers = (from: SlotAddr, to: SlotAddr) => {
+    const bench = benchedPlayers(assignments, players);
+    const { courts: next } = applyCourtSwap(assignments, bench, from, to);
+    if (next === assignments) return;
+    setAssignments(applyManualEdit(assignments, next));
   };
 
   const handleToggleForceBench = (playerId: string) => {
@@ -218,6 +228,7 @@ function App(): React.ReactElement {
               onScoreChange={handleScoreChange}
               hasHistoricalWinners={winCounts.size > 0}
               onRotateTeams={handleRotateTeams}
+              onSwapPlayers={handleSwapPlayers}
               hasManualCourtSelection={assignments.some(court => court.wasManuallyAssigned)}
               onViewBenchCounts={handleViewBenchCounts}
               manualCourtSelection={manualCourtSelection}

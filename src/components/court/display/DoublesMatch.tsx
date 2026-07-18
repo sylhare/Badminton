@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { Player } from '../../../types';
+import type { SlotBinding } from '../edit/slotBinding';
 
 import TeamDisplay from './TeamDisplay';
 
@@ -11,6 +12,8 @@ interface DoublesMatchProps {
   isAnimating?: boolean;
   onTeamClick?: (event: React.MouseEvent, teamNumber: number) => void;
   isClickable?: boolean;
+  team1Binding?: SlotBinding;
+  team2Binding?: SlotBinding;
 }
 
 const DoublesMatch: React.FC<DoublesMatchProps> = ({
@@ -20,6 +23,8 @@ const DoublesMatch: React.FC<DoublesMatchProps> = ({
   isAnimating = false,
   onTeamClick,
   isClickable = false,
+  team1Binding,
+  team2Binding,
 }) => {
   return (
     <div className={`teams ${isAnimating ? 'animating-blur' : ''}`}>
@@ -30,6 +35,7 @@ const DoublesMatch: React.FC<DoublesMatchProps> = ({
         isWinner={winner === 1}
         onTeamClick={onTeamClick}
         isClickable={isClickable}
+        slotBinding={team1Binding}
       />
       <TeamDisplay
         teamNumber={2}
@@ -37,6 +43,7 @@ const DoublesMatch: React.FC<DoublesMatchProps> = ({
         isWinner={winner === 2}
         onTeamClick={onTeamClick}
         isClickable={isClickable}
+        slotBinding={team2Binding}
       />
     </div>
   );

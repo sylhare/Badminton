@@ -246,23 +246,16 @@
 }
 
 .player-slot {
-    padding: 0.4rem 0.6rem;
-    background: white;
-    border: 1px solid #ddd;
+    padding: 8px 12px;
+    background: var(--surface-accent);
     border-radius: var(--radius-md);
-    cursor: pointer;
+    color: var(--text);
     font-size: 0.9rem;
-    transition: border-color 0.15s, outline 0.15s;
 }
 
-.player-slot:hover {
-    border-color: var(--color-primary);
-}
-
-.player-slot.swap-selected {
-    outline: 2px solid var(--color-primary);
-    border-color: var(--color-primary);
-}
+/* The draggable/selection affordances (.player-slot-draggable, .slot-dragging,
+   .slot-drop-target, .slot-armed, .swap-selected, .slot-bumped) are shared with
+   the court chips — defined once in index.css. */
 
 /* Active layout: single column, standings always below rounds */
 

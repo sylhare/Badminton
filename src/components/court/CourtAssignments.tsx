@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 
 import type { Court, ManualCourtSelection, Player, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { useSlotSwap } from '../../hooks/useSlotSwap';
+import type { SlotAddr } from '../../utils/slotSwap';
+import { benchSlot, courtSlot } from '../../utils/courtSwap';
 import ManualCourtModal from '../modals/ManualCourtModal';
 
 import { CourtCard } from './card';
@@ -32,6 +35,7 @@ interface CourtAssignmentsProps {
   onWinnerChange?: (courtNumber: number, winner: WinnerSelection) => void;
   onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
   onRotateTeams?: (courtNumber: number) => void;
+  onSwapPlayers?: (from: SlotAddr, to: SlotAddr) => void;
   hasManualCourtSelection?: boolean;
   onViewBenchCounts?: () => void;
   hasHistoricalWinners?: boolean;
@@ -51,6 +55,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   onWinnerChange,
   onScoreChange,
   onRotateTeams,
+  onSwapPlayers,
   hasManualCourtSelection = false,
   onViewBenchCounts,
   hasHistoricalWinners = false,
@@ -78,6 +83,16 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
   const hasPlayers = players.some(p => p.isPresent);
   const hasAssignments = assignments.length > 0;
+
+  // Touch swapping: a long press flips into "edit mode" (all chips shake) where
+  // tapping two players swaps them and the set-winner tap is suppressed —
+  // finger-dragging is unreliable on small screens. Desktop keeps drag-to-swap.
+  const swap = useSlotSwap({
+    onSwap: (from, to) => onSwapPlayers?.(from, to),
+    enabled: !!onSwapPlayers && hasAssignments,
+    touch: 'edit-mode',
+  });
+  const { isEditMode, exitEditMode } = swap;
   const isRecentAssignment = lastGeneratedAt !== undefined && (Date.now() - lastGeneratedAt) < TWO_DAYS_MS;
   const presentPlayerCount = players.filter(p => p.isPresent).length;
   const hasManualSelection = manualCourtSelection && manualCourtSelection.players.length > 0;
@@ -104,6 +119,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   };
 
   const handleGenerateAssignments = () => {
+    exitEditMode();
     setIsButtonShaking(true);
     setIsAnimating(true);
     trackCourtAction('generate_assignments', { courtCount: numberOfCourts });
@@ -129,7 +145,8 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   };
 
   return (
-    <div className="court-assignments-container">
+    <div className={`court-assignments-container${isEditMode ? ' edit-mode' : ''}`}>
+      {swap.dragGhost}
       <div className="court-settings-inline">
         <div className="court-input-group">
           <label htmlFor="courts">Courts:</label>
@@ -157,11 +174,26 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
         )}
       </div>
 
+      {isEditMode && (
+        <div className="edit-mode-banner" data-testid="edit-mode-banner">
+          <span>Tap two players to swap them</span>
+          <button
+            type="button"
+            className="edit-mode-done"
+            onClick={exitEditMode}
+            data-testid="edit-mode-done"
+          >
+            Done
+          </button>
+        </div>
+      )}
+
       {hasAssignments && (
         <>
           <div className="courts-grid">
-            {assignments.map((court) => {
+            {assignments.map((court, courtIndex) => {
               const isManualCourt = court.wasManuallyAssigned || (hasManualCourtSelection && court.courtNumber === 1);
+              const editable = !!onSwapPlayers && !!court.teams;
               return (
                 <CourtCard
                   key={court.courtNumber}
@@ -172,6 +204,9 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
                   isManualCourt={isManualCourt}
                   isAnimating={isAnimating}
                   isSmartEngineEnabled={isSmartEngineEnabled}
+                  isEditMode={isEditMode}
+                  team1Binding={editable ? swap.binding(i => courtSlot(courtIndex, 1, i)) : undefined}
+                  team2Binding={editable ? swap.binding(i => courtSlot(courtIndex, 2, i)) : undefined}
                 />
               );
             })}
@@ -183,7 +218,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
                 🪑 Bench ({benchedPlayers.length} player{benchedPlayers.length !== 1 ? 's' : ''})
               </div>
               <div className="bench-players">
-                <TeamPlayerList players={benchedPlayers} className="bench-player" />
+                <TeamPlayerList
+                  players={benchedPlayers}
+                  className="bench-player"
+                  slotBinding={onSwapPlayers ? swap.binding(i => benchSlot(assignments.length, i)) : undefined}
+                />
               </div>
               {onViewBenchCounts && (
                 <button

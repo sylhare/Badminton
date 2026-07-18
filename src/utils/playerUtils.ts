@@ -12,6 +12,13 @@ export function shuffleArray<T>(array: T[]): T[] {
 
 export const pairKey = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
+/** True when two player lists contain the same members (order ignored). */
+export function samePlayers(a: Player[], b: Player[]): boolean {
+  if (a.length !== b.length) return false;
+  const ids = new Set(a.map(p => p.id));
+  return b.every(p => ids.has(p.id));
+}
+
 export function teamPairs(team: Player[]): string[] {
   const pairs: string[] = [];
   for (let i = 0; i < team.length; i++)

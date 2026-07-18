@@ -1,9 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentTeam } from '../../tournament/types';
 import { formatTeamName } from '../../tournament/types';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
+import type { SlotAddr } from '../../utils/slotSwap';
+import { swapInGroups } from '../../utils/slotSwap';
+import { useSlotSwap } from '../../hooks/useSlotSwap';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 
 interface TournamentSetupProps {
@@ -12,11 +15,6 @@ interface TournamentSetupProps {
   onStart: (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat) => void;
   onAddPlayers?: (names: string[]) => void;
   onTogglePlayer?: (id: string) => void;
-}
-
-interface SwapSelection {
-  teamIdx: number;
-  playerIdx: number;
 }
 
 export const TournamentSetup: React.FC<TournamentSetupProps> = ({
@@ -31,41 +29,28 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
     RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
-  const [swapSelection, setSwapSelection] = useState<SwapSelection | null>(null);
+
+  // Each team is a group; a slot's { group, index } addresses a player within it.
+  const handleSwap = useCallback((from: SlotAddr, to: SlotAddr) => {
+    setTeams(prev => {
+      const groups = prev.map(t => t.players);
+      const swapped = swapInGroups(groups, from, to);
+      if (swapped === groups) return prev;
+      return prev.map((team, i) => ({ ...team, players: swapped[i] }));
+    });
+  }, []);
+
+  const swap = useSlotSwap({
+    onSwap: handleSwap,
+    enabled: format === 'doubles',
+    touch: 'tap',
+  });
+  const { clearSelection } = swap;
 
   useEffect(() => {
     setTeams(RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), format));
-    setSwapSelection(null);
-  }, [initialPlayers, format]);
-
-  const handlePlayerSlotClick = (teamIdx: number, playerIdx: number) => {
-    if (swapSelection === null) {
-      setSwapSelection({ teamIdx, playerIdx });
-      return;
-    }
-
-    if (swapSelection.teamIdx === teamIdx && swapSelection.playerIdx === playerIdx) {
-      setSwapSelection(null);
-      return;
-    }
-
-    setTeams(prev => {
-      const next = prev.map(t => ({ ...t, players: [...t.players] }));
-      const fromTeam = next[swapSelection.teamIdx];
-      const toTeam = next[teamIdx];
-      if (!fromTeam || !toTeam) return prev;
-
-      const fromPlayer = fromTeam.players[swapSelection.playerIdx];
-      const toPlayer = toTeam.players[playerIdx];
-      if (!fromPlayer || !toPlayer) return prev;
-
-      fromTeam.players[swapSelection.playerIdx] = toPlayer;
-      toTeam.players[playerIdx] = fromPlayer;
-
-      return next;
-    });
-    setSwapSelection(null);
-  };
+    clearSelection();
+  }, [initialPlayers, format, clearSelection]);
 
   const tournament = useMemo(
     () => RoundRobinTournament.create(format, numberOfCourts),
@@ -85,6 +70,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   return (
     <div className="tournament-setup">
+      {swap.dragGhost}
       <div className="setup-section">
         <h3>Format</h3>
         <div className="format-pills" data-testid="format-pills">
@@ -137,7 +123,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
         <div className="setup-section">
           <h3>Teams</h3>
           {format === 'doubles' && (
-            <p className="setup-hint">Click two player slots to swap them between teams.</p>
+            <p className="setup-hint">Drag a player onto another to swap them — or tap two players.</p>
           )}
           <div className="teams-grid" data-testid="teams-grid">
             {teams.map((team, teamIdx) => (
@@ -145,21 +131,22 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
                 <div className="team-card-title">Team {teamIdx + 1}</div>
                 {format === 'doubles' ? (
                   <div className="team-players-slots">
-                    {team.players.map((player, playerIdx) => {
-                      const isSelected =
-                        swapSelection?.teamIdx === teamIdx &&
-                        swapSelection?.playerIdx === playerIdx;
-                      return (
-                        <div
-                          key={player.id}
-                          className={`player-slot${isSelected ? ' swap-selected' : ''}`}
-                          onClick={() => handlePlayerSlotClick(teamIdx, playerIdx)}
-                          data-testid={`player-slot-${teamIdx}-${playerIdx}`}
-                        >
-                          {player.name}
-                        </div>
-                      );
-                    })}
+                    {(() => {
+                      const binding = swap.binding(index => ({ group: teamIdx, index }));
+                      return team.players.map((player, playerIdx) => {
+                        const stateCls = binding.stateClass(playerIdx);
+                        return (
+                          <div
+                            key={player.id}
+                            className={`player-slot player-slot-draggable${stateCls ? ` ${stateCls}` : ''}`}
+                            data-testid={`player-slot-${teamIdx}-${playerIdx}`}
+                            {...binding.getProps(playerIdx)}
+                          >
+                            {player.name}
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <div className="team-players-slots">
