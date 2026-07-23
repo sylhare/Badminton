@@ -5,6 +5,11 @@
   "description": "📸 Snap, 🎲 Shuffle, 🏸 Play! The badminton organizer app that turns chaos into fair, fun matches. Upload your player list photo or add them manually to get perfectly balanced teams in seconds.",
   "type": "module",
   "homepage": "https://sylhare.github.io/Badminton",
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
   "scripts": {
     "copy-tesseract-assets": "npx tsx script/copy-tesseract-assets.ts",
     "dev": "vite",
