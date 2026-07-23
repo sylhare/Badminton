@@ -5,6 +5,11 @@
   "description": "📸 Snap, 🎲 Shuffle, 🏸 Play! The badminton organizer app that turns chaos into fair, fun matches. Upload your player list photo or add them manually to get perfectly balanced teams in seconds.",
   "type": "module",
   "homepage": "https://sylhare.github.io/Badminton",
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
   "scripts": {
     "copy-tesseract-assets": "npx tsx script/copy-tesseract-assets.ts",
     "dev": "vite",
@@ -25,40 +30,40 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
-    "@techstark/opencv-js": "4.11.0-release.1",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "@techstark/opencv-js": "5.0.0-release.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.1",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.0",
-    "@playwright/test": "~1.60.0",
+    "@playwright/test": "~1.61.1",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@tesseract.js-data/eng": "^1.0.0",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^24.12.4",
-    "@types/react": "^19.2.15",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.2",
+    "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.10",
-    "eslint": "^10.4.0",
-    "eslint-plugin-import-x": "^4.16.2",
+    "eslint": "^10.7.0",
+    "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-unused-imports": "^4.4.1",
     "jsdom": "^29.1.1",
-    "playwright": "~1.60.0",
+    "playwright": "~1.61.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.64.0",
-    "vite": "^8.1.2",
+    "typescript-eslint": "^8.65.0",
+    "vite": "^8.1.5",
     "vitest": "^4.1.10"
   },
   "overrides": {
     "eslint-plugin-react": {
-      "eslint": "^10.4.0"
+      "eslint": "^10.7.0"
     }
   }
 }
