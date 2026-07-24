@@ -715,6 +715,10 @@ h1 {
 }
 
 .rearrange-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background: var(--surface-hover);
     color: var(--text-soft);
     border: 2px solid var(--border);
@@ -725,6 +729,37 @@ h1 {
     font-weight: 500;
     transition: all 0.2s ease;
     white-space: nowrap;
+}
+
+/* Immediate hover tooltip (the native title is too slow to notice). */
+.rearrange-button[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 240px;
+    white-space: normal;
+    background: var(--text);
+    color: var(--surface-hover);
+    border-radius: var(--radius-md);
+    border-top: 3px solid var(--color-primary);
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0s linear 0.15s;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Dwell ~1s before appearing (matches the ⓘ Tooltip), hide immediately on leave. */
+.rearrange-button[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.15s ease 1s, visibility 0s linear 1s;
 }
 
 .rearrange-button:hover {

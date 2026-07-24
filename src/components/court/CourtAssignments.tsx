@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ArrowsLeftRight } from '@phosphor-icons/react';
 
 import type { Court, Player, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -157,8 +158,10 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
             className={`rearrange-button ${isEditMode ? 'active' : ''}`}
             data-testid="rearrange-button"
             aria-pressed={isEditMode}
+            data-tooltip="Drag a player onto another to swap them between teams, courts and the bench — or tap two players."
           >
-            ✋ Rearrange players
+            <ArrowsLeftRight size={16} weight="bold" />
+            Rearrange players
           </button>
         )}
       </div>
