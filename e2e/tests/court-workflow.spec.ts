@@ -108,53 +108,36 @@ test.describe('Court Workflow', () => {
     });
   });
 
-  test.describe('Manual Court Assignment', () => {
-    test('Manual court assignment functionality', async ({ page }) => {
-      await mainPage.addPlayers([
-        'Alice Johnson',
-        'Bob Smith',
-        'Charlie Davis',
-        'Diana Wilson',
-        'Emma Brown',
-        'Frank Miller',
-      ]);
+  test.describe('Rearrange players', () => {
+    test('Rearrange button enters edit mode and swaps two players via tap-to-swap', async ({ page }) => {
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
+      await mainPage.generateAssignments(1);
 
-      await expect(page.getByTestId('stats-total-count')).toHaveText('6');
+      const rearrange = page.getByTestId('rearrange-button');
+      await expect(rearrange).toBeVisible();
 
-      const manualCourtButton = page.getByTestId('manual-court-button');
-      await expect(manualCourtButton).toBeVisible();
-      await manualCourtButton.click();
+      const team1Slot = '0:0';
+      const team2Slot = '1:0';
+      const before1 = (await mainPage.playerAtSlot(team1Slot)).trim();
+      const before2 = (await mainPage.playerAtSlot(team2Slot)).trim();
+      expect(before1).not.toBe(before2);
 
-      const modal = page.getByTestId('manual-court-modal');
-      await expect(modal).toBeVisible();
-
-      const firstPlayer = page.locator('[data-testid^="manual-court-player-"]').first();
-      await expect(firstPlayer).toBeVisible();
-      await firstPlayer.click();
-
-      const secondPlayer = page.locator('[data-testid^="manual-court-player-"]').nth(1);
-      await expect(secondPlayer).toBeVisible();
-      await secondPlayer.click();
-
-      await expect(page.locator('.selection-count')).toContainText('2/4 players selected');
-      await expect(page.locator('.match-preview')).toContainText('Will create: Singles match');
-
-      await test.step('clear selection resets to 0 players', async () => {
-        await page.getByTestId('clear-manual-selection').click();
-        await expect(page.locator('.selection-count')).toContainText('0/4 players selected');
+      await test.step('clicking the button reveals the edit-mode banner', async () => {
+        await rearrange.click();
+        await expect(page.getByTestId('edit-mode-banner')).toBeVisible();
       });
 
-      await firstPlayer.click();
-      await secondPlayer.click();
-      await expect(page.locator('.selection-count')).toContainText('2/4 players selected');
+      await test.step('tapping two players swaps them', async () => {
+        await page.locator(`[data-slot="${team1Slot}"]`).click({ force: true });
+        await page.locator(`[data-slot="${team2Slot}"]`).click({ force: true });
+        await expect(page.locator(`[data-slot="${team1Slot}"]`)).toHaveText(before2);
+        await expect(page.locator(`[data-slot="${team2Slot}"]`)).toHaveText(before1);
+      });
 
-      await page.getByText('Done').click();
-      await expect(page.getByTestId('manual-court-modal')).not.toBeVisible();
-
-      await mainPage.generateAssignments();
-
-      await expect(page.getByTestId('court-1')).toBeVisible();
-      await expect(page.getByTestId('court-1').locator('.manual-court-icon')).toBeVisible();
+      await test.step('Done leaves edit mode', async () => {
+        await page.getByTestId('edit-mode-done').click();
+        await expect(page.getByTestId('edit-mode-banner')).not.toBeVisible();
+      });
     });
   });
 

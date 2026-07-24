@@ -45,8 +45,10 @@ export interface UseSlotSwap {
   /** The floating drag label; render once near the surface root. */
   dragGhost: React.ReactNode;
   isDragging: boolean;
-  /** True while a touch `'edit-mode'` tap-to-swap session is active. */
+  /** True while a tap-to-swap edit session is active. */
   isEditMode: boolean;
+  /** Enter tap-to-swap edit mode explicitly (e.g. from a button). */
+  enterEditMode: () => void;
   /** Leave edit mode and drop the current selection. */
   exitEditMode: () => void;
   /** Drop the current selection without touching edit mode. */
@@ -90,6 +92,10 @@ export function useSlotSwap({
   const selection = useSwapSelection(handleSwap);
   const { clear: clearSelection, select: selectSlot, handleTap, isSelected } = selection;
 
+  const enterEditMode = useCallback(() => {
+    setIsEditMode(true);
+  }, []);
+
   const exitEditMode = useCallback(() => {
     setIsEditMode(false);
     clearSelection();
@@ -125,6 +131,7 @@ export function useSlotSwap({
     dragGhost: drag.dragGhost,
     isDragging: drag.isDragging,
     isEditMode,
+    enterEditMode,
     exitEditMode,
     clearSelection,
   };

@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 
-import type { Court, ManualCourtSelection, Player, WinnerSelection } from '../../types';
+import type { Court, Player, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
 import type { SlotAddr } from '../../utils/slotSwap';
 import { benchSlot, courtSlot } from '../../utils/courtSwap';
-import ManualCourtModal from '../modals/ManualCourtModal';
 
 import { CourtCard } from './card';
 import { TeamPlayerList } from './team';
@@ -36,11 +35,8 @@ interface CourtAssignmentsProps {
   onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
   onRotateTeams?: (courtNumber: number) => void;
   onSwapPlayers?: (from: SlotAddr, to: SlotAddr) => void;
-  hasManualCourtSelection?: boolean;
   onViewBenchCounts?: () => void;
   hasHistoricalWinners?: boolean;
-  manualCourtSelection: ManualCourtSelection | null;
-  onManualCourtSelectionChange: (selection: ManualCourtSelection | null) => void;
   lastGeneratedAt?: number;
   isSmartEngineEnabled?: boolean;
 }
@@ -56,11 +52,8 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   onScoreChange,
   onRotateTeams,
   onSwapPlayers,
-  hasManualCourtSelection = false,
   onViewBenchCounts,
   hasHistoricalWinners = false,
-  manualCourtSelection,
-  onManualCourtSelectionChange,
   lastGeneratedAt,
   isSmartEngineEnabled = false,
 }) => {
@@ -68,7 +61,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [isButtonShaking, setIsButtonShaking] = useState(false);
   const [, setTick] = useState(0);
-  const [isManualCourtModalOpen, setIsManualCourtModalOpen] = useState(false);
   const [courtInputValue, setCourtInputValue] = useState(String(numberOfCourts));
 
   useEffect(() => {
@@ -83,16 +75,15 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
   const hasPlayers = players.some(p => p.isPresent);
   const hasAssignments = assignments.length > 0;
+  const canRearrange = !!onSwapPlayers && hasAssignments;
 
   const swap = useSlotSwap({
     onSwap: (from, to) => onSwapPlayers?.(from, to),
-    enabled: !!onSwapPlayers && hasAssignments,
+    enabled: canRearrange,
     touch: 'edit-mode',
   });
-  const { isEditMode, exitEditMode } = swap;
+  const { isEditMode, enterEditMode, exitEditMode } = swap;
   const isRecentAssignment = lastGeneratedAt !== undefined && (Date.now() - lastGeneratedAt) < TWO_DAYS_MS;
-  const presentPlayerCount = players.filter(p => p.isPresent).length;
-  const hasManualSelection = manualCourtSelection && manualCourtSelection.players.length > 0;
 
   const handleCourtsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -160,20 +151,21 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           />
         </div>
 
-        {presentPlayerCount >= 2 && (
+        {canRearrange && (
           <button
-            onClick={() => setIsManualCourtModalOpen(true)}
-            className={`manual-court-button ${hasManualSelection ? 'has-selection' : ''}`}
-            data-testid="manual-court-button"
+            onClick={() => (isEditMode ? exitEditMode() : enterEditMode())}
+            className={`rearrange-button ${isEditMode ? 'active' : ''}`}
+            data-testid="rearrange-button"
+            aria-pressed={isEditMode}
           >
-            ⚙️ Manual assignment{hasManualSelection ? ` (${manualCourtSelection!.players.length})` : ''}
+            ✋ Rearrange players
           </button>
         )}
       </div>
 
       {isEditMode && (
         <div className="edit-mode-banner" data-testid="edit-mode-banner">
-          <span>Tap two players to swap them</span>
+          <span>Drag a player onto another to swap them — or tap two players.</span>
           <button
             type="button"
             className="edit-mode-done"
@@ -189,7 +181,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
         <>
           <div className="courts-grid">
             {assignments.map((court, courtIndex) => {
-              const isManualCourt = court.wasManuallyAssigned || (hasManualCourtSelection && court.courtNumber === 1);
               const editable = !!onSwapPlayers && !!court.teams;
               return (
                 <CourtCard
@@ -198,7 +189,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
                   onWinnerChange={handleWinnerChange}
                   onScoreChange={onScoreChange}
                   onRotateTeams={onRotateTeams}
-                  isManualCourt={isManualCourt}
                   isAnimating={isAnimating}
                   isSmartEngineEnabled={isSmartEngineEnabled}
                   isEditMode={isEditMode}
@@ -289,14 +279,6 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           </button>
         </div>
       )}
-
-      <ManualCourtModal
-        isOpen={isManualCourtModalOpen}
-        onClose={() => setIsManualCourtModalOpen(false)}
-        players={players}
-        currentSelection={manualCourtSelection}
-        onSelectionChange={onManualCourtSelectionChange}
-      />
     </div>
   );
 };
