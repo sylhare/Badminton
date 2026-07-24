@@ -5,14 +5,12 @@ import { useAnalytics } from '../../../hooks/useAnalytics';
 interface CourtHeaderProps {
   courtNumber: number;
   matchType?: string;
-  isManualCourt?: boolean;
   onRotateTeams?: () => void;
 }
 
 const CourtHeader: React.FC<CourtHeaderProps> = ({
   courtNumber,
   matchType,
-  isManualCourt = false,
   onRotateTeams,
 }) => {
   const { trackCourtAction } = useAnalytics();
@@ -26,11 +24,6 @@ const CourtHeader: React.FC<CourtHeaderProps> = ({
     <div className="court-header">
       <h3>
         Court {courtNumber}{matchType ? ` - ${matchType}` : ''}
-        {isManualCourt && (
-          <span className="manual-court-icon" title="Manually assigned court">
-            ⚙️
-          </span>
-        )}
       </h3>
       {handleRotateTeams && (
         <button

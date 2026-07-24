@@ -8,14 +8,9 @@ import { formatTimeAgo } from '../../../src/components/court/CourtAssignments';
 import { Court, Player } from '../../../src/types';
 import { TEST_COURTS, TEST_PLAYERS } from '../../data/testData';
 
-vi.mock('../../../src/components/ManualCourtModal', () => ({
-  default: () => null,
-}));
-
 describe('CourtAssignments Component', () => {
   const mockOnGenerateAssignments = vi.fn();
   const mockOnNumberOfCourtsChange = vi.fn();
-  const mockOnManualCourtSelectionChange = vi.fn();
 
   const mockAssignments: Court[] = [
     {
@@ -37,8 +32,6 @@ describe('CourtAssignments Component', () => {
     numberOfCourts: 4,
     onNumberOfCourtsChange: mockOnNumberOfCourtsChange,
     onGenerateAssignments: mockOnGenerateAssignments,
-    manualCourtSelection: null,
-    onManualCourtSelectionChange: mockOnManualCourtSelectionChange,
   };
 
   beforeEach(() => {
@@ -247,7 +240,6 @@ describe('CourtAssignments Component', () => {
 describe('Winner Selection', () => {
   const mockOnGenerateAssignments = vi.fn();
   const mockOnNumberOfCourtsChange = vi.fn();
-  const mockOnManualCourtSelectionChange = vi.fn();
   const mockOnWinnerChange = vi.fn();
 
   const doublesAssignment: Court[] = [TEST_COURTS.doublesWithTeams()];
@@ -270,8 +262,6 @@ describe('Winner Selection', () => {
     onNumberOfCourtsChange: mockOnNumberOfCourtsChange,
     onGenerateAssignments: mockOnGenerateAssignments,
     benchedPlayers: [],
-    manualCourtSelection: null,
-    onManualCourtSelectionChange: mockOnManualCourtSelectionChange,
   };
 
   beforeEach(() => {
@@ -523,7 +513,6 @@ describe('formatTimeAgo', () => {
 describe('Last generated badge', () => {
   const mockOnGenerateAssignments = vi.fn();
   const mockOnNumberOfCourtsChange = vi.fn();
-  const mockOnManualCourtSelectionChange = vi.fn();
 
   const baseProps = {
     players: TEST_PLAYERS,
@@ -532,8 +521,6 @@ describe('Last generated badge', () => {
     numberOfCourts: 4,
     onNumberOfCourtsChange: mockOnNumberOfCourtsChange,
     onGenerateAssignments: mockOnGenerateAssignments,
-    manualCourtSelection: null,
-    onManualCourtSelectionChange: mockOnManualCourtSelectionChange,
   };
 
   beforeEach(() => {

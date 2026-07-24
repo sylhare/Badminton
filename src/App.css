@@ -714,7 +714,11 @@ h1 {
     cursor: not-allowed;
 }
 
-.manual-court-button {
+.rearrange-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background: var(--surface-hover);
     color: var(--text-soft);
     border: 2px solid var(--border);
@@ -727,12 +731,43 @@ h1 {
     white-space: nowrap;
 }
 
-.manual-court-button:hover {
+/* Immediate hover tooltip (the native title is too slow to notice). */
+.rearrange-button[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 240px;
+    white-space: normal;
+    background: var(--text);
+    color: var(--surface-hover);
+    border-radius: var(--radius-md);
+    border-top: 3px solid var(--color-primary);
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0s linear 0.15s;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Dwell ~1s before appearing (matches the ⓘ Tooltip), hide immediately on leave. */
+.rearrange-button[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.15s ease 1s, visibility 0s linear 1s;
+}
+
+.rearrange-button:hover {
     background: var(--surface-accent);
     border-color: var(--border-strong);
 }
 
-.manual-court-button.has-selection {
+.rearrange-button.active {
     background: #ebf8ff;
     border-color: #63b3ed;
     color: #2b6cb0;
@@ -770,40 +805,6 @@ h1 {
 
 .no-assignments-hint .generate-button {
     margin-top: 16px;
-}
-
-.manual-court-modal-content {
-    max-width: 500px;
-}
-
-.manual-court-modal-content .modal-body {
-    max-height: 60vh;
-    overflow-y: auto;
-}
-
-.manual-court-modal-content .player-selection-grid {
-    margin-top: 15px;
-}
-
-.manual-court-modal-content .modal-footer {
-    padding-top: 15px;
-    border-top: 1px solid var(--border);
-}
-
-.manual-court-modal-content .modal-footer .modal-cancel-button {
-    background: var(--color-primary);
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.manual-court-modal-content .modal-footer .modal-cancel-button:hover {
-    background: var(--color-primary-hover);
 }
 
 .button-shake {
@@ -887,12 +888,6 @@ h1 {
     align-items: center;
     justify-content: center;
     gap: 8px;
-}
-
-.manual-court-icon {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    animation: subtle-pulse 2s ease-in-out infinite;
 }
 
 .rotate-teams-button {
@@ -1599,256 +1594,7 @@ h1 {
     }
 }
 
-/* Manual Court Selection styles */
-.manual-court-selection {
-    background: white;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.manual-court-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.2s ease;
-}
-
-.manual-court-header:hover {
-    color: var(--color-primary);
-}
-
-.manual-court-header h3 {
-    margin: 0;
-    color: var(--text);
-    font-size: 1.1rem;
-}
-
-.manual-court-toggle {
-    color: var(--color-primary);
-    font-size: 1.2rem;
-    font-weight: bold;
-    transition: transform 0.2s ease;
-}
-
-.manual-court-content {
-    margin-top: 15px;
-}
-
-.manual-court-description {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin: 0 0 15px 0;
-    line-height: 1.4;
-}
-
-.manual-court-selected {
-    background: var(--surface-hover);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 15px;
-    margin-bottom: 15px;
-}
-
-.selected-players strong {
-    color: var(--text);
-    font-size: 0.9rem;
-}
-
-.selected-player-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.selected-player-tag {
-    background: var(--color-primary);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    animation: fadeIn 0.2s ease-in;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes subtle-pulse {
-    0%, 100% {
-        opacity: 0.8;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-}
-
-.remove-selected-player {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.1rem;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0;
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.2s;
-}
-
-.remove-selected-player:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.clear-manual-selection {
-    background: var(--danger-hover);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
-    font-size: 0.85rem;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: all 0.2s;
-}
-
-.clear-manual-selection:hover {
-    background: #c53030;
-    transform: translateY(-1px);
-}
-
-.player-selection-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.player-selection-button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-    border: 2px solid var(--border);
-    border-radius: var(--radius-md);
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: left;
-    font-family: inherit;
-}
-
-.player-selection-button:hover:not(.disabled) {
-    border-color: var(--color-primary);
-    background: var(--surface-hover);
-    transform: translateY(-1px);
-}
-
-.player-selection-button.selected {
-    border-color: var(--color-primary);
-    background: var(--color-primary-light, #ebf8ff);
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
-}
-
-.player-selection-button.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.player-selection-checkbox {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--border-strong);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    color: var(--color-primary);
-    font-weight: bold;
-    transition: all 0.2s;
-}
-
-.player-selection-button.selected .player-selection-checkbox {
-    border-color: var(--color-primary);
-    background: var(--color-primary);
-    color: white;
-}
-
-.player-selection-name {
-    flex: 1;
-    font-weight: 500;
-    color: var(--text);
-}
-
-.manual-court-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-top: 1px solid var(--border);
-    margin-top: 10px;
-}
-
-.selection-count {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-.match-preview {
-    font-size: 0.85rem;
-    color: var(--color-primary);
-    font-weight: 600;
-    font-style: italic;
-    animation: fadeIn 0.3s ease-in;
-}
-
 @media (max-width: 768px) {
-    .player-selection-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .manual-court-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .selected-player-list {
-        justify-content: flex-start;
-    }
-
-    .manual-court-selection {
-        padding: 15px;
-    }
-
-    .player-selection-button {
-        padding: 15px 12px;
-        min-height: 44px;
-    }
-
     .leaderboard-table th, .leaderboard-table td {
         padding: 8px 10px;
     }

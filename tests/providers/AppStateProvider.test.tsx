@@ -26,7 +26,7 @@ describe('AppStateProvider', () => {
       await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
 
       let result: GenerateResult;
-      act(() => { result = appState.current!.generate([], 2, [], null); });
+      act(() => { result = appState.current!.generate([], 2, []); });
 
       expect(Array.isArray(result!.courts)).toBe(true);
       expect(typeof result!.committed).toBe('boolean');
@@ -46,7 +46,7 @@ describe('AppStateProvider', () => {
       await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
       await act(async () => { appState.current!.setPlayers([alice, bob]); });
 
-      act(() => { appState.current!.generate([alice, bob], 1, [courtWithWinner], null); });
+      act(() => { appState.current!.generate([alice, bob], 1, [courtWithWinner]); });
 
       await waitFor(() => {
         expect(appState.current!.players.find(p => p.id === '1')?.level).toBeGreaterThan(50);
@@ -68,13 +68,13 @@ describe('AppStateProvider', () => {
       await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
       await act(async () => { appState.current!.setPlayers([alice, bob]); });
 
-      act(() => { appState.current!.generate([alice, bob], 1, [courtWithWinner], null); });
+      act(() => { appState.current!.generate([alice, bob], 1, [courtWithWinner]); });
       await waitFor(() => {
         expect(appState.current!.players.find(p => p.id === '1')?.level).toBeGreaterThan(50);
       });
       const aliceLevel = appState.current!.players.find(p => p.id === '1')!.level;
 
-      act(() => { appState.current!.generate([alice, bob], 1, [courtWithWinner], null); });
+      act(() => { appState.current!.generate([alice, bob], 1, [courtWithWinner]); });
       await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)); });
 
       expect(appState.current!.players.find(p => p.id === '1')?.level).toBe(aliceLevel);
@@ -113,7 +113,7 @@ describe('AppStateProvider', () => {
       renderWithProvider(<Capture />);
       await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
 
-      act(() => { appState.current!.generate(players, 2, [], null); });
+      act(() => { appState.current!.generate(players, 2, []); });
       await waitFor(() => expect(appState.current!.benchCounts.size).toBeGreaterThan(0));
 
       await act(async () => { await appState.current!.resetAlgorithm(); });
