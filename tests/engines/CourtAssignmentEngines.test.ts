@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CourtAssignmentTracker } from '../../src/engines/CourtAssignmentTracker';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import * as selector from '../../src/engines/engineSelector';
-import type { Court, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../../src/types';
+import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { benchedPlayers } from '../../src/utils/playerUtils';
 
 const engines: Array<{ name: string; engine: ICourtAssignmentEngine; type: selector.EngineType }> = [
@@ -394,145 +394,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     });
   });
 
-  describe('Manual Court Selection', () => {
-    it('creates manual court with 2 players for singles', () => {
-      const players = mockPlayers(8);
-      const manualSelection: ManualCourtSelection = {
-        players: [players[0], players[1]],
-      };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-
-      expect(assignments).toHaveLength(2);
-
-      const manualCourt = assignments[0];
-      expect(manualCourt.courtNumber).toBe(1);
-      expect(manualCourt.players).toEqual([players[0], players[1]]);
-      expect(manualCourt.teams).toEqual({
-        team1: [players[0]],
-        team2: [players[1]],
-      });
-    });
-
-    it('creates manual court with 4 players for doubles', () => {
-      const players = mockPlayers(8);
-      const manualSelection: ManualCourtSelection = {
-        players: [players[0], players[1], players[2], players[3]],
-      };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-
-      expect(assignments).toHaveLength(2);
-
-      const manualCourt = assignments[0];
-      expect(manualCourt.courtNumber).toBe(1);
-      expect(manualCourt.players).toEqual([players[0], players[1], players[2], players[3]]);
-      expect(manualCourt.teams).toBeDefined();
-      expect(manualCourt.teams!.team1).toHaveLength(2);
-      expect(manualCourt.teams!.team2).toHaveLength(2);
-    });
-
-    it('excludes manually selected players from automatic assignment', () => {
-      const players = mockPlayers(8);
-      const manualSelection: ManualCourtSelection = {
-        players: [players[0], players[1], players[2], players[3]],
-      };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-
-      expect(assignments).toHaveLength(2);
-
-      const autoCourt = assignments[1];
-      const autoPlayerIds = autoCourt.players.map(p => p.id);
-
-      manualSelection.players.forEach(manualPlayer => {
-        expect(autoPlayerIds).not.toContain(manualPlayer.id);
-      });
-    });
-
-    it('ignores manual selection with only 1 player', () => {
-      const players = mockPlayers(8);
-      const manualSelection: ManualCourtSelection = {
-        players: [players[0]],
-      };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-
-      expect(assignments).toHaveLength(2);
-      const allAssignedPlayers = assignments.flatMap(court => court.players);
-      expect(allAssignedPlayers).toHaveLength(8);
-    });
-
-    it('ignores manual selection with more than 4 players', () => {
-      const players = mockPlayers(8);
-      const manualSelection: ManualCourtSelection = {
-        players: [players[0], players[1], players[2], players[3], players[4]],
-      };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-
-      expect(assignments).toHaveLength(2);
-      expect(assignments[0].courtNumber).toBe(1);
-      expect(assignments[1].courtNumber).toBe(2);
-    });
-
-    it('filters out absent players from manual selection', () => {
-      const players = mockPlayers(8);
-      players[1].isPresent = false;
-
-      const manualSelection: ManualCourtSelection = {
-        players: [players[0], players[1], players[2]],
-      };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-
-      expect(assignments).toHaveLength(2);
-
-      const manualCourt = assignments[0];
-      expect(manualCourt.players).toHaveLength(2);
-      expect(manualCourt.players).toEqual([players[0], players[2]]);
-    });
-
-    it('works with empty manual selection', () => {
-      const players = mockPlayers(8);
-      const manualSelection: ManualCourtSelection = { players: [] };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-
-      expect(assignments).toHaveLength(2);
-      expect(assignments[0].courtNumber).toBe(1);
-      expect(assignments[1].courtNumber).toBe(2);
-    });
-
-    it('works with null manual selection', () => {
-      const players = mockPlayers(8);
-
-      const { courts: assignments } = engine.generate(players, 2, undefined);
-
-      expect(assignments).toHaveLength(2);
-      expect(assignments[0].courtNumber).toBe(1);
-      expect(assignments[1].courtNumber).toBe(2);
-    });
-
-    it('properly handles benching with manual selection', () => {
-      const players = mockPlayers(10);
-      const manualSelection: ManualCourtSelection = {
-        players: [players[0], players[1], players[2], players[3]],
-      };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-      const benched = benchedPlayers(assignments, players);
-
-      expect(assignments).toHaveLength(2);
-      expect(benched).toHaveLength(2);
-
-      const benchedIds = benched.map(p => p.id);
-      manualSelection.players.forEach(player => {
-        expect(benchedIds).not.toContain(player.id);
-      });
-    });
-  });
-
   describe('Observer Pattern', () => {
     it('should notify listeners on state change', () => {
       const listener = vi.fn();
@@ -836,7 +697,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const players = mockPlayers(8);
 
       const forceBench = new Set(['P0', 'P1']);
-      const { courts: assignments } = engine.generate(players, 2, undefined, forceBench);
+      const { courts: assignments } = engine.generate(players, 2, forceBench);
 
       const onCourtIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
       expect(onCourtIds.has('P0')).toBeFalsy();
@@ -846,28 +707,6 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const benchedIds = benched.map(p => p.id);
       expect(benchedIds).toContain('P0');
       expect(benchedIds).toContain('P1');
-    });
-
-    it('handles 3-player manual selection by excluding them from auto-assignment', () => {
-      const players = mockPlayers(8);
-      const manualSelection: ManualCourtSelection = {
-        players: [players[0], players[1], players[2]],
-      };
-
-      const { courts: assignments } = engine.generate(players, 2, manualSelection);
-      expect(assignments.length).toBeGreaterThanOrEqual(1);
-
-      const court1 = assignments.find(c => c.courtNumber === 1);
-      expect(court1).toBeDefined();
-      expect(court1!.players.map(p => p.id)).toContain('P0');
-      expect(court1!.players.map(p => p.id)).toContain('P1');
-      expect(court1!.players.map(p => p.id)).toContain('P2');
-
-      const otherCourts = assignments.filter(c => c.courtNumber !== 1);
-      const otherPlayers = otherCourts.flatMap(c => c.players.map(p => p.id));
-      expect(otherPlayers).not.toContain('P0');
-      expect(otherPlayers).not.toContain('P1');
-      expect(otherPlayers).not.toContain('P2');
     });
   });
 

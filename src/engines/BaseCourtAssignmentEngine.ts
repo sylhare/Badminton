@@ -1,4 +1,4 @@
-import type { Court, GenerateResult, ICourtAssignmentEngine, ManualCourtSelection, Player } from '../types';
+import type { Court, GenerateResult, ICourtAssignmentEngine, Player } from '../types';
 import { pairKey, teamPairs } from '../utils/playerUtils';
 
 import { CourtAssignmentTracker } from './CourtAssignmentTracker';
@@ -9,7 +9,6 @@ import { CourtAssignmentTracker } from './CourtAssignmentTracker';
  * Implements the Template Method pattern for court generation.
  * Handles common tasks like:
  * - Filtering present players
- * - Managing manual court selections
  * - Calculating and assigning bench spots
  * - Recording statistics (benching, singles, pairs)
  *
@@ -28,48 +27,30 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
   generate(
     players: Player[],
     numberOfCourts: number,
-    manualSelection?: ManualCourtSelection,
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult {
     const replaceRound = !this.shouldCommitRound();
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return { courts: [], committed: true, anomalies: [] };
 
-    let manualCourtResult: Court | null = null;
-    let remainingPlayers = presentPlayers;
-    let remainingCourts = numberOfCourts;
-
-    if (manualSelection && manualSelection.players.length > 0) {
-      const manualPlayers = manualSelection.players.filter(p => p.isPresent);
-      if (manualPlayers.length >= 2 && manualPlayers.length <= 4) {
-        manualCourtResult = this.createManualCourt(manualPlayers, 1, (p) => this.getOptimalTeamSplit(p));
-        remainingPlayers = presentPlayers.filter(p => !manualPlayers.some(mp => mp.id === p.id));
-        remainingCourts = numberOfCourts - 1;
-      }
-    }
-
-    const capacity = remainingCourts * 4;
-    let benchSpots = Math.max(0, remainingPlayers.length - capacity);
-    if ((remainingPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
-    benchSpots = Math.min(benchSpots, remainingPlayers.length);
+    const capacity = numberOfCourts * 4;
+    let benchSpots = Math.max(0, presentPlayers.length - capacity);
+    if ((presentPlayers.length - benchSpots) % 2 === 1) benchSpots += 1;
+    benchSpots = Math.min(benchSpots, presentPlayers.length);
 
     const forceBenchedPlayers = forceBenchPlayerIds
-      ? remainingPlayers.filter(p => forceBenchPlayerIds.has(p.id))
+      ? presentPlayers.filter(p => forceBenchPlayerIds.has(p.id))
       : [];
 
     const additionalBenchSpots = Math.max(0, benchSpots - forceBenchedPlayers.length);
-    const playersForAlgorithmBench = remainingPlayers.filter(p => !forceBenchPlayerIds?.has(p.id));
+    const playersForAlgorithmBench = presentPlayers.filter(p => !forceBenchPlayerIds?.has(p.id));
     const algorithmBenchedPlayers = this.selectBenchedPlayers(playersForAlgorithmBench, additionalBenchSpots);
 
     const benchedPlayers = [...forceBenchedPlayers, ...algorithmBenchedPlayers];
 
-    const onCourtPlayers = remainingPlayers.filter(p => !benchedPlayers.includes(p));
+    const onCourtPlayers = presentPlayers.filter(p => !benchedPlayers.includes(p));
 
-    const startCourtNum = manualCourtResult ? 2 : 1;
-    let finalCourts = this.generateAssignments(onCourtPlayers, remainingCourts, startCourtNum);
-    if (manualCourtResult) {
-      finalCourts = [manualCourtResult, ...finalCourts];
-    }
+    const finalCourts = this.generateAssignments(onCourtPlayers, numberOfCourts, 1);
 
     if (!replaceRound) this.markRoundCompleted();
     this.clearCurrentSession();
@@ -86,16 +67,9 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
    * Core algorithm implementation to be defined by subclasses.
    * @param players Players available for assignment (already filtered for benching).
    * @param numberOfCourts Number of courts to fill.
-   * @param startCourtNum The starting court number (offset if manual court exists).
+   * @param startCourtNum The starting court number.
    */
   protected abstract generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[];
-
-  /**
-   * Helper to split 4 players into 2 teams.
-   * Subclasses should implement their specific heuristic (cost interpretation).
-   * By default, engines used `chooseBestTeamSplit`.
-   */
-  protected abstract getOptimalTeamSplit(players: Player[]): Court['teams'];
 
   /**
    * Evaluates the cost of a specific team split.

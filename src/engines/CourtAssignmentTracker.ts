@@ -574,21 +574,6 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }).slice(0, benchSpots);
   }
 
-  /**
-   * Creates a court for manual selection.
-   */
-  protected createManualCourt(players: Player[], courtNumber: number, teamSplitter?: (players: Player[]) => Court['teams']): Court {
-    const court: Court = { courtNumber, players: [...players] };
-
-    if (players.length === 4 && teamSplitter) {
-      court.teams = teamSplitter(players);
-    } else if (players.length >= 2) {
-      court.teams = { team1: [players[0]], team2: [players[1]] };
-    }
-
-    return court;
-  }
-
   /** Prunes historical pairings and counts based on recency. */
   private pruneHistoricalData(maxEntries: number): void {
     const pairingKeys = [...new Set([

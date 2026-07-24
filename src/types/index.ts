@@ -10,10 +10,6 @@ export interface Player {
   scoredGames?: number;
 }
 
-export interface ManualCourtSelection {
-  players: Player[];
-}
-
 export interface Court {
   courtNumber: number;
   players: Player[];
@@ -22,7 +18,6 @@ export interface Court {
     team2: Player[];
   };
   winner?: 1 | 2;
-  wasManuallyAssigned?: boolean;
   score?: { team1: number; team2: number };
 }
 
@@ -96,7 +91,7 @@ export interface ICourtAssignmentTracker {
 }
 
 export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
-  generate(players: Player[], numberOfCourts: number, manualSelection?: ManualCourtSelection, forceBenchPlayerIds?: Set<string>): GenerateResult;
+  generate(players: Player[], numberOfCourts: number, forceBenchPlayerIds?: Set<string>): GenerateResult;
   readonly name: string;
   readonly description: string;
 }
@@ -123,7 +118,7 @@ export interface AppStateContextType {
   benchCounts: Map<string, number>;
   engineState: EngineSnapshot | null;
   levelTrend: (playerId: string) => 'up' | 'down' | null;
-  generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], manualCourtSelection?: ManualCourtSelection | null, forceBenchPlayerIds?: Set<string>): GenerateResult;
+  generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], forceBenchPlayerIds?: Set<string>): GenerateResult;
   updateWinner(params: UpdateWinnerParams): Court[];
   applyManualEdit(previous: Court[], next: Court[]): Court[];
   saveState(): Promise<void>;
