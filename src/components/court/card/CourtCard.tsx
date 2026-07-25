@@ -14,7 +14,6 @@ interface CourtCardProps {
   onWinnerChange?: (courtNumber: number, teamNumber: number) => void;
   onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
   onRotateTeams?: (courtNumber: number) => void;
-  isManualCourt?: boolean;
   isAnimating?: boolean;
   isSmartEngineEnabled?: boolean;
   /** While rearranging players (touch edit mode), the set-winner tap is off. */
@@ -28,7 +27,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
   onWinnerChange,
   onScoreChange,
   onRotateTeams,
-  isManualCourt = false,
   isAnimating = false,
   isSmartEngineEnabled = false,
   isEditMode = false,
@@ -131,7 +129,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
       <CourtHeader
         courtNumber={court.courtNumber}
         matchType={matchType}
-        isManualCourt={isManualCourt}
         onRotateTeams={teams ? handleRotateTeams : undefined}
       />
       {matchContent}

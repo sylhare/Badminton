@@ -33,10 +33,6 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
     return this.runSimulatedAnnealing(players, numberOfCourts, startCourtNum);
   }
 
-  protected getOptimalTeamSplit(players: Player[]): Court['teams'] {
-    return this.chooseBestTeamSplit(players).teams;
-  }
-
   private runSimulatedAnnealing(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     if (players.length < 2) return [];
 

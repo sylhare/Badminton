@@ -21,23 +21,6 @@ describe('CourtHeader', () => {
     expect(screen.getByText(/Court 3 - Doubles/)).toBeInTheDocument();
   });
 
-  it('displays manual court icon when isManualCourt is true', () => {
-    render(<CourtHeader courtNumber={1} isManualCourt={true} />);
-    const icon = screen.getByTitle('Manually assigned court');
-    expect(icon).toBeInTheDocument();
-    expect(icon).toHaveTextContent('⚙️');
-  });
-
-  it('does not display manual court icon when isManualCourt is false', () => {
-    render(<CourtHeader courtNumber={1} isManualCourt={false} />);
-    expect(screen.queryByTitle('Manually assigned court')).not.toBeInTheDocument();
-  });
-
-  it('does not display manual court icon by default', () => {
-    render(<CourtHeader courtNumber={1} />);
-    expect(screen.queryByTitle('Manually assigned court')).not.toBeInTheDocument();
-  });
-
   it('renders correctly without match type', () => {
     render(<CourtHeader courtNumber={5} />);
     expect(screen.getByText('Court 5')).toBeInTheDocument();

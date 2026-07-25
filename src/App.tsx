@@ -13,7 +13,7 @@ import { useAppState } from './providers/AppStateProvider';
 import { benchedPlayers } from './utils/playerUtils';
 import { applyCourtSwap } from './utils/courtSwap';
 import type { SlotAddr } from './utils/slotSwap';
-import type { Court, ManualCourtSelection, WinnerSelection } from './types';
+import type { Court, WinnerSelection } from './types';
 
 export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
@@ -64,7 +64,6 @@ function App(): React.ReactElement {
   } = useAppState();
 
   const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(false);
-  const [manualCourtSelection, setManualCourtSelection] = useState<ManualCourtSelection | null>(null);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
 
   const { shareUrl, setShareUrl, importState, handleShare, handleImportAccept, handleImportDecline } = useShareState();
@@ -83,7 +82,6 @@ function App(): React.ReactElement {
     setAssignments([]);
     setLastGeneratedAt(undefined);
     setIsManagePlayersCollapsed(false);
-    setManualCourtSelection(null);
   };
 
   const handleResetAlgorithm = async () => {
@@ -102,22 +100,12 @@ function App(): React.ReactElement {
 
   const generateAssignments = () => {
     setLastGeneratedAt(Date.now());
-    const hadManualSelection = manualCourtSelection !== null && manualCourtSelection.players.length > 0;
-    const result = generate(players, numberOfCourts, assignments, manualCourtSelection, forceBenchPlayerIds);
-
-    if (hadManualSelection) {
-      result.courts.forEach(court => {
-        if (court.courtNumber === 1) {
-          court.wasManuallyAssigned = true;
-        }
-      });
-    }
+    const result = generate(players, numberOfCourts, assignments, forceBenchPlayerIds);
 
     setAssignments(result.courts);
     if (!isManagePlayersCollapsed) {
       setIsManagePlayersCollapsed(true);
     }
-    setManualCourtSelection(null);
     setForceBenchPlayerIds(new Set());
   };
 
@@ -229,10 +217,7 @@ function App(): React.ReactElement {
               hasHistoricalWinners={winCounts.size > 0}
               onRotateTeams={handleRotateTeams}
               onSwapPlayers={handleSwapPlayers}
-              hasManualCourtSelection={assignments.some(court => court.wasManuallyAssigned)}
               onViewBenchCounts={handleViewBenchCounts}
-              manualCourtSelection={manualCourtSelection}
-              onManualCourtSelectionChange={setManualCourtSelection}
               lastGeneratedAt={lastGeneratedAt}
               isSmartEngineEnabled={isSmartEngineEnabled}
             />

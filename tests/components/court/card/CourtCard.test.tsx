@@ -193,13 +193,6 @@ describe('CourtCard', () => {
       expect(screen.getByText('Charlie')).toBeInTheDocument();
       expect(screen.getByText('VS')).toBeInTheDocument();
     });
-
-    it('displays manual court icon when isManualCourt is true', () => {
-      render(<CourtCard court={genericCourt} isManualCourt={true} />);
-
-      const icon = screen.getByTitle('Manually assigned court');
-      expect(icon).toBeInTheDocument();
-    });
   });
 
   describe('Animation states', () => {

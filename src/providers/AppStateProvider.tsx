@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 
 import { engine, getEngineType, setEngine, enginePersistence } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
-import type { AppStateContextType, Court, EngineSnapshot, GenerateResult, ManualCourtSelection, Player, UpdateWinnerParams } from '../types';
+import type { AppStateContextType, Court, EngineSnapshot, GenerateResult, Player, UpdateWinnerParams } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
@@ -133,10 +133,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     players: Player[],
     numberOfCourts: number,
     previousAssignments: Court[],
-    manualCourtSelection?: ManualCourtSelection | null,
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult => {
-    const result = engine().generate(players, numberOfCourts, manualCourtSelection || undefined, forceBenchPlayerIds);
+    const result = engine().generate(players, numberOfCourts, forceBenchPlayerIds);
     if (result.committed) applyCourtResults(previousAssignments);
 
     result.anomalies.forEach(trackAssignmentAnomaly);

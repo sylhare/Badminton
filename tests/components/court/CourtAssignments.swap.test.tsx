@@ -29,8 +29,6 @@ function renderCourts(overrides = {}) {
     numberOfCourts: 2,
     onNumberOfCourtsChange: vi.fn(),
     onGenerateAssignments: vi.fn(),
-    manualCourtSelection: null,
-    onManualCourtSelectionChange: vi.fn(),
     onWinnerChange: vi.fn(),
     onSwapPlayers: vi.fn(),
     ...overrides,
@@ -130,6 +128,47 @@ describe('CourtAssignments drag-and-drop editing', () => {
       renderCourts();
       longPress('0:0');
       fireEvent.click(screen.getByTestId('edit-mode-done'));
+      expect(screen.queryByTestId('edit-mode-banner')).toBeNull();
+    });
+  });
+
+  describe('Rearrange players button (discoverability)', () => {
+    function tap(slot: string) {
+      const chip = document.querySelector(`[data-slot="${slot}"]`)!;
+      fireEvent.pointerDown(chip, { pointerType: 'touch', button: 0, clientX: 0, clientY: 0 });
+      fireEvent.pointerUp(chip, { pointerType: 'touch', clientX: 0, clientY: 0 });
+    }
+
+    it('shows the Rearrange button when assignments can be edited', () => {
+      renderCourts();
+      expect(screen.getByTestId('rearrange-button')).toBeTruthy();
+    });
+
+    it('is hidden when there are no assignments to rearrange', () => {
+      renderCourts({ assignments: [] });
+      expect(screen.queryByTestId('rearrange-button')).toBeNull();
+    });
+
+    it('enters edit mode and enables tap-to-swap when clicked', () => {
+      const props = renderCourts();
+
+      fireEvent.click(screen.getByTestId('rearrange-button'));
+      expect(screen.getByTestId('edit-mode-banner')).toBeTruthy();
+
+      tap('0:0');
+      tap('2:0');
+
+      expect(props.onSwapPlayers).toHaveBeenCalledWith({ group: 0, index: 0 }, { group: 2, index: 0 });
+    });
+
+    it('toggles edit mode off when clicked again', () => {
+      renderCourts();
+      const button = screen.getByTestId('rearrange-button');
+
+      fireEvent.click(button);
+      expect(screen.getByTestId('edit-mode-banner')).toBeTruthy();
+
+      fireEvent.click(button);
       expect(screen.queryByTestId('edit-mode-banner')).toBeNull();
     });
   });

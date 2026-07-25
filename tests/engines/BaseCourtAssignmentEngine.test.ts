@@ -31,10 +31,6 @@ class TestEngine extends BaseCourtAssignmentEngine {
     return courts;
   }
 
-  protected getOptimalTeamSplit(players: Player[]): Court['teams'] {
-    return this.chooseBestTeamSplit(players).teams;
-  }
-
   protected evaluateTeamSplitCost(team1: Player[], team2: Player[]): number {
     let cost = 0;
     cost += this.calculateTeammateCost(team1, 1);
