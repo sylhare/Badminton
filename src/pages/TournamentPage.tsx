@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { storageManager } from '../utils/StorageManager';
 import { useAppState } from '../providers/AppStateProvider';
 import { Tournament } from '../components/tournament/Tournament';
 import Footer from '../components/Footer';
@@ -11,35 +10,12 @@ import { tournamentLevelInputs } from '../tournament/tournamentLevels';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
 import './TournamentPage.css';
 
-type AnyTournament = RoundRobinTournament | EliminationTournament;
-
 const TournamentPage = (): React.ReactElement => {
-  const { players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled, applyLevelReplay } = useAppState();
-  const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
-  const [tournament, setTournament] = useState<AnyTournament | null>(null);
-  const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
+  const {
+    players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled,
+    applyLevelReplay, numberOfCourts, tournament, setTournament,
+  } = useAppState();
   const [showSetup, setShowSetup] = useState(false);
-
-  useEffect(() => {
-    Promise.all([storageManager.loadApp(), storageManager.loadTournament()]).then(
-      ([appState, savedTournament]) => {
-        if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
-        if (savedTournament) {
-          if (savedTournament.type === 'elimination') {
-            setTournament(EliminationTournament.fromState(savedTournament));
-          } else {
-            setTournament(RoundRobinTournament.fromState(savedTournament));
-          }
-        }
-        setIsTournamentLoaded(true);
-      },
-    );
-  }, []);
-
-  useEffect(() => {
-    if (!isTournamentLoaded) return;
-    storageManager.saveTournament(tournament?.state() ?? null);
-  }, [tournament, isTournamentLoaded]);
 
   const handleStart = (
     teams: TournamentTeam[],
@@ -111,7 +87,7 @@ const TournamentPage = (): React.ReactElement => {
         <Tournament
           tournament={tournament}
           initialPlayers={players}
-          initialNumberOfCourts={initialNumberOfCourts}
+          initialNumberOfCourts={numberOfCourts}
           onStart={handleStart}
           onMatchResult={handleMatchResult}
           onReset={handleReset}
