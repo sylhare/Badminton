@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { getColorForCount, getGlowColorForCount, GRAPH_COLORS } from '../../constants/graphColors';
 
 import { SvgChart } from './SvgChart';
+import { GraphCountLegend } from './GraphCountLegend';
 
 /**
  * Props for the PairsGraph component
@@ -163,24 +164,7 @@ export function PairsGraph({ pairsData }: PairsGraphProps): React.ReactElement |
         })}
       </SvgChart>
 
-      <div className="graph-legend">
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: GRAPH_COLORS.count1 }}></span>
-          <span>1×</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: GRAPH_COLORS.count2 }}></span>
-          <span>2×</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: GRAPH_COLORS.count3 }}></span>
-          <span>3×</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-dot" style={{ background: GRAPH_COLORS.count4Plus }}></span>
-          <span>4×+</span>
-        </div>
-      </div>
+      <GraphCountLegend />
     </div>
   );
 }

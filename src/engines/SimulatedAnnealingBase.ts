@@ -8,7 +8,7 @@ import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
  *
  * Implements the Template Method pattern for the SA loop.
  * Holds all shared SA infrastructure (loop, perturbation, constants).
- * Subclasses implement `evaluateTotalCost` and `evaluateTeamSplitCost`.
+ * Subclasses implement `courtSpecificCost` and `evaluateTeamSplitCost`.
  */
 export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine implements ICourtAssignmentEngine {
   SA_ITERATIONS: number = 500;
@@ -27,7 +27,24 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
     if (typeof params.coolingRate === 'number') this.COOLING_RATE = params.coolingRate;
   }
 
-  protected abstract evaluateTotalCost(courts: Court[]): number;
+  protected evaluateTotalCost(courts: Court[]): number {
+    let totalCost = 0;
+    for (const court of courts) {
+      if (!court.teams) continue;
+      if (court.players.length === 2) {
+        totalCost += this.calculateSinglesCost(court.players, this.SINGLES_REPEAT_PENALTY);
+      }
+      totalCost += this.calculateTeammateCost(court.teams.team1, this.TEAMMATE_REPEAT_PENALTY);
+      totalCost += this.calculateTeammateCost(court.teams.team2, this.TEAMMATE_REPEAT_PENALTY);
+      totalCost += this.calculateOpponentCost(court.teams.team1, court.teams.team2, this.OPPONENT_REPEAT_PENALTY);
+      totalCost += this.calculateWinBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
+      totalCost += this.courtSpecificCost(court);
+    }
+    return totalCost;
+  }
+
+  /** Per-court cost terms specific to each engine's matching model, summed on top of the shared terms above. */
+  protected abstract courtSpecificCost(court: Court): number;
 
   protected generateAssignments(players: Player[], numberOfCourts: number, startCourtNum: number): Court[] {
     return this.runSimulatedAnnealing(players, numberOfCourts, startCourtNum);
