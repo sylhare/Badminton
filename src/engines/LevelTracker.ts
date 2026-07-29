@@ -3,18 +3,7 @@ import type { Court, Player } from '../types';
 import { LevelTrackerConfig } from './levelTrackerConfig';
 
 export class LevelTracker {
-  /**
-   * Determine the K-factor (maximum rating change per game) based on the score.
-   *
-   * Returns {@link LevelTrackerConfig.K_DEFAULT} when no score is available or the
-   * winner score is not exactly 21 (deuce). Otherwise the raw K is looked up from
-   * {@link LevelTrackerConfig.K_SCALE} (matched by score difference) or falls back
-   * to {@link LevelTrackerConfig.K_MAX} for the most dominant wins.
-   *
-   * When teamPlayers is provided, the raw K is scaled by a balance factor
-   * [{@link LevelTrackerConfig.BALANCE_FACTOR_FLOOR}, 1.0] based on within-team
-   * level spread — the more unbalanced the team, the less informative the result.
-   */
+  /** K-factor (max rating change per game) from the score, normalised to the reference length and scaled by team balance. */
   getKFactor(
     score?: { team1: number; team2: number },
     winner?: 1 | 2,
@@ -26,10 +15,10 @@ export class LevelTracker {
     const loserScore = winner === 1 ? score.team2 : score.team1;
 
     let rawK = LevelTrackerConfig.K_MAX;
-    if (winnerScore !== 21) {
+    if (winnerScore > LevelTrackerConfig.REFERENCE_LENGTH || winnerScore <= 0) {
       rawK = LevelTrackerConfig.K_DEFAULT;
     } else {
-      const diff = 21 - loserScore;
+      const diff = (winnerScore - loserScore) * (LevelTrackerConfig.REFERENCE_LENGTH / winnerScore);
       for (const band of LevelTrackerConfig.K_SCALE) {
         if (diff <= band.maxDiff) { rawK = band.k; break; }
       }

@@ -42,6 +42,18 @@ describe('LevelTracker', () => {
       expect(tracker.getKFactor({ team1: 21, team2: 3 }, 1)).toBe(LevelTrackerConfig.K_MAX);
     });
 
+    it('normalises a shorter match (15–13) so a close win scales like a game to 21', () => {
+      expect(tracker.getKFactor({ team1: 15, team2: 13 }, 1)).toBe(LevelTrackerConfig.K_SCALE[0].k);
+    });
+
+    it('returns K_MAX for a dominant short match (15–2)', () => {
+      expect(tracker.getKFactor({ team1: 15, team2: 2 }, 1)).toBe(LevelTrackerConfig.K_MAX);
+    });
+
+    it('normalises an 11-point match win (11–9)', () => {
+      expect(tracker.getKFactor({ team1: 11, team2: 9 }, 1)).toBe(LevelTrackerConfig.K_SCALE[1].k);
+    });
+
     it('scales K by balance factor for an unbalanced team', () => {
       const team = [makePlayer('a', 0), makePlayer('b', 100)];
       expect(tracker.getKFactor(undefined, undefined, team)).toBe(LevelTrackerConfig.K_DEFAULT * LevelTrackerConfig.BALANCE_FACTOR_FLOOR);

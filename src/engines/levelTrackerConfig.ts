@@ -8,11 +8,10 @@ export class LevelTrackerConfig {
   /** K-factor for the most dominant win (diff > 15, loser < 6). */
   static readonly K_MAX = 3.0;
 
-  /**
-   * K-factor bands, applied when the winner score is exactly 21.
-   * Each entry maps a maximum score difference to a K-factor.
-   * Evaluated in order; first match wins.
-   */
+  /** Match length the {@link K_SCALE} bands are calibrated to; winner scores are normalised to it. */
+  static readonly REFERENCE_LENGTH = 21;
+
+  /** K-factor bands over the winner-score-normalised margin of victory; first matching maxDiff wins. */
   static readonly K_SCALE = [
     { maxDiff: 3, k: 0.8 },
     { maxDiff: 6, k: 1.6 },

@@ -7,13 +7,14 @@ import { Tournament } from '../components/tournament/Tournament';
 import Footer from '../components/Footer';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../tournament/EliminationTournament';
+import { tournamentLevelInputs } from '../tournament/tournamentLevels';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
 import './TournamentPage.css';
 
 type AnyTournament = RoundRobinTournament | EliminationTournament;
 
 const TournamentPage = (): React.ReactElement => {
-  const { players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled } = useAppState();
+  const { players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled, applyLevelReplay } = useAppState();
   const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
   const [tournament, setTournament] = useState<AnyTournament | null>(null);
   const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
@@ -59,7 +60,11 @@ const TournamentPage = (): React.ReactElement => {
     winner: 1 | 2,
     score?: { team1: number; team2: number },
   ) => {
-    setTournament(prev => prev?.withMatchResult(matchId, winner, score) ?? null);
+    if (!tournament) return;
+    const next = tournament.withMatchResult(matchId, winner, score);
+    setTournament(next);
+    const { baseline, courts } = tournamentLevelInputs(next);
+    applyLevelReplay(baseline, courts);
   };
 
   const handleReset = () => {

@@ -101,46 +101,11 @@ export class RoundRobinTournament extends Tournament {
   }
 
   calculateStandings(): TournamentStandingRow[] {
-    const { teams, matches } = this._state;
-    const standings = new Map<string, TournamentStandingRow>();
-
-    for (const team of teams) {
-      standings.set(team.id, { team, played: 0, won: 0, lost: 0, points: 0, scoreDiff: 0 });
-    }
-
-    for (const match of matches) {
-      if (match.winner === undefined) continue;
-
-      const row1 = standings.get(match.team1.id);
-      const row2 = standings.get(match.team2.id);
-      if (!row1 || !row2) continue;
-
-      row1.played++;
-      row2.played++;
-
-      if (match.winner === 1) {
-        row1.won++;
-        row1.points += 2;
-        row2.lost++;
-      } else {
-        row2.won++;
-        row2.points += 2;
-        row1.lost++;
-      }
-
-      if (match.score) {
-        const diff = match.score.team1 - match.score.team2;
-        row1.scoreDiff += diff;
-        row2.scoreDiff -= diff;
-      }
-    }
-
+    const standings = this.tallyStandings(2);
     return Array.from(standings.values()).sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       if (b.scoreDiff !== a.scoreDiff) return b.scoreDiff - a.scoreDiff;
-      const nameA = a.team.players[0]?.name ?? '';
-      const nameB = b.team.players[0]?.name ?? '';
-      return nameA.localeCompare(nameB);
+      return this.compareByTeamName(a, b);
     });
   }
 

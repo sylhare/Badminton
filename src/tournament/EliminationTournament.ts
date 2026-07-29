@@ -321,35 +321,8 @@ export class EliminationTournament extends Tournament {
    * are only ranked once the final is decided, so a pending finalist stays ahead.
    */
   calculateStandings(): TournamentStandingRow[] {
-    const { teams, matches } = this._state;
-    const standings = new Map<string, TournamentStandingRow>();
-    for (const team of teams) {
-      standings.set(team.id, { team, played: 0, won: 0, lost: 0, points: 0, scoreDiff: 0 });
-    }
-
-    for (const match of matches) {
-      if (match.winner === undefined) continue;
-      const row1 = standings.get(match.team1.id);
-      const row2 = standings.get(match.team2.id);
-      if (!row1 || !row2) continue;
-
-      row1.played++;
-      row2.played++;
-
-      if (match.winner === 1) {
-        row1.won++;
-        row2.lost++;
-      } else {
-        row2.won++;
-        row1.lost++;
-      }
-
-      if (match.score) {
-        const diff = match.score.team1 - match.score.team2;
-        row1.scoreDiff += diff;
-        row2.scoreDiff -= diff;
-      }
-    }
+    const { matches } = this._state;
+    const standings = this.tallyStandings();
 
     const wbMatches = matches.filter(m => m.bracket === BracketKind.Winners);
     const cbMatches = matches.filter(m => m.bracket === BracketKind.Consolation);
@@ -388,9 +361,7 @@ export class EliminationTournament extends Tournament {
       .sort((a, b) => {
         if (a.lost !== b.lost) return a.lost - b.lost;
         if (b.won !== a.won) return b.won - a.won;
-        const nameA = a.team.players[0]?.name ?? '';
-        const nameB = b.team.players[0]?.name ?? '';
-        return nameA.localeCompare(nameB);
+        return this.compareByTeamName(a, b);
       });
 
     return [...placed, ...unplaced];

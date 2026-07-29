@@ -124,4 +124,71 @@ describe('AppStateProvider', () => {
       });
     });
   });
+
+  describe('applyLevelReplay', () => {
+    const alice: Player = { id: '1', name: 'Alice', isPresent: true, level: 50 };
+    const bob: Player = { id: '2', name: 'Bob', isPresent: true, level: 50 };
+    const carol: Player = { id: '3', name: 'Carol', isPresent: true, level: 50 };
+    const court = (winner: 1 | 2): Court => ({
+      courtNumber: 1,
+      players: [alice, bob],
+      teams: { team1: [alice], team2: [bob] },
+      winner,
+      score: { team1: winner === 1 ? 21 : 10, team2: winner === 2 ? 21 : 10 },
+    });
+
+    async function setup(players: Player[]) {
+      renderWithProvider(<Capture />);
+      await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
+      await act(async () => { appState.current!.setPlayers(players); });
+    }
+
+    it('replays from baseline into the winner/loser levels', async () => {
+      await setup([alice, bob]);
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      await waitFor(() => {
+        expect(appState.current!.players.find(p => p.id === '1')!.level!).toBeGreaterThan(50);
+        expect(appState.current!.players.find(p => p.id === '2')!.level!).toBeLessThan(50);
+      });
+    });
+
+    it('is idempotent — applying the same baseline twice yields the same levels', async () => {
+      await setup([alice, bob]);
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level).not.toBe(50));
+      const once = appState.current!.players.find(p => p.id === '1')!.level;
+
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level).toBe(once));
+    });
+
+    it('reverts cleanly when the winner flips (replay always starts from baseline)', async () => {
+      await setup([alice, bob]);
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level!).toBeGreaterThan(50));
+
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(2)]); });
+      await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level!).toBeLessThan(50));
+    });
+
+    it('leaves non-participants untouched', async () => {
+      await setup([alice, bob, carol]);
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level).not.toBe(50));
+      expect(appState.current!.players.find(p => p.id === '3')!.level).toBe(50);
+    });
+
+    it('preserves live name/gender/presence, merging only the Elo fields', async () => {
+      const staleAlice: Player = { id: '1', name: 'OLD', isPresent: true, level: 50 };
+      const liveAlice: Player = { id: '1', name: 'Alice Renamed', gender: 'F', isPresent: false, level: 50 };
+      await setup([liveAlice, bob]);
+      act(() => { appState.current!.applyLevelReplay([staleAlice, bob], [court(1)]); });
+      await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level).not.toBe(50));
+
+      const merged = appState.current!.players.find(p => p.id === '1')!;
+      expect(merged.name).toBe('Alice Renamed');
+      expect(merged.gender).toBe('F');
+      expect(merged.isPresent).toBe(false);
+    });
+  });
 });

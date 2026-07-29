@@ -121,6 +121,7 @@ export interface AppStateContextType {
   generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], forceBenchPlayerIds?: Set<string>): GenerateResult;
   updateWinner(params: UpdateWinnerParams): Court[];
   applyManualEdit(previous: Court[], next: Court[]): Court[];
+  applyLevelReplay(baseline: Player[], courts: Court[]): void;
   saveState(): Promise<void>;
   resetAlgorithm(): Promise<void>;
   engineName: string;
