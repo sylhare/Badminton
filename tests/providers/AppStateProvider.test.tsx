@@ -4,6 +4,9 @@ import { act, waitFor } from '@testing-library/react';
 
 import { useAppState } from '../../src/providers/AppStateProvider';
 import type { Court, GenerateResult, Player, UpdateWinnerParams } from '../../src/types';
+import type { TournamentTeam } from '../../src/tournament/types';
+import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
+import { tournamentLevelInputs } from '../../src/tournament/tournamentLevels';
 import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 import { storageManager } from '../../src/utils/StorageManager';
 
@@ -189,6 +192,82 @@ describe('AppStateProvider', () => {
       expect(merged.name).toBe('Alice Renamed');
       expect(merged.gender).toBe('F');
       expect(merged.isPresent).toBe(false);
+    });
+  });
+
+  describe('tournament Elo integration (real adapter → replay, as TournamentPage wires it)', () => {
+    const alice: Player = { id: '1', name: 'Alice', isPresent: true, level: 50 };
+    const bob: Player = { id: '2', name: 'Bob', isPresent: true, level: 50 };
+
+    async function setup() {
+      renderWithProvider(<Capture />);
+      await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
+      await act(async () => { appState.current!.setPlayers([alice, bob]); });
+    }
+
+    function singlesTournament() {
+      const teamA: TournamentTeam = { id: 'a', players: [alice] };
+      const teamB: TournamentTeam = { id: 'b', players: [bob] };
+      return RoundRobinTournament.create('singles', 1).start([teamA, teamB], 1);
+    }
+
+    function applyResult(tournament: RoundRobinTournament) {
+      const { baseline, courts } = tournamentLevelInputs(tournament);
+      act(() => { appState.current!.applyLevelReplay(baseline, courts); });
+    }
+
+    const levelOf = (id: string) => appState.current!.players.find(p => p.id === id)!.level!;
+
+    it('records a tournament win into player Elo — winner up, loser down', async () => {
+      await setup();
+      const t = singlesTournament();
+      const match = t.matches()[0];
+      const winnerId = match.team1.players[0].id;
+      const loserId = match.team2.players[0].id;
+
+      applyResult(t.withMatchResult(match.id, 1, { team1: 21, team2: 10 }));
+
+      await waitFor(() => {
+        expect(levelOf(winnerId)).toBeGreaterThan(50);
+        expect(levelOf(loserId)).toBeLessThan(50);
+      });
+    });
+
+    it('reverts through the adapter when the match winner is edited', async () => {
+      await setup();
+      const t = singlesTournament();
+      const match = t.matches()[0];
+      const team1Id = match.team1.players[0].id;
+
+      applyResult(t.withMatchResult(match.id, 1, { team1: 21, team2: 10 }));
+      await waitFor(() => expect(levelOf(team1Id)).toBeGreaterThan(50));
+
+      applyResult(t.withMatchResult(match.id, 2, { team1: 10, team2: 21 }));
+      await waitFor(() => expect(levelOf(team1Id)).toBeLessThan(50));
+    });
+
+    it('applies length-aware Elo for a shorter (to 15) tournament match', async () => {
+      await setup();
+      const t = singlesTournament();
+      const winnerId = t.matches()[0].team1.players[0].id;
+
+      applyResult(t.withMatchResult(t.matches()[0].id, 1, { team1: 15, team2: 2 }));
+      await waitFor(() => expect(levelOf(winnerId)).toBeGreaterThan(50));
+    });
+
+    it('records a level-history snapshot so tournament Elo surfaces on the Stats graph', async () => {
+      await setup();
+      const t = singlesTournament();
+      const match = t.matches()[0];
+      const winnerId = match.team1.players[0].id;
+
+      applyResult(t.withMatchResult(match.id, 1, { team1: 21, team2: 10 }));
+
+      await waitFor(() => {
+        const history = appState.current!.engineState?.levelHistory?.[winnerId];
+        expect(history).toBeDefined();
+        expect(history![history!.length - 1]).toBeGreaterThan(50);
+      });
     });
   });
 });

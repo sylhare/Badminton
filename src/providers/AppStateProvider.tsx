@@ -132,11 +132,17 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const applyLevelReplay = useCallback((baseline: Player[], courts: Court[]) => {
     const replayed = levelTracker.updatePlayersLevels(courts, baseline);
     const byId = new Map(replayed.map(p => [p.id, p]));
+    const changed = players.some(p => {
+      const r = byId.get(p.id);
+      return r !== undefined && (r.level !== p.level || r.averageScore !== p.averageScore || r.scoredGames !== p.scoredGames);
+    });
+    if (!changed) return;
+    engine().recordLevelSnapshot(replayed);
     setPlayers(prev => prev.map(p => {
       const r = byId.get(p.id);
       return r ? { ...p, level: r.level, averageScore: r.averageScore, scoredGames: r.scoredGames } : p;
     }));
-  }, []);
+  }, [players]);
 
   const generate = useCallback((
     players: Player[],
