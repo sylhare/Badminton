@@ -6,7 +6,7 @@ import { useAppState } from '../../src/providers/AppStateProvider';
 import type { Court, GenerateResult, Player, UpdateWinnerParams } from '../../src/types';
 import type { TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
-import { tournamentLevelInputs } from '../../src/tournament/tournamentLevels';
+import { tournamentLevelInputs } from '../../src/engines/LevelTracker';
 import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 import { storageManager } from '../../src/utils/StorageManager';
 

@@ -176,9 +176,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     syncFromEngine();
   };
 
-  /** Single write path for level changes: snapshot the given players, then update state. */
+  /** Single write path for level changes: snapshot present players, then update state. */
   const commitLevels = useCallback((snapshotPlayers: Player[], nextPlayers: React.SetStateAction<Player[]>) => {
-    engine().recordLevelSnapshot(snapshotPlayers);
+    engine().recordLevelSnapshot(snapshotPlayers.filter(p => p.isPresent));
     setPlayers(nextPlayers);
   }, []);
 
@@ -189,7 +189,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
       return;
     }
     const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners.map(court => ({ court })), players);
-    commitLevels(nextPlayers.filter(p => p.isPresent), nextPlayers);
+    commitLevels(nextPlayers, nextPlayers);
   }, [players, commitLevels]);
 
   const applyLevelReplay = useCallback((baseline: Player[], games: ScoredGame[]) => {

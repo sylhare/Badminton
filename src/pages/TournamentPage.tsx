@@ -6,7 +6,7 @@ import { Tournament } from '../components/tournament/Tournament';
 import Footer from '../components/Footer';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../tournament/EliminationTournament';
-import { tournamentLevelInputs } from '../tournament/tournamentLevels';
+import { tournamentLevelInputs } from '../engines/LevelTracker';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
 import './TournamentPage.css';
 
