@@ -1,4 +1,4 @@
-import type { Court, Player } from '../types';
+import type { Player, ScoredGame } from '../types';
 
 import { LevelTrackerConfig } from './levelTrackerConfig';
 
@@ -55,6 +55,9 @@ export class LevelTracker {
    *
    * Each team's K-factor is adjusted by a per-team balance factor [0.5, 1.0] based on
    * within-team level spread — the more unbalanced the team, the smaller the rating change.
+   *
+   * Each game's rating change is further scaled by its `options.importance` (default 1), letting
+   * callers weight some games more heavily (e.g. a tournament final) without changing the formula.
    */
   getLevelTrend(playerId: string, levelHistory: Map<string, number[]>): 'up' | 'down' | null {
     const history = levelHistory.get(playerId);
@@ -66,12 +69,13 @@ export class LevelTracker {
     return null;
   }
 
-  updatePlayersLevels(courts: Court[], players: Player[]): Player[] {
+  updatePlayersLevels(games: ScoredGame[], players: Player[]): Player[] {
     const updatedPlayers = new Map<string, Player>(players.map(p => [p.id, { ...p }]));
 
-    for (const court of courts) {
+    for (const { court, options } of games) {
       if (!court.winner || !court.teams) continue;
 
+      const importance = options?.importance ?? LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE;
       const { team1, team2 } = court.teams;
 
       const freshTeam1 = team1.map(p => updatedPlayers.get(p.id) ?? p);
@@ -88,7 +92,7 @@ export class LevelTracker {
 
       const applyLevelDelta = (teamPlayers: Player[], actual: number, expected: number) => {
         const k = this.getKFactor(court.score, court.winner, teamPlayers);
-        const delta = k * (actual - expected);
+        const delta = k * importance * (actual - expected);
         for (const p of teamPlayers) {
           const current = updatedPlayers.get(p.id);
           if (!current) continue;

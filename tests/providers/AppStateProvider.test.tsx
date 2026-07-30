@@ -148,7 +148,7 @@ describe('AppStateProvider', () => {
 
     it('replays from baseline into the winner/loser levels', async () => {
       await setup([alice, bob]);
-      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [{ court: court(1) }]); });
       await waitFor(() => {
         expect(appState.current!.players.find(p => p.id === '1')!.level!).toBeGreaterThan(50);
         expect(appState.current!.players.find(p => p.id === '2')!.level!).toBeLessThan(50);
@@ -157,26 +157,26 @@ describe('AppStateProvider', () => {
 
     it('is idempotent — applying the same baseline twice yields the same levels', async () => {
       await setup([alice, bob]);
-      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [{ court: court(1) }]); });
       await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level).not.toBe(50));
       const once = appState.current!.players.find(p => p.id === '1')!.level;
 
-      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [{ court: court(1) }]); });
       await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level).toBe(once));
     });
 
     it('reverts cleanly when the winner flips (replay always starts from baseline)', async () => {
       await setup([alice, bob]);
-      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [{ court: court(1) }]); });
       await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level!).toBeGreaterThan(50));
 
-      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(2)]); });
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [{ court: court(2) }]); });
       await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level!).toBeLessThan(50));
     });
 
     it('leaves non-participants untouched', async () => {
       await setup([alice, bob, carol]);
-      act(() => { appState.current!.applyLevelReplay([alice, bob], [court(1)]); });
+      act(() => { appState.current!.applyLevelReplay([alice, bob], [{ court: court(1) }]); });
       await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level).not.toBe(50));
       expect(appState.current!.players.find(p => p.id === '3')!.level).toBe(50);
     });
@@ -185,7 +185,7 @@ describe('AppStateProvider', () => {
       const staleAlice: Player = { id: '1', name: 'OLD', isPresent: true, level: 50 };
       const liveAlice: Player = { id: '1', name: 'Alice Renamed', gender: 'F', isPresent: false, level: 50 };
       await setup([liveAlice, bob]);
-      act(() => { appState.current!.applyLevelReplay([staleAlice, bob], [court(1)]); });
+      act(() => { appState.current!.applyLevelReplay([staleAlice, bob], [{ court: court(1) }]); });
       await waitFor(() => expect(appState.current!.players.find(p => p.id === '1')!.level).not.toBe(50));
 
       const merged = appState.current!.players.find(p => p.id === '1')!;
@@ -212,8 +212,8 @@ describe('AppStateProvider', () => {
     }
 
     function applyResult(tournament: RoundRobinTournament) {
-      const { baseline, courts } = tournamentLevelInputs(tournament);
-      act(() => { appState.current!.applyLevelReplay(baseline, courts); });
+      const { baseline, games } = tournamentLevelInputs(tournament);
+      act(() => { appState.current!.applyLevelReplay(baseline, games); });
     }
 
     const levelOf = (id: string) => appState.current!.players.find(p => p.id === id)!.level!;

@@ -70,7 +70,7 @@ describe('LevelTracker', () => {
       const p1 = makePlayer('p1', 50);
       const p2 = makePlayer('p2', 50);
       const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 0 });
-      const [updated] = tracker.updatePlayersLevels([court], [p1, p2]);
+      const [updated] = tracker.updatePlayersLevels([{ court }],[p1, p2]);
       const delta = Math.abs((updated.level ?? 50) - 50);
       expect(delta).toBeLessThan(10);
     });
@@ -79,7 +79,7 @@ describe('LevelTracker', () => {
       const p1 = makePlayer('p1', 100);
       const p2 = makePlayer('p2', 0);
       const court = makeCourt([p1], [p2], 2, { team1: 0, team2: 21 });
-      const result = tracker.updatePlayersLevels([court], [p1, p2]);
+      const result = tracker.updatePlayersLevels([{ court }],[p1, p2]);
       const p1Updated = result.find(p => p.id === 'p1')!;
       const delta = Math.abs((p1Updated.level ?? 100) - 100);
       expect(delta).toBeLessThan(10);
@@ -89,7 +89,7 @@ describe('LevelTracker', () => {
       const p1 = makePlayer('p1', 50);
       const p2 = makePlayer('p2', 50);
       const court = makeCourt([p1], [p2], 1);
-      const [updated] = tracker.updatePlayersLevels([court], [p1, p2]);
+      const [updated] = tracker.updatePlayersLevels([{ court }],[p1, p2]);
       const delta = Math.abs((updated.level ?? 50) - 50);
       expect(delta).toBeLessThanOrEqual(2);
     });
@@ -118,14 +118,14 @@ describe('LevelTracker', () => {
 
     it('caps the winner score at 21', () => {
       const court = makeCourt([p1], [p2], 1, { team1: 23, team2: 21 });
-      const [updated] = tracker.updatePlayersLevels([court], [p1, p2]);
+      const [updated] = tracker.updatePlayersLevels([{ court }],[p1, p2]);
       expect(updated.averageScore).toBe(21);
       expect(updated.scoredGames).toBe(1);
     });
 
     it('caps the loser score at 20 to prevent deuce inflation', () => {
       const court = makeCourt([p1], [p2], 1, { team1: 23, team2: 21 });
-      const result = tracker.updatePlayersLevels([court], [p1, p2]);
+      const result = tracker.updatePlayersLevels([{ court }],[p1, p2]);
       const p2Updated = result.find(p => p.id === 'p2')!;
       expect(p2Updated.averageScore).toBe(20);
       expect(p2Updated.scoredGames).toBe(1);
@@ -133,7 +133,7 @@ describe('LevelTracker', () => {
 
     it('does not cap a normal loser score below 20', () => {
       const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 15 });
-      const result = tracker.updatePlayersLevels([court], [p1, p2]);
+      const result = tracker.updatePlayersLevels([{ court }],[p1, p2]);
       const p2Updated = result.find(p => p.id === 'p2')!;
       expect(p2Updated.averageScore).toBe(15);
     });
@@ -144,7 +144,7 @@ describe('LevelTracker', () => {
       const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 10 });
 
       const p1Edited = { ...p1, level: 90 };
-      const result = tracker.updatePlayersLevels([court], [p1Edited, p2]);
+      const result = tracker.updatePlayersLevels([{ court }],[p1Edited, p2]);
 
       const p1Result = result.find(p => p.id === 'p1')!;
       const p2Result = result.find(p => p.id === 'p2')!;
@@ -160,12 +160,36 @@ describe('LevelTracker', () => {
       const c1 = makeCourt([p1], [p2], 1, { team1: 21, team2: 15 });
       const c2 = makeCourt([p1], [p2], 1, { team1: 23, team2: 21 });
 
-      const after1 = tracker.updatePlayersLevels([c1], [p1, p2]);
-      const after2 = tracker.updatePlayersLevels([c2], after1);
+      const after1 = tracker.updatePlayersLevels([{ court: c1 }], [p1, p2]);
+      const after2 = tracker.updatePlayersLevels([{ court: c2 }], after1);
 
       const p2Final = after2.find(p => p.id === 'p2')!;
       expect(p2Final.averageScore).toBe(17.5);
       expect(p2Final.scoredGames).toBe(2);
+    });
+  });
+
+  describe('updatePlayersLevels — importance weighting', () => {
+    const winnerDeltaFor = (importance?: number): number => {
+      const p1 = makePlayer('p1', 50);
+      const p2 = makePlayer('p2', 50);
+      const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 15 });
+      const options = importance === undefined ? undefined : { importance };
+      const result = tracker.updatePlayersLevels([{ court, options }], [p1, p2]);
+      return (result.find(p => p.id === 'p1')!.level ?? 50) - 50;
+    };
+
+    it('importance 1 matches the unweighted (default) result — regression lock', () => {
+      expect(winnerDeltaFor(1)).toBeCloseTo(winnerDeltaFor(undefined), 5);
+    });
+
+    it('scales the rating change linearly with importance', () => {
+      expect(winnerDeltaFor(2)).toBeCloseTo(winnerDeltaFor(1) * 2, 5);
+      expect(winnerDeltaFor(1.5)).toBeCloseTo(winnerDeltaFor(1) * 1.5, 5);
+    });
+
+    it('importance 0 freezes levels', () => {
+      expect(winnerDeltaFor(0)).toBe(0);
     });
   });
 });

@@ -23,6 +23,18 @@ export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
 export type EngineType = 'sa' | 'sl';
 
+/** Per-game knobs for the Elo calculation, shared by casual and tournament play. */
+export interface EloOptions {
+  /** Multiplier applied to this game's rating change (default 1 — see ELO_DEFAULT_IMPORTANCE). */
+  importance?: number;
+}
+
+/** A decided game the level tracker should replay: the court result plus its Elo weighting. */
+export interface ScoredGame {
+  court: Court;
+  options?: EloOptions;
+}
+
 export interface AppState {
   players: Player[];
   numberOfCourts: number;

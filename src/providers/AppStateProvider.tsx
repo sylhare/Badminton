@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 
 import { engine, getEngineType, setEngine, enginePersistence } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
-import type { Court, EngineSnapshot, GenerateResult, Player, UpdateWinnerParams } from '../types';
+import type { Court, EngineSnapshot, GenerateResult, Player, ScoredGame, UpdateWinnerParams } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
@@ -42,7 +42,7 @@ export interface AppStateContextType {
   generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], forceBenchPlayerIds?: Set<string>): GenerateResult;
   updateWinner(params: UpdateWinnerParams): Court[];
   applyManualEdit(previous: Court[], next: Court[]): Court[];
-  applyLevelReplay(baseline: Player[], courts: Court[]): void;
+  applyLevelReplay(baseline: Player[], games: ScoredGame[]): void;
   tournament: AnyTournament | null;
   setTournament: React.Dispatch<React.SetStateAction<AnyTournament | null>>;
   saveState(): Promise<void>;
@@ -176,31 +176,35 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     syncFromEngine();
   };
 
+  /** Single write path for level changes: snapshot the given players, then update state. */
+  const commitLevels = useCallback((snapshotPlayers: Player[], nextPlayers: React.SetStateAction<Player[]>) => {
+    engine().recordLevelSnapshot(snapshotPlayers);
+    setPlayers(nextPlayers);
+  }, []);
+
   const applyCourtResults = useCallback((courts: Court[]) => {
     const courtsWithWinners = courts.filter(c => c.winner);
-    if (courtsWithWinners.length > 0) {
-      const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners, players);
-      engine().recordLevelSnapshot(nextPlayers.filter(p => p.isPresent));
-      setPlayers(nextPlayers);
-    } else {
+    if (courtsWithWinners.length === 0) {
       engine().recordLevelSnapshot(players.filter(p => p.isPresent));
+      return;
     }
-  }, [players]);
+    const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners.map(court => ({ court })), players);
+    commitLevels(nextPlayers.filter(p => p.isPresent), nextPlayers);
+  }, [players, commitLevels]);
 
-  const applyLevelReplay = useCallback((baseline: Player[], courts: Court[]) => {
-    const replayed = levelTracker.updatePlayersLevels(courts, baseline);
+  const applyLevelReplay = useCallback((baseline: Player[], games: ScoredGame[]) => {
+    const replayed = levelTracker.updatePlayersLevels(games, baseline);
     const byId = new Map(replayed.map(p => [p.id, p]));
     const changed = players.some(p => {
       const r = byId.get(p.id);
       return r !== undefined && (r.level !== p.level || r.averageScore !== p.averageScore || r.scoredGames !== p.scoredGames);
     });
     if (!changed) return;
-    engine().recordLevelSnapshot(replayed);
-    setPlayers(prev => prev.map(p => {
+    commitLevels(replayed, prev => prev.map(p => {
       const r = byId.get(p.id);
       return r ? { ...p, level: r.level, averageScore: r.averageScore, scoredGames: r.scoredGames } : p;
     }));
-  }, [players]);
+  }, [players, commitLevels]);
 
   const generate = useCallback((
     players: Player[],

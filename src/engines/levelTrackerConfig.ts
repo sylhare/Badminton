@@ -2,6 +2,9 @@ export class LevelTrackerConfig {
   /** ELO divisor — controls curve steepness (larger = flatter, more upsets). */
   static readonly ELO_DIVISOR = 400;
 
+  /** Neutral game-importance multiplier — a casual game swings levels exactly as before. */
+  static readonly ELO_DEFAULT_IMPORTANCE = 1.0;
+
   /** K-factor returned when no score is available (same as deuce). */
   static readonly K_DEFAULT = 0.6;
 

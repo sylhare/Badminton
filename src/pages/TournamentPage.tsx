@@ -39,8 +39,8 @@ const TournamentPage = (): React.ReactElement => {
     if (!tournament) return;
     const next = tournament.withMatchResult(matchId, winner, score);
     setTournament(next);
-    const { baseline, courts } = tournamentLevelInputs(next);
-    applyLevelReplay(baseline, courts);
+    const { baseline, games } = tournamentLevelInputs(next);
+    applyLevelReplay(baseline, games);
   };
 
   const handleReset = () => {
