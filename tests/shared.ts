@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { engineSA } from '../src/engines/SimulatedAnnealingEngine';
 import { storageManager } from '../src/utils/StorageManager';
-import { AppStateProvider } from '../src/providers/AppStateProvider';
+import { AppStateProvider, useAppState } from '../src/providers/AppStateProvider';
 
 /** Common test data used across multiple test files */
 export const COMMON_PLAYERS = {
@@ -36,6 +36,22 @@ export const flushPendingSaves = async (): Promise<void> => {
 /** Render a component wrapped in AppStateProvider and MemoryRouter */
 export function renderWithProvider(ui: React.ReactElement) {
   return render(React.createElement(MemoryRouter, null, React.createElement(AppStateProvider, null, ui)));
+}
+
+/**
+ * Captures the live AppState context value for assertions.
+ * Render `<Capture />` inside the provider, then read `appState.current`.
+ */
+export function captureAppState(): {
+  appState: { current: ReturnType<typeof useAppState> | null };
+  Capture: () => null;
+} {
+  const appState: { current: ReturnType<typeof useAppState> | null } = { current: null };
+  const Capture = () => {
+    appState.current = useAppState();
+    return null;
+  };
+  return { appState, Capture };
 }
 
 /** Helper to add players via the input field */

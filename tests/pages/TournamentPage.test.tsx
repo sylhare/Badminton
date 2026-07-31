@@ -4,19 +4,14 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TournamentPage from '../../src/pages/TournamentPage';
-import { useAppState } from '../../src/providers/AppStateProvider';
 import { storageManager } from '../../src/utils/StorageManager';
-import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
+import { captureAppState, clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 import { MOCK_PLAYERS } from '../data/testFactories';
 import { BracketKind } from '../../src/tournament/types';
 
 const mockPlayers = MOCK_PLAYERS.tournament;
 
-const appState: { current: ReturnType<typeof useAppState> | null } = { current: null };
-function Capture() {
-  appState.current = useAppState();
-  return null;
-}
+const { appState, Capture } = captureAppState();
 
 describe('TournamentPage', () => {
   beforeEach(async () => {

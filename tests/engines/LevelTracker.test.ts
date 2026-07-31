@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { LevelTracker } from '../../src/engines/LevelTracker';
-import {
-  DEFAULT_TOURNAMENT_WEIGHTS,
-  resolveMatchImportance,
-  tournamentToScoredGames,
-} from '../../src/engines/levelAdapters';
+import { resolveMatchImportance, tournamentToScoredGames } from '../../src/engines/levelAdapters';
 import { LevelTrackerConfig } from '../../src/engines/levelTrackerConfig';
 import type { Court, Player } from '../../src/types';
 import { BracketKind } from '../../src/tournament/types';
@@ -14,10 +10,6 @@ import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament'
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
 
 function makePlayer(id: string, level?: number): Player {
-  return { id, name: `Player ${id}`, isPresent: true, level };
-}
-
-function player(id: string, level: number): Player {
   return { id, name: `Player ${id}`, isPresent: true, level };
 }
 
@@ -37,6 +29,9 @@ function makeCourt(
 describe('LevelTracker', () => {
   let tracker: LevelTracker;
   beforeEach(() => { tracker = new LevelTracker(); });
+
+  const update = (court: Court, players: Player[], importance?: number) =>
+    tracker.updatePlayersLevels([{ court, importance }], players);
 
   describe('getKFactor', () => {
     it('returns K_DEFAULT when no score is provided', () => {
@@ -87,7 +82,7 @@ describe('LevelTracker', () => {
       const p1 = makePlayer('p1', 50);
       const p2 = makePlayer('p2', 50);
       const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 0 });
-      const [updated] = tracker.updatePlayersLevels([{ court }],[p1, p2]);
+      const [updated] = update(court, [p1, p2]);
       const delta = Math.abs((updated.level ?? 50) - 50);
       expect(delta).toBeLessThan(10);
     });
@@ -96,7 +91,7 @@ describe('LevelTracker', () => {
       const p1 = makePlayer('p1', 100);
       const p2 = makePlayer('p2', 0);
       const court = makeCourt([p1], [p2], 2, { team1: 0, team2: 21 });
-      const result = tracker.updatePlayersLevels([{ court }],[p1, p2]);
+      const result = update(court, [p1, p2]);
       const p1Updated = result.find(p => p.id === 'p1')!;
       const delta = Math.abs((p1Updated.level ?? 100) - 100);
       expect(delta).toBeLessThan(10);
@@ -106,7 +101,7 @@ describe('LevelTracker', () => {
       const p1 = makePlayer('p1', 50);
       const p2 = makePlayer('p2', 50);
       const court = makeCourt([p1], [p2], 1);
-      const [updated] = tracker.updatePlayersLevels([{ court }],[p1, p2]);
+      const [updated] = update(court, [p1, p2]);
       const delta = Math.abs((updated.level ?? 50) - 50);
       expect(delta).toBeLessThanOrEqual(2);
     });
@@ -135,14 +130,14 @@ describe('LevelTracker', () => {
 
     it('caps the winner score at 21', () => {
       const court = makeCourt([p1], [p2], 1, { team1: 23, team2: 21 });
-      const [updated] = tracker.updatePlayersLevels([{ court }],[p1, p2]);
+      const [updated] = update(court, [p1, p2]);
       expect(updated.averageScore).toBe(21);
       expect(updated.scoredGames).toBe(1);
     });
 
     it('caps the loser score at 20 to prevent deuce inflation', () => {
       const court = makeCourt([p1], [p2], 1, { team1: 23, team2: 21 });
-      const result = tracker.updatePlayersLevels([{ court }],[p1, p2]);
+      const result = update(court, [p1, p2]);
       const p2Updated = result.find(p => p.id === 'p2')!;
       expect(p2Updated.averageScore).toBe(20);
       expect(p2Updated.scoredGames).toBe(1);
@@ -150,7 +145,7 @@ describe('LevelTracker', () => {
 
     it('does not cap a normal loser score below 20', () => {
       const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 15 });
-      const result = tracker.updatePlayersLevels([{ court }],[p1, p2]);
+      const result = update(court, [p1, p2]);
       const p2Updated = result.find(p => p.id === 'p2')!;
       expect(p2Updated.averageScore).toBe(15);
     });
@@ -161,7 +156,7 @@ describe('LevelTracker', () => {
       const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 10 });
 
       const p1Edited = { ...p1, level: 90 };
-      const result = tracker.updatePlayersLevels([{ court }],[p1Edited, p2]);
+      const result = update(court, [p1Edited, p2]);
 
       const p1Result = result.find(p => p.id === 'p1')!;
       const p2Result = result.find(p => p.id === 'p2')!;
@@ -177,8 +172,8 @@ describe('LevelTracker', () => {
       const c1 = makeCourt([p1], [p2], 1, { team1: 21, team2: 15 });
       const c2 = makeCourt([p1], [p2], 1, { team1: 23, team2: 21 });
 
-      const after1 = tracker.updatePlayersLevels([{ court: c1 }], [p1, p2]);
-      const after2 = tracker.updatePlayersLevels([{ court: c2 }], after1);
+      const after1 = update(c1, [p1, p2]);
+      const after2 = update(c2, after1);
 
       const p2Final = after2.find(p => p.id === 'p2')!;
       expect(p2Final.averageScore).toBe(17.5);
@@ -191,7 +186,7 @@ describe('LevelTracker', () => {
       const p1 = makePlayer('p1', 50);
       const p2 = makePlayer('p2', 50);
       const court = makeCourt([p1], [p2], 1, { team1: 21, team2: 15 });
-      const result = tracker.updatePlayersLevels([{ court, importance }], [p1, p2]);
+      const result = update(court, [p1, p2], importance);
       return (result.find(p => p.id === 'p1')!.level ?? 50) - 50;
     };
 
@@ -211,9 +206,9 @@ describe('LevelTracker', () => {
 });
 
 describe('tournamentToScoredGames', () => {
-  const teamA = team('a', [player('a1', 40), player('a2', 60)]);
-  const teamB = team('b', [player('b1', 55), player('b2', 45)]);
-  const teamC = team('c', [player('c1', 50), player('c2', 50)]);
+  const teamA = team('a', [makePlayer('a1', 40), makePlayer('a2', 60)]);
+  const teamB = team('b', [makePlayer('b1', 55), makePlayer('b2', 45)]);
+  const teamC = team('c', [makePlayer('c1', 50), makePlayer('c2', 50)]);
 
   function startTournament() {
     return RoundRobinTournament.create('doubles', 2).start([teamA, teamB, teamC], 2);
@@ -276,16 +271,16 @@ describe('tournamentToScoredGames', () => {
 describe('resolveMatchImportance', () => {
   const wbMatch = (round: number): TournamentMatch => ({
     id: `m${round}`, round, courtNumber: 1,
-    team1: team('t1', [player('a', 50)]), team2: team('t2', [player('b', 50)]),
+    team1: team('t1', [makePlayer('a', 50)]), team2: team('t2', [makePlayer('b', 50)]),
     bracket: BracketKind.Winners,
   });
 
   it('boosts the winners-bracket final (last round)', () => {
-    expect(resolveMatchImportance(wbMatch(3), 3)).toBe(DEFAULT_TOURNAMENT_WEIGHTS.finalMultiplier);
+    expect(resolveMatchImportance(wbMatch(3), 3)).toBe(LevelTrackerConfig.WB_FINAL_IMPORTANCE);
   });
 
   it('boosts the winners-bracket semi-final (second-to-last round)', () => {
-    expect(resolveMatchImportance(wbMatch(2), 3)).toBe(DEFAULT_TOURNAMENT_WEIGHTS.semifinalMultiplier);
+    expect(resolveMatchImportance(wbMatch(2), 3)).toBe(LevelTrackerConfig.WB_SEMIFINAL_IMPORTANCE);
   });
 
   it('leaves earlier winners rounds at the base weight', () => {
@@ -306,7 +301,7 @@ describe('resolveMatchImportance', () => {
 describe('tournamentToScoredGames — elimination final weighting', () => {
   it('weights final > semi-final > early rounds across a full 8-team bracket', () => {
     const teams = Array.from({ length: 8 }, (_, i) =>
-      team(`t${i}`, [player(`p${i}`, 50)]));
+      team(`t${i}`, [makePlayer(`p${i}`, 50)]));
     let tournament = EliminationTournament.create('singles', 4).start(teams, 4);
 
     let guard = 0;
@@ -319,9 +314,9 @@ describe('tournamentToScoredGames — elimination final weighting', () => {
     const { games } = tournamentToScoredGames(tournament);
     const importances = new Set(games.map(g => g.importance!));
 
-    expect(importances.has(DEFAULT_TOURNAMENT_WEIGHTS.finalMultiplier)).toBe(true);
-    expect(importances.has(DEFAULT_TOURNAMENT_WEIGHTS.semifinalMultiplier)).toBe(true);
+    expect(importances.has(LevelTrackerConfig.WB_FINAL_IMPORTANCE)).toBe(true);
+    expect(importances.has(LevelTrackerConfig.WB_SEMIFINAL_IMPORTANCE)).toBe(true);
     expect(importances.has(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE)).toBe(true);
-    expect(Math.max(...importances)).toBe(DEFAULT_TOURNAMENT_WEIGHTS.finalMultiplier);
+    expect(Math.max(...importances)).toBe(LevelTrackerConfig.WB_FINAL_IMPORTANCE);
   });
 });

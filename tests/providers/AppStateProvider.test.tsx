@@ -2,18 +2,23 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, waitFor } from '@testing-library/react';
 
-import { useAppState } from '../../src/providers/AppStateProvider';
 import type { Court, GenerateResult, Player, UpdateWinnerParams } from '../../src/types';
 import type { TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
 import { tournamentToScoredGames } from '../../src/engines/levelAdapters';
-import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
+import { captureAppState, clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 import { storageManager } from '../../src/utils/StorageManager';
 
-const appState: { current: ReturnType<typeof useAppState> | null } = { current: null };
-function Capture() {
-  appState.current = useAppState();
-  return null;
+const { appState, Capture } = captureAppState();
+
+const alice: Player = { id: '1', name: 'Alice', isPresent: true, level: 50 };
+const bob: Player = { id: '2', name: 'Bob', isPresent: true, level: 50 };
+const carol: Player = { id: '3', name: 'Carol', isPresent: true, level: 50 };
+
+async function setup(players: Player[] = [alice, bob]) {
+  renderWithProvider(<Capture />);
+  await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
+  await act(async () => { appState.current!.setPlayers(players); });
 }
 
 describe('AppStateProvider', () => {
@@ -36,8 +41,6 @@ describe('AppStateProvider', () => {
     });
 
     it('updates player levels when previous courts had winners', async () => {
-      const alice: Player = { id: '1', name: 'Alice', isPresent: true, level: 50 };
-      const bob: Player = { id: '2', name: 'Bob', isPresent: true, level: 50 };
       const courtWithWinner: Court = {
         courtNumber: 1,
         players: [alice, bob],
@@ -45,9 +48,7 @@ describe('AppStateProvider', () => {
         winner: 1,
       };
 
-      renderWithProvider(<Capture />);
-      await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
-      await act(async () => { appState.current!.setPlayers([alice, bob]); });
+      await setup([alice, bob]);
 
       act(() => { appState.current!.generate([alice, bob], 1, [courtWithWinner]); });
 
@@ -58,8 +59,6 @@ describe('AppStateProvider', () => {
     });
 
     it('does not update player levels on rapid re-generation', async () => {
-      const alice: Player = { id: '1', name: 'Alice', isPresent: true, level: 50 };
-      const bob: Player = { id: '2', name: 'Bob', isPresent: true, level: 50 };
       const courtWithWinner: Court = {
         courtNumber: 1,
         players: [alice, bob],
@@ -67,9 +66,7 @@ describe('AppStateProvider', () => {
         winner: 1,
       };
 
-      renderWithProvider(<Capture />);
-      await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
-      await act(async () => { appState.current!.setPlayers([alice, bob]); });
+      await setup([alice, bob]);
 
       act(() => { appState.current!.generate([alice, bob], 1, [courtWithWinner]); });
       await waitFor(() => {
@@ -129,9 +126,6 @@ describe('AppStateProvider', () => {
   });
 
   describe('applyGameResults', () => {
-    const alice: Player = { id: '1', name: 'Alice', isPresent: true, level: 50 };
-    const bob: Player = { id: '2', name: 'Bob', isPresent: true, level: 50 };
-    const carol: Player = { id: '3', name: 'Carol', isPresent: true, level: 50 };
     const court = (winner: 1 | 2): Court => ({
       courtNumber: 1,
       players: [alice, bob],
@@ -139,12 +133,6 @@ describe('AppStateProvider', () => {
       winner,
       score: { team1: winner === 1 ? 21 : 10, team2: winner === 2 ? 21 : 10 },
     });
-
-    async function setup(players: Player[]) {
-      renderWithProvider(<Capture />);
-      await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
-      await act(async () => { appState.current!.setPlayers(players); });
-    }
 
     it('replays from baseline into the winner/loser levels', async () => {
       await setup([alice, bob]);
@@ -204,15 +192,6 @@ describe('AppStateProvider', () => {
   });
 
   describe('tournament Elo integration (real adapter → replay, as TournamentPage wires it)', () => {
-    const alice: Player = { id: '1', name: 'Alice', isPresent: true, level: 50 };
-    const bob: Player = { id: '2', name: 'Bob', isPresent: true, level: 50 };
-
-    async function setup() {
-      renderWithProvider(<Capture />);
-      await waitFor(() => expect(appState.current?.isLoaded).toBe(true));
-      await act(async () => { appState.current!.setPlayers([alice, bob]); });
-    }
-
     function singlesTournament() {
       const teamA: TournamentTeam = { id: 'a', players: [alice] };
       const teamB: TournamentTeam = { id: 'b', players: [bob] };

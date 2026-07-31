@@ -5,6 +5,12 @@ export class LevelTrackerConfig {
   /** Neutral game-importance multiplier — a casual game swings levels exactly as before. */
   static readonly ELO_DEFAULT_IMPORTANCE = 1.0;
 
+  /** Winners-bracket final (last round) swings levels 1.5x a casual game. */
+  static readonly WB_FINAL_IMPORTANCE = 1.5;
+
+  /** Winners-bracket semi-final (second-to-last round) swings levels 1.25x a casual game. */
+  static readonly WB_SEMIFINAL_IMPORTANCE = 1.25;
+
   /** K-factor returned when no score is available (same as deuce). */
   static readonly K_DEFAULT = 0.6;
 
