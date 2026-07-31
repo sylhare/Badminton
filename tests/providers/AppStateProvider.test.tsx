@@ -193,6 +193,14 @@ describe('AppStateProvider', () => {
       expect(merged.gender).toBe('F');
       expect(merged.isPresent).toBe(false);
     });
+
+    it('records no phantom Elo for players absent from the roster (e.g. cleared)', async () => {
+      await setup([]);
+      act(() => { appState.current!.applyGameResults([{ court: court(1) }], [alice, bob]); });
+      await waitFor(() => expect(appState.current!.isLoaded).toBe(true));
+      expect(appState.current!.players).toHaveLength(0);
+      expect(appState.current!.engineState?.levelHistory?.['1']).toBeUndefined();
+    });
   });
 
   describe('tournament Elo integration (real adapter → replay, as TournamentPage wires it)', () => {

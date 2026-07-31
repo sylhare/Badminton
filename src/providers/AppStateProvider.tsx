@@ -1,8 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { engine, getEngineType, setEngine, enginePersistence } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
-import { courtToScoredGame } from '../engines/levelAdapters';
 import type { Court, EngineSnapshot, GenerateResult, Player, ScoredGame, UpdateWinnerParams } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
@@ -13,11 +12,7 @@ import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 /** A reconstructed tournament instance of either supported format. */
 export type AnyTournament = RoundRobinTournament | EliminationTournament;
 
-/**
- * Shape of the app-state context. Lives here (not in core `types/`) because it
- * references application-layer types like {@link AnyTournament}; keeping it in
- * core would force domain types to depend on feature modules.
- */
+/** App-state context shape. Lives here, not core `types/`, to avoid a core→feature type dependency. */
 export interface AppStateContextType {
   players: Player[];
   numberOfCourts: number;
@@ -141,74 +136,62 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     storageManager.saveTournament(tournament?.state() ?? null);
   }, [tournament]);
 
-  const handleAddPlayers = (names: string[]) => {
+  const handleAddPlayers = useCallback((names: string[]) => {
     const newPlayers = createPlayersFromNames(names, 'manual');
     setPlayers(prev => [...prev, ...newPlayers]);
-  };
+  }, []);
 
-  const handlePlayerToggle = (id: string) => {
+  const handlePlayerToggle = useCallback((id: string) => {
     setPlayers(prev =>
       prev.map(p => p.id === id ? { ...p, isPresent: !p.isPresent } : p),
     );
-  };
+  }, []);
 
-  const handleRemovePlayer = (id: string) => {
+  const handleRemovePlayer = useCallback((id: string) => {
     engine().removePlayerHistory(id);
     setPlayers(prev => prev.filter(p => p.id !== id));
-  };
+  }, []);
 
-  const handleUpdatePlayer = (id: string, gender: Player['gender'], level: number) => {
+  const handleUpdatePlayer = useCallback((id: string, gender: Player['gender'], level: number) => {
     setPlayers(prev =>
       prev.map(p => p.id === id ? { ...p, gender, level } : p),
     );
-  };
+  }, []);
 
-  const clearPlayers = () => {
+  const clearPlayers = useCallback(() => {
     setPlayers([]);
     setTournament(null);
     engine().resetHistory();
     storageManager.clearAll();
-  };
+  }, []);
 
-  const handleToggleSmartEngine = () => {
+  const handleToggleSmartEngine = useCallback(() => {
     if (!isLoaded) return;
     const next = !isSmartEngineEnabled;
     setIsSmartEngineEnabled(next);
     setEngine(next ? 'sl' : 'sa');
     syncFromEngine();
-  };
+  }, [isLoaded, isSmartEngineEnabled, syncFromEngine]);
 
-  /** Single write path for level changes: snapshot present players, then update state. */
-  const commitLevels = useCallback((snapshotPlayers: Player[], nextPlayers: React.SetStateAction<Player[]>) => {
-    engine().recordLevelSnapshot(snapshotPlayers.filter(p => p.isPresent));
-    setPlayers(nextPlayers);
-  }, []);
-
-  /**
-   * The single path for level changes. Replays the decided `games` on top of `base`
-   * levels, then merges the resulting level fields back onto the live players.
-   * Casual rounds pass no base, so they build on the current levels (incremental);
-   * tournaments pass their start-of-play baseline, so editing a result re-runs the
-   * whole bracket from scratch (full replay).
-   */
+  /** Single path for level changes: replays decided `games` on `base`, merges level fields onto the live roster. */
   const applyGameResults = useCallback((games: ScoredGame[], base: Player[] = players) => {
     const scored = games.filter(g => g.court.winner);
     if (scored.length === 0) {
       engine().recordLevelSnapshot(players.filter(p => p.isPresent));
       return;
     }
-    const replayed = levelTracker.updatePlayersLevels(scored, base);
-    const byId = new Map(replayed.map(p => [p.id, p]));
-    const changed = players.some(p => {
-      const r = byId.get(p.id);
-      return r !== undefined && (r.level !== p.level || r.averageScore !== p.averageScore || r.scoredGames !== p.scoredGames);
+    const replayed = new Map(levelTracker.updatePlayersLevels(scored, base).map(p => [p.id, p]));
+    let changed = false;
+    const next = players.map(p => {
+      const r = replayed.get(p.id);
+      if (!r || (r.level === p.level && r.averageScore === p.averageScore && r.scoredGames === p.scoredGames)) return p;
+      changed = true;
+      return { ...p, level: r.level, averageScore: r.averageScore, scoredGames: r.scoredGames };
     });
     if (!changed) return;
-    commitLevels(replayed, prev => prev.map(p => {
-      const r = byId.get(p.id);
-      return r ? { ...p, level: r.level, averageScore: r.averageScore, scoredGames: r.scoredGames } : p;
-    }));
-  }, [players, commitLevels]);
+    engine().recordLevelSnapshot(next.filter(p => p.isPresent));
+    setPlayers(next);
+  }, [players]);
 
   const generate = useCallback((
     players: Player[],
@@ -217,7 +200,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult => {
     const result = engine().generate(players, numberOfCourts, forceBenchPlayerIds);
-    if (result.committed) applyGameResults(previousAssignments.map(courtToScoredGame));
+    if (result.committed) applyGameResults(previousAssignments.map(court => ({ court })));
 
     result.anomalies.forEach(trackAssignmentAnomaly);
 
@@ -243,7 +226,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
   const levelTrend = useCallback((playerId: string) => engine().levelTrend(playerId), []);
 
-  const value: AppStateContextType = {
+  const value = useMemo<AppStateContextType>(() => ({
     players,
     numberOfCourts,
     setNumberOfCourts,
@@ -275,7 +258,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     resetAlgorithm,
     engineName: engine().name,
     engineDescription: engine().description,
-  };
+  }), [
+    players, numberOfCourts, assignments, lastGeneratedAt, isLoaded,
+    isSmartEngineEnabled, counts, engineState, tournament,
+    handlePlayerToggle, handleAddPlayers, handleRemovePlayer, handleUpdatePlayer,
+    clearPlayers, handleToggleSmartEngine, levelTrend, generate, updateWinner,
+    applyManualEdit, applyGameResults, saveState, resetAlgorithm,
+  ]);
 
   return (
     <AppStateContext.Provider value={value}>

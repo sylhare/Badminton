@@ -309,7 +309,6 @@ describe('tournamentToScoredGames — elimination final weighting', () => {
       team(`t${i}`, [player(`p${i}`, 50)]));
     let tournament = EliminationTournament.create('singles', 4).start(teams, 4);
 
-    // Decide the whole bracket so every round (incl. the final) is present and decided.
     let guard = 0;
     while (!tournament.isComplete() && guard++ < 40) {
       const pending = tournament.matches().find(m => m.winner === undefined);

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAppState } from '../providers/AppStateProvider';
+import type { AnyTournament } from '../providers/AppStateProvider';
 import { Tournament } from '../components/tournament/Tournament';
 import Footer from '../components/Footer';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
@@ -17,12 +18,18 @@ const TournamentPage = (): React.ReactElement => {
   } = useAppState();
   const [showSetup, setShowSetup] = useState(false);
 
+  const commitElo = (t: AnyTournament) => {
+    const { baseline, games } = tournamentToScoredGames(t);
+    if (games.length) applyGameResults(games, baseline);
+  };
+
   const handleStart = (
     teams: TournamentTeam[],
     numberOfCourts: number,
     format: TournamentFormat,
     type: TournamentType,
   ) => {
+    if (tournament && !tournament.isComplete()) commitElo(tournament);
     if (type === 'elimination') {
       setTournament(EliminationTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
     } else {
@@ -39,11 +46,11 @@ const TournamentPage = (): React.ReactElement => {
     if (!tournament) return;
     const next = tournament.withMatchResult(matchId, winner, score);
     setTournament(next);
-    const { baseline, games } = tournamentToScoredGames(next);
-    applyGameResults(games, baseline);
+    if (!tournament.isComplete() && next.isComplete()) commitElo(next);
   };
 
   const handleReset = () => {
+    if (tournament && !tournament.isComplete()) commitElo(tournament);
     setTournament(null);
     setShowSetup(false);
   };
