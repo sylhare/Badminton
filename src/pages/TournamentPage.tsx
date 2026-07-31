@@ -13,7 +13,7 @@ import './TournamentPage.css';
 const TournamentPage = (): React.ReactElement => {
   const {
     players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled,
-    applyLevelReplay, numberOfCourts, tournament, setTournament,
+    applyGameResults, numberOfCourts, tournament, setTournament,
   } = useAppState();
   const [showSetup, setShowSetup] = useState(false);
 
@@ -40,7 +40,7 @@ const TournamentPage = (): React.ReactElement => {
     const next = tournament.withMatchResult(matchId, winner, score);
     setTournament(next);
     const { baseline, games } = tournamentLevelInputs(next);
-    applyLevelReplay(baseline, games);
+    applyGameResults(games, baseline);
   };
 
   const handleReset = () => {

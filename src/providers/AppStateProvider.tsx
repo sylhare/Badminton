@@ -42,7 +42,7 @@ export interface AppStateContextType {
   generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], forceBenchPlayerIds?: Set<string>): GenerateResult;
   updateWinner(params: UpdateWinnerParams): Court[];
   applyManualEdit(previous: Court[], next: Court[]): Court[];
-  applyLevelReplay(baseline: Player[], games: ScoredGame[]): void;
+  applyGameResults(games: ScoredGame[], base?: Player[]): void;
   tournament: AnyTournament | null;
   setTournament: React.Dispatch<React.SetStateAction<AnyTournament | null>>;
   saveState(): Promise<void>;
@@ -182,18 +182,20 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     setPlayers(nextPlayers);
   }, []);
 
-  const applyCourtResults = useCallback((courts: Court[]) => {
-    const courtsWithWinners = courts.filter(c => c.winner);
-    if (courtsWithWinners.length === 0) {
+  /**
+   * The single path for level changes. Replays the decided `games` on top of `base`
+   * levels, then merges the resulting level fields back onto the live players.
+   * Casual rounds pass no base, so they build on the current levels (incremental);
+   * tournaments pass their start-of-play baseline, so editing a result re-runs the
+   * whole bracket from scratch (full replay).
+   */
+  const applyGameResults = useCallback((games: ScoredGame[], base: Player[] = players) => {
+    const scored = games.filter(g => g.court.winner);
+    if (scored.length === 0) {
       engine().recordLevelSnapshot(players.filter(p => p.isPresent));
       return;
     }
-    const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners.map(court => ({ court })), players);
-    commitLevels(nextPlayers, nextPlayers);
-  }, [players, commitLevels]);
-
-  const applyLevelReplay = useCallback((baseline: Player[], games: ScoredGame[]) => {
-    const replayed = levelTracker.updatePlayersLevels(games, baseline);
+    const replayed = levelTracker.updatePlayersLevels(scored, base);
     const byId = new Map(replayed.map(p => [p.id, p]));
     const changed = players.some(p => {
       const r = byId.get(p.id);
@@ -213,12 +215,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult => {
     const result = engine().generate(players, numberOfCourts, forceBenchPlayerIds);
-    if (result.committed) applyCourtResults(previousAssignments);
+    if (result.committed) applyGameResults(previousAssignments.map(court => ({ court })));
 
     result.anomalies.forEach(trackAssignmentAnomaly);
 
     return result;
-  }, [applyCourtResults, trackAssignmentAnomaly]);
+  }, [applyGameResults, trackAssignmentAnomaly]);
 
   const updateWinner = useCallback((params: UpdateWinnerParams): Court[] => {
     return engine().updateWinner(params);
@@ -264,7 +266,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     generate,
     updateWinner,
     applyManualEdit,
-    applyLevelReplay,
+    applyGameResults,
     tournament,
     setTournament,
     saveState,
