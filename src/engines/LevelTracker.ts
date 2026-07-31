@@ -70,62 +70,46 @@ export class LevelTracker {
   }
 
   updatePlayersLevels(games: ScoredGame[], players: Player[]): Player[] {
-    const updatedPlayers = new Map<string, Player>(players.map(p => [p.id, { ...p }]));
+    const updated = new Map<string, Player>(players.map(p => [p.id, { ...p }]));
+    const patch = (id: string, fields: Partial<Player>): void => {
+      const current = updated.get(id);
+      if (current) updated.set(id, { ...current, ...fields });
+    };
 
-    for (const { court, importance: gameImportance } of games) {
+    for (const { court, importance } of games) {
       if (!court.winner || !court.teams) continue;
 
-      const importance = gameImportance ?? LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE;
-      const { team1, team2 } = court.teams;
+      const weight = importance ?? LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE;
+      const sides = [court.teams.team1, court.teams.team2].map((team, i) => ({
+        team: team.map(p => updated.get(p.id) ?? p),
+        won: court.winner === i + 1,
+        rawScore: i === 0 ? court.score?.team1 : court.score?.team2,
+      }));
+      const avg = sides.map(s => this.getTeamAvgLevel(s.team));
 
-      const freshTeam1 = team1.map(p => updatedPlayers.get(p.id) ?? p);
-      const freshTeam2 = team2.map(p => updatedPlayers.get(p.id) ?? p);
+      sides.forEach((side, i) => {
+        const expected = 1 / (1 + Math.pow(10, (avg[1 - i] - avg[i]) / LevelTrackerConfig.ELO_DIVISOR));
+        const delta = this.getKFactor(court.score, court.winner, side.team) * weight * ((side.won ? 1 : 0) - expected);
 
-      const team1Avg = this.getTeamAvgLevel(freshTeam1);
-      const team2Avg = this.getTeamAvgLevel(freshTeam2);
-
-      const team1Expected = 1 / (1 + Math.pow(10, (team2Avg - team1Avg) / LevelTrackerConfig.ELO_DIVISOR));
-      const team2Expected = 1 - team1Expected;
-
-      const team1Actual = court.winner === 1 ? 1 : 0;
-      const team2Actual = court.winner === 2 ? 1 : 0;
-
-      const applyLevelDelta = (teamPlayers: Player[], actual: number, expected: number) => {
-        const k = this.getKFactor(court.score, court.winner, teamPlayers);
-        const delta = k * importance * (actual - expected);
-        for (const p of teamPlayers) {
-          const current = updatedPlayers.get(p.id);
+        for (const p of side.team) {
+          const current = updated.get(p.id);
           if (!current) continue;
-          const raw = (current.level ?? 50) + delta;
-          const newLevel = Math.round(Math.min(100, Math.max(0, raw)) * 10) / 10;
-          updatedPlayers.set(p.id, { ...current, level: newLevel });
-        }
-      };
+          const level = Math.round(Math.min(100, Math.max(0, (current.level ?? 50) + delta)) * 10) / 10;
+          patch(p.id, { level });
 
-      applyLevelDelta(freshTeam1, team1Actual, team1Expected);
-      applyLevelDelta(freshTeam2, team2Actual, team2Expected);
-
-      if (court.score) {
-        const updateAvgScore = (teamPlayers: Player[], teamScore: number, isWinner: boolean) => {
-          const cap = isWinner ? 21 : 20;
-          const cappedScore = Math.min(teamScore, cap);
-          for (const p of teamPlayers) {
-            const current = updatedPlayers.get(p.id);
-            if (!current) continue;
+          if (side.rawScore !== undefined) {
+            const cappedScore = Math.min(side.rawScore, side.won ? 21 : 20);
             const prevGames = current.scoredGames ?? 0;
             const scoredGames = prevGames + 1;
             const averageScore =
               Math.round((((current.averageScore ?? 0) * prevGames + cappedScore) / scoredGames) * 10) / 10;
-            updatedPlayers.set(p.id, { ...current, scoredGames, averageScore });
+            patch(p.id, { scoredGames, averageScore });
           }
-        };
-
-        updateAvgScore(team1, court.score.team1, court.winner === 1);
-        updateAvgScore(team2, court.score.team2, court.winner === 2);
-      }
+        }
+      });
     }
 
-    return players.map(p => updatedPlayers.get(p.id) ?? p);
+    return players.map(p => updated.get(p.id) ?? p);
   }
 }
 
