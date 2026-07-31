@@ -2,7 +2,9 @@ import React from 'react';
 import { vi } from 'vitest';
 
 import { Player } from '../../src/types';
+import type { Court } from '../../src/types';
 import type { TournamentMatch, TournamentStandingRow, TournamentTeam } from '../../src/tournament/types';
+import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
 
 export { GRAPH_COLORS, GRAPH_LEGEND_LABELS } from '../../src/constants/graphColors';
 
@@ -103,6 +105,34 @@ export const MOCK_PLAYERS = {
     createMockPlayer({ id: 'p5', name: 'Eve', isPresent: false }),
   ],
 };
+
+export function createSequentialPlayers(count: number): Player[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `P${i}`,
+    name: `Player ${i}`,
+    isPresent: true,
+  }));
+}
+
+export function createMockCourt(courtNumber: number, players: Player[], winner?: 1 | 2): Court {
+  return {
+    courtNumber,
+    players,
+    teams: { team1: [players[0], players[1]], team2: [players[2], players[3]] },
+    winner,
+  };
+}
+
+export function createRoundRobinTournament(matches: TournamentMatch[], teams: TournamentTeam[]): RoundRobinTournament {
+  return RoundRobinTournament.fromState({
+    phase: 'active',
+    format: 'singles',
+    type: 'round-robin',
+    numberOfCourts: 1,
+    teams,
+    matches,
+  });
+}
 
 export function createTournamentTeam(id: string, playerNames: string[] = [id]): TournamentTeam {
   return {

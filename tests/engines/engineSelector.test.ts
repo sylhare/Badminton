@@ -6,14 +6,7 @@ import { engineSL } from '../../src/engines/SmartEngine';
 import type { Player } from '../../src/types';
 import { storageManager } from '../../src/utils/StorageManager';
 import { benchedPlayers } from '../../src/utils/playerUtils';
-
-function mockPlayers(count: number): Player[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `P${i}`,
-    name: `Player ${i}`,
-    isPresent: true,
-  }));
-}
+import { createSequentialPlayers as mockPlayers } from '../data/testFactories';
 
 describe('Engine Selector', () => {
   beforeEach(() => {

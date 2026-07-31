@@ -12,6 +12,11 @@ import { addPlayers, clearTestState, clickTeam, generateAndWaitForAssignments, r
 describe('Team rotation', () => {
   const user = userEvent.setup();
 
+  const clickAndWait = (testId: string, ms: number) => act(async () => {
+    await user.click(screen.getByTestId(testId));
+    await new Promise(resolve => setTimeout(resolve, ms));
+  });
+
   beforeEach(async () => await clearTestState());
   afterEach(async () => await clearTestState());
 
@@ -145,15 +150,8 @@ describe('Team rotation', () => {
   });
 
   describe('Court generation stats', () => {
-    const rapidRegenerate = async () => act(async () => {
-      await user.click(screen.getByTestId('generate-assignments-button'));
-      await new Promise(resolve => setTimeout(resolve, 50));
-    });
-
-    const regenerate = async () => act(async () => {
-      await user.click(screen.getByTestId('generate-assignments-button'));
-      await new Promise(resolve => setTimeout(resolve, 300));
-    });
+    const rapidRegenerate = () => clickAndWait('generate-assignments-button', 50);
+    const regenerate = () => clickAndWait('generate-assignments-button', 300);
 
     it('replaces bench stats when rapid-regenerating (discarded round not double-counted)', async () => {
       renderWithProvider(<App />);
@@ -273,10 +271,7 @@ describe('Team rotation', () => {
       await addPlayers(user, 'Alice,Bob,Charlie,Diana');
       await generateAndWaitForAssignments(user);
 
-      const rotate = async () => act(async () => {
-        await user.click(screen.getByTestId('rotate-teams-button'));
-        await new Promise(resolve => setTimeout(resolve, 50));
-      });
+      const rotate = () => clickAndWait('rotate-teams-button', 50);
 
       await rotate();
       const pairsAfterFirst = new Set(

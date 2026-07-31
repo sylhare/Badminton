@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
 import type { Court, Player } from '../../src/types';
+import { createMockCourt, createSequentialPlayers as mockPlayers } from '../data/testFactories';
 
 /**
  * Test implementation of BaseCourtAssignmentEngine that exposes protected methods
@@ -72,26 +73,6 @@ class TestEngine extends BaseCourtAssignmentEngine {
   public testChooseBestTeamSplit(players: Player[]): { teams: Court['teams']; cost: number } {
     return this.chooseBestTeamSplit(players);
   }
-}
-
-function mockPlayers(count: number, startId = 0): Player[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `P${startId + i}`,
-    name: `Player ${startId + i}`,
-    isPresent: true,
-  }));
-}
-
-function createMockCourt(courtNumber: number, players: Player[], winner?: 1 | 2): Court {
-  return {
-    courtNumber,
-    players,
-    teams: {
-      team1: [players[0], players[1]],
-      team2: [players[2], players[3]],
-    },
-    winner,
-  };
 }
 
 describe('BaseCourtAssignmentEngine', () => {

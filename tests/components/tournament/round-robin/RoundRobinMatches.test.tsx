@@ -4,38 +4,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { RoundRobinMatches } from '../../../../src/components/tournament/round-robin/RoundRobinMatches';
-import { RoundRobinTournament } from '../../../../src/tournament/RoundRobinTournament';
-import type { TournamentMatch, TournamentTeam } from '../../../../src/tournament/types';
-import { createMockPlayer } from '../../../data/testFactories';
-
-function makeTeam(id: string, playerNames: string[]): TournamentTeam {
-  return {
-    id,
-    players: playerNames.map((name, i) => createMockPlayer({ id: `${id}-p${i}`, name })),
-  };
-}
-
-function makeMatch(
-  id: string,
-  round: number,
-  team1: TournamentTeam,
-  team2: TournamentTeam,
-  winner?: 1 | 2,
-  score?: { team1: number; team2: number },
-): TournamentMatch {
-  return { id, round, courtNumber: 1, team1, team2, winner, score };
-}
-
-function makeTournament(matches: TournamentMatch[], teams: TournamentTeam[]) {
-  return RoundRobinTournament.fromState({
-    phase: 'active',
-    format: 'singles',
-    type: 'round-robin',
-    numberOfCourts: 1,
-    teams,
-    matches,
-  });
-}
+import {
+  createRoundRobinTournament as makeTournament,
+  createTournamentMatch as makeMatch,
+  createTournamentTeam as makeTeam,
+} from '../../../data/testFactories';
 
 const teamA = makeTeam('a', ['Alice']);
 const teamB = makeTeam('b', ['Bob']);
