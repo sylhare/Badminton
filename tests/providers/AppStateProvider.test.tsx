@@ -6,7 +6,7 @@ import { useAppState } from '../../src/providers/AppStateProvider';
 import type { Court, GenerateResult, Player, UpdateWinnerParams } from '../../src/types';
 import type { TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
-import { tournamentLevelInputs } from '../../src/engines/LevelTracker';
+import { tournamentToScoredGames } from '../../src/engines/levelAdapters';
 import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 import { storageManager } from '../../src/utils/StorageManager';
 
@@ -212,7 +212,7 @@ describe('AppStateProvider', () => {
     }
 
     function applyResult(tournament: RoundRobinTournament) {
-      const { baseline, games } = tournamentLevelInputs(tournament);
+      const { baseline, games } = tournamentToScoredGames(tournament);
       act(() => { appState.current!.applyGameResults(games, baseline); });
     }
 

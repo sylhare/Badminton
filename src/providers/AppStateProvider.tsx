@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 
 import { engine, getEngineType, setEngine, enginePersistence } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
+import { courtToScoredGame } from '../engines/levelAdapters';
 import type { Court, EngineSnapshot, GenerateResult, Player, ScoredGame, UpdateWinnerParams } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
@@ -164,6 +165,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
   const clearPlayers = () => {
     setPlayers([]);
+    setTournament(null);
     engine().resetHistory();
     storageManager.clearAll();
   };
@@ -215,7 +217,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult => {
     const result = engine().generate(players, numberOfCourts, forceBenchPlayerIds);
-    if (result.committed) applyGameResults(previousAssignments.map(court => ({ court })));
+    if (result.committed) applyGameResults(previousAssignments.map(courtToScoredGame));
 
     result.anomalies.forEach(trackAssignmentAnomaly);
 

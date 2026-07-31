@@ -1,7 +1,4 @@
 import type { Player, ScoredGame } from '../types';
-import type { Tournament } from '../tournament/Tournament';
-import { BracketKind } from '../tournament/types';
-import type { TournamentMatch } from '../tournament/types';
 
 import { LevelTrackerConfig } from './levelTrackerConfig';
 
@@ -133,59 +130,3 @@ export class LevelTracker {
 }
 
 export const levelTracker = new LevelTracker();
-
-/**
- * How much tournament matches swing player levels, relative to a casual game.
- * Named here so there are no magic numbers in the resolver.
- */
-export const DEFAULT_TOURNAMENT_WEIGHTS = {
-  /** Baseline importance for a tournament match (1 = same as a casual game). */
-  base: 1.0,
-  /** Multiplier for the winners-bracket final (last round). */
-  finalMultiplier: 1.5,
-  /** Multiplier for the winners-bracket semi-final (second-to-last round). */
-  semifinalMultiplier: 1.25,
-} as const;
-
-/**
- * Resolves a match's Elo importance. The final/semi-final boost only applies to
- * the winners bracket, so round-robin matches (no bracket) and consolation/
- * third-place matches keep the base weight.
- */
-export function resolveMatchImportance(match: TournamentMatch, totalRounds: number): number {
-  if (match.bracket === BracketKind.Winners) {
-    if (match.round === totalRounds) return DEFAULT_TOURNAMENT_WEIGHTS.base * DEFAULT_TOURNAMENT_WEIGHTS.finalMultiplier;
-    if (match.round === totalRounds - 1) return DEFAULT_TOURNAMENT_WEIGHTS.base * DEFAULT_TOURNAMENT_WEIGHTS.semifinalMultiplier;
-  }
-  return DEFAULT_TOURNAMENT_WEIGHTS.base;
-}
-
-export interface TournamentLevelInputs {
-  baseline: Player[];
-  games: ScoredGame[];
-}
-
-/**
- * Adapts a tournament's decided matches into the start-of-play baseline and the
- * ordered {@link ScoredGame}s the level tracker replays — each carrying the Elo
- * importance derived from {@link resolveMatchImportance}. A tournament is just a
- * series of games, so it feeds the same {@link LevelTracker.updatePlayersLevels}.
- */
-export function tournamentLevelInputs(tournament: Tournament): TournamentLevelInputs {
-  const baseline = tournament.teams().flatMap(team => team.players);
-  const totalRounds = tournament.totalRounds();
-  const games: ScoredGame[] = tournament.matches()
-    .filter(match => match.winner)
-    .sort((a, b) => a.round - b.round || a.courtNumber - b.courtNumber)
-    .map(match => ({
-      court: {
-        courtNumber: match.courtNumber,
-        players: [...match.team1.players, ...match.team2.players],
-        teams: { team1: match.team1.players, team2: match.team2.players },
-        winner: match.winner,
-        score: match.score,
-      },
-      importance: resolveMatchImportance(match, totalRounds),
-    }));
-  return { baseline, games };
-}

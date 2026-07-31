@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { LevelTracker } from '../../src/engines/LevelTracker';
 import {
   DEFAULT_TOURNAMENT_WEIGHTS,
-  LevelTracker,
   resolveMatchImportance,
-  tournamentLevelInputs,
-} from '../../src/engines/LevelTracker';
+  tournamentToScoredGames,
+} from '../../src/engines/levelAdapters';
 import { LevelTrackerConfig } from '../../src/engines/levelTrackerConfig';
 import type { Court, Player } from '../../src/types';
 import { BracketKind } from '../../src/tournament/types';
@@ -210,7 +210,7 @@ describe('LevelTracker', () => {
   });
 });
 
-describe('tournamentLevelInputs', () => {
+describe('tournamentToScoredGames', () => {
   const teamA = team('a', [player('a1', 40), player('a2', 60)]);
   const teamB = team('b', [player('b1', 55), player('b2', 45)]);
   const teamC = team('c', [player('c1', 50), player('c2', 50)]);
@@ -220,7 +220,7 @@ describe('tournamentLevelInputs', () => {
   }
 
   it('baseline is every participant deduped, snapshotting start-of-play levels', () => {
-    const { baseline } = tournamentLevelInputs(startTournament());
+    const { baseline } = tournamentToScoredGames(startTournament());
     expect(baseline.map(p => p.id).sort()).toEqual(['a1', 'a2', 'b1', 'b2', 'c1', 'c2']);
     expect(baseline.find(p => p.id === 'a1')?.level).toBe(40);
     expect(baseline.find(p => p.id === 'b1')?.level).toBe(55);
@@ -231,7 +231,7 @@ describe('tournamentLevelInputs', () => {
     const firstMatch = tournament.matches()[0];
     const decided = tournament.withMatchResult(firstMatch.id, 1, { team1: 21, team2: 15 });
 
-    const { games } = tournamentLevelInputs(decided);
+    const { games } = tournamentToScoredGames(decided);
 
     expect(games).toHaveLength(1);
     expect(games[0].court.winner).toBe(1);
@@ -241,7 +241,7 @@ describe('tournamentLevelInputs', () => {
   });
 
   it('returns no games before any result is entered', () => {
-    expect(tournamentLevelInputs(startTournament()).games).toHaveLength(0);
+    expect(tournamentToScoredGames(startTournament()).games).toHaveLength(0);
   });
 
   it('orders decided matches by round then court number', () => {
@@ -249,7 +249,7 @@ describe('tournamentLevelInputs', () => {
     for (const match of tournament.matches()) {
       tournament = tournament.withMatchResult(match.id, 1, { team1: 21, team2: 10 });
     }
-    const { games } = tournamentLevelInputs(tournament);
+    const { games } = tournamentToScoredGames(tournament);
 
     const sig = (team1Ids: string[], team2Ids: string[]) => `${team1Ids.join()}|${team2Ids.join()}`;
     const expected = tournament.matches()
@@ -266,9 +266,9 @@ describe('tournamentLevelInputs', () => {
     for (const match of tournament.matches()) {
       tournament = tournament.withMatchResult(match.id, 1, { team1: 21, team2: 10 });
     }
-    const { games } = tournamentLevelInputs(tournament);
+    const { games } = tournamentToScoredGames(tournament);
     for (const g of games) {
-      expect(g.importance).toBe(DEFAULT_TOURNAMENT_WEIGHTS.base);
+      expect(g.importance).toBe(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE);
     }
   });
 });
@@ -289,21 +289,21 @@ describe('resolveMatchImportance', () => {
   });
 
   it('leaves earlier winners rounds at the base weight', () => {
-    expect(resolveMatchImportance(wbMatch(1), 3)).toBe(DEFAULT_TOURNAMENT_WEIGHTS.base);
+    expect(resolveMatchImportance(wbMatch(1), 3)).toBe(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE);
   });
 
   it('does not boost consolation/third-place matches in the final round', () => {
     const cbFinal: TournamentMatch = { ...wbMatch(3), bracket: BracketKind.Consolation };
-    expect(resolveMatchImportance(cbFinal, 3)).toBe(DEFAULT_TOURNAMENT_WEIGHTS.base);
+    expect(resolveMatchImportance(cbFinal, 3)).toBe(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE);
   });
 
   it('does not boost bracketless (round-robin) matches', () => {
     const rrMatch: TournamentMatch = { ...wbMatch(3), bracket: undefined };
-    expect(resolveMatchImportance(rrMatch, 3)).toBe(DEFAULT_TOURNAMENT_WEIGHTS.base);
+    expect(resolveMatchImportance(rrMatch, 3)).toBe(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE);
   });
 });
 
-describe('tournamentLevelInputs — elimination final weighting', () => {
+describe('tournamentToScoredGames — elimination final weighting', () => {
   it('weights final > semi-final > early rounds across a full 8-team bracket', () => {
     const teams = Array.from({ length: 8 }, (_, i) =>
       team(`t${i}`, [player(`p${i}`, 50)]));
@@ -317,12 +317,12 @@ describe('tournamentLevelInputs — elimination final weighting', () => {
       tournament = tournament.withMatchResult(pending.id, 1, { team1: 21, team2: 10 });
     }
 
-    const { games } = tournamentLevelInputs(tournament);
+    const { games } = tournamentToScoredGames(tournament);
     const importances = new Set(games.map(g => g.importance!));
 
     expect(importances.has(DEFAULT_TOURNAMENT_WEIGHTS.finalMultiplier)).toBe(true);
     expect(importances.has(DEFAULT_TOURNAMENT_WEIGHTS.semifinalMultiplier)).toBe(true);
-    expect(importances.has(DEFAULT_TOURNAMENT_WEIGHTS.base)).toBe(true);
+    expect(importances.has(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE)).toBe(true);
     expect(Math.max(...importances)).toBe(DEFAULT_TOURNAMENT_WEIGHTS.finalMultiplier);
   });
 });
