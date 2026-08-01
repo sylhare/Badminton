@@ -1,11 +1,51 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { engine, getEngineType, setEngine, enginePersistence } from '../engines/engineSelector';
 import { levelTracker } from '../engines/LevelTracker';
-import type { AppStateContextType, Court, EngineSnapshot, GenerateResult, Player, UpdateWinnerParams } from '../types';
+import type { Court, EngineSnapshot, GenerateResult, Player, ScoredGame, UpdateWinnerParams } from '../types';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
+import { EliminationTournament } from '../tournament/EliminationTournament';
+import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
+
+/** A reconstructed tournament instance of either supported format. */
+export type AnyTournament = RoundRobinTournament | EliminationTournament;
+
+/** App-state context shape. Lives here, not core `types/`, to avoid a core→feature type dependency. */
+export interface AppStateContextType {
+  players: Player[];
+  numberOfCourts: number;
+  setNumberOfCourts: React.Dispatch<React.SetStateAction<number>>;
+  assignments: Court[];
+  setAssignments: React.Dispatch<React.SetStateAction<Court[]>>;
+  lastGeneratedAt?: number;
+  setLastGeneratedAt: React.Dispatch<React.SetStateAction<number | undefined>>;
+  isLoaded: boolean;
+  handlePlayerToggle: (id: string) => void;
+  handleAddPlayers: (names: string[]) => void;
+  handleRemovePlayer: (id: string) => void;
+  handleUpdatePlayer: (id: string, gender: Player['gender'], level: number) => void;
+  clearPlayers: () => void;
+  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
+  isSmartEngineEnabled: boolean;
+  handleToggleSmartEngine: () => void;
+  winCounts: Map<string, number>;
+  lossCounts: Map<string, number>;
+  benchCounts: Map<string, number>;
+  engineState: EngineSnapshot | null;
+  levelTrend: (playerId: string) => 'up' | 'down' | null;
+  generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], forceBenchPlayerIds?: Set<string>): GenerateResult;
+  updateWinner(params: UpdateWinnerParams): Court[];
+  applyManualEdit(previous: Court[], next: Court[]): Court[];
+  applyGameResults(games: ScoredGame[], base?: Player[]): void;
+  tournament: AnyTournament | null;
+  setTournament: React.Dispatch<React.SetStateAction<AnyTournament | null>>;
+  saveState(): Promise<void>;
+  resetAlgorithm(): Promise<void>;
+  engineName: string;
+  engineDescription: string;
+}
 
 const AppStateContext = createContext<AppStateContextType | null>(null);
 
@@ -24,6 +64,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
   const [isSmartEngineEnabled, setIsSmartEngineEnabled] = useState(false);
   const [counts, setCounts] = useState({ wins: new Map<string, number>(), losses: new Map<string, number>(), bench: new Map<string, number>() });
   const [engineState, setEngineState] = useState<EngineSnapshot | null>(null);
+  const [tournament, setTournament] = useState<AnyTournament | null>(null);
   const hasLoadedRef = useRef(false);
   const { trackAssignmentAnomaly } = useAnalytics();
 
@@ -43,11 +84,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
     const hydrate = async () => {
       try {
-        const loadedState = await storageManager.loadApp();
+        const [loadedState, savedTournament] = await Promise.all([
+          storageManager.loadApp(),
+          storageManager.loadTournament(),
+        ]);
         if (loadedState.players?.length) setPlayers(loadedState.players);
         if (loadedState.numberOfCourts !== undefined) setNumberOfCourts(loadedState.numberOfCourts);
         if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
         if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
+        if (savedTournament) {
+          setTournament(savedTournament.type === 'elimination'
+            ? EliminationTournament.fromState(savedTournament)
+            : RoundRobinTournament.fromState(savedTournament));
+        }
         const smart = loadedState.isSmartEngineEnabled ?? false;
         if (smart) setIsSmartEngineEnabled(true);
         const engineType = smart ? 'sl' : 'sa';
@@ -82,51 +131,66 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     storageManager.saveApp({ players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt });
   }, [players, isSmartEngineEnabled, numberOfCourts, assignments, lastGeneratedAt]);
 
-  const handleAddPlayers = (names: string[]) => {
+  useEffect(() => {
+    if (!hasLoadedRef.current) return;
+    storageManager.saveTournament(tournament?.state() ?? null);
+  }, [tournament]);
+
+  const handleAddPlayers = useCallback((names: string[]) => {
     const newPlayers = createPlayersFromNames(names, 'manual');
     setPlayers(prev => [...prev, ...newPlayers]);
-  };
+  }, []);
 
-  const handlePlayerToggle = (id: string) => {
+  const handlePlayerToggle = useCallback((id: string) => {
     setPlayers(prev =>
       prev.map(p => p.id === id ? { ...p, isPresent: !p.isPresent } : p),
     );
-  };
+  }, []);
 
-  const handleRemovePlayer = (id: string) => {
+  const handleRemovePlayer = useCallback((id: string) => {
     engine().removePlayerHistory(id);
     setPlayers(prev => prev.filter(p => p.id !== id));
-  };
+  }, []);
 
-  const handleUpdatePlayer = (id: string, gender: Player['gender'], level: number) => {
+  const handleUpdatePlayer = useCallback((id: string, gender: Player['gender'], level: number) => {
     setPlayers(prev =>
       prev.map(p => p.id === id ? { ...p, gender, level } : p),
     );
-  };
+  }, []);
 
-  const clearPlayers = () => {
+  const clearPlayers = useCallback(() => {
     setPlayers([]);
+    setTournament(null);
     engine().resetHistory();
     storageManager.clearAll();
-  };
+  }, []);
 
-  const handleToggleSmartEngine = () => {
+  const handleToggleSmartEngine = useCallback(() => {
     if (!isLoaded) return;
     const next = !isSmartEngineEnabled;
     setIsSmartEngineEnabled(next);
     setEngine(next ? 'sl' : 'sa');
     syncFromEngine();
-  };
+  }, [isLoaded, isSmartEngineEnabled, syncFromEngine]);
 
-  const applyCourtResults = useCallback((courts: Court[]) => {
-    const courtsWithWinners = courts.filter(c => c.winner);
-    if (courtsWithWinners.length > 0) {
-      const nextPlayers = levelTracker.updatePlayersLevels(courtsWithWinners, players);
-      engine().recordLevelSnapshot(nextPlayers.filter(p => p.isPresent));
-      setPlayers(nextPlayers);
-    } else {
+  /** Single path for level changes: replays decided `games` on `base`, merges level fields onto the live roster. */
+  const applyGameResults = useCallback((games: ScoredGame[], base: Player[] = players) => {
+    const scored = games.filter(g => g.court.winner);
+    if (scored.length === 0) {
       engine().recordLevelSnapshot(players.filter(p => p.isPresent));
+      return;
     }
+    const replayed = new Map(levelTracker.updatePlayersLevels(scored, base).map(p => [p.id, p]));
+    let changed = false;
+    const next = players.map(p => {
+      const r = replayed.get(p.id);
+      if (!r || (r.level === p.level && r.averageScore === p.averageScore && r.scoredGames === p.scoredGames)) return p;
+      changed = true;
+      return { ...p, level: r.level, averageScore: r.averageScore, scoredGames: r.scoredGames };
+    });
+    if (!changed) return;
+    engine().recordLevelSnapshot(next.filter(p => p.isPresent));
+    setPlayers(next);
   }, [players]);
 
   const generate = useCallback((
@@ -136,12 +200,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult => {
     const result = engine().generate(players, numberOfCourts, forceBenchPlayerIds);
-    if (result.committed) applyCourtResults(previousAssignments);
+    if (result.committed) applyGameResults(previousAssignments.map(court => ({ court })));
 
     result.anomalies.forEach(trackAssignmentAnomaly);
 
     return result;
-  }, [applyCourtResults, trackAssignmentAnomaly]);
+  }, [applyGameResults, trackAssignmentAnomaly]);
 
   const updateWinner = useCallback((params: UpdateWinnerParams): Court[] => {
     return engine().updateWinner(params);
@@ -162,7 +226,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
 
   const levelTrend = useCallback((playerId: string) => engine().levelTrend(playerId), []);
 
-  const value: AppStateContextType = {
+  const value = useMemo<AppStateContextType>(() => ({
     players,
     numberOfCourts,
     setNumberOfCourts,
@@ -187,11 +251,20 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     generate,
     updateWinner,
     applyManualEdit,
+    applyGameResults,
+    tournament,
+    setTournament,
     saveState,
     resetAlgorithm,
     engineName: engine().name,
     engineDescription: engine().description,
-  };
+  }), [
+    players, numberOfCourts, assignments, lastGeneratedAt, isLoaded,
+    isSmartEngineEnabled, counts, engineState, tournament,
+    handlePlayerToggle, handleAddPlayers, handleRemovePlayer, handleUpdatePlayer,
+    clearPlayers, handleToggleSmartEngine, levelTrend, generate, updateWinner,
+    applyManualEdit, applyGameResults, saveState, resetAlgorithm,
+  ]);
 
   return (
     <AppStateContext.Provider value={value}>

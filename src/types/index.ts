@@ -1,5 +1,3 @@
-import type React from 'react';
-
 export interface Player {
   id: string;
   name: string;
@@ -24,6 +22,13 @@ export interface Court {
 export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
 export type EngineType = 'sa' | 'sl';
+
+/** A decided game the level tracker should replay: the court result plus its Elo weighting. */
+export interface ScoredGame {
+  court: Court;
+  /** Multiplier applied to this game's rating change (default 1 — see ELO_DEFAULT_IMPORTANCE). */
+  importance?: number;
+}
 
 export interface AppState {
   players: Player[];
@@ -96,33 +101,3 @@ export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
   readonly description: string;
 }
 
-export interface AppStateContextType {
-  players: Player[];
-  numberOfCourts: number;
-  setNumberOfCourts: React.Dispatch<React.SetStateAction<number>>;
-  assignments: Court[];
-  setAssignments: React.Dispatch<React.SetStateAction<Court[]>>;
-  lastGeneratedAt?: number;
-  setLastGeneratedAt: React.Dispatch<React.SetStateAction<number | undefined>>;
-  isLoaded: boolean;
-  handlePlayerToggle: (id: string) => void;
-  handleAddPlayers: (names: string[]) => void;
-  handleRemovePlayer: (id: string) => void;
-  handleUpdatePlayer: (id: string, gender: Player['gender'], level: number) => void;
-  clearPlayers: () => void;
-  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
-  isSmartEngineEnabled: boolean;
-  handleToggleSmartEngine: () => void;
-  winCounts: Map<string, number>;
-  lossCounts: Map<string, number>;
-  benchCounts: Map<string, number>;
-  engineState: EngineSnapshot | null;
-  levelTrend: (playerId: string) => 'up' | 'down' | null;
-  generate(players: Player[], numberOfCourts: number, previousAssignments: Court[], forceBenchPlayerIds?: Set<string>): GenerateResult;
-  updateWinner(params: UpdateWinnerParams): Court[];
-  applyManualEdit(previous: Court[], next: Court[]): Court[];
-  saveState(): Promise<void>;
-  resetAlgorithm(): Promise<void>;
-  engineName: string;
-  engineDescription: string;
-}

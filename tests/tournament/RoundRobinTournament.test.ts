@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
-import { createMockPlayer, createTournamentMatch, createTournamentTeam } from '../data/testFactories';
+import { createMockPlayer, createRoundRobinTournament, createTournamentMatch, createTournamentTeam } from '../data/testFactories';
 
 describe('RoundRobinTournament', () => {
   const teamA = createTournamentTeam('a', ['A']);
@@ -10,14 +10,7 @@ describe('RoundRobinTournament', () => {
   const teamC = createTournamentTeam('c', ['C']);
 
   function makeTournament(matches: TournamentMatch[], teams: TournamentTeam[] = [teamA, teamB, teamC]) {
-    return RoundRobinTournament.fromState({
-      phase: 'active',
-      format: 'singles',
-      type: 'round-robin',
-      numberOfCourts: 1,
-      teams,
-      matches,
-    });
+    return createRoundRobinTournament(matches, teams);
   }
 
   describe('start', () => {

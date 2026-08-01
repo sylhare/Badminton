@@ -1,20 +1,9 @@
-import type { Court, Player } from '../types';
+import type { Player, ScoredGame } from '../types';
 
 import { LevelTrackerConfig } from './levelTrackerConfig';
 
 export class LevelTracker {
-  /**
-   * Determine the K-factor (maximum rating change per game) based on the score.
-   *
-   * Returns {@link LevelTrackerConfig.K_DEFAULT} when no score is available or the
-   * winner score is not exactly 21 (deuce). Otherwise the raw K is looked up from
-   * {@link LevelTrackerConfig.K_SCALE} (matched by score difference) or falls back
-   * to {@link LevelTrackerConfig.K_MAX} for the most dominant wins.
-   *
-   * When teamPlayers is provided, the raw K is scaled by a balance factor
-   * [{@link LevelTrackerConfig.BALANCE_FACTOR_FLOOR}, 1.0] based on within-team
-   * level spread — the more unbalanced the team, the less informative the result.
-   */
+  /** K-factor (max rating change per game) from the score, normalised to the reference length and scaled by team balance. */
   getKFactor(
     score?: { team1: number; team2: number },
     winner?: 1 | 2,
@@ -26,10 +15,10 @@ export class LevelTracker {
     const loserScore = winner === 1 ? score.team2 : score.team1;
 
     let rawK = LevelTrackerConfig.K_MAX;
-    if (winnerScore !== 21) {
+    if (winnerScore > LevelTrackerConfig.REFERENCE_LENGTH || winnerScore <= 0) {
       rawK = LevelTrackerConfig.K_DEFAULT;
     } else {
-      const diff = 21 - loserScore;
+      const diff = (winnerScore - loserScore) * (LevelTrackerConfig.REFERENCE_LENGTH / winnerScore);
       for (const band of LevelTrackerConfig.K_SCALE) {
         if (diff <= band.maxDiff) { rawK = band.k; break; }
       }
@@ -54,19 +43,7 @@ export class LevelTracker {
     return total / players.length;
   }
 
-  /**
-   * Apply Elo-style level updates to all players based on court results.
-   * Only courts with both a winner and teams assigned are processed.
-   *
-   * Uses the Elo formula with a divisor of {@link LevelTrackerConfig.ELO_DIVISOR} to
-   * compute expected win probabilities. A larger divisor produces a flatter probability
-   * curve, so mismatched teams cause smaller swings and upsets are less extreme.
-   *
-   * Average score tracking is updated when a score is recorded.
-   *
-   * Each team's K-factor is adjusted by a per-team balance factor [0.5, 1.0] based on
-   * within-team level spread — the more unbalanced the team, the smaller the rating change.
-   */
+  /** Direction of a player's last recorded level change, or null if flat / too little history. */
   getLevelTrend(playerId: string, levelHistory: Map<string, number[]>): 'up' | 'down' | null {
     const history = levelHistory.get(playerId);
     if (!history || history.length < 2) return null;
@@ -77,62 +54,45 @@ export class LevelTracker {
     return null;
   }
 
-  updatePlayersLevels(courts: Court[], players: Player[]): Player[] {
-    const updatedPlayers = new Map<string, Player>(players.map(p => [p.id, { ...p }]));
+  /** Elo update per decided game; each change scales by team balance and the game's `importance` (default 1). */
+  updatePlayersLevels(games: ScoredGame[], players: Player[]): Player[] {
+    const updated = new Map<string, Player>(players.map(p => [p.id, { ...p }]));
 
-    for (const court of courts) {
+    for (const { court, importance } of games) {
       if (!court.winner || !court.teams) continue;
 
-      const { team1, team2 } = court.teams;
+      const weight = importance ?? LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE;
+      const sides = [court.teams.team1, court.teams.team2].map((team, i) => ({
+        team: team.map(p => updated.get(p.id) ?? p),
+        won: court.winner === i + 1,
+        rawScore: i === 0 ? court.score?.team1 : court.score?.team2,
+      }));
+      const avg = sides.map(s => this.getTeamAvgLevel(s.team));
 
-      const freshTeam1 = team1.map(p => updatedPlayers.get(p.id) ?? p);
-      const freshTeam2 = team2.map(p => updatedPlayers.get(p.id) ?? p);
+      sides.forEach((side, i) => {
+        const expected = 1 / (1 + Math.pow(10, (avg[1 - i] - avg[i]) / LevelTrackerConfig.ELO_DIVISOR));
+        const delta = this.getKFactor(court.score, court.winner, side.team) * weight * ((side.won ? 1 : 0) - expected);
 
-      const team1Avg = this.getTeamAvgLevel(freshTeam1);
-      const team2Avg = this.getTeamAvgLevel(freshTeam2);
-
-      const team1Expected = 1 / (1 + Math.pow(10, (team2Avg - team1Avg) / LevelTrackerConfig.ELO_DIVISOR));
-      const team2Expected = 1 - team1Expected;
-
-      const team1Actual = court.winner === 1 ? 1 : 0;
-      const team2Actual = court.winner === 2 ? 1 : 0;
-
-      const applyLevelDelta = (teamPlayers: Player[], actual: number, expected: number) => {
-        const k = this.getKFactor(court.score, court.winner, teamPlayers);
-        const delta = k * (actual - expected);
-        for (const p of teamPlayers) {
-          const current = updatedPlayers.get(p.id);
+        for (const p of side.team) {
+          const current = updated.get(p.id);
           if (!current) continue;
-          const raw = (current.level ?? 50) + delta;
-          const newLevel = Math.round(Math.min(100, Math.max(0, raw)) * 10) / 10;
-          updatedPlayers.set(p.id, { ...current, level: newLevel });
-        }
-      };
+          const level = Math.round(Math.min(100, Math.max(0, (current.level ?? 50) + delta)) * 10) / 10;
+          const merged: Player = { ...current, level };
 
-      applyLevelDelta(freshTeam1, team1Actual, team1Expected);
-      applyLevelDelta(freshTeam2, team2Actual, team2Expected);
-
-      if (court.score) {
-        const updateAvgScore = (teamPlayers: Player[], teamScore: number, isWinner: boolean) => {
-          const cap = isWinner ? 21 : 20;
-          const cappedScore = Math.min(teamScore, cap);
-          for (const p of teamPlayers) {
-            const current = updatedPlayers.get(p.id);
-            if (!current) continue;
+          if (side.rawScore !== undefined) {
+            const cappedScore = Math.min(side.rawScore, side.won ? 21 : 20);
             const prevGames = current.scoredGames ?? 0;
-            const scoredGames = prevGames + 1;
-            const averageScore =
-              Math.round((((current.averageScore ?? 0) * prevGames + cappedScore) / scoredGames) * 10) / 10;
-            updatedPlayers.set(p.id, { ...current, scoredGames, averageScore });
+            merged.scoredGames = prevGames + 1;
+            merged.averageScore =
+              Math.round((((current.averageScore ?? 0) * prevGames + cappedScore) / merged.scoredGames) * 10) / 10;
           }
-        };
 
-        updateAvgScore(team1, court.score.team1, court.winner === 1);
-        updateAvgScore(team2, court.score.team2, court.winner === 2);
-      }
+          updated.set(p.id, merged);
+        }
+      });
     }
 
-    return players.map(p => updatedPlayers.get(p.id) ?? p);
+    return players.map(p => updated.get(p.id) ?? p);
   }
 }
 

@@ -1,44 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { storageManager } from '../utils/StorageManager';
 import { useAppState } from '../providers/AppStateProvider';
+import type { AnyTournament } from '../providers/AppStateProvider';
 import { Tournament } from '../components/tournament/Tournament';
 import Footer from '../components/Footer';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../tournament/EliminationTournament';
+import { tournamentToScoredGames } from '../engines/levelAdapters';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
 import './TournamentPage.css';
 
-type AnyTournament = RoundRobinTournament | EliminationTournament;
-
 const TournamentPage = (): React.ReactElement => {
-  const { players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled } = useAppState();
-  const [initialNumberOfCourts, setInitialNumberOfCourts] = useState(4);
-  const [tournament, setTournament] = useState<AnyTournament | null>(null);
-  const [isTournamentLoaded, setIsTournamentLoaded] = useState(false);
+  const {
+    players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled,
+    applyGameResults, numberOfCourts, tournament, setTournament,
+  } = useAppState();
   const [showSetup, setShowSetup] = useState(false);
 
-  useEffect(() => {
-    Promise.all([storageManager.loadApp(), storageManager.loadTournament()]).then(
-      ([appState, savedTournament]) => {
-        if (appState.numberOfCourts !== undefined) setInitialNumberOfCourts(appState.numberOfCourts);
-        if (savedTournament) {
-          if (savedTournament.type === 'elimination') {
-            setTournament(EliminationTournament.fromState(savedTournament));
-          } else {
-            setTournament(RoundRobinTournament.fromState(savedTournament));
-          }
-        }
-        setIsTournamentLoaded(true);
-      },
-    );
-  }, []);
-
-  useEffect(() => {
-    if (!isTournamentLoaded) return;
-    storageManager.saveTournament(tournament?.state() ?? null);
-  }, [tournament, isTournamentLoaded]);
+  const commitElo = (t: AnyTournament) => {
+    const { baseline, games } = tournamentToScoredGames(t);
+    if (games.length) applyGameResults(games, baseline);
+  };
 
   const handleStart = (
     teams: TournamentTeam[],
@@ -46,6 +29,7 @@ const TournamentPage = (): React.ReactElement => {
     format: TournamentFormat,
     type: TournamentType,
   ) => {
+    if (tournament && !tournament.isComplete()) commitElo(tournament);
     if (type === 'elimination') {
       setTournament(EliminationTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
     } else {
@@ -59,10 +43,14 @@ const TournamentPage = (): React.ReactElement => {
     winner: 1 | 2,
     score?: { team1: number; team2: number },
   ) => {
-    setTournament(prev => prev?.withMatchResult(matchId, winner, score) ?? null);
+    if (!tournament) return;
+    const next = tournament.withMatchResult(matchId, winner, score);
+    setTournament(next);
+    if (!tournament.isComplete() && next.isComplete()) commitElo(next);
   };
 
   const handleReset = () => {
+    if (tournament && !tournament.isComplete()) commitElo(tournament);
     setTournament(null);
     setShowSetup(false);
   };
@@ -106,7 +94,7 @@ const TournamentPage = (): React.ReactElement => {
         <Tournament
           tournament={tournament}
           initialPlayers={players}
-          initialNumberOfCourts={initialNumberOfCourts}
+          initialNumberOfCourts={numberOfCourts}
           onStart={handleStart}
           onMatchResult={handleMatchResult}
           onReset={handleReset}

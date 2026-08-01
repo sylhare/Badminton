@@ -5,30 +5,11 @@ import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import * as selector from '../../src/engines/engineSelector';
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { benchedPlayers } from '../../src/utils/playerUtils';
+import { createMockCourt, createSequentialPlayers as mockPlayers } from '../data/testFactories';
 
 const engines: Array<{ name: string; engine: ICourtAssignmentEngine; type: selector.EngineType }> = [
   { name: 'Simulated Annealing (SA)', engine: engineSA, type: 'sa' },
 ];
-
-function mockPlayers(count: number): Player[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `P${i}`,
-    name: `Player ${i}`,
-    isPresent: true,
-  }));
-}
-
-function createMockCourt(courtNumber: number, players: Player[], winner?: 1 | 2): Court {
-  return {
-    courtNumber,
-    players,
-    teams: {
-      team1: [players[0], players[1]],
-      team2: [players[2], players[3]],
-    },
-    winner,
-  };
-}
 
 describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
   beforeEach(() => {
@@ -534,21 +515,8 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
   describe('Skill Balancing', () => {
     it('balances teams by total wins (average across multiple runs)', () => {
-      const players = Array.from({ length: 4 }, (_, i) => ({
-        id: `P${i}`,
-        name: `Player ${i}`,
-        isPresent: true,
-      }));
-
-      const trainingCourt: Court = {
-        courtNumber: 1,
-        players,
-        teams: {
-          team1: [players[0], players[1]],
-          team2: [players[2], players[3]],
-        },
-        winner: 1,
-      };
+      const players = mockPlayers(4);
+      const trainingCourt: Court = createMockCourt(1, players, 1);
 
       for (let i = 0; i < 50; i++) {
         selector.engine().recordWins([{ ...trainingCourt, courtNumber: i + 1 }]);

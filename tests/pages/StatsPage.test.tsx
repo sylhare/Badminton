@@ -34,8 +34,10 @@ vi.mock('../../src/utils/StorageManager', () => ({
   storageManager: {
     loadApp: mockLoadApp,
     loadEngine: vi.fn(),
+    loadTournament: vi.fn(() => Promise.resolve(null)),
     saveApp: vi.fn(),
     saveEngine: vi.fn(),
+    saveTournament: vi.fn(),
     clearAll: vi.fn(),
     waitForQueue: vi.fn(() => Promise.resolve()),
     onStateChange: vi.fn(() => vi.fn()),

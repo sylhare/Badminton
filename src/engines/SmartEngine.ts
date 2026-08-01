@@ -79,23 +79,12 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
     return cost;
   }
 
-  protected evaluateTotalCost(courts: Court[]): number {
-    let totalCost = 0;
-    for (const court of courts) {
-      if (!court.teams) continue;
-      if (court.players.length === 2) {
-        totalCost += this.calculateSinglesCost(court.players, this.SINGLES_REPEAT_PENALTY);
-      }
-      totalCost += this.calculateTeammateCost(court.teams.team1, this.TEAMMATE_REPEAT_PENALTY);
-      totalCost += this.calculateTeammateCost(court.teams.team2, this.TEAMMATE_REPEAT_PENALTY);
-      totalCost += this.calculateOpponentCost(court.teams.team1, court.teams.team2, this.OPPONENT_REPEAT_PENALTY);
-      totalCost += this.calculateWinBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
-      totalCost += this.calculateGenderCost(court.teams.team1, court.teams.team2);
-      totalCost += this.calculateLevelBalanceCost(court.teams.team1, court.teams.team2);
-      totalCost += this.calculateLevelTeammateBias(court.teams.team1);
-      totalCost += this.calculateLevelTeammateBias(court.teams.team2);
-    }
-    return totalCost;
+  protected courtSpecificCost(court: Court): number {
+    if (!court.teams) return 0;
+    return this.calculateGenderCost(court.teams.team1, court.teams.team2)
+      + this.calculateLevelBalanceCost(court.teams.team1, court.teams.team2)
+      + this.calculateLevelTeammateBias(court.teams.team1)
+      + this.calculateLevelTeammateBias(court.teams.team2);
   }
 }
 

@@ -5,14 +5,17 @@ import userEvent from '@testing-library/user-event';
 
 import TournamentPage from '../../src/pages/TournamentPage';
 import { storageManager } from '../../src/utils/StorageManager';
-import { clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
+import { captureAppState, clearTestState, flushPendingSaves, renderWithProvider } from '../shared';
 import { MOCK_PLAYERS } from '../data/testFactories';
 import { BracketKind } from '../../src/tournament/types';
 
 const mockPlayers = MOCK_PLAYERS.tournament;
 
+const { appState, Capture } = captureAppState();
+
 describe('TournamentPage', () => {
   beforeEach(async () => {
+    appState.current = null;
     await clearTestState();
     await storageManager.saveApp({ players: mockPlayers, numberOfCourts: 2 });
     await storageManager.saveTournament(null);
@@ -22,6 +25,14 @@ describe('TournamentPage', () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     await clearTestState();
+  });
+
+  const team = (i: number) => ({ id: `t${i}`, players: [mockPlayers[i]] });
+  const match = (id: string, round: number, i: number, j: number) =>
+    ({ id, round, courtNumber: 1, team1: team(i), team2: team(j) });
+  const savedRR = (teamIdx: number[], matches: ReturnType<typeof match>[]) => ({
+    phase: 'active' as const, format: 'singles' as const, type: 'round-robin' as const,
+    numberOfCourts: 2, teams: teamIdx.map(team), matches,
   });
 
   it('renders "Tournament Setup" heading on setup page', () => {
@@ -101,24 +112,7 @@ describe('TournamentPage', () => {
   });
 
   it('restores an in-progress tournament from saved state on mount', async () => {
-    const savedState = {
-      phase: 'active' as const,
-      format: 'singles' as const,
-      type: 'round-robin' as const,
-      numberOfCourts: 2,
-      teams: [
-        { id: 't1', players: [mockPlayers[0]] },
-        { id: 't2', players: [mockPlayers[1]] },
-      ],
-      matches: [
-        {
-          id: 'm1', round: 1, courtNumber: 1,
-          team1: { id: 't1', players: [mockPlayers[0]] },
-          team2: { id: 't2', players: [mockPlayers[1]] },
-        },
-      ],
-    };
-    await storageManager.saveTournament(savedState);
+    await storageManager.saveTournament(savedRR([0, 1], [match('m1', 1, 0, 1)]));
     await flushPendingSaves();
 
     renderWithProvider(<TournamentPage />);
@@ -281,5 +275,51 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('score-modal-confirm'));
 
     expect(screen.getByTestId('score-diff-0')).toHaveTextContent('+11');
+  });
+
+  describe('Elo commit timing', () => {
+    const renderAndRecordAlice = async (saved: ReturnType<typeof savedRR>) => {
+      await storageManager.saveTournament(saved);
+      await flushPendingSaves();
+      const user = userEvent.setup();
+      renderWithProvider(<><TournamentPage /><Capture /></>);
+      await waitFor(() => expect(screen.getByTestId('tournament-matches')).toBeInTheDocument());
+      await user.click(screen.getAllByText('Alice')[0]);
+      await user.click(screen.getByTestId('score-modal-confirm'));
+      return user;
+    };
+
+    const levelOf = (id: string) => appState.current!.players.find(p => p.id === id)!.level;
+
+    it('records Elo into the roster when the last match completes the tournament', async () => {
+      await renderAndRecordAlice(savedRR([0, 1], [match('m1', 1, 0, 1)]));
+      await waitFor(() => {
+        expect(levelOf('p1')!).toBeGreaterThan(50);
+        expect(levelOf('p2')!).toBeLessThan(50);
+      });
+    });
+
+    it('holds Elo until over, then commits decided results on "Start a New Tournament"', async () => {
+      const user = await renderAndRecordAlice(
+        savedRR([0, 1, 2], [match('m1', 1, 0, 1), match('m2', 2, 0, 2), match('m3', 3, 1, 2)]),
+      );
+      expect(levelOf('p1')).toBeUndefined();
+
+      await user.click(screen.getByTestId('new-tournament-button'));
+      await waitFor(() => expect(levelOf('p1')!).toBeGreaterThan(50));
+    });
+
+    it('commits decided results when a new tournament is started from the setup nav', async () => {
+      const user = await renderAndRecordAlice(
+        savedRR([0, 1, 2], [match('m1', 1, 0, 1), match('m2', 2, 0, 2), match('m3', 3, 1, 2)]),
+      );
+      expect(levelOf('p1')).toBeUndefined();
+
+      await user.click(screen.getByTestId('back-to-setup'));
+      await waitFor(() => expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled());
+      await user.click(screen.getByTestId('start-tournament-button'));
+
+      await waitFor(() => expect(levelOf('p1')!).toBeGreaterThan(50));
+    });
   });
 });

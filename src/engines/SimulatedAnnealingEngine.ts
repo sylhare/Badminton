@@ -25,22 +25,11 @@ export class CourtAssignmentEngineSA extends SimulatedAnnealingBase implements I
     return cost;
   }
 
-  protected evaluateTotalCost(courts: Court[]): number {
-    let totalCost = 0;
-    for (const court of courts) {
-      if (!court.teams) continue;
-      if (court.players.length === 2) {
-        totalCost += this.calculateSinglesCost(court.players, this.SINGLES_REPEAT_PENALTY);
-      }
-      totalCost += this.calculateTeammateCost(court.teams.team1, this.TEAMMATE_REPEAT_PENALTY);
-      totalCost += this.calculateTeammateCost(court.teams.team2, this.TEAMMATE_REPEAT_PENALTY);
-      totalCost += this.calculateOpponentCost(court.teams.team1, court.teams.team2, this.OPPONENT_REPEAT_PENALTY);
-      totalCost += this.calculateSkillPairPenalty(court.teams.team1, this.SKILL_PAIR_PENALTY);
-      totalCost += this.calculateSkillPairPenalty(court.teams.team2, this.SKILL_PAIR_PENALTY);
-      totalCost += this.calculateWinBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
-      totalCost += this.calculateLossBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
-    }
-    return totalCost;
+  protected courtSpecificCost(court: Court): number {
+    if (!court.teams) return 0;
+    return this.calculateSkillPairPenalty(court.teams.team1, this.SKILL_PAIR_PENALTY)
+      + this.calculateSkillPairPenalty(court.teams.team2, this.SKILL_PAIR_PENALTY)
+      + this.calculateLossBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
   }
 }
 

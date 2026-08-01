@@ -2,17 +2,25 @@ export class LevelTrackerConfig {
   /** ELO divisor — controls curve steepness (larger = flatter, more upsets). */
   static readonly ELO_DIVISOR = 400;
 
+  /** Neutral game-importance multiplier — a casual game swings levels exactly as before. */
+  static readonly ELO_DEFAULT_IMPORTANCE = 1.0;
+
+  /** Winners-bracket final (last round) swings levels 1.5x a casual game. */
+  static readonly WB_FINAL_IMPORTANCE = 1.5;
+
+  /** Winners-bracket semi-final (second-to-last round) swings levels 1.25x a casual game. */
+  static readonly WB_SEMIFINAL_IMPORTANCE = 1.25;
+
   /** K-factor returned when no score is available (same as deuce). */
   static readonly K_DEFAULT = 0.6;
 
   /** K-factor for the most dominant win (diff > 15, loser < 6). */
   static readonly K_MAX = 3.0;
 
-  /**
-   * K-factor bands, applied when the winner score is exactly 21.
-   * Each entry maps a maximum score difference to a K-factor.
-   * Evaluated in order; first match wins.
-   */
+  /** Match length the {@link K_SCALE} bands are calibrated to; winner scores are normalised to it. */
+  static readonly REFERENCE_LENGTH = 21;
+
+  /** K-factor bands over the winner-score-normalised margin of victory; first matching maxDiff wins. */
   static readonly K_SCALE = [
     { maxDiff: 3, k: 0.8 },
     { maxDiff: 6, k: 1.6 },
