@@ -8,7 +8,7 @@ interface UseMatchModalResult {
   modalMatch: TournamentMatch | null;
   pendingWinner: 1 | 2 | null;
   handleTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
-  handleModalConfirm: (score: { team1: number; team2: number }) => void;
+  handleModalConfirm: (winner: 1 | 2, score: { team1: number; team2: number }) => void;
   handleModalCancel: () => void;
 }
 
@@ -23,9 +23,9 @@ export function useMatchModal(onMatchResult: MatchResultFn): UseMatchModalResult
     setPending({ match, winner: teamNumber });
   };
 
-  const handleModalConfirm = (score: { team1: number; team2: number }) => {
+  const handleModalConfirm = (winner: 1 | 2, score: { team1: number; team2: number }) => {
     if (!pending) return;
-    onMatchResult(pending.match.id, pending.winner, score);
+    onMatchResult(pending.match.id, winner, score);
     setPending(null);
   };
 

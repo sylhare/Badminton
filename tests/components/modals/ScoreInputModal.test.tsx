@@ -66,16 +66,16 @@ describe('ScoreInputModal', () => {
   });
 
   describe('confirm uses 18 as default loser score', () => {
-    it('calls onConfirm with {team1: 21, team2: 18} when team 1 wins and loser is empty', async () => {
+    it('calls onConfirm with winner 1 and {team1: 21, team2: 18} when team 1 wins and loser is empty', async () => {
       const { confirmBtn, onConfirm } = renderModal(1);
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith({ team1: 21, team2: 18 });
+      expect(onConfirm).toHaveBeenCalledWith(1, { team1: 21, team2: 18 });
     });
 
-    it('calls onConfirm with {team1: 18, team2: 21} when team 2 wins and loser is empty', async () => {
+    it('calls onConfirm with winner 2 and {team1: 18, team2: 21} when team 2 wins and loser is empty', async () => {
       const { confirmBtn, onConfirm } = renderModal(2);
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith({ team1: 18, team2: 21 });
+      expect(onConfirm).toHaveBeenCalledWith(2, { team1: 18, team2: 21 });
     });
 
     it('calls onConfirm with entered scores when both are filled', async () => {
@@ -84,42 +84,43 @@ describe('ScoreInputModal', () => {
       await user.type(input1(), '21');
       await user.type(input2(), '15');
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith({ team1: 21, team2: 15 });
+      expect(onConfirm).toHaveBeenCalledWith(1, { team1: 21, team2: 15 });
     });
   });
 
-  describe('confirm disabled when winner has fewer points', () => {
-    it('disables confirm when team 1 wins and winner score is below default loser score (18)', async () => {
-      const { input1, confirmBtn } = renderModal(1);
-      await user.clear(input1());
-      await user.type(input1(), '15');
-      expect(confirmBtn()).toBeDisabled();
-    });
-
-    it('disables confirm when team 1 wins but score1 < score2', async () => {
-      const { input1, input2, confirmBtn } = renderModal(1);
-      await user.clear(input1());
-      await user.type(input1(), '15');
-      await user.type(input2(), '21');
-      expect(confirmBtn()).toBeDisabled();
-    });
-
-    it('disables confirm when team 2 wins but score2 < score1', async () => {
-      const { input1, input2, confirmBtn } = renderModal(2);
+  describe('score decides the winner regardless of the clicked team', () => {
+    it('resolves the clicked loser as winner when they score more points', async () => {
+      const { input1, input2, confirmBtn, onConfirm } = renderModal(2);
       await user.type(input1(), '21');
       await user.clear(input2());
-      await user.type(input2(), '10');
-      expect(confirmBtn()).toBeDisabled();
+      await user.type(input2(), '18');
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(1, { team1: 21, team2: 18 });
     });
 
-    it('does not call onConfirm when confirm button is disabled', async () => {
-      const { input1, input2, confirmBtn, onConfirm } = renderModal(1);
+    it('keeps the clicked team as winner on a tie', async () => {
+      const { input1, input2, confirmBtn, onConfirm } = renderModal(2);
+      await user.type(input1(), '20');
+      await user.clear(input2());
+      await user.type(input2(), '20');
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(2, { team1: 20, team2: 20 });
+    });
+
+    it('updates the title to the score-derived winner', async () => {
+      const { input1, input2 } = renderModal(2);
+      await user.type(input1(), '21');
+      await user.clear(input2());
+      await user.type(input2(), '18');
+      expect(screen.getByText('🏆 Team 1 wins!')).toBeInTheDocument();
+    });
+
+    it('never disables confirm', async () => {
+      const { input1, input2, confirmBtn } = renderModal(1);
       await user.clear(input1());
       await user.type(input1(), '10');
       await user.type(input2(), '21');
-      expect(confirmBtn()).toBeDisabled();
-      await user.click(confirmBtn());
-      expect(onConfirm).not.toHaveBeenCalled();
+      expect(confirmBtn()).not.toBeDisabled();
     });
   });
 

@@ -9,7 +9,7 @@ interface ScoreInputModalProps {
   winnerTeam: 1 | 2;
   team1Players: Player[];
   team2Players: Player[];
-  onConfirm: (score: { team1: number; team2: number }) => void;
+  onConfirm: (winner: 1 | 2, score: { team1: number; team2: number }) => void;
   onCancel: () => void;
 }
 
@@ -56,8 +56,13 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     team2: isNaN(parsed2) ? defaults.team2 : parsed2,
   };
 
+  const resolvedWinner: 1 | 2 =
+    resolvedScore.team1 > resolvedScore.team2 ? 1
+      : resolvedScore.team2 > resolvedScore.team1 ? 2
+        : winnerTeam;
+
   const handleConfirm = () => {
-    onConfirm(resolvedScore);
+    onConfirm(resolvedWinner, resolvedScore);
     setScore1('');
     setScore2('');
   };
@@ -68,16 +73,12 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     onCancel();
   };
 
-  const isConfirmDisabled =
-    (winnerTeam === 1 && resolvedScore.team1 < resolvedScore.team2) ||
-    (winnerTeam === 2 && resolvedScore.team2 < resolvedScore.team1);
-
   const teamNames = (players: Player[]) => players.map(p => p.name).join(' & ');
 
   return (
     <Modal
       isOpen={isOpen}
-      title={`🏆 Team ${winnerTeam} wins!`}
+      title={`🏆 Team ${resolvedWinner} wins!`}
       onClose={handleCancel}
       testId="score-input-modal"
     >
@@ -115,7 +116,6 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
         <button
           className="button button-primary"
           onClick={handleConfirm}
-          disabled={isConfirmDisabled}
           data-testid="score-modal-confirm"
         >
           Confirm
