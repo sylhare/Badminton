@@ -118,10 +118,11 @@ test.describe('Smart Engine', () => {
     test('entering score and confirming saves score; avg pts shows after regenerate', async ({ page }) => {
       await page.locator('.team-clickable').first().click();
 
-      await test.step('confirm disabled when winner score is lower than opponent', async () => {
+      await test.step('score decides the winner; confirm stays enabled when the clicked team scores lower', async () => {
         await page.getByTestId('score-input-team1').fill('10');
         await page.getByTestId('score-input-team2').fill('21');
-        await expect(page.getByTestId('score-modal-confirm')).toBeDisabled();
+        await expect(page.getByTestId('score-modal-confirm')).toBeEnabled();
+        await expect(page.getByText('🏆 Team 2 wins!')).toBeVisible();
         await page.getByTestId('score-input-team1').fill('');
         await page.getByTestId('score-input-team2').fill('');
       });
