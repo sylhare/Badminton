@@ -119,8 +119,8 @@ export class GroupKnockoutTournament extends Tournament {
     return groups;
   }
 
-  /** Standings within a single group, ranked like a round-robin. */
-  groupStandings(groupIndex: number): TournamentStandingRow[] {
+  /** A single group's matches as a round-robin sub-tournament, for standings and match rendering. */
+  groupTournament(groupIndex: number): RoundRobinTournament {
     const groupTeams = this.groups()[groupIndex] ?? [];
     const groupMatches = this.groupMatches().filter(m => m.group === groupIndex);
     return RoundRobinTournament.fromState({
@@ -128,7 +128,12 @@ export class GroupKnockoutTournament extends Tournament {
       type: 'round-robin',
       teams: groupTeams,
       matches: groupMatches,
-    }).calculateStandings();
+    });
+  }
+
+  /** Standings within a single group, ranked like a round-robin. */
+  groupStandings(groupIndex: number): TournamentStandingRow[] {
+    return this.groupTournament(groupIndex).calculateStandings();
   }
 
   /** True once every group-stage match has a result. */
