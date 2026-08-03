@@ -7,7 +7,7 @@ export enum BracketKind {
   Consolation = 'consolation',
   ThirdPlace = 'third-place',
 }
-export type TournamentType = 'round-robin' | 'elimination';
+export type TournamentType = 'round-robin' | 'elimination' | 'group-knockout';
 export type TournamentPhase = 'setup' | 'active' | 'completed';
 
 export interface TournamentTeam {
@@ -31,6 +31,8 @@ export interface TournamentMatch {
   /** One entry per set played; empty while the match is undecided or was won without a score. */
   sets: SetScore[];
   bracket?: BracketKind;
+  /** Group index (0-based) for a group-stage match; absent for knockout/bracket matches. */
+  group?: number;
 }
 
 export interface TournamentStandingRow {
@@ -55,6 +57,10 @@ export interface TournamentState {
   bracketSize?: number;
   /** Total sets in a match (best-of-N); the winner is the side that takes a majority. Defaults to 1. */
   bestOf?: number;
+  /** group-knockout: target teams per group in the round-robin phase. */
+  groupSize?: number;
+  /** group-knockout: how many teams advance from each group to the knockout bracket. */
+  qualifiersPerGroup?: number;
 }
 
 export function formatTeamName(team: TournamentTeam): string {
