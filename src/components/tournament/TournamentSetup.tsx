@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
-import type { TournamentFormat, TournamentTeam } from '../../tournament/types';
+import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
 import { formatTeamName } from '../../tournament/types';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import type { SlotAddr } from '../../utils/slotSwap';
@@ -14,7 +14,15 @@ const BEST_OF_OPTIONS = [1, 3, 5];
 interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
-  onStart: (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat, bestOf: number) => void;
+  type?: TournamentType;
+  onStart: (
+    teams: TournamentTeam[],
+    numberOfCourts: number,
+    format: TournamentFormat,
+    bestOf: number,
+    groupSize: number,
+    qualifiersPerGroup: number,
+  ) => void;
   onAddPlayers?: (names: string[]) => void;
   onTogglePlayer?: (id: string) => void;
 }
@@ -22,6 +30,7 @@ interface TournamentSetupProps {
 export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
+  type = 'round-robin',
   onStart,
   onAddPlayers,
   onTogglePlayer,
@@ -29,6 +38,8 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const [format, setFormat] = useState<TournamentFormat>('doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
   const [bestOf, setBestOf] = useState(1);
+  const [groupSize, setGroupSize] = useState(4);
+  const [qualifiersPerGroup, setQualifiersPerGroup] = useState(2);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
     RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
@@ -67,7 +78,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handleStart = () => {
     if (validationError) return;
-    onStart(teams, numberOfCourts, format, bestOf);
+    onStart(teams, numberOfCourts, format, bestOf, groupSize, qualifiersPerGroup);
   };
 
   return (
@@ -136,6 +147,42 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
           ))}
         </div>
       </div>
+
+      {type === 'group-knockout' && (
+        <div className="setup-section" data-testid="group-knockout-config">
+          <h3>Groups + Knockout</h3>
+          <div className="group-knockout-fields">
+            <label className="group-knockout-field">
+              Teams per group
+              <input
+                type="number"
+                min="2"
+                value={groupSize}
+                onChange={e => setGroupSize(Math.max(2, parseInt(e.target.value, 10) || 2))}
+                className="court-count-input"
+                data-testid="group-size-input"
+              />
+            </label>
+            <label className="group-knockout-field">
+              Qualifiers per group
+              <input
+                type="number"
+                min="1"
+                max={groupSize}
+                value={qualifiersPerGroup}
+                onChange={e => setQualifiersPerGroup(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className="court-count-input"
+                data-testid="qualifiers-input"
+              />
+            </label>
+          </div>
+          {qualifiersPerGroup >= groupSize && (
+            <p className="setup-warning" data-testid="qualifiers-warning">
+              Every team in a group would qualify — lower the qualifiers or raise the group size.
+            </p>
+          )}
+        </div>
+      )}
 
       {teams.length > 0 && (
         <div className="setup-section">
