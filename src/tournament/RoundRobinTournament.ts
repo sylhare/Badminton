@@ -47,6 +47,7 @@ function generateMatches(teams: TournamentTeam[], numberOfCourts: number): Tourn
         courtNumber: (matchIndex % numberOfCourts) + 1,
         team1: t1,
         team2: t2,
+        sets: [],
       });
       matchIndex++;
     }
@@ -104,6 +105,7 @@ export class RoundRobinTournament extends Tournament {
     const standings = this.tallyStandings(2);
     return Array.from(standings.values()).sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
+      if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
       if (b.scoreDiff !== a.scoreDiff) return b.scoreDiff - a.scoreDiff;
       return this.compareByTeamName(a, b);
     });

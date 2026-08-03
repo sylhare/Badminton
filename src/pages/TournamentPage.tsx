@@ -44,7 +44,7 @@ const TournamentPage = (): React.ReactElement => {
     score?: { team1: number; team2: number },
   ) => {
     if (!tournament) return;
-    const next = tournament.withMatchResult(matchId, winner, score);
+    const next = tournament.withMatchResult(matchId, winner, score ? [score] : []);
     setTournament(next);
     if (!tournament.isComplete() && next.isComplete()) commitElo(next);
   };

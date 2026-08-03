@@ -151,9 +151,9 @@ export function createTournamentMatch(
   team1: TournamentTeam,
   team2: TournamentTeam,
   winner?: 1 | 2,
-  score?: { team1: number; team2: number },
+  sets: { team1: number; team2: number }[] = [],
 ): TournamentMatch {
-  return { id, round, courtNumber: 1, team1, team2, winner, score };
+  return { id, round, courtNumber: 1, team1, team2, winner, sets };
 }
 
 export function createStandingRow(
@@ -161,8 +161,9 @@ export function createStandingRow(
   won: number,
   lost: number,
   scoreDiff: number,
+  setDiff = 0,
 ): TournamentStandingRow {
-  return { team, played: won + lost, won, lost, points: won * 2, scoreDiff };
+  return { team, played: won + lost, won, lost, points: won * 2, setDiff, scoreDiff };
 }
 
 export function createMockFile(
