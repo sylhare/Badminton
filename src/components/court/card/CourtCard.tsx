@@ -53,9 +53,10 @@ const CourtCard: React.FC<CourtCardProps> = ({
   };
 
   const handleRotateTeams = onRotateTeams ? () => onRotateTeams(court.courtNumber) : undefined;
-  const handleModalConfirm = (winner: 1 | 2, score: { team1: number; team2: number }) => {
+  const handleModalConfirm = (winner: 1 | 2, sets: { team1: number; team2: number }[]) => {
     if (pendingWinner === null || !onWinnerChange) return;
-    trackGameAction('set_winner', { gameType: score.team1 > 0 || score.team2 > 0 ? 'with_score' : 'no_score', courtNumber: court.courtNumber });
+    const score = sets[0];
+    trackGameAction('set_winner', { gameType: score && (score.team1 > 0 || score.team2 > 0) ? 'with_score' : 'no_score', courtNumber: court.courtNumber });
     onWinnerChange(court.courtNumber, winner);
     onScoreChange?.(court.courtNumber, score);
     triggerConfetti(clickCoordsRef.current.x, clickCoordsRef.current.y, 30);

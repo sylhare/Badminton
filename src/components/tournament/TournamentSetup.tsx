@@ -9,10 +9,12 @@ import { swapInGroups } from '../../utils/slotSwap';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 
+const BEST_OF_OPTIONS = [1, 3, 5];
+
 interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
-  onStart: (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat) => void;
+  onStart: (teams: TournamentTeam[], numberOfCourts: number, format: TournamentFormat, bestOf: number) => void;
   onAddPlayers?: (names: string[]) => void;
   onTogglePlayer?: (id: string) => void;
 }
@@ -26,6 +28,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 }) => {
   const [format, setFormat] = useState<TournamentFormat>('doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
+  const [bestOf, setBestOf] = useState(1);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
     RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
   );
@@ -64,7 +67,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handleStart = () => {
     if (validationError) return;
-    onStart(teams, numberOfCourts, format);
+    onStart(teams, numberOfCourts, format, bestOf);
   };
 
   return (
@@ -116,6 +119,22 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
           className="court-count-input"
           data-testid="tournament-court-count"
         />
+      </div>
+
+      <div className="setup-section">
+        <h3>Sets per Match</h3>
+        <div className="format-pills" data-testid="best-of-pills">
+          {BEST_OF_OPTIONS.map(n => (
+            <button
+              key={n}
+              className={`format-pill${bestOf === n ? ' format-pill-active' : ''}`}
+              onClick={() => setBestOf(n)}
+              data-testid={`best-of-pill-${n}`}
+            >
+              {n === 1 ? 'Single game' : `Best of ${n}`}
+            </button>
+          ))}
+        </div>
       </div>
 
       {teams.length > 0 && (
