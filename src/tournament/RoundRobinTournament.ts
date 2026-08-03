@@ -10,6 +10,7 @@ import type {
   TournamentTeam,
 } from './types';
 import { DEFAULT_TOURNAMENT_STATE } from './types';
+import { roundRobinPairings } from './schedule';
 
 function makeTeamId(index: number): string {
   return `team-${Date.now()}-${index}`;
@@ -20,43 +21,14 @@ function makeMatchId(index: number): string {
 }
 
 function generateMatches(teams: TournamentTeam[], numberOfCourts: number): TournamentMatch[] {
-  const n = teams.length;
-  if (n < 2) return [];
-
-  const hasBye = n % 2 !== 0;
-  const paddedTeams: (TournamentTeam | null)[] = hasBye ? [...teams, null] : [...teams];
-  const m = paddedTeams.length;
-
-  const matches: TournamentMatch[] = [];
-  let matchIndex = 0;
-
-  const rotating = paddedTeams.slice(1);
-
-  for (let round = 0; round < m - 1; round++) {
-    const roundTeams = [paddedTeams[0], ...rotating];
-
-    for (let i = 0; i < m / 2; i++) {
-      const t1 = roundTeams[i];
-      const t2 = roundTeams[m - 1 - i];
-
-      if (t1 === null || t2 === null) continue;
-
-      matches.push({
-        id: makeMatchId(matchIndex),
-        round: round + 1,
-        courtNumber: (matchIndex % numberOfCourts) + 1,
-        team1: t1,
-        team2: t2,
-        sets: [],
-      });
-      matchIndex++;
-    }
-
-    const last = rotating.pop()!;
-    rotating.unshift(last);
-  }
-
-  return matches;
+  return roundRobinPairings(teams).map((pairing, i) => ({
+    id: makeMatchId(i),
+    round: pairing.round,
+    courtNumber: (i % numberOfCourts) + 1,
+    team1: pairing.team1,
+    team2: pairing.team2,
+    sets: [],
+  }));
 }
 
 export class RoundRobinTournament extends Tournament {
