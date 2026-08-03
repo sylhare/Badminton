@@ -388,6 +388,7 @@ describe('StorageManager', () => {
       numberOfCourts: 2,
       teams: [{ id: 't1', players: [{ id: 'p1', name: 'Alice', isPresent: true }] }],
       matches: [],
+      bestOf: 1,
     };
 
     it('should round-trip tournament state', async () => {
@@ -424,6 +425,23 @@ describe('StorageManager', () => {
       expect(loaded?.format).toBe('doubles');
       expect(loaded?.teams).toEqual([]);
       expect(loaded?.matches).toEqual([]);
+    });
+
+    it('migrates a legacy match score into a one-entry sets array on load', async () => {
+      const legacy = {
+        tournament: {
+          phase: 'active', format: 'singles', type: 'round-robin', numberOfCourts: 1,
+          teams: [], matches: [
+            { id: 'm1', round: 1, courtNumber: 1, team1: { id: 'a', players: [] }, team2: { id: 'b', players: [] }, winner: 1, score: { team1: 21, team2: 15 } },
+            { id: 'm2', round: 1, courtNumber: 1, team1: { id: 'a', players: [] }, team2: { id: 'b', players: [] } },
+          ],
+        },
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+      const loaded = await storageManager.loadTournament();
+      expect(loaded?.matches[0].sets).toEqual([{ team1: 21, team2: 15 }]);
+      expect((loaded?.matches[0] as { score?: unknown }).score).toBeUndefined();
+      expect(loaded?.matches[1].sets).toEqual([]);
     });
 
     it('should remove the tournament key when saveTournament(null) is called', async () => {

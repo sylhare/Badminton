@@ -135,7 +135,7 @@ describe('RoundRobinMatches', () => {
 
     it('shows score inline', () => {
       const tournament = makeTournament(
-        [makeMatch('m1', 1, teamA, teamB, 1, { team1: 21, team2: 14 })],
+        [makeMatch('m1', 1, teamA, teamB, 1, [{ team1: 21, team2: 14 }])],
         [teamA, teamB],
       );
       render(<RoundRobinMatches tournament={tournament} onMatchResult={onMatchResult} />);

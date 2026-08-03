@@ -224,7 +224,7 @@ describe('tournamentToScoredGames', () => {
   it('includes only decided matches, mapped to court shape', () => {
     const tournament = startTournament();
     const firstMatch = tournament.matches()[0];
-    const decided = tournament.withMatchResult(firstMatch.id, 1, { team1: 21, team2: 15 });
+    const decided = tournament.withMatchResult(firstMatch.id, 1, [{ team1: 21, team2: 15 }]);
 
     const { games } = tournamentToScoredGames(decided);
 
@@ -242,7 +242,7 @@ describe('tournamentToScoredGames', () => {
   it('orders decided matches by round then court number', () => {
     let tournament = startTournament();
     for (const match of tournament.matches()) {
-      tournament = tournament.withMatchResult(match.id, 1, { team1: 21, team2: 10 });
+      tournament = tournament.withMatchResult(match.id, 1, [{ team1: 21, team2: 10 }]);
     }
     const { games } = tournamentToScoredGames(tournament);
 
@@ -258,7 +258,7 @@ describe('tournamentToScoredGames', () => {
 
   it('replays winners-bracket matches before consolation within the same round', () => {
     const decided = (id: string, courtNumber: number, bracket: BracketKind): TournamentMatch => ({
-      id, round: 1, courtNumber, bracket, winner: 1,
+      id, round: 1, courtNumber, bracket, winner: 1, sets: [],
       team1: team(`${id}-a`, [makePlayer(`${id}-a`)]), team2: team(`${id}-b`, [makePlayer(`${id}-b`)]),
     });
     const cb = decided('cb', 1, BracketKind.Consolation);
@@ -274,7 +274,7 @@ describe('tournamentToScoredGames', () => {
 
   it('orders winners, then consolation, then third-place within a round', () => {
     const decided = (id: string, bracket: BracketKind): TournamentMatch => ({
-      id, round: 2, courtNumber: 1, bracket, winner: 1,
+      id, round: 2, courtNumber: 1, bracket, winner: 1, sets: [],
       team1: team(`${id}-a`, [makePlayer(`${id}-a`)]), team2: team(`${id}-b`, [makePlayer(`${id}-b`)]),
     });
     const third = decided('tp', BracketKind.ThirdPlace);
@@ -292,7 +292,7 @@ describe('tournamentToScoredGames', () => {
   it('round-robin matches all keep the base weight (no bracket, no final boost)', () => {
     let tournament = startTournament();
     for (const match of tournament.matches()) {
-      tournament = tournament.withMatchResult(match.id, 1, { team1: 21, team2: 10 });
+      tournament = tournament.withMatchResult(match.id, 1, [{ team1: 21, team2: 10 }]);
     }
     const { games } = tournamentToScoredGames(tournament);
     for (const g of games) {
@@ -341,7 +341,7 @@ describe('tournamentToScoredGames — elimination final weighting', () => {
     while (!tournament.isComplete() && guard++ < 40) {
       const pending = tournament.matches().find(m => m.winner === undefined);
       if (!pending) break;
-      tournament = tournament.withMatchResult(pending.id, 1, { team1: 21, team2: 10 });
+      tournament = tournament.withMatchResult(pending.id, 1, [{ team1: 21, team2: 10 }]);
     }
 
     const { games } = tournamentToScoredGames(tournament);

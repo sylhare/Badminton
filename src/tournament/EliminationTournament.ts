@@ -4,6 +4,7 @@ import { shuffleArray } from '../utils/playerUtils';
 import { Tournament } from './Tournament';
 import { BracketKind, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
+  SetScore,
   TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
@@ -58,6 +59,7 @@ export class EliminationTournament extends Tournament {
       courtNumber: (courtIndex % this._state.numberOfCourts) + 1,
       team1,
       team2,
+      sets: [],
       bracket,
     };
   }
@@ -258,13 +260,13 @@ export class EliminationTournament extends Tournament {
   override withMatchResult(
     matchId: string,
     winner: 1 | 2,
-    score?: { team1: number; team2: number },
+    sets?: SetScore[],
   ): this {
     const existing = this._state.matches.find(m => m.id === matchId);
     if (!existing) return this;
 
     let updatedMatches = this._state.matches.map(m =>
-      m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
+      m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m,
     );
     if (existing.winner !== undefined && existing.winner !== winner) {
       updatedMatches = this.withoutDependentMatches(updatedMatches, existing);
