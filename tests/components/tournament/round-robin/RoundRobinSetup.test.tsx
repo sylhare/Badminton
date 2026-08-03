@@ -177,19 +177,31 @@ describe('TournamentSetup', () => {
   });
 
   describe('onStart', () => {
-    it('passes teams, numberOfCourts, and format to the callback', async () => {
+    it('passes teams, numberOfCourts, format, and bestOf to the callback', async () => {
       const user = userEvent.setup();
       render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
 
       await user.click(screen.getByTestId('start-tournament-button'));
 
       expect(onStart).toHaveBeenCalledOnce();
-      const [teams, numberOfCourts, format]: [TournamentTeam[], number, TournamentFormat] =
+      const [teams, numberOfCourts, format, bestOf]: [TournamentTeam[], number, TournamentFormat, number] =
         onStart.mock.calls[0];
       expect(format).toBe('doubles');
       expect(numberOfCourts).toBe(2);
       expect(teams).toHaveLength(2);
       expect(teams[0].players).toHaveLength(2);
+      expect(bestOf).toBe(1);
+    });
+
+    it('passes the selected best-of value to the callback', async () => {
+      const user = userEvent.setup();
+      render(<TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} onStart={onStart} />);
+
+      await user.click(screen.getByTestId('best-of-pill-3'));
+      await user.click(screen.getByTestId('start-tournament-button'));
+
+      const [, , , bestOf] = onStart.mock.calls[0];
+      expect(bestOf).toBe(3);
     });
 
     it('reflects updated court count in the callback', async () => {

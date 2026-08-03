@@ -61,15 +61,28 @@ export function formatTeamName(team: TournamentTeam): string {
   return team.players.map(p => p.name).join(' & ');
 }
 
-/** Sets won by each side of a match. */
-export function setsWonBy(match: TournamentMatch): SetScore {
+/** Sets won by each side across a list of sets. */
+export function tallySets(sets: SetScore[]): SetScore {
   let team1 = 0;
   let team2 = 0;
-  for (const set of match.sets) {
+  for (const set of sets) {
     if (set.team1 > set.team2) team1++;
     else if (set.team2 > set.team1) team2++;
   }
   return { team1, team2 };
+}
+
+/** Side that took more sets; undefined on a tie or when no sets were recorded. */
+export function winningSide(sets: SetScore[]): 1 | 2 | undefined {
+  const { team1, team2 } = tallySets(sets);
+  if (team1 > team2) return 1;
+  if (team2 > team1) return 2;
+  return undefined;
+}
+
+/** Sets won by each side of a match. */
+export function setsWonBy(match: TournamentMatch): SetScore {
+  return tallySets(match.sets);
 }
 
 /** Total points scored by each side across every set of a match. */
@@ -82,10 +95,7 @@ export function totalPoints(match: TournamentMatch): SetScore {
 
 /** Winner implied by the sets played; undefined on a tie or when no sets were recorded. */
 export function winnerFromSets(match: TournamentMatch): 1 | 2 | undefined {
-  const { team1, team2 } = setsWonBy(match);
-  if (team1 > team2) return 1;
-  if (team2 > team1) return 2;
-  return undefined;
+  return winningSide(match.sets);
 }
 
 export const DEFAULT_TOURNAMENT_STATE: TournamentState = {

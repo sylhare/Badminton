@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 
+import type { SetScore } from '../../../tournament/types';
 import type { BracketNode } from '../../../tournament/bracketTree';
 import { nextPowerOf2, roundLabel } from '../../../tournament/bracketTree';
 import { EliminationTournament } from '../../../tournament/EliminationTournament';
@@ -22,7 +23,7 @@ interface BracketSectionConfig {
 
 interface EliminationBracketProps {
   tournament: EliminationTournament;
-  onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
+  onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
 }
 
 export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onMatchResult }) => {
@@ -106,6 +107,7 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
           winnerTeam={pendingWinner}
           team1Players={modalMatch.team1.players}
           team2Players={modalMatch.team2.players}
+          bestOf={tournament.state().bestOf ?? 1}
           onConfirm={handleModalConfirm}
           onCancel={handleModalCancel}
         />

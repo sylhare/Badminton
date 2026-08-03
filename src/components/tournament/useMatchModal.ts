@@ -1,14 +1,14 @@
 import { useState } from 'react';
 
-import type { TournamentMatch } from '../../tournament/types';
+import type { SetScore, TournamentMatch } from '../../tournament/types';
 
-type MatchResultFn = (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
+type MatchResultFn = (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
 
 interface UseMatchModalResult {
   modalMatch: TournamentMatch | null;
   pendingWinner: 1 | 2 | null;
   handleTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
-  handleModalConfirm: (winner: 1 | 2, score: { team1: number; team2: number }) => void;
+  handleModalConfirm: (winner: 1 | 2, sets: SetScore[]) => void;
   handleModalCancel: () => void;
 }
 
@@ -23,9 +23,9 @@ export function useMatchModal(onMatchResult: MatchResultFn): UseMatchModalResult
     setPending({ match, winner: teamNumber });
   };
 
-  const handleModalConfirm = (winner: 1 | 2, score: { team1: number; team2: number }) => {
+  const handleModalConfirm = (winner: 1 | 2, sets: SetScore[]) => {
     if (!pending) return;
-    onMatchResult(pending.match.id, winner, score);
+    onMatchResult(pending.match.id, winner, sets);
     setPending(null);
   };
 

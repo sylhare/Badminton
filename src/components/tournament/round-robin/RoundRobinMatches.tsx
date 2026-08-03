@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import type { TournamentMatch } from '../../../tournament/types';
+import type { SetScore, TournamentMatch } from '../../../tournament/types';
 import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
 import ScoreInputModal from '../../modals/ScoreInputModal';
@@ -8,7 +8,7 @@ import { useMatchModal } from '../useMatchModal';
 
 interface RoundRobinMatchesProps {
   tournament: RoundRobinTournament;
-  onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
+  onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
 }
 
 export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
@@ -145,6 +145,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
         winnerTeam={pendingWinner ?? 1}
         team1Players={modalMatch?.team1.players ?? []}
         team2Players={modalMatch?.team2.players ?? []}
+        bestOf={tournament.state().bestOf ?? 1}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
       />

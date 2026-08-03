@@ -49,35 +49,35 @@ describe('useMatchModal', () => {
   });
 
   describe('handleModalConfirm', () => {
-    it('forwards the modal-resolved winner and score to onMatchResult, then closes modal', () => {
+    it('forwards the modal-resolved winner and sets to onMatchResult, then closes modal', () => {
       const match = createTournamentMatch('m1', 1, teamA, teamB);
       const onMatchResult = vi.fn();
       const { result } = renderHook(() => useMatchModal(onMatchResult));
 
       act(() => result.current.handleTeamClick(match, 2));
-      act(() => result.current.handleModalConfirm(2, { team1: 15, team2: 21 }));
+      act(() => result.current.handleModalConfirm(2, [{ team1: 15, team2: 21 }]));
 
-      expect(onMatchResult).toHaveBeenCalledWith('m1', 2, { team1: 15, team2: 21 });
+      expect(onMatchResult).toHaveBeenCalledWith('m1', 2, [{ team1: 15, team2: 21 }]);
       expect(result.current.modalMatch).toBeNull();
       expect(result.current.pendingWinner).toBeNull();
     });
 
-    it('forwards a winner that differs from the clicked team (score decides the winner in the modal)', () => {
+    it('forwards a winner that differs from the clicked team (sets decide the winner in the modal)', () => {
       const match = createTournamentMatch('m1', 1, teamA, teamB);
       const onMatchResult = vi.fn();
       const { result } = renderHook(() => useMatchModal(onMatchResult));
 
       act(() => result.current.handleTeamClick(match, 2));
-      act(() => result.current.handleModalConfirm(1, { team1: 21, team2: 18 }));
+      act(() => result.current.handleModalConfirm(1, [{ team1: 21, team2: 18 }]));
 
-      expect(onMatchResult).toHaveBeenCalledWith('m1', 1, { team1: 21, team2: 18 });
+      expect(onMatchResult).toHaveBeenCalledWith('m1', 1, [{ team1: 21, team2: 18 }]);
     });
 
     it('does nothing if called without a pending match', () => {
       const onMatchResult = vi.fn();
       const { result } = renderHook(() => useMatchModal(onMatchResult));
 
-      act(() => result.current.handleModalConfirm(1, { team1: 21, team2: 15 }));
+      act(() => result.current.handleModalConfirm(1, [{ team1: 21, team2: 15 }]));
 
       expect(onMatchResult).not.toHaveBeenCalled();
     });
