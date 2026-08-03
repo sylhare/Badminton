@@ -170,6 +170,28 @@ test.describe('Tournament Page - Elimination', () => {
     await expect(page.getByTestId('elimination-bracket')).not.toBeVisible();
   });
 
+  test('score decides the winner even when the losing team was clicked', async ({ page }) => {
+    await tournamentPage.setup(DEFAULT_PLAYERS);
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.selectType('elimination');
+    await tournamentPage.startElimination();
+
+    const wbSection = page.getByTestId('wb-section');
+    const team1Btn = wbSection.locator('[data-testid^="bracket-team-1-"]').first();
+    const matchId = (await team1Btn.getAttribute('data-testid'))!.replace('bracket-team-1-', '');
+    const team2Btn = wbSection.getByTestId(`bracket-team-2-${matchId}`);
+
+    await team1Btn.click();
+    await expect(page.getByTestId('score-input-modal')).toBeVisible();
+    await page.getByTestId('score-input-team1').fill('15');
+    await page.getByTestId('score-input-team2').fill('21');
+    await expect(page.getByText('🏆 Team 2 wins!')).toBeVisible();
+    await page.getByTestId('score-modal-confirm').click();
+
+    await expect(team2Btn).toHaveClass(/bracket-team-winner/);
+    await expect(team1Btn).toHaveClass(/bracket-team-loser/);
+  });
+
   test('consolation bracket — 6-player: CB Final shows players after single CB R1 match (odd seeds bug)', async ({ page }) => {
     await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank']);
     await page.getByTestId('format-pill-singles').click();
