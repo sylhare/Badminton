@@ -89,10 +89,46 @@ describe('GroupKnockoutTournament — group phase', () => {
     });
   });
 
-  describe('isComplete', () => {
-    it('reports the group phase as complete once all its matches are decided', () => {
-      // Knockout wiring comes later; for now a fully-decided group phase is complete.
-      expect(decideAll(start(['a', 'b', 'c', 'd'], 2, 1)).isComplete()).toBe(true);
+  describe('knockout phase', () => {
+    it('auto-seeds the knockout bracket when the group phase completes', () => {
+      const decided = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
+      expect(decided.knockoutStarted()).toBe(true);
+      // Two group winners → a single knockout final; tournament not yet complete.
+      expect(decided.knockoutMatches()).toHaveLength(1);
+      expect(decided.isComplete()).toBe(false);
+    });
+
+    it('seeds the knockout final with the two group winners', () => {
+      const decided = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
+      const winners = decided.groups().map((_, g) => decided.groupStandings(g)[0].team.id).sort();
+      const final = decided.knockoutMatches()[0];
+      expect([final.team1.id, final.team2.id].sort()).toEqual(winners);
+    });
+
+    it('completes and marks the phase once the knockout final is decided', () => {
+      let t = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
+      const finalId = t.knockoutMatches()[0].id;
+      t = t.withMatchResult(finalId, 1, [{ team1: 21, team2: 15 }]);
+      expect(t.isComplete()).toBe(true);
+      expect(t.phase()).toBe('completed');
+    });
+
+    it('builds a four-team knockout from two groups of four', () => {
+      const decided = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
+      expect(decided.bracketSize()).toBe(4);
+      // Four qualifiers → two seeded first-round (semi-final) matches.
+      expect(decided.knockoutMatches().filter(m => m.round === 1)).toHaveLength(2);
+    });
+
+    it('spans both phases in totalRounds once the knockout starts', () => {
+      // Group phase: 1 round (groups of two). Knockout of two qualifiers: 1 round.
+      expect(decideAll(start(['a', 'b', 'c', 'd'], 2, 1)).totalRounds()).toBe(2);
+    });
+
+    it('does not seed the knockout while the group phase is unfinished', () => {
+      const t = start(['a', 'b', 'c', 'd', 'e', 'f'], 3, 2);
+      expect(t.knockoutStarted()).toBe(false);
+      expect(t.knockoutMatches()).toHaveLength(0);
     });
   });
 });
