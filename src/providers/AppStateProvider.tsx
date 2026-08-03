@@ -8,9 +8,23 @@ import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
 import { EliminationTournament } from '../tournament/EliminationTournament';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
+import { GroupKnockoutTournament } from '../tournament/GroupKnockoutTournament';
+import type { TournamentState } from '../tournament/types';
 
-/** A reconstructed tournament instance of either supported format. */
-export type AnyTournament = RoundRobinTournament | EliminationTournament;
+/** A reconstructed tournament instance of any supported format. */
+export type AnyTournament = RoundRobinTournament | EliminationTournament | GroupKnockoutTournament;
+
+/** Rebuild the concrete tournament class from persisted state. */
+export function reconstructTournament(state: TournamentState): AnyTournament {
+  switch (state.type) {
+    case 'elimination':
+      return EliminationTournament.fromState(state);
+    case 'group-knockout':
+      return GroupKnockoutTournament.fromState(state);
+    default:
+      return RoundRobinTournament.fromState(state);
+  }
+}
 
 /** App-state context shape. Lives here, not core `types/`, to avoid a core→feature type dependency. */
 export interface AppStateContextType {
@@ -93,9 +107,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
         if (loadedState.assignments?.length) setAssignments(loadedState.assignments);
         if (loadedState.lastGeneratedAt !== undefined) setLastGeneratedAt(loadedState.lastGeneratedAt);
         if (savedTournament) {
-          setTournament(savedTournament.type === 'elimination'
-            ? EliminationTournament.fromState(savedTournament)
-            : RoundRobinTournament.fromState(savedTournament));
+          setTournament(reconstructTournament(savedTournament));
         }
         const smart = loadedState.isSmartEngineEnabled ?? false;
         if (smart) setIsSmartEngineEnabled(true);

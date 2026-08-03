@@ -252,9 +252,16 @@ export class EliminationTournament extends Tournament {
   }
 
   start(teams: TournamentTeam[], numberOfCourts: number): EliminationTournament {
-    const shuffled = shuffleArray(teams);
-    const bracketSize = nextPowerOf2(shuffled.length);
-    const setup = new EliminationTournament({ ...this._state, teams: shuffled, numberOfCourts, bracketSize });
+    return this.startSeeded(shuffleArray(teams), numberOfCourts);
+  }
+
+  /**
+   * Start the bracket from an already-ordered team list (no shuffle), so a
+   * caller can supply its own seeding — e.g. group-stage qualifiers.
+   */
+  startSeeded(teams: TournamentTeam[], numberOfCourts: number): EliminationTournament {
+    const bracketSize = nextPowerOf2(teams.length);
+    const setup = new EliminationTournament({ ...this._state, teams, numberOfCourts, bracketSize });
     const matches = setup.generateWinnersFirstRound();
     return new EliminationTournament({ ...setup._state, phase: 'active', matches });
   }

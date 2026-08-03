@@ -7,6 +7,7 @@ import { Tournament } from '../components/tournament/Tournament';
 import Footer from '../components/Footer';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../tournament/EliminationTournament';
+import { GroupKnockoutTournament } from '../tournament/GroupKnockoutTournament';
 import { tournamentToScoredGames } from '../engines/levelAdapters';
 import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
 import './TournamentPage.css';
@@ -29,10 +30,18 @@ const TournamentPage = (): React.ReactElement => {
     format: TournamentFormat,
     type: TournamentType,
     bestOf: number,
+    groupSize?: number,
+    qualifiersPerGroup?: number,
   ) => {
     if (tournament && !tournament.isComplete()) commitElo(tournament);
     if (type === 'elimination') {
       setTournament(EliminationTournament.create(format, numberOfCourts, bestOf).start(teams, numberOfCourts));
+    } else if (type === 'group-knockout') {
+      setTournament(
+        GroupKnockoutTournament
+          .create(format, numberOfCourts, bestOf, groupSize, qualifiersPerGroup)
+          .start(teams, numberOfCourts),
+      );
     } else {
       setTournament(RoundRobinTournament.create(format, numberOfCourts, bestOf).start(teams, numberOfCourts));
     }
