@@ -11,7 +11,7 @@ interface ScoreInputModalProps {
   winnerTeam: 1 | 2;
   team1Players: Player[];
   team2Players: Player[];
-  /** Sets needed to win; the modal collects up to this many sets. Defaults to 1. */
+  /** Total sets in a match (best-of-N); the modal collects up to this many sets. Defaults to 1. */
   bestOf?: number;
   onConfirm: (winner: 1 | 2, sets: SetScore[]) => void;
   onCancel: () => void;

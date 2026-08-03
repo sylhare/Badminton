@@ -53,7 +53,7 @@ export interface TournamentState {
   teams: TournamentTeam[];
   matches: TournamentMatch[];
   bracketSize?: number;
-  /** Sets needed to win a match; the winner is the first to take a majority. Defaults to 1. */
+  /** Total sets in a match (best-of-N); the winner is the side that takes a majority. Defaults to 1. */
   bestOf?: number;
 }
 
@@ -91,11 +91,6 @@ export function totalPoints(match: TournamentMatch): SetScore {
     (acc, set) => ({ team1: acc.team1 + set.team1, team2: acc.team2 + set.team2 }),
     { team1: 0, team2: 0 },
   );
-}
-
-/** Winner implied by the sets played; undefined on a tie or when no sets were recorded. */
-export function winnerFromSets(match: TournamentMatch): 1 | 2 | undefined {
-  return winningSide(match.sets);
 }
 
 export const DEFAULT_TOURNAMENT_STATE: TournamentState = {
