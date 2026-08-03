@@ -5,6 +5,7 @@ import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from 
 import { Tournament as TournamentBase } from '../../tournament/Tournament';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../../tournament/EliminationTournament';
+import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
 
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { TournamentSetup } from './TournamentSetup';
@@ -12,7 +13,7 @@ import { EliminationBracket } from './elimination/EliminationBracket';
 import { TournamentStandings } from './TournamentStandings';
 
 interface TournamentProps {
-  tournament: RoundRobinTournament | EliminationTournament | null;
+  tournament: RoundRobinTournament | EliminationTournament | GroupKnockoutTournament | null;
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   onStart: (
@@ -21,6 +22,8 @@ interface TournamentProps {
     format: TournamentFormat,
     type: TournamentType,
     bestOf: number,
+    groupSize?: number,
+    qualifiersPerGroup?: number,
   ) => void;
   onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
   onReset: () => void;
@@ -92,12 +95,16 @@ export const Tournament: React.FC<TournamentProps> = ({
   const isComplete = tournament.isComplete();
   const isElimination = tournament instanceof EliminationTournament;
 
+  let matchesView: React.ReactNode = null; // group-knockout view added in a later step
+  if (tournament instanceof EliminationTournament) {
+    matchesView = <EliminationBracket tournament={tournament} onMatchResult={onMatchResult} />;
+  } else if (tournament instanceof RoundRobinTournament) {
+    matchesView = <RoundRobinMatches tournament={tournament} onMatchResult={onMatchResult} />;
+  }
+
   return (
     <div className="tournament-active-layout">
-      {tournament instanceof EliminationTournament
-        ? <EliminationBracket tournament={tournament} onMatchResult={onMatchResult} />
-        : <RoundRobinMatches tournament={tournament} onMatchResult={onMatchResult} />
-      }
+      {matchesView}
       <TournamentStandings
         standings={standings}
         isComplete={isComplete}
