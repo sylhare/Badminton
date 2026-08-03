@@ -13,6 +13,12 @@ interface ScoreInputModalProps {
   onCancel: () => void;
 }
 
+function resolveWinner(score: { team1: number; team2: number }, clicked: 1 | 2): 1 | 2 {
+  if (score.team1 > score.team2) return 1;
+  if (score.team2 > score.team1) return 2;
+  return clicked;
+}
+
 const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   isOpen,
   winnerTeam,
@@ -56,10 +62,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     team2: isNaN(parsed2) ? defaults.team2 : parsed2,
   };
 
-  const resolvedWinner: 1 | 2 =
-    resolvedScore.team1 > resolvedScore.team2 ? 1
-      : resolvedScore.team2 > resolvedScore.team1 ? 2
-        : winnerTeam;
+  const resolvedWinner = resolveWinner(resolvedScore, winnerTeam);
 
   const handleConfirm = () => {
     onConfirm(resolvedWinner, resolvedScore);
