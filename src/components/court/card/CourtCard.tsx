@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 
 import type { Court } from '../../../types';
+import type { SetScore } from '../../../tournament/types';
 import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
 import ScoreInputModal from '../../modals/ScoreInputModal';
@@ -12,7 +13,7 @@ import CourtHeader from './CourtHeader';
 interface CourtCardProps {
   court: Court;
   onWinnerChange?: (courtNumber: number, teamNumber: number) => void;
-  onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
+  onScoreChange?: (courtNumber: number, score?: SetScore) => void;
   onRotateTeams?: (courtNumber: number) => void;
   isAnimating?: boolean;
   isSmartEngineEnabled?: boolean;
@@ -53,7 +54,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   };
 
   const handleRotateTeams = onRotateTeams ? () => onRotateTeams(court.courtNumber) : undefined;
-  const handleModalConfirm = (winner: 1 | 2, sets: { team1: number; team2: number }[]) => {
+  const handleModalConfirm = (winner: 1 | 2, sets: SetScore[]) => {
     if (pendingWinner === null || !onWinnerChange) return;
     const score = sets[0];
     trackGameAction('set_winner', { gameType: score && (score.team1 > 0 || score.team2 > 0) ? 'with_score' : 'no_score', courtNumber: court.courtNumber });
