@@ -10,6 +10,7 @@ import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournamen
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { TournamentSetup } from './TournamentSetup';
 import { EliminationBracket } from './elimination/EliminationBracket';
+import { GroupKnockout } from './GroupKnockout';
 import { TournamentStandings } from './TournamentStandings';
 
 interface TournamentProps {
@@ -79,12 +80,21 @@ export const Tournament: React.FC<TournamentProps> = ({
             >
               Elimination
             </button>
+            <button
+              className={`format-pill${selectedType === 'group-knockout' ? ' format-pill-active' : ''}`}
+              onClick={() => setSelectedType('group-knockout')}
+              data-testid="type-pill-group-knockout"
+            >
+              Groups + Knockout
+            </button>
           </div>
         </div>
         <TournamentSetup
           initialPlayers={initialPlayers}
           initialNumberOfCourts={initialNumberOfCourts}
-          onStart={(teams, courts, format, bestOf) => onStart(teams, courts, format, selectedType, bestOf)}
+          type={selectedType}
+          onStart={(teams, courts, format, bestOf, groupSize, qualifiersPerGroup) =>
+            onStart(teams, courts, format, selectedType, bestOf, groupSize, qualifiersPerGroup)}
           onAddPlayers={onAddPlayers}
           onTogglePlayer={onTogglePlayer}
         />
@@ -94,10 +104,13 @@ export const Tournament: React.FC<TournamentProps> = ({
 
   const isComplete = tournament.isComplete();
   const isElimination = tournament instanceof EliminationTournament;
+  const isGroupKnockout = tournament instanceof GroupKnockoutTournament;
 
-  let matchesView: React.ReactNode = null; // group-knockout view added in a later step
+  let matchesView: React.ReactNode = null;
   if (tournament instanceof EliminationTournament) {
     matchesView = <EliminationBracket tournament={tournament} onMatchResult={onMatchResult} />;
+  } else if (tournament instanceof GroupKnockoutTournament) {
+    matchesView = <GroupKnockout tournament={tournament} onMatchResult={onMatchResult} />;
   } else if (tournament instanceof RoundRobinTournament) {
     matchesView = <RoundRobinMatches tournament={tournament} onMatchResult={onMatchResult} />;
   }
@@ -105,12 +118,15 @@ export const Tournament: React.FC<TournamentProps> = ({
   return (
     <div className="tournament-active-layout">
       {matchesView}
-      <TournamentStandings
-        standings={standings}
-        isComplete={isComplete}
-        subtitle={standingsSubtitle(tournament, isComplete)}
-        showPoints={!isElimination}
-      />
+      {/* group-knockout shows per-group standings inline, so the combined table is hidden */}
+      {!isGroupKnockout && (
+        <TournamentStandings
+          standings={standings}
+          isComplete={isComplete}
+          subtitle={standingsSubtitle(tournament, isComplete)}
+          showPoints={!isElimination}
+        />
+      )}
       <button
         className="button button-primary"
         onClick={onReset}
