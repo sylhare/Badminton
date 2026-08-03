@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
-import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
+import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
 import { Tournament as TournamentBase } from '../../tournament/Tournament';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../../tournament/EliminationTournament';
@@ -20,8 +20,9 @@ interface TournamentProps {
     numberOfCourts: number,
     format: TournamentFormat,
     type: TournamentType,
+    bestOf: number,
   ) => void;
-  onMatchResult: (matchId: string, winner: 1 | 2, score?: { team1: number; team2: number }) => void;
+  onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
   onReset: () => void;
   onAddPlayers: (names: string[]) => void;
   onTogglePlayer: (id: string) => void;
@@ -80,7 +81,7 @@ export const Tournament: React.FC<TournamentProps> = ({
         <TournamentSetup
           initialPlayers={initialPlayers}
           initialNumberOfCourts={initialNumberOfCourts}
-          onStart={(teams, courts, format) => onStart(teams, courts, format, selectedType)}
+          onStart={(teams, courts, format, bestOf) => onStart(teams, courts, format, selectedType, bestOf)}
           onAddPlayers={onAddPlayers}
           onTogglePlayer={onTogglePlayer}
         />

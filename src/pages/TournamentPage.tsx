@@ -8,7 +8,7 @@ import Footer from '../components/Footer';
 import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
 import { EliminationTournament } from '../tournament/EliminationTournament';
 import { tournamentToScoredGames } from '../engines/levelAdapters';
-import type { TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
+import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
 import './TournamentPage.css';
 
 const TournamentPage = (): React.ReactElement => {
@@ -28,12 +28,13 @@ const TournamentPage = (): React.ReactElement => {
     numberOfCourts: number,
     format: TournamentFormat,
     type: TournamentType,
+    bestOf: number,
   ) => {
     if (tournament && !tournament.isComplete()) commitElo(tournament);
     if (type === 'elimination') {
-      setTournament(EliminationTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
+      setTournament(EliminationTournament.create(format, numberOfCourts, bestOf).start(teams, numberOfCourts));
     } else {
-      setTournament(RoundRobinTournament.create(format, numberOfCourts).start(teams, numberOfCourts));
+      setTournament(RoundRobinTournament.create(format, numberOfCourts, bestOf).start(teams, numberOfCourts));
     }
     setShowSetup(false);
   };
@@ -41,10 +42,10 @@ const TournamentPage = (): React.ReactElement => {
   const handleMatchResult = (
     matchId: string,
     winner: 1 | 2,
-    score?: { team1: number; team2: number },
+    sets?: SetScore[],
   ) => {
     if (!tournament) return;
-    const next = tournament.withMatchResult(matchId, winner, score ? [score] : []);
+    const next = tournament.withMatchResult(matchId, winner, sets);
     setTournament(next);
     if (!tournament.isComplete() && next.isComplete()) commitElo(next);
   };
