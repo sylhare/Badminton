@@ -140,8 +140,6 @@ describe('RoundRobinTournament', () => {
     });
 
     it('breaks ties by set differential before point differential', () => {
-      // Both A and C win once (equal points). A takes a longer, higher point-diff
-      // three-setter; C wins in straight sets for a better set differential.
       const standings = makeStandingsTournament(
         [
           createTournamentMatch('m1', 1, alice, bob, 1, [
@@ -158,7 +156,6 @@ describe('RoundRobinTournament', () => {
       expect(rowA.setDiff).toBe(1);
       expect(rowC.setDiff).toBe(2);
       expect(rowA.scoreDiff).toBeGreaterThan(rowC.scoreDiff);
-      // Higher set differential wins the tie despite A's larger point differential.
       expect(standings.map(r => r.team.id)).toEqual(['c', 'a', 'b']);
     });
 
