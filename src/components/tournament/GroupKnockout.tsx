@@ -23,7 +23,8 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
     <div className="group-knockout" data-testid="group-knockout">
       <div className="group-stage" data-testid="group-stage">
         {groups.map((_, groupIndex) => {
-          const standings = tournament.groupStandings(groupIndex);
+          const groupTournament = tournament.groupTournament(groupIndex);
+          const standings = groupTournament.calculateStandings();
           return (
             <section key={groupIndex} className="group-section" data-testid={`group-section-${groupIndex}`}>
               <h3>{groupLabel(groupIndex)}</h3>
@@ -55,7 +56,7 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
                   </tbody>
                 </table>
               </div>
-              <RoundRobinMatches tournament={tournament.groupTournament(groupIndex)} onMatchResult={onMatchResult} />
+              <RoundRobinMatches tournament={groupTournament} onMatchResult={onMatchResult} />
             </section>
           );
         })}

@@ -171,7 +171,6 @@ export class GroupKnockoutTournament extends Tournament {
       ...this._state,
       type: 'elimination',
       teams: this.qualifiers(),
-      bracketSize: this._state.bracketSize,
       matches: this.knockoutMatches(),
     });
   }
@@ -189,12 +188,14 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   private withPhase(matches: TournamentMatch[], bracketSize?: number): GroupKnockoutTournament {
-    const next = new GroupKnockoutTournament({
+    const knockoutStarted = matches.some(m => m.bracket !== undefined);
+    const complete = knockoutStarted && matches.length > 0 && matches.every(m => m.winner !== undefined);
+    return new GroupKnockoutTournament({
       ...this._state,
       matches,
       bracketSize: bracketSize ?? this._state.bracketSize,
+      phase: complete ? 'completed' : 'active',
     });
-    return new GroupKnockoutTournament({ ...next._state, phase: next.isComplete() ? 'completed' : 'active' });
   }
 
   override withMatchResult(matchId: string, winner: 1 | 2, sets?: SetScore[]): this {
