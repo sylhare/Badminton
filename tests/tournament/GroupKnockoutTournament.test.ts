@@ -27,7 +27,6 @@ describe('GroupKnockoutTournament — group phase', () => {
       const t = start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2);
       const groupMatches = t.groupMatches();
       expect(t.groups().map(g => g.length)).toEqual([4, 4]);
-      // Each group of 4 is a full round-robin: 6 matches per group, 12 total.
       expect(groupMatches).toHaveLength(12);
       expect(groupMatches.every((m: TournamentMatch) => m.group !== undefined)).toBe(true);
     });
@@ -58,7 +57,6 @@ describe('GroupKnockoutTournament — group phase', () => {
 
   describe('groupStandings', () => {
     it('ranks the group winner first', () => {
-      // Two groups of two → one match each. team1 wins both.
       const decided = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
       for (let g = 0; g < decided.groups().length; g++) {
         const standings = decided.groupStandings(g);
@@ -78,14 +76,13 @@ describe('GroupKnockoutTournament — group phase', () => {
       const decided = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
       const qualifiers = decided.qualifiers();
       expect(qualifiers).toHaveLength(2);
-      // Each qualifier is the winner (team1) of its group's single match.
       const groupWinners = decided.groups().map((_, g) => decided.groupStandings(g)[0].team.id).sort();
       expect(qualifiers.map(t => t.id).sort()).toEqual(groupWinners);
     });
 
     it('returns qualifiersPerGroup teams from each group', () => {
       const decided = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f'], 3, 2));
-      expect(decided.qualifiers()).toHaveLength(4); // 2 groups × 2 qualifiers
+      expect(decided.qualifiers()).toHaveLength(4);
     });
   });
 
@@ -93,7 +90,6 @@ describe('GroupKnockoutTournament — group phase', () => {
     it('auto-seeds the knockout bracket when the group phase completes', () => {
       const decided = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
       expect(decided.knockoutStarted()).toBe(true);
-      // Two group winners → a single knockout final; tournament not yet complete.
       expect(decided.knockoutMatches()).toHaveLength(1);
       expect(decided.isComplete()).toBe(false);
     });
@@ -116,12 +112,10 @@ describe('GroupKnockoutTournament — group phase', () => {
     it('builds a four-team knockout from two groups of four', () => {
       const decided = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
       expect(decided.bracketSize()).toBe(4);
-      // Four qualifiers → two seeded first-round (semi-final) matches.
       expect(decided.knockoutMatches().filter(m => m.round === 1)).toHaveLength(2);
     });
 
     it('spans both phases in totalRounds once the knockout starts', () => {
-      // Group phase: 1 round (groups of two). Knockout of two qualifiers: 1 round.
       expect(decideAll(start(['a', 'b', 'c', 'd'], 2, 1)).totalRounds()).toBe(2);
     });
 
@@ -129,6 +123,14 @@ describe('GroupKnockoutTournament — group phase', () => {
       const t = start(['a', 'b', 'c', 'd', 'e', 'f'], 3, 2);
       expect(t.knockoutStarted()).toBe(false);
       expect(t.knockoutMatches()).toHaveLength(0);
+    });
+
+    it('completes at the group phase when fewer than two teams qualify', () => {
+      const decided = decideAll(start(['a', 'b', 'c'], 4, 1));
+      expect(decided.groupPhaseComplete()).toBe(true);
+      expect(decided.knockoutStarted()).toBe(false);
+      expect(decided.isComplete()).toBe(true);
+      expect(decided.phase()).toBe('completed');
     });
   });
 });
