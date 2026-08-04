@@ -23,7 +23,6 @@ describe('reconstructTournament', () => {
     for (const id of t.groupMatches().map(m => m.id)) {
       t = t.withMatchResult(id, 1, [{ team1: 21, team2: 10 }]);
     }
-    // Knockout has been seeded; rebuild from state and finish the final.
     const rebuilt = reconstructTournament(t.state()) as GroupKnockoutTournament;
     expect(rebuilt.knockoutStarted()).toBe(true);
     const finished = rebuilt.withMatchResult(rebuilt.knockoutMatches()[0].id, 1, [{ team1: 21, team2: 12 }]);

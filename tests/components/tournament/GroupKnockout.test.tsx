@@ -52,7 +52,6 @@ describe('GroupKnockout', () => {
     const decided = decideGroupPhase(startTournament(['a', 'b', 'c', 'd'], 2, 1));
     render(<GroupKnockout tournament={decided} onMatchResult={vi.fn()} />);
 
-    // qualifiersPerGroup = 1 → only the first row of each group is marked qualified.
     expect(screen.getByTestId('group-0-standing-0')).toHaveClass('qualified');
     expect(screen.getByTestId('group-0-standing-1')).not.toHaveClass('qualified');
   });
@@ -63,8 +62,6 @@ describe('GroupKnockout', () => {
     const tournament = startTournament(['a', 'b', 'c', 'd'], 2, 1);
     render(<GroupKnockout tournament={tournament} onMatchResult={onMatchResult} />);
 
-    // Click a team inside the first group's match area (not its standings table),
-    // then confirm the score modal.
     const firstMatch = tournament.groupMatches()[0];
     const matchArea = within(screen.getByTestId('group-section-0')).getByTestId('tournament-matches');
     await user.click(within(matchArea).getByText(firstMatch.team1.players[0].name));
