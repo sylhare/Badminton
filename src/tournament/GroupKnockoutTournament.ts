@@ -188,33 +188,25 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   private withPhase(matches: TournamentMatch[], bracketSize?: number): GroupKnockoutTournament {
-    const knockoutStarted = matches.some(m => m.bracket !== undefined);
-    const complete = knockoutStarted && matches.length > 0 && matches.every(m => m.winner !== undefined);
-    return new GroupKnockoutTournament({
-      ...this._state,
-      matches,
-      bracketSize: bracketSize ?? this._state.bracketSize,
-      phase: complete ? 'completed' : 'active',
-    });
+    const state = { ...this._state, matches, bracketSize: bracketSize ?? this._state.bracketSize };
+    const candidate = new GroupKnockoutTournament(state);
+    return new GroupKnockoutTournament({ ...state, phase: candidate.isComplete() ? 'completed' : 'active' });
   }
 
   override withMatchResult(matchId: string, winner: 1 | 2, sets?: SetScore[]): this {
     const existing = this._state.matches.find(m => m.id === matchId);
     if (!existing) return this;
 
-    // Knockout match: delegate to the elimination sub-tournament, which handles
-    // follow-up generation and cascade-deletes, then splice its matches back in.
     if (existing.bracket !== undefined) {
       const updatedKnockout = this.knockout().withMatchResult(matchId, winner, sets).matches();
       return this.withPhase([...this.groupMatches(), ...updatedKnockout]) as this;
     }
 
-    // Group match: record the result, then seed the knockout if the group phase just finished.
     const updatedMatches = this._state.matches.map(m =>
       m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m,
     );
     let next = new GroupKnockoutTournament({ ...this._state, matches: updatedMatches });
-    if (!next.knockoutStarted() && next.groupPhaseComplete()) {
+    if (!next.knockoutStarted() && next.groupPhaseComplete() && next.qualifiers().length >= 2) {
       next = next.startKnockout();
     }
     return this.withPhase(next.matches(), next.bracketSize()) as this;
@@ -257,7 +249,8 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   isComplete(): boolean {
-    if (!this.knockoutStarted()) return false;
+    if (!this.groupPhaseComplete()) return false;
+    if (!this.knockoutStarted()) return this.qualifiers().length < 2;
     const { matches } = this._state;
     return matches.length > 0 && matches.every(m => m.winner !== undefined);
   }

@@ -10,7 +10,7 @@ export function partitionIntoGroups(teams: TournamentTeam[], groupSize: number):
   if (n === 0) return [];
 
   const size = Math.max(2, groupSize);
-  const numGroups = Math.max(1, Math.ceil(n / size));
+  const numGroups = Math.max(1, Math.min(Math.ceil(n / size), Math.floor(n / 2)));
   const base = Math.floor(n / numGroups);
   const remainder = n % numGroups;
 
