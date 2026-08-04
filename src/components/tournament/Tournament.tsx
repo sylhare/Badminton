@@ -56,7 +56,10 @@ export const Tournament: React.FC<TournamentProps> = ({
   const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
   const isSetupPhase = !tournament || tournament.phase() === 'setup';
   const standings = useMemo(
-    () => (isSetupPhase || showSetup) ? [] : (tournament?.calculateStandings() ?? []),
+    // group-knockout renders per-group standings inline, so the combined table is never shown
+    () => (isSetupPhase || showSetup || tournament instanceof GroupKnockoutTournament)
+      ? []
+      : (tournament?.calculateStandings() ?? []),
     [tournament, isSetupPhase, showSetup],
   );
 
