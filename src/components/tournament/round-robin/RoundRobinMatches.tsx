@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { SetScore, TournamentMatch } from '../../../tournament/types';
+import { formatSets } from '../../../tournament/types';
 import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
 import { useMatchModal } from '../useMatchModal';
@@ -23,11 +24,6 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   const { isExpanded, toggle } = useExpandedRounds(currentRound, tournament.isComplete());
 
   const isSingles = (match: TournamentMatch) => match.team1.players.length === 1;
-
-  const formatScore = (match: TournamentMatch) => {
-    if (!match.sets.length) return null;
-    return match.sets.map(set => `${set.team1} – ${set.team2}`).join(', ');
-  };
 
   return (
     <div className="tournament-matches" data-testid="tournament-matches">
@@ -57,7 +53,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
             {expanded && (
               <div className="round-matches" data-testid="round-matches">
                 {roundMatches.map(match => {
-                  const score = formatScore(match);
+                  const score = formatSets(match.sets);
                   return (
                     <div
                       key={match.id}
