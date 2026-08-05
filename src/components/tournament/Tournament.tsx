@@ -2,19 +2,14 @@ import React, { useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
-import { Tournament as TournamentBase } from '../../tournament/Tournament';
-import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
-import { EliminationTournament } from '../../tournament/EliminationTournament';
-import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
+import type { Tournament as TournamentBase } from '../../tournament/Tournament';
 
-import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { TournamentSetup } from './TournamentSetup';
-import { EliminationBracket } from './elimination/EliminationBracket';
-import { GroupKnockout } from './GroupKnockout';
 import { TournamentStandings } from './TournamentStandings';
+import { TOURNAMENT_KINDS, TOURNAMENT_TYPES } from './tournamentKinds';
 
 interface TournamentProps {
-  tournament: RoundRobinTournament | EliminationTournament | GroupKnockoutTournament | null;
+  tournament: TournamentBase | null;
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   onStart: (
@@ -33,15 +28,6 @@ interface TournamentProps {
   showSetup?: boolean;
 }
 
-function standingsSubtitle(t: TournamentBase, isComplete: boolean): string {
-  if (t instanceof EliminationTournament) {
-    return isComplete ? 'Final Results' : 'In Progress';
-  }
-  const done = t.completedRounds();
-  const total = t.totalRounds();
-  return done > 0 ? `After Round ${done} / ${total}` : `Round 0 / ${total}`;
-}
-
 export const Tournament: React.FC<TournamentProps> = ({
   tournament,
   initialPlayers,
@@ -56,7 +42,7 @@ export const Tournament: React.FC<TournamentProps> = ({
   const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
   const isSetupPhase = !tournament || tournament.phase() === 'setup';
   const standings = useMemo(
-    () => (isSetupPhase || showSetup || tournament instanceof GroupKnockoutTournament)
+    () => (isSetupPhase || showSetup || !(tournament?.showsCombinedStandings() ?? true))
       ? []
       : (tournament?.calculateStandings() ?? []),
     [tournament, isSetupPhase, showSetup],
@@ -68,27 +54,16 @@ export const Tournament: React.FC<TournamentProps> = ({
         <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
           <h3>Mode</h3>
           <div className="format-pills">
-            <button
-              className={`format-pill${selectedType === 'round-robin' ? ' format-pill-active' : ''}`}
-              onClick={() => setSelectedType('round-robin')}
-              data-testid="type-pill-round-robin"
-            >
-              Round Robin
-            </button>
-            <button
-              className={`format-pill${selectedType === 'elimination' ? ' format-pill-active' : ''}`}
-              onClick={() => setSelectedType('elimination')}
-              data-testid="type-pill-elimination"
-            >
-              Elimination
-            </button>
-            <button
-              className={`format-pill${selectedType === 'group-knockout' ? ' format-pill-active' : ''}`}
-              onClick={() => setSelectedType('group-knockout')}
-              data-testid="type-pill-group-knockout"
-            >
-              Groups + Knockout
-            </button>
+            {TOURNAMENT_TYPES.map(type => (
+              <button
+                key={type}
+                className={`format-pill${selectedType === type ? ' format-pill-active' : ''}`}
+                onClick={() => setSelectedType(type)}
+                data-testid={`type-pill-${type}`}
+              >
+                {TOURNAMENT_KINDS[type].label}
+              </button>
+            ))}
           </div>
         </div>
         <TournamentSetup
@@ -105,28 +80,17 @@ export const Tournament: React.FC<TournamentProps> = ({
   }
 
   const isComplete = tournament.isComplete();
-  const isElimination = tournament instanceof EliminationTournament;
-  const isGroupKnockout = tournament instanceof GroupKnockoutTournament;
-
-  let matchesView: React.ReactNode = null;
-  if (tournament instanceof EliminationTournament) {
-    matchesView = <EliminationBracket tournament={tournament} onMatchResult={onMatchResult} />;
-  } else if (tournament instanceof GroupKnockoutTournament) {
-    matchesView = <GroupKnockout tournament={tournament} onMatchResult={onMatchResult} />;
-  } else if (tournament instanceof RoundRobinTournament) {
-    matchesView = <RoundRobinMatches tournament={tournament} onMatchResult={onMatchResult} />;
-  }
+  const kind = TOURNAMENT_KINDS[tournament.state().type];
 
   return (
     <div className="tournament-active-layout">
-      {matchesView}
-      {/* group-knockout shows per-group standings inline, so the combined table is hidden */}
-      {!isGroupKnockout && (
+      {kind.renderMatches(tournament, onMatchResult)}
+      {tournament.showsCombinedStandings() && (
         <TournamentStandings
           standings={standings}
           isComplete={isComplete}
-          subtitle={standingsSubtitle(tournament, isComplete)}
-          showPoints={!isElimination}
+          subtitle={tournament.standingsSubtitle()}
+          showPoints={tournament.showsPoints()}
         />
       )}
       <button
