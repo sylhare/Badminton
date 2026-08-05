@@ -6,24 +6,15 @@ import type { Court, EngineSnapshot, GenerateResult, Player, ScoredGame, UpdateW
 import { useAnalytics } from '../hooks/useAnalytics';
 import { createPlayersFromNames } from '../utils/playerUtils';
 import { storageManager } from '../utils/StorageManager';
-import { EliminationTournament } from '../tournament/EliminationTournament';
-import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
-import { GroupKnockoutTournament } from '../tournament/GroupKnockoutTournament';
+import { TOURNAMENT_FACTORY } from '../tournament/tournamentFactory';
+import type { AnyTournament } from '../tournament/tournamentFactory';
 import type { TournamentState } from '../tournament/types';
 
-/** A reconstructed tournament instance of any supported format. */
-export type AnyTournament = RoundRobinTournament | EliminationTournament | GroupKnockoutTournament;
+export type { AnyTournament };
 
 /** Rebuild the concrete tournament class from persisted state. */
 export function reconstructTournament(state: TournamentState): AnyTournament {
-  switch (state.type) {
-    case 'elimination':
-      return EliminationTournament.fromState(state);
-    case 'group-knockout':
-      return GroupKnockoutTournament.fromState(state);
-    default:
-      return RoundRobinTournament.fromState(state);
-  }
+  return TOURNAMENT_FACTORY[state.type].fromState(state);
 }
 
 /** App-state context shape. Lives here, not core `types/`, to avoid a core→feature type dependency. */
