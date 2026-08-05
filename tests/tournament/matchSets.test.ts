@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { setsWonBy, totalPoints } from '../../src/tournament/types';
+import { resolveMatchResult, setsWonBy, totalPoints } from '../../src/tournament/types';
 import { createTournamentMatch, createTournamentTeam } from '../data/testFactories';
 
 describe('match set helpers', () => {
@@ -34,6 +34,30 @@ describe('match set helpers', () => {
 
     it('returns zero for a match with no sets', () => {
       expect(totalPoints(match([]))).toEqual({ team1: 0, team2: 0 });
+    });
+  });
+
+  describe('resolveMatchResult', () => {
+    const blank = { team1: null, team2: null };
+
+    it('best-of-1: a blank set defaults to 21–18 for the clicked team', () => {
+      expect(resolveMatchResult([blank], 1, 1)).toEqual({ winner: 1, sets: [{ team1: 21, team2: 18 }] });
+      expect(resolveMatchResult([blank], 2, 1)).toEqual({ winner: 2, sets: [{ team1: 18, team2: 21 }] });
+    });
+
+    it('best-of-1: the score decides the winner even when the losing team was clicked', () => {
+      expect(resolveMatchResult([{ team1: 15, team2: 21 }], 1, 1))
+        .toEqual({ winner: 2, sets: [{ team1: 15, team2: 21 }] });
+    });
+
+    it('best-of-N: winner is the set majority; blank sets are dropped', () => {
+      const result = resolveMatchResult([{ team1: 21, team2: 15 }, { team1: 21, team2: 10 }, blank], 2, 3);
+      expect(result).toEqual({ winner: 1, sets: [{ team1: 21, team2: 15 }, { team1: 21, team2: 10 }] });
+    });
+
+    it('best-of-N: a set tie records no winner (null), not the clicked team', () => {
+      expect(resolveMatchResult([{ team1: 21, team2: 15 }, { team1: 15, team2: 21 }, blank], 1, 3)).toBeNull();
+      expect(resolveMatchResult([blank, blank, blank], 1, 3)).toBeNull();
     });
   });
 });
