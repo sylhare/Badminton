@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { Player } from '../../../types';
+import { cx } from '../../common/cx';
 import type { SlotBinding } from '../edit/slotBinding';
 
 import TeamDisplay from './TeamDisplay';
@@ -26,25 +27,28 @@ const DoublesMatch: React.FC<DoublesMatchProps> = ({
   team1Binding,
   team2Binding,
 }) => {
+  const hasTeam2 = team2Players.length > 0;
   return (
-    <div className={`teams ${isAnimating ? 'animating-blur' : ''}`}>
+    <div className={cx('teams', isAnimating && 'animating-blur')}>
       <TeamDisplay
         teamNumber={1}
         players={team1Players}
-        showVsDivider
+        showVsDivider={hasTeam2}
         isWinner={winner === 1}
         onTeamClick={onTeamClick}
         isClickable={isClickable}
         slotBinding={team1Binding}
       />
-      <TeamDisplay
-        teamNumber={2}
-        players={team2Players}
-        isWinner={winner === 2}
-        onTeamClick={onTeamClick}
-        isClickable={isClickable}
-        slotBinding={team2Binding}
-      />
+      {hasTeam2 && (
+        <TeamDisplay
+          teamNumber={2}
+          players={team2Players}
+          isWinner={winner === 2}
+          onTeamClick={onTeamClick}
+          isClickable={isClickable}
+          slotBinding={team2Binding}
+        />
+      )}
     </div>
   );
 };
