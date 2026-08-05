@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { LevelTracker } from '../../src/engines/LevelTracker';
+import { levelTracker as tracker } from '../../src/engines/LevelTracker';
 import { resolveMatchImportance, tournamentToScoredGames } from '../../src/engines/levelAdapters';
 import { LevelTrackerConfig } from '../../src/engines/levelTrackerConfig';
 import type { Court, Player } from '../../src/types';
@@ -28,9 +28,6 @@ function makeCourt(
 }
 
 describe('LevelTracker', () => {
-  let tracker: LevelTracker;
-  beforeEach(() => { tracker = new LevelTracker(); });
-
   const update = (court: Court, players: Player[], importance?: number) =>
     tracker.updatePlayersLevels([{ court, importance }], players);
 
