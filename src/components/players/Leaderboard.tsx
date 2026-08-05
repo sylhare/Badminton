@@ -13,19 +13,10 @@ interface LeaderboardProps {
 type SortColumn = 'wins' | 'level' | 'avgScore';
 type SortDir = 'asc' | 'desc';
 
-const medalForRank = (idx: number): string => {
-  if (idx === 0) return '🥇 ';
-  if (idx === 1) return '🥈 ';
-  if (idx === 2) return '🥉 ';
-  return '';
-};
-
-const cryingForRank = (idx: number): string => {
-  if (idx === 0) return '💩 ';
-  if (idx === 1) return '😬 ';
-  if (idx === 2) return '😐 ';
-  return '';
-};
+const RANK_MEDALS = ['🥇 ', '🥈 ', '🥉 '];
+const RANK_FROWNS = ['💩 ', '😬 ', '😐 '];
+const medalForRank = (idx: number): string => RANK_MEDALS[idx] ?? '';
+const cryingForRank = (idx: number): string => RANK_FROWNS[idx] ?? '';
 
 const SortIcon: React.FC<{ col: SortColumn; sortCol: SortColumn; sortDir: SortDir }> = ({ col, sortCol, sortDir }) => {
   if (col !== sortCol) return <span className="sort-icon sort-icon--inactive">⇅</span>;
