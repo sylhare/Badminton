@@ -5,7 +5,7 @@ import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournamen
 
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { EliminationBracket } from './elimination/EliminationBracket';
-import { StandingsTable } from './StandingsTable';
+import { StandingsTable } from './common/StandingsTable';
 
 interface GroupKnockoutProps {
   tournament: GroupKnockoutTournament;
