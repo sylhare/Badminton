@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
 import { Tooltip } from '../Tooltip';
+import { SegmentedControl } from '../tournament/common/SegmentedControl';
 
 import Modal from './Modal';
+
+const GENDER_LABEL = { F: '💁‍♀️ F', M: '🙋‍♂️ M', Unknown: 'Unknown' } as const;
 
 interface PlayerEditModalProps {
   player: Player | null;
@@ -42,20 +45,14 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
             Gender
             <Tooltip testId="gender" text="Setting gender helps Smart Engine balance mixed doubles — it avoids putting all players of the same gender on one team." />
           </label>
-          <div className="gender-selector">
-            {(['F', 'M', 'Unknown'] as const).map((option) => (
-              <button
-                key={option}
-                className={`gender-pill ${gender === option ? 'active' : ''}`}
-                onClick={() => setGender(option)}
-                data-testid={`gender-pill-${option}`}
-              >
-                {option === 'F' && '💁‍♀️ F'}
-                {option === 'M' && '🙋‍♂️ M'}
-                {option === 'Unknown' && 'Unknown'}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            variant="gender"
+            options={['F', 'M', 'Unknown'] as const}
+            selected={gender ?? 'Unknown'}
+            onSelect={setGender}
+            label={g => GENDER_LABEL[g]}
+            testIdFor={g => `gender-pill-${g}`}
+          />
         </div>
 
         <div className="player-edit-field">
