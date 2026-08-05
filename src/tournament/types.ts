@@ -48,7 +48,6 @@ export interface TournamentStandingRow {
 }
 
 export interface TournamentState {
-  phase: TournamentPhase;
   format: TournamentFormat;
   type: TournamentType;
   numberOfCourts: number;
@@ -100,7 +99,6 @@ export function totalPoints(match: TournamentMatch): SetScore {
 }
 
 export const DEFAULT_TOURNAMENT_STATE: TournamentState = {
-  phase: 'setup',
   format: 'doubles',
   type: 'round-robin',
   numberOfCourts: 4,

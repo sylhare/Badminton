@@ -68,7 +68,6 @@ export class RoundRobinTournament extends Tournament {
     const shuffled = shuffleArray(teams);
     return new RoundRobinTournament({
       ...this._state,
-      phase: 'active',
       teams: shuffled,
       numberOfCourts,
       matches: generateMatches(shuffled, numberOfCourts),

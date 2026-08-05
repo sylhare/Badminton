@@ -97,7 +97,6 @@ export class GroupKnockoutTournament extends Tournament {
     const matches = GroupKnockoutTournament.generateGroupMatches(groups, numberOfCourts);
     return new GroupKnockoutTournament({
       ...this._state,
-      phase: 'active',
       teams: shuffled,
       numberOfCourts,
       matches,
@@ -189,11 +188,8 @@ export class GroupKnockoutTournament extends Tournament {
     });
   }
 
-  private withPhase(matches: TournamentMatch[], bracketSize?: number): GroupKnockoutTournament {
-    const state = { ...this._state, matches, bracketSize: bracketSize ?? this._state.bracketSize };
-    const next = new GroupKnockoutTournament(state);
-    const phase = next.isComplete() ? 'completed' : 'active';
-    return phase === state.phase ? next : new GroupKnockoutTournament({ ...state, phase });
+  private withState(matches: TournamentMatch[], bracketSize?: number): this {
+    return this.rebuild({ ...this._state, matches, bracketSize: bracketSize ?? this._state.bracketSize });
   }
 
   override withMatchResult(matchId: string, winner: 1 | 2, sets?: SetScore[]): this {
@@ -202,7 +198,7 @@ export class GroupKnockoutTournament extends Tournament {
 
     if (existing.bracket !== undefined) {
       const updatedKnockout = this.knockout().withMatchResult(matchId, winner, sets).matches();
-      return this.withPhase([...this.groupMatches(), ...updatedKnockout]) as this;
+      return this.withState([...this.groupMatches(), ...updatedKnockout]);
     }
 
     // A group-stage result changed. Recompute the group phase from the updated
@@ -219,17 +215,17 @@ export class GroupKnockoutTournament extends Tournament {
 
     const qualifiers = regrouped.groupPhaseComplete() ? regrouped.qualifiers() : [];
     if (qualifiers.length < MIN_KNOCKOUT_TEAMS) {
-      return this.withPhase(updatedGroupMatches) as this;
+      return this.withState(updatedGroupMatches);
     }
     if (this.knockoutStarted() && GroupKnockoutTournament.sameSeeding(this.qualifiers(), qualifiers)) {
       const kept = new GroupKnockoutTournament({
         ...this._state,
         matches: [...updatedGroupMatches, ...this.knockoutMatches()],
       });
-      return this.withPhase(kept.matches(), kept.bracketSize()) as this;
+      return this.withState(kept.matches(), kept.bracketSize());
     }
     const seeded = regrouped.startKnockout(qualifiers);
-    return this.withPhase(seeded.matches(), seeded.bracketSize()) as this;
+    return this.withState(seeded.matches(), seeded.bracketSize());
   }
 
   /** The group phase renders its own per-group standings tables, so the combined table is hidden. */

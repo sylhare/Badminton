@@ -20,8 +20,10 @@ export abstract class Tournament {
     return this._state;
   }
 
+  /** Derived from the matches: no matches → setup, all decided → completed, else active. */
   phase(): TournamentPhase {
-    return this._state.phase;
+    if (this._state.matches.length === 0) return 'setup';
+    return this.isComplete() ? 'completed' : 'active';
   }
 
   format(): TournamentFormat {
