@@ -215,8 +215,6 @@ export class EliminationTournament extends Tournament {
       if (!roundComplete(allCB, n)) break;
       if (this.roundExists(allCB, n + 1)) continue;
 
-      // Round n+1's pool is exactly getCBExpectedPool(n+1): round-n winners plus
-      // round-n pool members that had a bye — the same recurrence, not re-inlined.
       const advancers: TournamentTeam[] = [...getCBExpectedPool(n + 1, cbSeeds, allCB)];
 
       if (advancers.length < 2 && n + 1 < totalWBRounds && this.wbRoundFullyDecided(winnersMatches, n + 1)) {

@@ -120,10 +120,6 @@ export abstract class Tournament {
     return null;
   }
 
-  // --- Presentation policy ------------------------------------------------
-  // Each format decides how it is displayed so the view layer can stay generic
-  // (no per-type branching). Defaults suit a round-based, points-scored format.
-
   /** Subtitle shown above the standings table. */
   standingsSubtitle(): string {
     const done = this.completedRounds();

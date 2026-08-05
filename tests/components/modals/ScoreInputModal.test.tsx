@@ -197,8 +197,6 @@ describe('ScoreInputModal', () => {
       const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
       expect(set(0).t1().value).toBe('');
       expect(set(0).t2().value).toBe('');
-      // No sets played yet → no majority → cannot record a winner (would otherwise
-      // fall back to the clicked team and advance a tied match in a knockout).
       expect(confirmBtn()).toBeDisabled();
       await user.click(confirmBtn());
       expect(onConfirm).not.toHaveBeenCalled();

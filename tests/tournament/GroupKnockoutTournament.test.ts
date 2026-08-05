@@ -144,12 +144,9 @@ describe('GroupKnockoutTournament — group phase', () => {
       expect(t.isComplete()).toBe(true);
 
       const winnerBefore = t.groupStandings(0)[0].team.id;
-      // flip group A's only match so the other team wins → group A qualifier changes
       const reseeded = t.withMatchResult(groupAMatch(t).id, 2, [{ team1: 10, team2: 21 }]);
 
       expect(reseeded.groupStandings(0)[0].team.id).not.toBe(winnerBefore);
-      // the bracket is rebuilt from the new qualifiers: the previously-decided
-      // final is reset (undecided) and no longer features the old qualifier
       expect(reseeded.knockoutMatches()).toHaveLength(1);
       expect(reseeded.knockoutMatches()[0].winner).toBeUndefined();
       expect([reseeded.knockoutMatches()[0].team1.id, reseeded.knockoutMatches()[0].team2.id])
@@ -162,7 +159,6 @@ describe('GroupKnockoutTournament — group phase', () => {
       const finalId = t.knockoutMatches()[0].id;
       t = t.withMatchResult(finalId, 1, [{ team1: 21, team2: 15 }]);
 
-      // same winner (team1), different score → qualifiers identical → bracket kept
       const edited = t.withMatchResult(groupAMatch(t).id, 1, [{ team1: 21, team2: 3 }]);
       const finalAfter = edited.knockoutMatches().find(m => m.id === finalId);
       expect(finalAfter?.winner).toBe(1);

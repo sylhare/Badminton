@@ -134,7 +134,6 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('start-tournament-button'));
 
     await waitFor(() => {
-      // an active tournament is one that has generated matches (phase is now derived)
       const activeCall = saveSpy.mock.calls.find(([s]) => (s?.matches?.length ?? 0) > 0);
       expect(activeCall).toBeDefined();
     });

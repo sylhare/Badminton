@@ -56,7 +56,6 @@ const CourtCard: React.FC<CourtCardProps> = ({
   const handleRotateTeams = onRotateTeams ? () => onRotateTeams(court.courtNumber) : undefined;
   const handleModalConfirm = (winner: 1 | 2, sets: SetScore[]) => {
     if (pendingWinner === null || !onWinnerChange) return;
-    // The court modal is always best-of-1, so resolveMatchResult always yields one set.
     const score = sets[0];
     trackGameAction('set_winner', { gameType: 'with_score', courtNumber: court.courtNumber });
     onWinnerChange(court.courtNumber, winner);
