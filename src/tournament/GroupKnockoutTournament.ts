@@ -220,11 +220,6 @@ export class GroupKnockoutTournament extends Tournament {
       return this.withState([...this.groupMatches(), ...updatedKnockout]);
     }
 
-    // A group-stage result changed. Recompute the group phase from the updated
-    // matches alone, then (re)seed the knockout: editing a decided group result
-    // after the bracket was seeded can change who qualifies, so a stale bracket
-    // must be rebuilt (existing knockout matches are dropped) unless the seeding
-    // is unchanged, in which case the played bracket is preserved.
     const groupMatches = this.replaceMatch(this.groupMatches(), matchId, winner, sets);
     const regrouped = this.withGroupMatches(groupMatches);
     const qualifiers = regrouped.qualifiers();
