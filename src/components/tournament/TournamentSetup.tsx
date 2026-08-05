@@ -10,6 +10,9 @@ import { swapInGroups } from '../../utils/slotSwap';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 
+import { PillGroup } from './PillGroup';
+import { NumberField } from './NumberField';
+
 const BEST_OF_OPTIONS = [1, 3, 5];
 
 interface TournamentSetupProps {
@@ -95,18 +98,14 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
       {swap.dragGhost}
       <div className="setup-section">
         <h3>Format</h3>
-        <div className="format-pills" data-testid="format-pills">
-          {(['doubles', 'singles'] as TournamentFormat[]).map(f => (
-            <button
-              key={f}
-              className={`format-pill${format === f ? ' format-pill-active' : ''}`}
-              onClick={() => setFormat(f)}
-              data-testid={`format-pill-${f}`}
-            >
-              {f === 'singles' ? 'Singles (1v1)' : 'Doubles (2v2)'}
-            </button>
-          ))}
-        </div>
+        <PillGroup
+          options={['doubles', 'singles'] as TournamentFormat[]}
+          selected={format}
+          onSelect={setFormat}
+          label={f => (f === 'singles' ? 'Singles (1v1)' : 'Doubles (2v2)')}
+          testIdFor={f => `format-pill-${f}`}
+          containerTestId="format-pills"
+        />
       </div>
 
       <div className="setup-section">
@@ -131,30 +130,19 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
       <div className="setup-section">
         <h3>Number of Courts</h3>
-        <input
-          type="number"
-          min="1"
-          value={numberOfCourts}
-          onChange={e => setNumberOfCourts(Math.max(1, parseInt(e.target.value, 10) || 1))}
-          className="court-count-input"
-          data-testid="tournament-court-count"
-        />
+        <NumberField value={numberOfCourts} min={1} onChange={setNumberOfCourts} testId="tournament-court-count" />
       </div>
 
       <div className="setup-section">
         <h3>Sets per Match</h3>
-        <div className="format-pills" data-testid="best-of-pills">
-          {BEST_OF_OPTIONS.map(n => (
-            <button
-              key={n}
-              className={`format-pill${bestOf === n ? ' format-pill-active' : ''}`}
-              onClick={() => setBestOf(n)}
-              data-testid={`best-of-pill-${n}`}
-            >
-              {n === 1 ? 'Single game' : `Best of ${n}`}
-            </button>
-          ))}
-        </div>
+        <PillGroup
+          options={BEST_OF_OPTIONS}
+          selected={bestOf}
+          onSelect={setBestOf}
+          label={n => (n === 1 ? 'Single game' : `Best of ${n}`)}
+          testIdFor={n => `best-of-pill-${n}`}
+          containerTestId="best-of-pills"
+        />
       </div>
 
       {type === 'group-knockout' && (
@@ -163,29 +151,24 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
           <div className="group-knockout-fields">
             <label className="group-knockout-field">
               Teams per group
-              <input
-                type="number"
-                min="2"
+              <NumberField
                 value={groupSize}
-                onChange={e => {
-                  const next = Math.max(2, parseInt(e.target.value, 10) || 2);
+                min={2}
+                onChange={next => {
                   setGroupSize(next);
                   setQualifiersPerGroup(q => Math.min(q, next - 1));
                 }}
-                className="court-count-input"
-                data-testid="group-size-input"
+                testId="group-size-input"
               />
             </label>
             <label className="group-knockout-field">
               Qualifiers per group
-              <input
-                type="number"
-                min="1"
-                max={groupSize}
+              <NumberField
                 value={qualifiersPerGroup}
-                onChange={e => setQualifiersPerGroup(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                className="court-count-input"
-                data-testid="qualifiers-input"
+                min={1}
+                max={groupSize}
+                onChange={setQualifiersPerGroup}
+                testId="qualifiers-input"
               />
             </label>
           </div>

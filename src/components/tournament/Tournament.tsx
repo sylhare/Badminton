@@ -7,6 +7,7 @@ import type { Tournament as TournamentBase } from '../../tournament/Tournament';
 import { TournamentSetup } from './TournamentSetup';
 import { TournamentStandings } from './TournamentStandings';
 import { TOURNAMENT_KINDS, TOURNAMENT_TYPES } from './tournamentKinds';
+import { PillGroup } from './PillGroup';
 
 interface TournamentProps {
   tournament: TournamentBase | null;
@@ -53,18 +54,13 @@ export const Tournament: React.FC<TournamentProps> = ({
       <div className="tournament-setup-wrapper">
         <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
           <h3>Mode</h3>
-          <div className="format-pills">
-            {TOURNAMENT_TYPES.map(type => (
-              <button
-                key={type}
-                className={`format-pill${selectedType === type ? ' format-pill-active' : ''}`}
-                onClick={() => setSelectedType(type)}
-                data-testid={`type-pill-${type}`}
-              >
-                {TOURNAMENT_KINDS[type].label}
-              </button>
-            ))}
-          </div>
+          <PillGroup
+            options={TOURNAMENT_TYPES}
+            selected={selectedType}
+            onSelect={setSelectedType}
+            label={type => TOURNAMENT_KINDS[type].label}
+            testIdFor={type => `type-pill-${type}`}
+          />
         </div>
         <TournamentSetup
           initialPlayers={initialPlayers}
