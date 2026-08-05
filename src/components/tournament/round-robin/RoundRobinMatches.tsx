@@ -4,6 +4,7 @@ import type { SetScore, TournamentMatch } from '../../../tournament/types';
 import { formatSets } from '../../../tournament/types';
 import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
+import { cx } from '../../common/cx';
 import { useMatchModal } from '../useMatchModal';
 
 import { useExpandedRounds } from './useExpandedRounds';
@@ -35,7 +36,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
         return (
           <div
             key={round}
-            className={`round-section${roundDone ? ' round-complete' : ''}`}
+            className={cx('round-section', roundDone && 'round-complete')}
             data-testid={`round-${round}`}
           >
             <div
@@ -57,7 +58,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
                   return (
                     <div
                       key={match.id}
-                      className={`match-row${match.winner ? ' match-complete' : ''}`}
+                      className={cx('match-row', match.winner && 'match-complete')}
                       data-testid={`match-${match.id}`}
                     >
                       <div className="match-court">Court {match.courtNumber}</div>

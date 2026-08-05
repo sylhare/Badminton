@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { SetScore } from '../../tournament/types';
-import { resolveMatchResult } from '../../tournament/types';
+import { resolveMatchResult, defaultSinglesScore } from '../../tournament/types';
 
 import Modal from './Modal';
 
@@ -60,7 +60,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     }));
   };
 
-  const singleDefaults = winnerTeam === 1 ? { team1: 21, team2: 18 } : { team1: 18, team2: 21 };
+  const singleDefaults = defaultSinglesScore(winnerTeam);
 
   const parseScore = (value: string): number | null => {
     const n = parseInt(value, 10);

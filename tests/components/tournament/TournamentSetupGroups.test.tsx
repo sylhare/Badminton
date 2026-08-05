@@ -13,6 +13,10 @@ const presentPlayers = [
   createMockPlayer({ id: 'p2', name: 'Bob', isPresent: true }),
   createMockPlayer({ id: 'p3', name: 'Carol', isPresent: true }),
   createMockPlayer({ id: 'p4', name: 'Dave', isPresent: true }),
+  createMockPlayer({ id: 'p5', name: 'Eve', isPresent: true }),
+  createMockPlayer({ id: 'p6', name: 'Frank', isPresent: true }),
+  createMockPlayer({ id: 'p7', name: 'Grace', isPresent: true }),
+  createMockPlayer({ id: 'p8', name: 'Heidi', isPresent: true }),
 ];
 
 describe('TournamentSetup — group-knockout config', () => {
@@ -54,7 +58,7 @@ describe('TournamentSetup — group-knockout config', () => {
       <TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} type="group-knockout" onStart={onStart} />,
     );
 
-    fireEvent.change(screen.getByTestId('group-size-input'), { target: { value: '2' } });
+    fireEvent.change(screen.getByTestId('group-size-input'), { target: { value: '3' } });
     fireEvent.change(screen.getByTestId('qualifiers-input'), { target: { value: '2' } });
     expect(screen.getByTestId('qualifiers-warning')).toBeInTheDocument();
   });
