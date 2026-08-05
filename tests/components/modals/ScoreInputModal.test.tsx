@@ -193,12 +193,15 @@ describe('ScoreInputModal', () => {
       expect(screen.queryByTestId('score-input-team1-3')).not.toBeInTheDocument();
     });
 
-    it('starts every set blank so an immediate confirm records no set (not a 21-0)', async () => {
+    it('starts every set blank and disables confirm until a set majority exists', async () => {
       const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
       expect(set(0).t1().value).toBe('');
       expect(set(0).t2().value).toBe('');
+      // No sets played yet → no majority → cannot record a winner (would otherwise
+      // fall back to the clicked team and advance a tied match in a knockout).
+      expect(confirmBtn()).toBeDisabled();
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(1, []);
+      expect(onConfirm).not.toHaveBeenCalled();
     });
 
     it('derives the winner from the majority of sets and emits only played sets', async () => {
