@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { SetScore } from '../../tournament/types';
-import { winningSide } from '../../tournament/types';
+import { resolveMatchResult } from '../../tournament/types';
 
 import Modal from './Modal';
 
@@ -62,36 +62,21 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
 
   const singleDefaults = winnerTeam === 1 ? { team1: 21, team2: 18 } : { team1: 18, team2: 21 };
 
-  const resolveSets = (): SetScore[] => {
-    const resolved: SetScore[] = [];
-    sets.forEach((set, index) => {
-      const p1 = parseInt(set.s1, 10);
-      const p2 = parseInt(set.s2, 10);
-      const blank1 = isNaN(p1);
-      const blank2 = isNaN(p2);
-      if (isSingle && index === 0) {
-        resolved.push({
-          team1: blank1 ? singleDefaults.team1 : p1,
-          team2: blank2 ? singleDefaults.team2 : p2,
-        });
-        return;
-      }
-      if (blank1 && blank2) return;
-      resolved.push({ team1: blank1 ? 0 : p1, team2: blank2 ? 0 : p2 });
-    });
-    return resolved;
+  const parseScore = (value: string): number | null => {
+    const n = parseInt(value, 10);
+    return isNaN(n) ? null : n;
   };
-
-  const resolvedSets = resolveSets();
-  const decidedWinner = winningSide(resolvedSets);
-  // Single-set matches always confirm (blank defaults to a 21–18 win for the clicked
-  // team). Best-of-N requires a genuine set majority, so a tie can't record a winner.
-  const canConfirm = isSingle || decidedWinner !== undefined;
-  const resolvedWinner: 1 | 2 = decidedWinner ?? winnerTeam;
+  const result = resolveMatchResult(
+    sets.map(s => ({ team1: parseScore(s.s1), team2: parseScore(s.s2) })),
+    winnerTeam,
+    setCount,
+  );
+  const canConfirm = result !== null;
+  const resolvedWinner: 1 | 2 = result?.winner ?? winnerTeam;
 
   const handleConfirm = () => {
-    if (!canConfirm) return;
-    onConfirm(resolvedWinner, resolvedSets);
+    if (!result) return;
+    onConfirm(result.winner, result.sets);
     setSets([emptySet()]);
   };
 
