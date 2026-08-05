@@ -56,8 +56,9 @@ const CourtCard: React.FC<CourtCardProps> = ({
   const handleRotateTeams = onRotateTeams ? () => onRotateTeams(court.courtNumber) : undefined;
   const handleModalConfirm = (winner: 1 | 2, sets: SetScore[]) => {
     if (pendingWinner === null || !onWinnerChange) return;
-    const score: SetScore | undefined = sets[0];
-    trackGameAction('set_winner', { gameType: score && (score.team1 > 0 || score.team2 > 0) ? 'with_score' : 'no_score', courtNumber: court.courtNumber });
+    // The court modal is always best-of-1, so resolveMatchResult always yields one set.
+    const score = sets[0];
+    trackGameAction('set_winner', { gameType: 'with_score', courtNumber: court.courtNumber });
     onWinnerChange(court.courtNumber, winner);
     onScoreChange?.(court.courtNumber, score);
     triggerConfetti(clickCoordsRef.current.x, clickCoordsRef.current.y, 30);
