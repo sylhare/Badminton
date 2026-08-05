@@ -137,8 +137,7 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** True once every group-stage match has a result. */
   groupPhaseComplete(): boolean {
-    const groupMatches = this.groupMatches();
-    return groupMatches.length > 0 && groupMatches.every(m => m.winner !== undefined);
+    return this.allDecided(this.groupMatches());
   }
 
   /** Qualifying teams in knockout-seed order (empty until the group phase is complete). */
@@ -211,9 +210,7 @@ export class GroupKnockoutTournament extends Tournament {
     // after the bracket was seeded can change who qualifies, so a stale bracket
     // must be rebuilt (existing knockout matches are dropped) unless the seeding
     // is unchanged, in which case the played bracket is preserved.
-    const updatedGroupMatches = this.groupMatches().map(m =>
-      m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m,
-    );
+    const updatedGroupMatches = this.replaceMatch(this.groupMatches(), matchId, winner, sets);
     const regrouped = new GroupKnockoutTournament({
       ...this._state,
       matches: updatedGroupMatches,
@@ -275,7 +272,6 @@ export class GroupKnockoutTournament extends Tournament {
   isComplete(): boolean {
     if (!this.groupPhaseComplete()) return false;
     if (!this.knockoutStarted()) return this.qualifiers().length < MIN_KNOCKOUT_TEAMS;
-    const { matches } = this._state;
-    return matches.length > 0 && matches.every(m => m.winner !== undefined);
+    return this.allDecided();
   }
 }

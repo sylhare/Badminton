@@ -274,16 +274,14 @@ export class EliminationTournament extends Tournament {
     const existing = this._state.matches.find(m => m.id === matchId);
     if (!existing) return this;
 
-    let updatedMatches = this._state.matches.map(m =>
-      m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m,
-    );
+    let updatedMatches = this.replaceMatch(this._state.matches, matchId, winner, sets);
     if (existing.winner !== undefined && existing.winner !== winner) {
       updatedMatches = this.withoutDependentMatches(updatedMatches, existing);
     }
     const followUp = this.generateFollowUpMatches(updatedMatches);
     const allMatches = [...updatedMatches, ...followUp];
-    const phase = allMatches.length > 0 && allMatches.every(m => m.winner !== undefined) ? 'completed' : 'active';
-    return new EliminationTournament({ ...this._state, matches: allMatches, phase }) as unknown as this;
+    const phase = this.allDecided(allMatches) ? 'completed' : 'active';
+    return this.rebuild({ ...this._state, matches: allMatches, phase });
   }
 
   /**
@@ -377,11 +375,11 @@ export class EliminationTournament extends Tournament {
 
     const unplaced = Array.from(standings.values())
       .filter(r => !placedIds.has(r.team.id))
-      .sort((a, b) => {
-        if (a.lost !== b.lost) return a.lost - b.lost;
-        if (b.won !== a.won) return b.won - a.won;
-        return this.compareByTeamName(a, b);
-      });
+      .sort(this.orderStandings([
+        (a, b) => a.lost - b.lost,
+        (a, b) => b.won - a.won,
+        (a, b) => this.compareByTeamName(a, b),
+      ]));
 
     return [...placed, ...unplaced];
   }
@@ -399,8 +397,6 @@ export class EliminationTournament extends Tournament {
   }
 
   isComplete(): boolean {
-    const { matches } = this._state;
-    if (matches.length === 0) return false;
-    return matches.every(m => m.winner !== undefined);
+    return this.allDecided();
   }
 }

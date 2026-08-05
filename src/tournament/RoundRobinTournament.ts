@@ -77,12 +77,12 @@ export class RoundRobinTournament extends Tournament {
 
   calculateStandings(): TournamentStandingRow[] {
     const standings = this.tallyStandings(2);
-    return Array.from(standings.values()).sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
-      if (b.scoreDiff !== a.scoreDiff) return b.scoreDiff - a.scoreDiff;
-      return this.compareByTeamName(a, b);
-    });
+    return Array.from(standings.values()).sort(this.orderStandings([
+      (a, b) => b.points - a.points,
+      (a, b) => b.setDiff - a.setDiff,
+      (a, b) => b.scoreDiff - a.scoreDiff,
+      (a, b) => this.compareByTeamName(a, b),
+    ]));
   }
 
   completedRounds(): number {
@@ -129,7 +129,7 @@ export class RoundRobinTournament extends Tournament {
   }
 
   isComplete(): boolean {
-    return this._state.matches.length > 0 && this._state.matches.every(m => m.winner !== undefined);
+    return this.allDecided();
   }
 
   currentRound(): number {

@@ -36,18 +36,38 @@ export abstract class Tournament {
     return this._state.matches;
   }
 
-  withMatchResult(
+  /** Reconstruct this exact tournament subclass around a new state (immutable copy). */
+  protected rebuild(state: TournamentState): this {
+    return new (this.constructor as new (s: TournamentState) => this)(state);
+  }
+
+  /** True when a non-empty set of matches all have a decided winner. */
+  protected allDecided(matches: TournamentMatch[] = this._state.matches): boolean {
+    return matches.length > 0 && matches.every(m => m.winner !== undefined);
+  }
+
+  /** Apply a result to one match by id, returning the updated match list. */
+  protected replaceMatch(
+    matches: TournamentMatch[],
     matchId: string,
     winner: 1 | 2,
     sets?: SetScore[],
-  ): this {
-    const newState: TournamentState = {
+  ): TournamentMatch[] {
+    return matches.map(m => (m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m));
+  }
+
+  /** Compose standings comparators into one: the first non-zero result wins. */
+  protected orderStandings(
+    comparators: Array<(a: TournamentStandingRow, b: TournamentStandingRow) => number>,
+  ): (a: TournamentStandingRow, b: TournamentStandingRow) => number {
+    return (a, b) => comparators.reduce((result, cmp) => result || cmp(a, b), 0);
+  }
+
+  withMatchResult(matchId: string, winner: 1 | 2, sets?: SetScore[]): this {
+    return this.rebuild({
       ...this._state,
-      matches: this._state.matches.map(m =>
-        m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m,
-      ),
-    };
-    return new (this.constructor as new (s: TournamentState) => this)(newState);
+      matches: this.replaceMatch(this._state.matches, matchId, winner, sets),
+    });
   }
 
   /** Stable standings tiebreak: alphabetical by the team's first player name. */
