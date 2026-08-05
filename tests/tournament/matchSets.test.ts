@@ -59,5 +59,18 @@ describe('match set helpers', () => {
       expect(resolveMatchResult([{ team1: 21, team2: 15 }, { team1: 15, team2: 21 }, blank], 1, 3)).toBeNull();
       expect(resolveMatchResult([blank, blank, blank], 1, 3)).toBeNull();
     });
+
+    it('best-of-N: a lead short of a majority is not yet decided (null)', () => {
+      expect(resolveMatchResult([{ team1: 21, team2: 15 }, blank, blank], 1, 3)).toBeNull();
+      expect(resolveMatchResult([{ team1: 21, team2: 15 }, { team1: 21, team2: 10 }, blank], 1, 5)).toBeNull();
+    });
+
+    it('best-of-N: records the winner once a majority of sets is clinched', () => {
+      const bo3 = resolveMatchResult([{ team1: 15, team2: 21 }, { team1: 21, team2: 10 }, { team1: 21, team2: 18 }], 1, 3);
+      expect(bo3).toEqual({
+        winner: 1,
+        sets: [{ team1: 15, team2: 21 }, { team1: 21, team2: 10 }, { team1: 21, team2: 18 }],
+      });
+    });
   });
 });

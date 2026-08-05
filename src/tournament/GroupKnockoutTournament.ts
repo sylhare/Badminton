@@ -30,6 +30,8 @@ export class GroupKnockoutTournament extends Tournament {
   private _groupsMemo?: TournamentTeam[][];
   private _qualifiersMemo?: TournamentTeam[];
   private _knockoutMemo?: EliminationTournament;
+  private _groupMatchesMemo?: TournamentMatch[];
+  private _knockoutMatchesMemo?: TournamentMatch[];
 
   private static sameSeeding(a: TournamentTeam[], b: TournamentTeam[]): boolean {
     return a.length === b.length && a.every((team, i) => team.id === b[i].id);
@@ -60,10 +62,15 @@ export class GroupKnockoutTournament extends Tournament {
    */
   static validateConfig(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
     if (teams.length === 0) return null;
-    const smallest = Math.min(...partitionIntoGroups(teams, groupSize).map(g => g.length));
-    return qualifiersPerGroup >= smallest
-      ? 'Every team in a group would qualify — lower the qualifiers or raise the group size.'
-      : null;
+    const groups = partitionIntoGroups(teams, groupSize);
+    const smallest = Math.min(...groups.map(g => g.length));
+    if (qualifiersPerGroup >= smallest) {
+      return 'Every team in a group would qualify — lower the qualifiers or raise the group size.';
+    }
+    if (groups.length * qualifiersPerGroup < MIN_KNOCKOUT_TEAMS) {
+      return 'Too few teams would qualify for a knockout — add teams or lower the group size.';
+    }
+    return null;
   }
 
   static fromState(state: TournamentState): GroupKnockoutTournament {
@@ -119,7 +126,7 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** Group-stage matches (those tagged with a group index). */
   groupMatches(): TournamentMatch[] {
-    return this._state.matches.filter(m => m.group !== undefined);
+    return (this._groupMatchesMemo ??= this._state.matches.filter(m => m.group !== undefined));
   }
 
   /**
@@ -168,7 +175,7 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** Knockout-phase (bracket) matches. */
   knockoutMatches(): TournamentMatch[] {
-    return this._state.matches.filter(m => m.bracket !== undefined);
+    return (this._knockoutMatchesMemo ??= this._state.matches.filter(m => m.bracket !== undefined));
   }
 
   /** True once the group phase has finished and the knockout bracket has been seeded. */

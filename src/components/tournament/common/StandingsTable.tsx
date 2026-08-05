@@ -2,6 +2,7 @@ import React from 'react';
 
 import type { TournamentStandingRow } from '../../../tournament/types';
 import { formatTeamName } from '../../../tournament/types';
+import { cx } from '../../common/cx';
 
 interface StandingsTableProps {
   rows: TournamentStandingRow[];
@@ -29,7 +30,7 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({
   extraClassName,
 }) => (
   <div className="standings-table-wrapper">
-    <table className={`leaderboard-table standings-table${extraClassName ? ` ${extraClassName}` : ''}`}>
+    <table className={cx('leaderboard-table', 'standings-table', extraClassName)}>
       <thead>
         <tr>
           <th>{rankHeader}</th>

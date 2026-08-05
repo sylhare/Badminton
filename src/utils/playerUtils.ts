@@ -44,6 +44,24 @@ export function validatePlayerNames(names: string[]): string[] {
   return names.map(name => name.trim()).filter(name => name.length > 0);
 }
 
+export type NameSeparator = 'backticks' | 'commas/newlines' | null;
+
+/**
+ * Single authority for turning the free-text player-entry field into names.
+ * Backticks take precedence over commas/newlines; a lone entry is one name.
+ * Returns the already-validated names so the displayed count can never drift
+ * from what is actually added.
+ */
+export function parsePlayerInput(text: string): { names: string[]; separator: NameSeparator } {
+  if (text.includes('`')) {
+    return { names: validatePlayerNames(text.split('`')), separator: 'backticks' };
+  }
+  if (/[,\n]/.test(text)) {
+    return { names: validatePlayerNames(text.split(/[,\n]+/)), separator: 'commas/newlines' };
+  }
+  return { names: validatePlayerNames([text]), separator: null };
+}
+
 export function benchedPlayers(assignments: Court[], players: Player[]): Player[] {
   const assignedIds = new Set(assignments.flatMap(c => c.players.map(p => p.id)));
   return players.filter(p => p.isPresent && !assignedIds.has(p.id));

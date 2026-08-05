@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, UserPlus } from '@phosphor-icons/react';
 
-import { validatePlayerNames } from '../../utils/playerUtils';
+import { parsePlayerInput } from '../../utils/playerUtils';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import ImageUploadModal from '../modals/ImageUploadModal';
 
@@ -14,50 +14,25 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
   const [playerInput, setPlayerInput] = useState('');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
+  const { names, separator } = parsePlayerInput(playerInput);
+  const playerCount = names.length;
+  const isMultiInput = separator !== null;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!playerInput.trim()) return;
+    if (names.length === 0) return;
 
-    const hasBackticks = playerInput.includes('`');
-    let playerNames: string[];
-
-    if (hasBackticks) {
-      playerNames = playerInput
-        .split('`')
-        .map(name => name.trim())
-        .filter(name => name.length > 0);
-    } else {
-      const hasSeparators = /[,\n]/.test(playerInput);
-      if (hasSeparators) {
-        playerNames = playerInput.split(/[,\n]+/);
-      } else {
-        playerNames = [playerInput];
-      }
-    }
-
-    const validNames = validatePlayerNames(playerNames);
-    if (validNames.length > 0) {
-      const method = validNames.length > 1 ? 'manual-bulk' : 'manual-single';
-      trackPlayerAction('add_players', { method, count: validNames.length });
-      onPlayersAdded(validNames);
-      setPlayerInput('');
-    }
+    const method = names.length > 1 ? 'manual-bulk' : 'manual-single';
+    trackPlayerAction('add_players', { method, count: names.length });
+    onPlayersAdded(names);
+    setPlayerInput('');
   };
 
   const handleImagePlayersAdded = (players: string[]) => {
     onPlayersAdded(players);
   };
-
-  const isMultiInput = playerInput.includes('`') || /[,\n]/.test(playerInput);
-  const getPlayerCount = (): number => {
-    if (isMultiInput) {
-      return playerInput.split(/[`\n,]+/).filter(s => s.trim()).length;
-    }
-    return playerInput.trim() ? 1 : 0;
-  };
-  const playerCount = getPlayerCount();
 
   return (
     <div className="player-entry-container">
@@ -100,7 +75,7 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
 
       {isMultiInput && playerCount > 1 && (
         <p className="multi-input-hint">
-          💡 Detected {playerCount} players separated by {playerInput.includes('`') ? 'backticks' : 'commas/newlines'}
+          💡 Detected {playerCount} players separated by {separator}
         </p>
       )}
 

@@ -92,11 +92,17 @@ export function winningSide(sets: SetScore[]): 1 | 2 | undefined {
 
 type RawSet = { team1: number | null; team2: number | null };
 
+/** Default single-set score for a click-only win: winner 21, loser 18. */
+export function defaultSinglesScore(clicked: 1 | 2): SetScore {
+  return clicked === 1 ? { team1: 21, team2: 18 } : { team1: 18, team2: 21 };
+}
+
 /**
  * Resolve a match from raw per-set inputs (null = blank), returning the winner and
  * played sets, or null when no winner can be recorded. best-of-1: the clicked team
  * wins and a blank set defaults to 21–18 (a real score can still flip the winner).
- * best-of-N: the winner is the set majority and a tie yields null. This is the single
+ * best-of-N: a winner is recorded only once one side clinches a majority of sets
+ * (ceil(bestOf/2)); a lead short of that, or a tie, yields null. This is the single
  * place that decides winner-from-click vs winner-from-score.
  */
 export function resolveMatchResult(
@@ -106,7 +112,7 @@ export function resolveMatchResult(
 ): { winner: 1 | 2; sets: SetScore[] } | null {
   if (Math.max(1, bestOf) === 1) {
     const raw = rawSets[0];
-    const defaults = clicked === 1 ? { team1: 21, team2: 18 } : { team1: 18, team2: 21 };
+    const defaults = defaultSinglesScore(clicked);
     const set: SetScore = { team1: raw?.team1 ?? defaults.team1, team2: raw?.team2 ?? defaults.team2 };
     return { winner: winningSide([set]) ?? clicked, sets: [set] };
   }
@@ -114,7 +120,11 @@ export function resolveMatchResult(
     .filter(s => s.team1 !== null || s.team2 !== null)
     .map(s => ({ team1: s.team1 ?? 0, team2: s.team2 ?? 0 }));
   const winner = winningSide(sets);
-  return winner ? { winner, sets } : null;
+  if (!winner) return null;
+  const tally = tallySets(sets);
+  const setsToClinch = Math.ceil(bestOf / 2);
+  const winnerSets = winner === 1 ? tally.team1 : tally.team2;
+  return winnerSets >= setsToClinch ? { winner, sets } : null;
 }
 
 /** Sets won by each side of a match. */
