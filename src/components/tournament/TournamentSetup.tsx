@@ -10,8 +10,8 @@ import { swapInGroups } from '../../utils/slotSwap';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 
-import { PillGroup } from './PillGroup';
-import { NumberField } from './NumberField';
+import { SegmentedControl } from './common/SegmentedControl';
+import { NumberField } from './common/NumberField';
 
 const BEST_OF_OPTIONS = [1, 3, 5];
 
@@ -98,7 +98,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
       {swap.dragGhost}
       <div className="setup-section">
         <h3>Format</h3>
-        <PillGroup
+        <SegmentedControl
           options={['doubles', 'singles'] as TournamentFormat[]}
           selected={format}
           onSelect={setFormat}
@@ -135,7 +135,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
       <div className="setup-section">
         <h3>Sets per Match</h3>
-        <PillGroup
+        <SegmentedControl
           options={BEST_OF_OPTIONS}
           selected={bestOf}
           onSelect={setBestOf}

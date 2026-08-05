@@ -2,7 +2,7 @@ import React from 'react';
 
 import type { TournamentStandingRow } from '../../tournament/types';
 
-import { StandingsTable } from './StandingsTable';
+import { StandingsTable } from './common/StandingsTable';
 
 interface TournamentStandingsProps {
   standings: TournamentStandingRow[];
