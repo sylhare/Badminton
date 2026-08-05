@@ -107,7 +107,7 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
           winnerTeam={pendingWinner}
           team1Players={modalMatch.team1.players}
           team2Players={modalMatch.team2.players}
-          bestOf={tournament.state().bestOf ?? 1}
+          bestOf={tournament.state().bestOf}
           onConfirm={handleModalConfirm}
           onCancel={handleModalCancel}
         />
