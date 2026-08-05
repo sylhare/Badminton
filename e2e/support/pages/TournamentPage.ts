@@ -31,9 +31,21 @@ export class TournamentPage {
     await expect(this.page.getByTestId('elimination-bracket')).toBeVisible();
   }
 
+  /** Click Start Tournament and wait for the group-knockout view to appear. */
+  async startGroupKnockout(): Promise<void> {
+    await this.page.getByTestId('start-tournament-button').click();
+    await expect(this.page.getByTestId('group-knockout')).toBeVisible();
+  }
+
   /** Select the tournament type before starting. */
-  async selectType(type: 'round-robin' | 'elimination'): Promise<void> {
+  async selectType(type: 'round-robin' | 'elimination' | 'group-knockout'): Promise<void> {
     await this.page.getByTestId(`type-pill-${type}`).click();
+  }
+
+  /** Set the group-knockout group size and qualifiers-per-group. */
+  async setGroupConfig(groupSize: number, qualifiersPerGroup: number): Promise<void> {
+    await this.page.getByTestId('group-size-input').fill(String(groupSize));
+    await this.page.getByTestId('qualifiers-input').fill(String(qualifiersPerGroup));
   }
 
   /** Add players directly via the tournament page's ManualPlayerEntry. */
