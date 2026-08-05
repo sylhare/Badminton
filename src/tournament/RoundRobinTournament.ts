@@ -11,18 +11,11 @@ import type {
 } from './types';
 import { DEFAULT_TOURNAMENT_STATE } from './types';
 import { roundRobinPairings } from './schedule';
-
-function makeTeamId(index: number): string {
-  return `team-${Date.now()}-${index}`;
-}
-
-function makeMatchId(index: number): string {
-  return `match-${Date.now()}-${index}`;
-}
+import { makeId } from './ids';
 
 function generateMatches(teams: TournamentTeam[], numberOfCourts: number): TournamentMatch[] {
   return roundRobinPairings(teams).map((pairing, i) => ({
-    id: makeMatchId(i),
+    id: makeId('match', i),
     round: pairing.round,
     courtNumber: (i % numberOfCourts) + 1,
     team1: pairing.team1,
@@ -51,11 +44,11 @@ export class RoundRobinTournament extends Tournament {
 
   static createTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
     if (format === 'singles') {
-      return players.map((p, i) => ({ id: makeTeamId(i), players: [p] }));
+      return players.map((p, i) => ({ id: makeId('team', i), players: [p] }));
     }
     const teams: TournamentTeam[] = [];
     for (let i = 0; i < players.length; i += 2) {
-      teams.push({ id: makeTeamId(i), players: players.slice(i, i + 2) });
+      teams.push({ id: makeId('team', i), players: players.slice(i, i + 2) });
     }
     return teams;
   }

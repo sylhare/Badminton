@@ -55,7 +55,7 @@ export interface TournamentState {
   matches: TournamentMatch[];
   bracketSize?: number;
   /** Total sets in a match (best-of-N); the winner is the side that takes a majority. Defaults to 1. */
-  bestOf?: number;
+  bestOf: number;
   /** group-knockout: target teams per group in the round-robin phase. */
   groupSize?: number;
   /** group-knockout: how many teams advance from each group to the knockout bracket. */
