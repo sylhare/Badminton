@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 
+import { DEFAULT_LEVEL } from '../../types';
+
 import { SvgChart } from './SvgChart';
 
 interface LevelHistoryGraphProps {
@@ -53,8 +55,8 @@ export function LevelHistoryGraph({
     const yMax = Math.min(100, rawMax + 5);
 
     entries.sort((a, b) => {
-      const aFinal = a[1][a[1].length - 1] ?? 50;
-      const bFinal = b[1][b[1].length - 1] ?? 50;
+      const aFinal = a[1][a[1].length - 1] ?? DEFAULT_LEVEL;
+      const bFinal = b[1][b[1].length - 1] ?? DEFAULT_LEVEL;
       return bFinal - aFinal;
     });
 
@@ -179,7 +181,7 @@ export function LevelHistoryGraph({
 
         {/* Top-10 coloured lines */}
         {topPlayers.map(({ id, history, color, name }) => {
-          const lastLevel = history[history.length - 1] ?? 50;
+          const lastLevel = history[history.length - 1] ?? DEFAULT_LEVEL;
           const labelX = toX(history.length, totalRounds) + 4;
           const labelY = toY(lastLevel);
           return (
