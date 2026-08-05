@@ -1782,7 +1782,7 @@ h1 {
     font-size: 0.95rem;
 }
 
-.gender-selector {
+.gender-pills {
     display: flex;
     gap: 10px;
 }
@@ -1804,7 +1804,7 @@ h1 {
     color: var(--color-primary);
 }
 
-.gender-pill.active {
+.gender-pill-active {
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: white;
