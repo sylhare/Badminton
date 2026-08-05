@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
 import { Tooltip } from '../Tooltip';
-import { SegmentedControl } from '../tournament/common/SegmentedControl';
+import { SegmentedControl } from '../common/SegmentedControl';
 
 import Modal from './Modal';
 

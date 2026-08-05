@@ -3,11 +3,11 @@ import React, { useMemo, useState } from 'react';
 import type { Player } from '../../types';
 import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
 import type { Tournament as TournamentBase } from '../../tournament/Tournament';
+import { SegmentedControl } from '../common/SegmentedControl';
 
 import { TournamentSetup } from './TournamentSetup';
 import { TournamentStandings } from './TournamentStandings';
 import { TOURNAMENT_KINDS, TOURNAMENT_TYPES } from './tournamentKinds';
-import { SegmentedControl } from './common/SegmentedControl';
 
 interface TournamentProps {
   tournament: TournamentBase | null;
