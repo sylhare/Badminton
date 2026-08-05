@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { cx } from './cx';
+
 interface SegmentedControlProps<T extends string | number> {
   options: readonly T[];
   selected: T;
@@ -26,7 +28,7 @@ export function SegmentedControl<T extends string | number>({
       {options.map(value => (
         <button
           key={value}
-          className={`${variant}-pill${value === selected ? ` ${variant}-pill-active` : ''}`}
+          className={cx(`${variant}-pill`, value === selected && `${variant}-pill-active`)}
           onClick={() => onSelect(value)}
           data-testid={testIdFor(value)}
         >
