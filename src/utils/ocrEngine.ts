@@ -24,11 +24,7 @@ export async function recognizePlayerNames(
   image: File | Blob | Uint8Array,
   { onProgress, preprocess, assetOptions }: OcrOptions = {},
 ): Promise<string[]> {
-  const pushProgress = (progress: number) => {
-    if (onProgress) {
-      onProgress(progress);
-    }
-  };
+  const pushProgress = onProgress ?? (() => {});
 
   const isBrowser = typeof window !== 'undefined' && !!window.document;
   const shouldPreprocess = preprocess ?? isBrowser;
@@ -63,17 +59,12 @@ export async function recognizePlayerNames(
     if (shouldPreprocess && image instanceof File) {
       try {
         pushProgress(0.35);
-
         imageForOCR = await preprocessImage(image);
-
-        pushProgress(0.6);
       } catch (err) {
         console.warn('Image preprocessing skipped:', err);
-        pushProgress(0.6);
       }
-    } else {
-      pushProgress(0.6);
     }
+    pushProgress(0.6);
 
     const {
       data: { text },
