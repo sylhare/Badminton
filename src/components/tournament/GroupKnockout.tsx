@@ -1,11 +1,11 @@
 import React from 'react';
 
 import type { SetScore } from '../../tournament/types';
-import { formatTeamName } from '../../tournament/types';
 import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
 
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { EliminationBracket } from './elimination/EliminationBracket';
+import { StandingsTable } from './StandingsTable';
 
 interface GroupKnockoutProps {
   tournament: GroupKnockoutTournament;
@@ -28,34 +28,16 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
           return (
             <section key={groupIndex} className="group-section" data-testid={`group-section-${groupIndex}`}>
               <h3>{groupLabel(groupIndex)}</h3>
-              <div className="standings-table-wrapper">
-                <table className="leaderboard-table standings-table group-standings">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Team</th>
-                      <th>W</th>
-                      <th>L</th>
-                      <th>Pts</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {standings.map((row, rank) => (
-                      <tr
-                        key={row.team.id}
-                        className={rank < qualifiersPerGroup ? 'qualified' : ''}
-                        data-testid={`group-${groupIndex}-standing-${rank}`}
-                      >
-                        <td>{rank + 1}</td>
-                        <td>{formatTeamName(row.team)}</td>
-                        <td>{row.won}</td>
-                        <td>{row.lost}</td>
-                        <td>{row.points}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <StandingsTable
+                rows={standings}
+                rankHeader="#"
+                rankCell={rank => rank + 1}
+                rowClass={rank => (rank < qualifiersPerGroup ? 'qualified' : '')}
+                testIdFor={rank => `group-${groupIndex}-standing-${rank}`}
+                showPoints
+                showScoreDiff={false}
+                extraClassName="group-standings"
+              />
               <RoundRobinMatches tournament={groupTournament} onMatchResult={onMatchResult} />
             </section>
           );
