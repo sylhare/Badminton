@@ -12,6 +12,7 @@ import type {
   TournamentTeam,
 } from './types';
 import { RoundRobinTournament } from './RoundRobinTournament';
+import { makeId } from './ids';
 import type { SeedSlots } from './bracketTree';
 import {
   ConsolationBracket,
@@ -59,7 +60,7 @@ export class EliminationTournament extends Tournament {
     courtIndex: number,
   ): TournamentMatch {
     return {
-      id: `elim-match-${Date.now()}-${courtIndex}`,
+      id: makeId('elim-match', courtIndex),
       round,
       courtNumber: (courtIndex % this._state.numberOfCourts) + 1,
       team1,

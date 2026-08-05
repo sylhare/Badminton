@@ -6,6 +6,7 @@ import { RoundRobinTournament } from './RoundRobinTournament';
 import { EliminationTournament } from './EliminationTournament';
 import { roundRobinPairings } from './schedule';
 import { partitionIntoGroups, seedQualifiers } from './groups';
+import { makeId } from './ids';
 import { DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
   SetScore,
@@ -77,7 +78,7 @@ export class GroupKnockoutTournament extends Tournament {
     groups.forEach((groupTeams, groupIndex) => {
       for (const pairing of roundRobinPairings(groupTeams)) {
         matches.push({
-          id: `gk-match-${Date.now()}-${index}`,
+          id: makeId('gk-match', index),
           round: pairing.round,
           courtNumber: (index % numberOfCourts) + 1,
           team1: pairing.team1,
