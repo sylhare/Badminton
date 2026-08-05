@@ -7,7 +7,7 @@ import type { Tournament as TournamentBase } from '../../tournament/Tournament';
 import { TournamentSetup } from './TournamentSetup';
 import { TournamentStandings } from './TournamentStandings';
 import { TOURNAMENT_KINDS, TOURNAMENT_TYPES } from './tournamentKinds';
-import { PillGroup } from './PillGroup';
+import { SegmentedControl } from './common/SegmentedControl';
 
 interface TournamentProps {
   tournament: TournamentBase | null;
@@ -54,7 +54,7 @@ export const Tournament: React.FC<TournamentProps> = ({
       <div className="tournament-setup-wrapper">
         <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
           <h3>Mode</h3>
-          <PillGroup
+          <SegmentedControl
             options={TOURNAMENT_TYPES}
             selected={selectedType}
             onSelect={setSelectedType}
