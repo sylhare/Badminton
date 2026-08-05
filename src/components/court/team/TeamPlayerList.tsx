@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { Player } from '../../../types';
+import { cx } from '../../common/cx';
 import type { SlotBinding } from '../edit/slotBinding';
 
 interface TeamPlayerListProps {
@@ -19,11 +20,11 @@ const TeamPlayerList: React.FC<TeamPlayerListProps> = ({
     <>
       {players.map((player, index) => {
         const extra = slotBinding?.getProps(index);
-        const stateClass = slotBinding?.stateClass(index) ?? '';
+        const stateClass = slotBinding?.stateClass(index);
         return (
           <div
             key={player.id}
-            className={`${className}${slotBinding ? ' player-slot-draggable' : ''}${stateClass ? ` ${stateClass}` : ''}`}
+            className={cx(className, slotBinding && 'player-slot-draggable', stateClass)}
             {...extra}
           >
             {player.name}
