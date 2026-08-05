@@ -1,4 +1,5 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../types';
+import { DEFAULT_LEVEL } from '../types';
 
 import { SimulatedAnnealingBase } from './SimulatedAnnealingBase';
 
@@ -52,8 +53,8 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
    * Missing level defaults to 50 (neutral).
    */
   protected calculateLevelBalanceCost(team1: Player[], team2: Player[]): number {
-    const avg1 = team1.reduce((sum, p) => sum + (p.level ?? 50), 0) / team1.length;
-    const avg2 = team2.reduce((sum, p) => sum + (p.level ?? 50), 0) / team2.length;
+    const avg1 = team1.reduce((sum, p) => sum + (p.level ?? DEFAULT_LEVEL), 0) / team1.length;
+    const avg2 = team2.reduce((sum, p) => sum + (p.level ?? DEFAULT_LEVEL), 0) / team2.length;
     return Math.abs(avg1 - avg2) * this.LEVEL_BALANCE_PENALTY;
   }
 
@@ -65,7 +66,7 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
     let cost = 0;
     for (let i = 0; i < team.length; i++) {
       for (let j = i + 1; j < team.length; j++) {
-        cost += Math.abs((team[i].level ?? 50) - (team[j].level ?? 50)) * this.LEVEL_PAIR_BIAS;
+        cost += Math.abs((team[i].level ?? DEFAULT_LEVEL) - (team[j].level ?? DEFAULT_LEVEL)) * this.LEVEL_PAIR_BIAS;
       }
     }
     return cost;
