@@ -1,4 +1,4 @@
-import type { Court, ICourtAssignmentEngine, Player } from '../types';
+import type { Court, ICourtAssignmentEngine } from '../types';
 
 import { SimulatedAnnealingBase } from './SimulatedAnnealingBase';
 
@@ -14,15 +14,6 @@ export class CourtAssignmentEngineSA extends SimulatedAnnealingBase implements I
   readonly name = 'Simulated Annealing';
   get description(): string {
     return `Simulated Annealing with iterative improvement. Performs ${this.SA_ITERATIONS} iterations, accepting worse solutions probabilistically to escape local minima.`;
-  }
-
-  protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
-    let cost = 0;
-    cost += this.calculateTeammateCost(t1, this.TEAMMATE_REPEAT_PENALTY);
-    cost += this.calculateTeammateCost(t2, this.TEAMMATE_REPEAT_PENALTY);
-    cost += this.calculateOpponentCost(t1, t2, this.OPPONENT_REPEAT_PENALTY);
-    cost += this.calculateWinBalanceCost(t1, t2, this.BALANCE_PENALTY);
-    return cost;
   }
 
   protected courtSpecificCost(court: Court): number {

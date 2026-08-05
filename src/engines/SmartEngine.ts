@@ -20,39 +20,31 @@ export class SmartEngine extends SimulatedAnnealingBase implements ICourtAssignm
   readonly description = 'Gender/Level-aware matching. Avoids gender-homogeneous matchups (FF vs MM) and extreme level gaps. Includes a small bias for similar-level teammates.';
 
   protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
-    let cost = 0;
-    cost += this.calculateTeammateCost(t1, this.TEAMMATE_REPEAT_PENALTY);
-    cost += this.calculateTeammateCost(t2, this.TEAMMATE_REPEAT_PENALTY);
-    cost += this.calculateOpponentCost(t1, t2, this.OPPONENT_REPEAT_PENALTY);
-    cost += this.calculateWinBalanceCost(t1, t2, this.BALANCE_PENALTY);
-    cost += this.calculateGenderCost(t1, t2);
-    cost += this.calculateLevelBalanceCost(t1, t2);
-    cost += this.calculateLevelTeammateBias(t1);
-    cost += this.calculateLevelTeammateBias(t2);
-    return cost;
+    return super.evaluateTeamSplitCost(t1, t2)
+      + this.calculateGenderCost(t1, t2)
+      + this.calculateLevelBalanceCost(t1, t2)
+      + this.calculateLevelTeammateBias(t1)
+      + this.calculateLevelTeammateBias(t2);
+  }
+
+  /** The team's single gender if every known-gender player shares it (and there are ≥2), else null. */
+  private soleGender(team: Player[]): 'F' | 'M' | null {
+    const known = team.filter(p => p.gender === 'F' || p.gender === 'M');
+    if (known.length < 2) return null;
+    if (known.every(p => p.gender === 'F')) return 'F';
+    if (known.every(p => p.gender === 'M')) return 'M';
+    return null;
   }
 
   /**
    * Penalizes matchups where one team is entirely F and the other is entirely M.
-   * Players with Unknown or undefined gender are ignored.
-   * Only applies to doubles: singles (1 known-gender player per team) are not penalized.
+   * Players with Unknown or undefined gender are ignored; singles (1 known-gender
+   * player per team) are not penalized.
    */
   protected calculateGenderCost(team1: Player[], team2: Player[]): number {
-    const knownTeam1 = team1.filter(p => p.gender === 'F' || p.gender === 'M');
-    const knownTeam2 = team2.filter(p => p.gender === 'F' || p.gender === 'M');
-
-    if (knownTeam1.length < 2 || knownTeam2.length < 2) return 0;
-
-    const allFemaleTeam1 = knownTeam1.every(p => p.gender === 'F');
-    const allMaleTeam1 = knownTeam1.every(p => p.gender === 'M');
-    const allFemaleTeam2 = knownTeam2.every(p => p.gender === 'F');
-    const allMaleTeam2 = knownTeam2.every(p => p.gender === 'M');
-
-    if ((allFemaleTeam1 && allMaleTeam2) || (allMaleTeam1 && allFemaleTeam2)) {
-      return this.GENDER_MISMATCH_PENALTY;
-    }
-
-    return 0;
+    const g1 = this.soleGender(team1);
+    const g2 = this.soleGender(team2);
+    return g1 && g2 && g1 !== g2 ? this.GENDER_MISMATCH_PENALTY : 0;
   }
 
   /**
