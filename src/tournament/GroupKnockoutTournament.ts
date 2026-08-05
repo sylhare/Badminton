@@ -18,13 +18,22 @@ import type {
 
 const DEFAULT_GROUP_SIZE = 4;
 const DEFAULT_QUALIFIERS_PER_GROUP = 2;
+const MIN_KNOCKOUT_TEAMS = 2;
 
 /**
  * Two-phase tournament: a round-robin group stage followed by a knockout bracket
- * seeded from the top finishers of each group. This class owns the group phase
- * and the qualifier computation; the knockout phase is wired up in a later step.
+ * seeded from the top finishers of each group. This class owns the group phase,
+ * the qualifier computation, and seeding results through into the knockout phase.
  */
 export class GroupKnockoutTournament extends Tournament {
+  private _groupsMemo?: TournamentTeam[][];
+  private _qualifiersMemo?: TournamentTeam[];
+  private _knockoutMemo?: EliminationTournament;
+
+  private static sameSeeding(a: TournamentTeam[], b: TournamentTeam[]): boolean {
+    return a.length === b.length && a.every((team, i) => team.id === b[i].id);
+  }
+
   static create(
     format: TournamentFormat = 'doubles',
     numberOfCourts = 4,
@@ -100,23 +109,13 @@ export class GroupKnockoutTournament extends Tournament {
     return this._state.matches.filter(m => m.group !== undefined);
   }
 
-  /** The teams making up each group, indexed by group number. */
+  /**
+   * The teams making up each group, indexed by group number. Derived from the
+   * stored (shuffled) team list, which `start()` partitioned the same way and
+   * which is never mutated afterwards.
+   */
   groups(): TournamentTeam[][] {
-    const groupMatches = this.groupMatches();
-    if (groupMatches.length === 0) return [];
-
-    const count = Math.max(...groupMatches.map(m => m.group!)) + 1;
-    const groups: TournamentTeam[][] = Array.from({ length: count }, () => []);
-    const seen = new Set<string>();
-    for (const match of groupMatches) {
-      for (const team of [match.team1, match.team2]) {
-        const key = `${match.group}:${team.id}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        groups[match.group!].push(team);
-      }
-    }
-    return groups;
+    return (this._groupsMemo ??= partitionIntoGroups(this._state.teams, this.groupSize()));
   }
 
   /** A single group's matches as a round-robin sub-tournament, for standings and match rendering. */
@@ -144,6 +143,10 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** Qualifying teams in knockout-seed order (empty until the group phase is complete). */
   qualifiers(): TournamentTeam[] {
+    return (this._qualifiersMemo ??= this.computeQualifiers());
+  }
+
+  private computeQualifiers(): TournamentTeam[] {
     if (!this.groupPhaseComplete()) return [];
     const perGroup = this.groups().map((_, groupIndex) =>
       this.groupStandings(groupIndex).slice(0, this.qualifiersPerGroup()).map(row => row.team),
@@ -167,19 +170,19 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** The knockout phase as an EliminationTournament over the seeded qualifiers. */
   knockout(): EliminationTournament {
-    return EliminationTournament.fromState({
+    return (this._knockoutMemo ??= EliminationTournament.fromState({
       ...this._state,
       type: 'elimination',
       teams: this.qualifiers(),
       matches: this.knockoutMatches(),
-    });
+    }));
   }
 
   /** Seed the knockout bracket from the group qualifiers, appending its first-round matches. */
-  private startKnockout(): GroupKnockoutTournament {
+  private startKnockout(qualifiers: TournamentTeam[]): GroupKnockoutTournament {
     const seeded = EliminationTournament
       .create(this._state.format, this._state.numberOfCourts, this._state.bestOf)
-      .startSeeded(this.qualifiers(), this._state.numberOfCourts);
+      .startSeeded(qualifiers, this._state.numberOfCourts);
     return new GroupKnockoutTournament({
       ...this._state,
       matches: [...this._state.matches, ...seeded.matches()],
@@ -189,8 +192,9 @@ export class GroupKnockoutTournament extends Tournament {
 
   private withPhase(matches: TournamentMatch[], bracketSize?: number): GroupKnockoutTournament {
     const state = { ...this._state, matches, bracketSize: bracketSize ?? this._state.bracketSize };
-    const candidate = new GroupKnockoutTournament(state);
-    return new GroupKnockoutTournament({ ...state, phase: candidate.isComplete() ? 'completed' : 'active' });
+    const next = new GroupKnockoutTournament(state);
+    const phase = next.isComplete() ? 'completed' : 'active';
+    return phase === state.phase ? next : new GroupKnockoutTournament({ ...state, phase });
   }
 
   override withMatchResult(matchId: string, winner: 1 | 2, sets?: SetScore[]): this {
@@ -202,39 +206,59 @@ export class GroupKnockoutTournament extends Tournament {
       return this.withPhase([...this.groupMatches(), ...updatedKnockout]) as this;
     }
 
-    const updatedMatches = this._state.matches.map(m =>
+    // A group-stage result changed. Recompute the group phase from the updated
+    // matches alone, then (re)seed the knockout: editing a decided group result
+    // after the bracket was seeded can change who qualifies, so a stale bracket
+    // must be rebuilt (existing knockout matches are dropped) unless the seeding
+    // is unchanged, in which case the played bracket is preserved.
+    const updatedGroupMatches = this.groupMatches().map(m =>
       m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m,
     );
-    let next = new GroupKnockoutTournament({ ...this._state, matches: updatedMatches });
-    if (!next.knockoutStarted() && next.groupPhaseComplete() && next.qualifiers().length >= 2) {
-      next = next.startKnockout();
+    const regrouped = new GroupKnockoutTournament({
+      ...this._state,
+      matches: updatedGroupMatches,
+      bracketSize: undefined,
+    });
+
+    const qualifiers = regrouped.groupPhaseComplete() ? regrouped.qualifiers() : [];
+    if (qualifiers.length < MIN_KNOCKOUT_TEAMS) {
+      return this.withPhase(updatedGroupMatches) as this;
     }
-    return this.withPhase(next.matches(), next.bracketSize()) as this;
+    if (this.knockoutStarted() && GroupKnockoutTournament.sameSeeding(this.qualifiers(), qualifiers)) {
+      const kept = new GroupKnockoutTournament({
+        ...this._state,
+        matches: [...updatedGroupMatches, ...this.knockoutMatches()],
+      });
+      return this.withPhase(kept.matches(), kept.bracketSize()) as this;
+    }
+    const seeded = regrouped.startKnockout(qualifiers);
+    return this.withPhase(seeded.matches(), seeded.bracketSize()) as this;
+  }
+
+  /** The group phase renders its own per-group standings tables, so the combined table is hidden. */
+  override showsCombinedStandings(): boolean {
+    return false;
   }
 
   calculateStandings(): TournamentStandingRow[] {
     return this.groups().flatMap((_, groupIndex) => this.groupStandings(groupIndex));
   }
 
-  private completedGroupRounds(): number {
-    const groupMatches = this.groupMatches();
-    if (groupMatches.length === 0) return 0;
+  /** The whole group phase as one round-robin over every group's matches, for round counting. */
+  private groupPhaseAsRoundRobin(): RoundRobinTournament {
+    return RoundRobinTournament.fromState({
+      ...this._state,
+      type: 'round-robin',
+      matches: this.groupMatches(),
+    });
+  }
 
-    const rounds = Array.from(new Set(groupMatches.map(m => m.round))).sort((a, b) => a - b);
-    let completed = 0;
-    for (const round of rounds) {
-      if (groupMatches.filter(m => m.round === round).every(m => m.winner !== undefined)) {
-        completed = round;
-      } else {
-        break;
-      }
-    }
-    return completed;
+  private completedGroupRounds(): number {
+    return this.groupPhaseAsRoundRobin().completedRounds();
   }
 
   private groupTotalRounds(): number {
-    const groupMatches = this.groupMatches();
-    return groupMatches.length ? Math.max(...groupMatches.map(m => m.round)) : 0;
+    return this.groupPhaseAsRoundRobin().totalRounds();
   }
 
   completedRounds(): number {
@@ -250,7 +274,7 @@ export class GroupKnockoutTournament extends Tournament {
 
   isComplete(): boolean {
     if (!this.groupPhaseComplete()) return false;
-    if (!this.knockoutStarted()) return this.qualifiers().length < 2;
+    if (!this.knockoutStarted()) return this.qualifiers().length < MIN_KNOCKOUT_TEAMS;
     const { matches } = this._state;
     return matches.length > 0 && matches.every(m => m.winner !== undefined);
   }
