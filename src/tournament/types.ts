@@ -90,6 +90,33 @@ export function winningSide(sets: SetScore[]): 1 | 2 | undefined {
   return undefined;
 }
 
+type RawSet = { team1: number | null; team2: number | null };
+
+/**
+ * Resolve a match from raw per-set inputs (null = blank), returning the winner and
+ * played sets, or null when no winner can be recorded. best-of-1: the clicked team
+ * wins and a blank set defaults to 21–18 (a real score can still flip the winner).
+ * best-of-N: the winner is the set majority and a tie yields null. This is the single
+ * place that decides winner-from-click vs winner-from-score.
+ */
+export function resolveMatchResult(
+  rawSets: RawSet[],
+  clicked: 1 | 2,
+  bestOf: number,
+): { winner: 1 | 2; sets: SetScore[] } | null {
+  if (Math.max(1, bestOf) === 1) {
+    const raw = rawSets[0];
+    const defaults = clicked === 1 ? { team1: 21, team2: 18 } : { team1: 18, team2: 21 };
+    const set: SetScore = { team1: raw?.team1 ?? defaults.team1, team2: raw?.team2 ?? defaults.team2 };
+    return { winner: winningSide([set]) ?? clicked, sets: [set] };
+  }
+  const sets = rawSets
+    .filter(s => s.team1 !== null || s.team2 !== null)
+    .map(s => ({ team1: s.team1 ?? 0, team2: s.team2 ?? 0 }));
+  const winner = winningSide(sets);
+  return winner ? { winner, sets } : null;
+}
+
 /** Sets won by each side of a match. */
 export function setsWonBy(match: TournamentMatch): SetScore {
   return tallySets(match.sets);
