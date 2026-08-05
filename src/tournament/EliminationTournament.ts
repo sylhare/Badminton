@@ -331,6 +331,14 @@ export class EliminationTournament extends Tournament {
    * semi-final loser, consolation final — then by fewest losses. Semi-final losers
    * are only ranked once the final is decided, so a pending finalist stays ahead.
    */
+  override standingsSubtitle(): string {
+    return this.isComplete() ? 'Final Results' : 'In Progress';
+  }
+
+  override showsPoints(): boolean {
+    return false;
+  }
+
   calculateStandings(): TournamentStandingRow[] {
     const { matches } = this._state;
     const standings = this.tallyStandings();

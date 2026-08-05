@@ -98,6 +98,27 @@ export abstract class Tournament {
     return null;
   }
 
+  // --- Presentation policy ------------------------------------------------
+  // Each format decides how it is displayed so the view layer can stay generic
+  // (no per-type branching). Defaults suit a round-based, points-scored format.
+
+  /** Subtitle shown above the standings table. */
+  standingsSubtitle(): string {
+    const done = this.completedRounds();
+    const total = this.totalRounds();
+    return done > 0 ? `After Round ${done} / ${total}` : `Round 0 / ${total}`;
+  }
+
+  /** Whether the combined standings table is shown (formats with inline standings hide it). */
+  showsCombinedStandings(): boolean {
+    return true;
+  }
+
+  /** Whether the standings table shows a points column (knockout-only formats hide it). */
+  showsPoints(): boolean {
+    return true;
+  }
+
   abstract start(teams: TournamentTeam[], numberOfCourts: number): Tournament;
   abstract calculateStandings(): TournamentStandingRow[];
   abstract completedRounds(): number;
