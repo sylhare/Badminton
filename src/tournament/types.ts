@@ -66,6 +66,11 @@ export function formatTeamName(team: TournamentTeam): string {
   return team.players.map(p => p.name).join(' & ');
 }
 
+/** Render a match's sets as "21 – 14, 18 – 21", or null when no set was recorded. */
+export function formatSets(sets: SetScore[]): string | null {
+  return sets.length ? sets.map(s => `${s.team1} – ${s.team2}`).join(', ') : null;
+}
+
 /** Sets won by each side across a list of sets. */
 export function tallySets(sets: SetScore[]): SetScore {
   let team1 = 0;
