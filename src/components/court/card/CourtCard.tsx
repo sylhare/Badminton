@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 
 import type { Court } from '../../../types';
 import type { SetScore } from '../../../tournament/types';
-import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
+import { DoublesMatch, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 import { useAnalytics } from '../../../hooks/useAnalytics';
@@ -112,7 +112,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
     );
   } else {
     matchContent = (
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={teams.team1}
         team2Players={teams.team2}
         winner={court.winner}
