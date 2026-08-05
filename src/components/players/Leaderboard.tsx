@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CaretDown, CaretUp } from '@phosphor-icons/react';
 
 import type { Player } from '../../types';
+import { DEFAULT_LEVEL } from '../../types';
 import { useAppState } from '../../providers/AppStateProvider';
 
 interface LeaderboardProps {
@@ -51,7 +52,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
     const ranked = [...filtered].sort((a, b) => {
       let diff = 0;
       if (sortCol === 'wins') diff = a.wins - b.wins;
-      else if (sortCol === 'level') diff = (a.level ?? 50) - (b.level ?? 50);
+      else if (sortCol === 'level') diff = (a.level ?? DEFAULT_LEVEL) - (b.level ?? DEFAULT_LEVEL);
       else diff = (a.averageScore ?? 0) - (b.averageScore ?? 0);
       if (diff !== 0) return sortDir === 'desc' ? -diff : diff;
       return a.name.localeCompare(b.name);

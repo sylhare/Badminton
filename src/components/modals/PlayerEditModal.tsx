@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import type { Player } from '../../types';
+import { DEFAULT_LEVEL } from '../../types';
 import { Tooltip } from '../Tooltip';
 import { SegmentedControl } from '../common/SegmentedControl';
 
@@ -27,7 +28,7 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   useEffect(() => {
     if (player) {
       setGender(player.gender ?? 'Unknown');
-      setLevel(player.level ?? 50);
+      setLevel(player.level ?? DEFAULT_LEVEL);
     }
   }, [player]);
 

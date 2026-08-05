@@ -8,6 +8,9 @@ export interface Player {
   scoredGames?: number;
 }
 
+/** Neutral fallback skill level (0–100) for a player whose level is unknown. */
+export const DEFAULT_LEVEL = 50;
+
 export interface Court {
   courtNumber: number;
   players: Player[];

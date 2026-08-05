@@ -1,4 +1,5 @@
 import type { Player, ScoredGame } from '../types';
+import { DEFAULT_LEVEL } from '../types';
 
 import { LevelTrackerConfig } from './levelTrackerConfig';
 
@@ -6,7 +7,7 @@ import { LevelTrackerConfig } from './levelTrackerConfig';
 function teamBalanceFactor(players?: Player[]): number {
   if (!players || players.length <= 1) return 1;
   const avg = getTeamAvgLevel(players);
-  const variance = players.reduce((s, p) => s + Math.pow((p.level ?? 50) - avg, 2), 0) / players.length;
+  const variance = players.reduce((s, p) => s + Math.pow((p.level ?? DEFAULT_LEVEL) - avg, 2), 0) / players.length;
   return 1 - LevelTrackerConfig.BALANCE_FACTOR_FLOOR * Math.min(1, Math.sqrt(variance) / LevelTrackerConfig.BALANCE_FACTOR_NORMALIZER);
 }
 
@@ -36,8 +37,8 @@ export function getKFactor(
 
 /** Compute the average level for a team, defaulting unknown levels to 50. */
 export function getTeamAvgLevel(players: Player[]): number {
-  if (players.length === 0) return 50;
-  const total = players.reduce((sum, p) => sum + (p.level ?? 50), 0);
+  if (players.length === 0) return DEFAULT_LEVEL;
+  const total = players.reduce((sum, p) => sum + (p.level ?? DEFAULT_LEVEL), 0);
   return total / players.length;
 }
 
@@ -74,7 +75,7 @@ export function updatePlayersLevels(games: ScoredGame[], players: Player[]): Pla
       for (const p of side.team) {
         const current = updated.get(p.id);
         if (!current) continue;
-        const level = Math.round(Math.min(100, Math.max(0, (current.level ?? 50) + delta)) * 10) / 10;
+        const level = Math.round(Math.min(100, Math.max(0, (current.level ?? DEFAULT_LEVEL) + delta)) * 10) / 10;
         const merged: Player = { ...current, level };
 
         if (side.rawScore !== undefined) {
