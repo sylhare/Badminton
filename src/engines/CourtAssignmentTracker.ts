@@ -324,10 +324,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       );
     }
 
-    if (currentEngineType === 'sa' && savedAt !== undefined) {
-      if (Date.now() - savedAt > CourtAssignmentTracker.PAIR_HISTORY_TTL_MS) {
-        this.clearPairHistory();
-      }
+    if (currentEngineType === 'sa' && savedAt !== undefined
+      && Date.now() - savedAt > CourtAssignmentTracker.PAIR_HISTORY_TTL_MS) {
+      this.clearPairHistory();
     }
   }
 
@@ -354,12 +353,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         const losingPlayerIds = losingTeam.map(p => p.id);
 
         const previousRecord = CourtAssignmentTracker.recordedWinsMap.get(courtNumber);
-
-        if (previousRecord && this.shouldReversePreviousRecord(previousRecord, court.winner, winningPlayerIds)) {
+        if (previousRecord) {
+          if (!this.shouldReversePreviousRecord(previousRecord, court.winner, winningPlayerIds)) return;
           this.reversePreviousWinRecord(previousRecord);
-          stateChanged = true;
-        } else if (previousRecord) {
-          return;
         }
 
         winningTeam.forEach(player => {

@@ -171,11 +171,11 @@ function nodeFromResults(
   matches: TournamentMatch[],
 ): BracketNode {
   if (resultA === 'bye' && resultB === 'bye') return { type: 'empty', slotIndex: position };
-  if (resultA === 'bye') {
-    return resultB === 'tbd' ? { type: 'tbd', slotIndex: position } : { type: 'bye-advance', team: resultB as TournamentTeam, slotIndex: position };
-  }
-  if (resultB === 'bye') {
-    return resultA === 'tbd' ? { type: 'tbd', slotIndex: position } : { type: 'bye-advance', team: resultA as TournamentTeam, slotIndex: position };
+  if (resultA === 'bye' || resultB === 'bye') {
+    const survivor = resultA === 'bye' ? resultB : resultA;
+    return survivor === 'tbd'
+      ? { type: 'tbd', slotIndex: position }
+      : { type: 'bye-advance', team: survivor as TournamentTeam, slotIndex: position };
   }
   if (resultA === 'tbd' || resultB === 'tbd') return { type: 'tbd', slotIndex: position };
 
