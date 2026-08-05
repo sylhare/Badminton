@@ -263,7 +263,7 @@ export class EliminationTournament extends Tournament {
     const bracketSize = nextPowerOf2(teams.length);
     const setup = new EliminationTournament({ ...this._state, teams, numberOfCourts, bracketSize });
     const matches = setup.generateWinnersFirstRound();
-    return new EliminationTournament({ ...setup._state, phase: 'active', matches });
+    return new EliminationTournament({ ...setup._state, matches });
   }
 
   override withMatchResult(
@@ -280,8 +280,7 @@ export class EliminationTournament extends Tournament {
     }
     const followUp = this.generateFollowUpMatches(updatedMatches);
     const allMatches = [...updatedMatches, ...followUp];
-    const phase = this.allDecided(allMatches) ? 'completed' : 'active';
-    return this.rebuild({ ...this._state, matches: allMatches, phase });
+    return this.rebuild({ ...this._state, matches: allMatches });
   }
 
   /**
