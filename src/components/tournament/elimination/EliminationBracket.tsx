@@ -4,7 +4,6 @@ import type { SetScore } from '../../../tournament/types';
 import type { BracketNode } from '../../../tournament/bracketTree';
 import { nextPowerOf2, roundLabel } from '../../../tournament/bracketTree';
 import { EliminationTournament } from '../../../tournament/EliminationTournament';
-import ScoreInputModal from '../../modals/ScoreInputModal';
 import { useMatchModal } from '../useMatchModal';
 
 import { CARD_HEIGHT, HEADER_HEIGHT } from './BracketColumn';
@@ -27,13 +26,7 @@ interface EliminationBracketProps {
 }
 
 export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onMatchResult }) => {
-  const {
-    modalMatch,
-    pendingWinner,
-    handleTeamClick,
-    handleModalConfirm,
-    handleModalCancel,
-  } = useMatchModal(onMatchResult);
+  const { handleTeamClick, scoreModal } = useMatchModal(onMatchResult);
 
   const bracketSize = tournament.bracketSize();
 
@@ -101,17 +94,7 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
         />
       ))}
 
-      {modalMatch && pendingWinner !== null && (
-        <ScoreInputModal
-          isOpen
-          winnerTeam={pendingWinner}
-          team1Players={modalMatch.team1.players}
-          team2Players={modalMatch.team2.players}
-          bestOf={tournament.state().bestOf}
-          onConfirm={handleModalConfirm}
-          onCancel={handleModalCancel}
-        />
-      )}
+      {scoreModal(tournament.state().bestOf)}
     </div>
   );
 };
