@@ -32,7 +32,7 @@ test.describe('Tournament Page - Group + Knockout', () => {
     await page.getByTestId('format-pill-singles').click();
     await tournamentPage.selectType('group-knockout');
 
-    await tournamentPage.setGroupConfig(2, 2);
+    await tournamentPage.setGroupConfig(3, 2);
 
     await expect(page.getByTestId('qualifiers-warning')).toBeVisible();
     await expect(page.getByTestId('start-tournament-button')).toBeDisabled();
