@@ -53,6 +53,19 @@ export class GroupKnockoutTournament extends Tournament {
     });
   }
 
+  /**
+   * Config error when the qualifiers would take a whole group (a pointless knockout),
+   * else null. Validated against the *actual* smallest group, which can be smaller than
+   * the requested groupSize once partitionIntoGroups caps the group count.
+   */
+  static validateConfig(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
+    if (teams.length === 0) return null;
+    const smallest = Math.min(...partitionIntoGroups(teams, groupSize).map(g => g.length));
+    return qualifiersPerGroup >= smallest
+      ? 'Every team in a group would qualify — lower the qualifiers or raise the group size.'
+      : null;
+  }
+
   static fromState(state: TournamentState): GroupKnockoutTournament {
     return new GroupKnockoutTournament(state);
   }
@@ -193,6 +206,11 @@ export class GroupKnockoutTournament extends Tournament {
     return this.rebuild({ ...this._state, matches, bracketSize: bracketSize ?? this._state.bracketSize });
   }
 
+  /** A fresh instance holding only the given group matches (knockout dropped, ready to re-seed). */
+  private withGroupMatches(groupMatches: TournamentMatch[]): GroupKnockoutTournament {
+    return new GroupKnockoutTournament({ ...this._state, matches: groupMatches, bracketSize: undefined });
+  }
+
   override withMatchResult(matchId: string, winner: 1 | 2, sets?: SetScore[]): this {
     const existing = this._state.matches.find(m => m.id === matchId);
     if (!existing) return this;
@@ -207,23 +225,13 @@ export class GroupKnockoutTournament extends Tournament {
     // after the bracket was seeded can change who qualifies, so a stale bracket
     // must be rebuilt (existing knockout matches are dropped) unless the seeding
     // is unchanged, in which case the played bracket is preserved.
-    const updatedGroupMatches = this.replaceMatch(this.groupMatches(), matchId, winner, sets);
-    const regrouped = new GroupKnockoutTournament({
-      ...this._state,
-      matches: updatedGroupMatches,
-      bracketSize: undefined,
-    });
+    const groupMatches = this.replaceMatch(this.groupMatches(), matchId, winner, sets);
+    const regrouped = this.withGroupMatches(groupMatches);
+    const qualifiers = regrouped.qualifiers();
 
-    const qualifiers = regrouped.groupPhaseComplete() ? regrouped.qualifiers() : [];
-    if (qualifiers.length < MIN_KNOCKOUT_TEAMS) {
-      return this.withState(updatedGroupMatches);
-    }
+    if (qualifiers.length < MIN_KNOCKOUT_TEAMS) return this.withState(groupMatches);
     if (this.knockoutStarted() && GroupKnockoutTournament.sameSeeding(this.qualifiers(), qualifiers)) {
-      const kept = new GroupKnockoutTournament({
-        ...this._state,
-        matches: [...updatedGroupMatches, ...this.knockoutMatches()],
-      });
-      return this.withState(kept.matches(), kept.bracketSize());
+      return this.withState([...groupMatches, ...this.knockoutMatches()], this.bracketSize());
     }
     const seeded = regrouped.startKnockout(qualifiers);
     return this.withState(seeded.matches(), seeded.bracketSize());
