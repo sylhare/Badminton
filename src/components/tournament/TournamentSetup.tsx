@@ -4,6 +4,7 @@ import type { Player } from '../../types';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
 import { formatTeamName } from '../../tournament/types';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
+import { partitionIntoGroups } from '../../tournament/groups';
 import type { SlotAddr } from '../../utils/slotSwap';
 import { swapInGroups } from '../../utils/slotSwap';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
@@ -76,8 +77,16 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
       ? `${matchesPerRound} matches per round but only ${numberOfCourts} court${numberOfCourts > 1 ? 's' : ''} — some matches will need to wait.`
       : null;
 
+  // Validate qualifiers against the *actual* smallest group, which can be smaller
+  // than the requested groupSize once partitionIntoGroups caps the group count.
+  const smallestGroupSize =
+    type === 'group-knockout' && teams.length > 0
+      ? Math.min(...partitionIntoGroups(teams, groupSize).map(g => g.length))
+      : groupSize;
+  const qualifiersTooHigh = type === 'group-knockout' && qualifiersPerGroup >= smallestGroupSize;
+
   const handleStart = () => {
-    if (validationError) return;
+    if (validationError || qualifiersTooHigh) return;
     onStart(teams, numberOfCourts, format, bestOf, groupSize, qualifiersPerGroup);
   };
 
@@ -158,7 +167,11 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
                 type="number"
                 min="2"
                 value={groupSize}
-                onChange={e => setGroupSize(Math.max(2, parseInt(e.target.value, 10) || 2))}
+                onChange={e => {
+                  const next = Math.max(2, parseInt(e.target.value, 10) || 2);
+                  setGroupSize(next);
+                  setQualifiersPerGroup(q => Math.min(q, next - 1));
+                }}
                 className="court-count-input"
                 data-testid="group-size-input"
               />
@@ -176,7 +189,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
               />
             </label>
           </div>
-          {qualifiersPerGroup >= groupSize && (
+          {qualifiersTooHigh && (
             <p className="setup-warning" data-testid="qualifiers-warning">
               Every team in a group would qualify — lower the qualifiers or raise the group size.
             </p>
@@ -236,7 +249,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
       <button
         className="button button-primary"
         onClick={handleStart}
-        disabled={!!validationError || teams.length === 0}
+        disabled={!!validationError || teams.length === 0 || qualifiersTooHigh}
         data-testid="start-tournament-button"
       >
         Start Tournament

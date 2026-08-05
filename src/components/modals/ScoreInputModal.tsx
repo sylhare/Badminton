@@ -83,9 +83,14 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   };
 
   const resolvedSets = resolveSets();
-  const resolvedWinner: 1 | 2 = winningSide(resolvedSets) ?? winnerTeam;
+  const decidedWinner = winningSide(resolvedSets);
+  // Single-set matches always confirm (blank defaults to a 21–18 win for the clicked
+  // team). Best-of-N requires a genuine set majority, so a tie can't record a winner.
+  const canConfirm = isSingle || decidedWinner !== undefined;
+  const resolvedWinner: 1 | 2 = decidedWinner ?? winnerTeam;
 
   const handleConfirm = () => {
+    if (!canConfirm) return;
     onConfirm(resolvedWinner, resolvedSets);
     setSets([emptySet()]);
   };
@@ -130,7 +135,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      title={`🏆 Team ${resolvedWinner} wins!`}
+      title={canConfirm ? `🏆 Team ${resolvedWinner} wins!` : 'Enter the set scores'}
       onClose={handleCancel}
       testId="score-input-modal"
     >
@@ -150,6 +155,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
         <button
           className="button button-primary"
           onClick={handleConfirm}
+          disabled={!canConfirm}
           data-testid="score-modal-confirm"
         >
           Confirm
