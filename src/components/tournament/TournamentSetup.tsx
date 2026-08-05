@@ -9,9 +9,8 @@ import type { SlotAddr } from '../../utils/slotSwap';
 import { swapInGroups } from '../../utils/slotSwap';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
-
-import { SegmentedControl } from './common/SegmentedControl';
-import { NumberField } from './common/NumberField';
+import { SegmentedControl } from '../common/SegmentedControl';
+import { NumberField } from '../common/NumberField';
 
 const BEST_OF_OPTIONS = [1, 3, 5];
 
