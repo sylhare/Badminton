@@ -50,7 +50,7 @@ function buildGroups(courts: Court[], bench: Player[]): Player[][] {
 
 /**
  * Swaps the two addressed players and rebuilds the court layout, keeping each
- * court's `players` list in sync with its `teams` and clearing `winner`/`score`
+ * court's `players` list in sync with its `teams` and clearing `winner`/`sets`
  * on any court whose team composition changed (the previous result is no longer
  * valid once the line-up differs). Returns the original layout unchanged for a
  * no-op swap.
@@ -82,7 +82,7 @@ export function applyCourtSwap(
 
     if (changed) {
       next.winner = undefined;
-      next.score = undefined;
+      next.sets = undefined;
     }
     return next;
   });

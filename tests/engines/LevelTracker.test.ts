@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { levelTracker as tracker } from '../../src/engines/LevelTracker';
 import { resolveMatchImportance, tournamentToScoredGames } from '../../src/engines/levelAdapters';
 import { LevelTrackerConfig } from '../../src/engines/levelTrackerConfig';
+import { MatchScore } from '../../src/scoring/MatchScore';
 import type { Court, Player } from '../../src/types';
 import { BracketKind } from '../../src/tournament/types';
 import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
@@ -24,7 +25,7 @@ function makeCourt(
   winner: 1 | 2,
   score?: { team1: number; team2: number },
 ): Court {
-  return { courtNumber: 1, teams: { team1, team2 }, winner, score };
+  return { courtNumber: 1, teams: { team1, team2 }, winner, sets: score ? [score] : [] };
 }
 
 describe('LevelTracker', () => {
@@ -219,7 +220,8 @@ describe('tournamentToScoredGames', () => {
       { team1: 21, team2: 15 }, { team1: 21, team2: 18 },
     ]);
     const { games } = tournamentToScoredGames(decided);
-    expect(games[0].court.score).toEqual({ team1: 21, team2: 17 });
+    expect(MatchScore.of(games[0].court.sets ?? [], games[0].court.winner).eloScore())
+      .toEqual({ team1: 21, team2: 17 });
   });
 
   it('replays group matches before the knockout and boosts the knockout final', () => {
@@ -252,7 +254,7 @@ describe('tournamentToScoredGames', () => {
 
     expect(games).toHaveLength(1);
     expect(games[0].court.winner).toBe(1);
-    expect(games[0].court.score).toEqual({ team1: 21, team2: 15 });
+    expect(games[0].court.sets).toEqual([{ team1: 21, team2: 15 }]);
     expect(games[0].court.teams?.team1.map(p => p.id)).toEqual(firstMatch.team1.players.map(p => p.id));
     expect(games[0].court.teams?.team2.map(p => p.id)).toEqual(firstMatch.team2.players.map(p => p.id));
   });

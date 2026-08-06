@@ -1,3 +1,5 @@
+import { MatchScore } from '../scoring/MatchScore';
+
 import type {
   SetScore,
   TournamentFormat,
@@ -7,7 +9,6 @@ import type {
   TournamentState,
   TournamentTeam,
 } from './types';
-import { setsWonBy, totalPoints } from './types';
 
 export abstract class Tournament {
   protected readonly _state: TournamentState;
@@ -97,11 +98,12 @@ export abstract class Tournament {
       winRow.points += pointsPerWin;
       lossRow.lost++;
 
-      const sets = setsWonBy(match);
+      const score = MatchScore.of(match.sets, match.winner);
+      const sets = score.setsWon();
       row1.setDiff += sets.team1 - sets.team2;
       row2.setDiff += sets.team2 - sets.team1;
 
-      const points = totalPoints(match);
+      const points = score.points();
       row1.scoreDiff += points.team1 - points.team2;
       row2.scoreDiff += points.team2 - points.team1;
     }

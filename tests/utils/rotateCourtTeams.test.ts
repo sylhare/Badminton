@@ -85,12 +85,12 @@ describe('rotateCourtTeams', () => {
         players: [A, B, C, D],
         teams: { team1: [A, B], team2: [C, D] },
         winner: 1,
-        score: { team1: 21, team2: 15 },
+        sets: [{ team1: 21, team2: 15 }],
       };
 
       const rotated = rotateCourtTeams(court);
 
-      expect(rotated.score).toBeUndefined();
+      expect(rotated.sets).toBeUndefined();
     });
 
     it('preserves court number and players array', () => {
@@ -127,12 +127,12 @@ describe('rotateCourtTeams', () => {
         players: [A, B],
         teams: { team1: [A], team2: [B] },
         winner: 1,
-        score: { team1: 21, team2: 12 },
+        sets: [{ team1: 21, team2: 12 }],
       };
 
       const rotated = rotateCourtTeams(court);
 
-      expect(rotated.score).toBeUndefined();
+      expect(rotated.sets).toBeUndefined();
     });
 
     it('swaps team1 and team2', () => {

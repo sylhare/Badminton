@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowsLeftRight } from '@phosphor-icons/react';
 
-import type { Court, Player, WinnerSelection } from '../../types';
+import type { Court, Player, SetScore, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
 import type { SlotAddr } from '../../utils/slotSwap';
@@ -33,7 +33,7 @@ interface CourtAssignmentsProps {
   onNumberOfCourtsChange: (courts: number) => void;
   onGenerateAssignments: () => void;
   onWinnerChange?: (courtNumber: number, winner: WinnerSelection) => void;
-  onScoreChange?: (courtNumber: number, score?: { team1: number; team2: number }) => void;
+  onScoreChange?: (courtNumber: number, sets?: SetScore[]) => void;
   onRotateTeams?: (courtNumber: number) => void;
   onSwapPlayers?: (from: SlotAddr, to: SlotAddr) => void;
   onViewBenchCounts?: () => void;
