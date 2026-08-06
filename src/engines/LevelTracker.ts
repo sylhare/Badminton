@@ -1,4 +1,4 @@
-import type { Player, ScoredGame } from '../types';
+import type { Player, ScoredGame, SetScore } from '../types';
 import { DEFAULT_LEVEL } from '../types';
 import { MatchScore } from '../scoring/MatchScore';
 
@@ -14,7 +14,7 @@ function teamBalanceFactor(players?: Player[]): number {
 
 /** K-factor (max rating change per game) from the score, normalised to the reference length and scaled by team balance. */
 export function getKFactor(
-  score?: { team1: number; team2: number },
+  score?: SetScore,
   winner?: 1 | 2,
   teamPlayers?: Player[],
 ): number {

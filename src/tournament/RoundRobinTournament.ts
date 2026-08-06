@@ -127,7 +127,7 @@ export class RoundRobinTournament extends Tournament {
   currentRound(): number {
     const rounds = this.roundNumbers();
     for (const r of rounds) {
-      if (this.matchesForRound(r).some(m => m.winner === undefined)) return r;
+      if (!this.isRoundComplete(r)) return r;
     }
     return rounds[rounds.length - 1] ?? 1;
   }
