@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-import type { Player } from '../../types';
-import type { SetScore } from '../../tournament/types';
-import { resolveMatchResult, defaultSinglesScore } from '../../tournament/types';
+import type { Player, SetScore } from '../../types';
+import { MatchScore } from '../../scoring/MatchScore';
 
 import Modal from './Modal';
 
@@ -60,13 +59,13 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     }));
   };
 
-  const singleDefaults = defaultSinglesScore(winnerTeam);
+  const singleDefaults = MatchScore.defaultSingle(winnerTeam);
 
   const parseScore = (value: string): number | null => {
     const n = parseInt(value, 10);
     return isNaN(n) ? null : n;
   };
-  const result = resolveMatchResult(
+  const result = MatchScore.resolve(
     sets.map(s => ({ team1: parseScore(s.s1), team2: parseScore(s.s2) })),
     winnerTeam,
     setCount,
@@ -75,7 +74,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   const resolvedWinner: 1 | 2 = result?.winner ?? winnerTeam;
 
   const handleConfirm = () => {
-    if (!result) return;
+    if (!result || !result.winner) return;
     onConfirm(result.winner, result.sets);
     setSets([emptySet()]);
   };

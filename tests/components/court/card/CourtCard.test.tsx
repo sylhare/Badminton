@@ -170,7 +170,7 @@ describe('CourtCard', () => {
       await user.click(screen.getByTestId('score-modal-confirm'));
 
       expect(mockOnWinnerChange).toHaveBeenCalledWith(3, 1);
-      expect(mockOnScoreChange).toHaveBeenCalledWith(3, { team1: 21, team2: 15 });
+      expect(mockOnScoreChange).toHaveBeenCalledWith(3, [{ team1: 21, team2: 15 }]);
     });
   });
 

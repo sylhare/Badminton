@@ -1,5 +1,6 @@
 import type { Player, ScoredGame } from '../types';
 import { DEFAULT_LEVEL } from '../types';
+import { MatchScore } from '../scoring/MatchScore';
 
 import { LevelTrackerConfig } from './levelTrackerConfig';
 
@@ -60,17 +61,19 @@ export function updatePlayersLevels(games: ScoredGame[], players: Player[]): Pla
   for (const { court, importance } of games) {
     if (!court.winner || !court.teams) continue;
 
+    const result = MatchScore.of(court.sets ?? [], court.winner);
+    const score = result.eloScore();
     const weight = importance ?? LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE;
     const sides = [court.teams.team1, court.teams.team2].map((team, i) => ({
       team: team.map(p => updated.get(p.id) ?? p),
-      won: court.winner === i + 1,
-      rawScore: i === 0 ? court.score?.team1 : court.score?.team2,
+      won: result.winner === i + 1,
+      rawScore: i === 0 ? score?.team1 : score?.team2,
     }));
     const avg = sides.map(s => getTeamAvgLevel(s.team));
 
     sides.forEach((side, i) => {
       const expected = 1 / (1 + Math.pow(10, (avg[1 - i] - avg[i]) / LevelTrackerConfig.ELO_DIVISOR));
-      const delta = getKFactor(court.score, court.winner, side.team) * weight * ((side.won ? 1 : 0) - expected);
+      const delta = getKFactor(score, result.winner, side.team) * weight * ((side.won ? 1 : 0) - expected);
 
       for (const p of side.team) {
         const current = updated.get(p.id);

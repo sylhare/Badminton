@@ -13,13 +13,13 @@ import { useAppState } from './providers/AppStateProvider';
 import { benchedPlayers } from './utils/playerUtils';
 import { applyCourtSwap } from './utils/courtSwap';
 import type { SlotAddr } from './utils/slotSwap';
-import type { Court, WinnerSelection } from './types';
+import type { Court, SetScore, WinnerSelection } from './types';
 
 export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
   if (!teams) return court;
 
-  const cleared = { ...court, winner: undefined, score: undefined };
+  const cleared = { ...court, winner: undefined, sets: undefined };
 
   if (players.length === 4) {
     const [p0, p1, p2, p3] = players;
@@ -90,10 +90,10 @@ function App(): React.ReactElement {
     setLastGeneratedAt(undefined);
   };
 
-  const handleScoreChange = (courtNumber: number, score?: { team1: number; team2: number }) => {
+  const handleScoreChange = (courtNumber: number, sets?: SetScore[]) => {
     setAssignments(prev =>
       prev.map(c =>
-        c.courtNumber === courtNumber ? { ...c, score } : c,
+        c.courtNumber === courtNumber ? { ...c, sets } : c,
       ),
     );
   };
