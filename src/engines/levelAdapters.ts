@@ -1,7 +1,7 @@
 import type { Player, ScoredGame } from '../types';
 import type { Tournament } from '../tournament/Tournament';
-import { BracketKind, totalPoints } from '../tournament/types';
-import type { SetScore, TournamentMatch } from '../tournament/types';
+import { BracketKind } from '../tournament/types';
+import type { TournamentMatch } from '../tournament/types';
 
 import { LevelTrackerConfig } from './levelTrackerConfig';
 
@@ -34,18 +34,6 @@ function phaseRank(match: TournamentMatch): number {
   return match.bracket === undefined ? 0 : 1;
 }
 
-/**
- * The score fed to the Elo K-factor: the average of the sets, not their sum, so
- * a best-of-N winner still reads as a ~21-point game and the margin-of-victory
- * scale applies (a summed total would exceed the reference length and flatten K).
- */
-function averageSetScore(match: TournamentMatch): SetScore | undefined {
-  if (!match.sets.length) return undefined;
-  const total = totalPoints(match);
-  const n = match.sets.length;
-  return { team1: Math.round(total.team1 / n), team2: Math.round(total.team2 / n) };
-}
-
 /** The winners bracket's final round, used to locate the final/semi for the importance boost. */
 function winnersFinalRound(matches: TournamentMatch[], fallback: number): number {
   const rounds = matches.filter(m => m.bracket === BracketKind.Winners).map(m => m.round);
@@ -60,7 +48,7 @@ function matchToScoredGame(match: TournamentMatch, finalRound: number): ScoredGa
       players: [...match.team1.players, ...match.team2.players],
       teams: { team1: match.team1.players, team2: match.team2.players },
       winner: match.winner,
-      score: averageSetScore(match),
+      sets: match.sets,
     },
     importance: resolveMatchImportance(match, finalRound),
   };

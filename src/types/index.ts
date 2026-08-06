@@ -11,6 +11,12 @@ export interface Player {
 /** Neutral fallback skill level (0–100) for a player whose level is unknown. */
 export const DEFAULT_LEVEL = 50;
 
+/** Points scored by each side within a single set. */
+export interface SetScore {
+  team1: number;
+  team2: number;
+}
+
 export interface Court {
   courtNumber: number;
   players: Player[];
@@ -19,7 +25,8 @@ export interface Court {
     team2: Player[];
   };
   winner?: 1 | 2;
-  score?: { team1: number; team2: number };
+  /** One entry per set played; empty while undecided or won without a score. A casual game is a best-of-1. */
+  sets?: SetScore[];
 }
 
 export type TeamNumber = 1 | 2;

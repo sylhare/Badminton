@@ -1,6 +1,6 @@
-import type { AppState, CourtEngineState, EngineType } from '../types';
+import type { AppState, Court, CourtEngineState, EngineType, SetScore } from '../types';
 import { DEFAULT_TOURNAMENT_STATE } from '../tournament/types';
-import type { SetScore, TournamentMatch, TournamentState } from '../tournament/types';
+import type { TournamentMatch, TournamentState } from '../tournament/types';
 
 interface StorageData {
   app: AppState;
@@ -34,16 +34,27 @@ interface CompactEngineState {
   rp?: number;
 }
 
-/**
- * Migrates a persisted match to the sets model: matches saved before best-of-N
- * carried a single `score`, which becomes a one-entry `sets` array.
- */
+/* ─── LEGACY sets-model back-compat ───────────────────────────────────────────
+ * Before the unified sets model, both tournament matches and casual courts stored a
+ * single `score`; they now store a `sets` array. These two readers upgrade old saves
+ * on load. Delete this block (and its two call sites) once no pre-sets saves remain. */
+
+/** Tournament match: a saved single `score` becomes a one-entry `sets` array. */
 function migrateMatchSets(match: TournamentMatch): TournamentMatch {
   const legacy = match as TournamentMatch & { score?: SetScore };
   if (legacy.sets) return match;
   const { score, ...rest } = legacy;
   return { ...rest, sets: score ? [score] : [] };
 }
+
+/** Casual court: a saved single `score` becomes a one-entry `sets` array. Pristine courts (no score) are left as-is. */
+function migrateCourtSets(court: Court): Court {
+  const legacy = court as Court & { score?: SetScore };
+  if (legacy.sets || legacy.score === undefined) return court;
+  const { score, ...rest } = legacy;
+  return { ...rest, sets: [score] };
+}
+/* ─── end legacy back-compat ─────────────────────────────────────────────────── */
 
 export async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
@@ -135,7 +146,7 @@ class StorageManager {
       return {
         players: Array.isArray(app.players) ? app.players : [],
         numberOfCourts: typeof app.numberOfCourts === 'number' ? app.numberOfCourts : 4,
-        assignments: Array.isArray(app.assignments) ? app.assignments : [],
+        assignments: Array.isArray(app.assignments) ? app.assignments.map(migrateCourtSets) : [],
         lastGeneratedAt: typeof app.lastGeneratedAt === 'number' ? app.lastGeneratedAt : undefined,
         isSmartEngineEnabled: typeof app.isSmartEngineEnabled === 'boolean' ? app.isSmartEngineEnabled : undefined,
         savedAt: typeof app.savedAt === 'number' ? app.savedAt : undefined,

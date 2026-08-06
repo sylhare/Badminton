@@ -1,7 +1,7 @@
 import React from 'react';
 
 import type { SetScore, TournamentMatch } from '../../../tournament/types';
-import { formatSets } from '../../../tournament/types';
+import { MatchScore } from '../../../scoring/MatchScore';
 import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
 import { cx } from '../../common/cx';
@@ -54,7 +54,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
             {expanded && (
               <div className="round-matches" data-testid="round-matches">
                 {roundMatches.map(match => {
-                  const score = formatSets(match.sets);
+                  const score = MatchScore.of(match.sets, match.winner).formatted();
                   return (
                     <div
                       key={match.id}
