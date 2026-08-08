@@ -14,6 +14,17 @@ export function resolveMatchImportance(match: TournamentMatch, totalRounds: numb
   return LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE;
 }
 
+/** Replay order within a round: winners bracket, then consolation, then third-place. */
+const BRACKET_REPLAY_RANK: Record<BracketKind, number> = {
+  [BracketKind.Winners]: 0,
+  [BracketKind.Consolation]: 1,
+  [BracketKind.ThirdPlace]: 2,
+};
+
+function bracketRank(match: TournamentMatch): number {
+  return match.bracket === undefined ? 0 : BRACKET_REPLAY_RANK[match.bracket];
+}
+
 /** A tournament match is a court result carrying its Elo importance. */
 function matchToScoredGame(match: TournamentMatch, totalRounds: number): ScoredGame {
   return {
@@ -34,7 +45,7 @@ export function tournamentToScoredGames(tournament: Tournament): { baseline: Pla
   const totalRounds = tournament.totalRounds();
   const games: ScoredGame[] = tournament.matches()
     .filter(match => match.winner)
-    .sort((a, b) => a.round - b.round || a.courtNumber - b.courtNumber)
+    .sort((a, b) => a.round - b.round || bracketRank(a) - bracketRank(b) || a.courtNumber - b.courtNumber)
     .map(match => matchToScoredGame(match, totalRounds));
   return { baseline, games };
 }

@@ -39,8 +39,8 @@ test.describe('Court player drag-and-drop editing', () => {
   });
 
   test('records the win for the post-swap team, not the swapped-away player', async () => {
-    const swappedAway = await mainPage.playerAtSlot('0:0'); // court 1, team 1, slot 0
-    const swappedIn = await mainPage.playerAtSlot('2:0'); // court 2, team 1, slot 0
+    const swappedAway = await mainPage.playerAtSlot('0:0');
+    const swappedIn = await mainPage.playerAtSlot('2:0');
     expect(swappedAway).not.toBe(swappedIn);
 
     await mainPage.dragPlayer('0:0', '2:0');

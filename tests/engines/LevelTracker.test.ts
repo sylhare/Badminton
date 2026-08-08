@@ -256,6 +256,39 @@ describe('tournamentToScoredGames', () => {
     expect(actual).toEqual(expected);
   });
 
+  it('replays winners-bracket matches before consolation within the same round', () => {
+    const decided = (id: string, courtNumber: number, bracket: BracketKind): TournamentMatch => ({
+      id, round: 1, courtNumber, bracket, winner: 1,
+      team1: team(`${id}-a`, [makePlayer(`${id}-a`)]), team2: team(`${id}-b`, [makePlayer(`${id}-b`)]),
+    });
+    const cb = decided('cb', 1, BracketKind.Consolation);
+    const wb = decided('wb', 2, BracketKind.Winners);
+    const { games } = tournamentToScoredGames({
+      teams: () => [cb.team1, cb.team2, wb.team1, wb.team2],
+      totalRounds: () => 2,
+      matches: () => [cb, wb],
+    } as never);
+
+    expect(games.map(g => g.court.courtNumber)).toEqual([2, 1]);
+  });
+
+  it('orders winners, then consolation, then third-place within a round', () => {
+    const decided = (id: string, bracket: BracketKind): TournamentMatch => ({
+      id, round: 2, courtNumber: 1, bracket, winner: 1,
+      team1: team(`${id}-a`, [makePlayer(`${id}-a`)]), team2: team(`${id}-b`, [makePlayer(`${id}-b`)]),
+    });
+    const third = decided('tp', BracketKind.ThirdPlace);
+    const cons = decided('cb', BracketKind.Consolation);
+    const win = decided('wb', BracketKind.Winners);
+    const { games } = tournamentToScoredGames({
+      teams: () => [third, cons, win].flatMap(m => [m.team1, m.team2]),
+      totalRounds: () => 2,
+      matches: () => [third, cons, win],
+    } as never);
+
+    expect(games.map(g => g.court.players[0].name)).toEqual(['Player wb-a', 'Player cb-a', 'Player tp-a']);
+  });
+
   it('round-robin matches all keep the base weight (no bracket, no final boost)', () => {
     let tournament = startTournament();
     for (const match of tournament.matches()) {
