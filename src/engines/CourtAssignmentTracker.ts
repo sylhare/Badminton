@@ -8,6 +8,7 @@ import type {
   Player,
   UpdateWinnerParams,
 } from '../types';
+import { DEFAULT_LEVEL } from '../types';
 import { MAX_LEVEL_HISTORY_ENTRIES, storageManager } from '../utils/StorageManager';
 import { benchedPlayers, opponentPairs, samePlayers, shuffleArray, teamPairs } from '../utils/playerUtils';
 
@@ -323,10 +324,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
       );
     }
 
-    if (currentEngineType === 'sa' && savedAt !== undefined) {
-      if (Date.now() - savedAt > CourtAssignmentTracker.PAIR_HISTORY_TTL_MS) {
-        this.clearPairHistory();
-      }
+    if (currentEngineType === 'sa' && savedAt !== undefined
+      && Date.now() - savedAt > CourtAssignmentTracker.PAIR_HISTORY_TTL_MS) {
+      this.clearPairHistory();
     }
   }
 
@@ -353,12 +353,9 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
         const losingPlayerIds = losingTeam.map(p => p.id);
 
         const previousRecord = CourtAssignmentTracker.recordedWinsMap.get(courtNumber);
-
-        if (previousRecord && this.shouldReversePreviousRecord(previousRecord, court.winner, winningPlayerIds)) {
+        if (previousRecord) {
+          if (!this.shouldReversePreviousRecord(previousRecord, court.winner, winningPlayerIds)) return;
           this.reversePreviousWinRecord(previousRecord);
-          stateChanged = true;
-        } else if (previousRecord) {
-          return;
         }
 
         winningTeam.forEach(player => {
@@ -388,7 +385,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   recordLevelSnapshot(players: Player[]): void {
     for (const p of players) {
       const history = CourtAssignmentTracker.levelHistoryMap.get(p.id) ?? [];
-      history.push(p.level ?? 50);
+      history.push(p.level ?? DEFAULT_LEVEL);
       if (history.length > CourtAssignmentTracker.MAX_LEVEL_HISTORY) history.shift();
       CourtAssignmentTracker.levelHistoryMap.set(p.id, history);
     }

@@ -12,6 +12,7 @@ import type {
   TournamentTeam,
 } from './types';
 import { RoundRobinTournament } from './RoundRobinTournament';
+import { makeId } from './ids';
 import type { SeedSlots } from './bracketTree';
 import {
   ConsolationBracket,
@@ -20,9 +21,12 @@ import {
   getCBExpectedPool,
   getWBSemiFinalLosers,
   getWinnersFirstRoundLoser,
+  loserOf,
   nextPowerOf2,
+  positionsInRound,
   resolvePosition,
   roundComplete,
+  winnerOf,
 } from './bracketTree';
 
 export class EliminationTournament extends Tournament {
@@ -56,7 +60,7 @@ export class EliminationTournament extends Tournament {
     courtIndex: number,
   ): TournamentMatch {
     return {
-      id: `elim-match-${Date.now()}-${courtIndex}`,
+      id: makeId('elim-match', courtIndex),
       round,
       courtNumber: (courtIndex % this._state.numberOfCourts) + 1,
       team1,
@@ -140,7 +144,7 @@ export class EliminationTournament extends Tournament {
     let courtIndex = startCourtIndex;
 
     for (let round = 2; round <= totalWBRounds; round++) {
-      const positions = bracketSize / Math.pow(2, round);
+      const positions = positionsInRound(bracketSize, round);
       for (let pos = 0; pos < positions; pos++) {
         const teamA = resolvePosition(round - 1, 2 * pos, teams, winnersMatches);
         const teamB = resolvePosition(round - 1, 2 * pos + 1, teams, winnersMatches);
@@ -156,7 +160,7 @@ export class EliminationTournament extends Tournament {
 
   /** True once every slot of the WB round has resolved to a team or a bye. */
   private wbRoundFullyDecided(winnersMatches: TournamentMatch[], round: number): boolean {
-    const positions = this.bracketSize() / Math.pow(2, round);
+    const positions = positionsInRound(this.bracketSize(), round);
     for (let pos = 0; pos < positions; pos++) {
       if (resolvePosition(round, pos, this._state.teams, winnersMatches) === 'tbd') return false;
     }
@@ -170,7 +174,7 @@ export class EliminationTournament extends Tournament {
   private cbSeedSlots(winnersMatches: TournamentMatch[]): SeedSlots {
     const { teams } = this._state;
     const slots: Array<TournamentTeam | null> = [];
-    for (let pos = 0; pos < this.bracketSize() / 2; pos++) {
+    for (let pos = 0; pos < positionsInRound(this.bracketSize(), 1); pos++) {
       if (!teams[2 * pos] || !teams[2 * pos + 1]) continue;
       slots.push(getWinnersFirstRoundLoser(pos, teams, winnersMatches));
     }
@@ -211,21 +215,11 @@ export class EliminationTournament extends Tournament {
       if (!roundComplete(allCB, n)) break;
       if (this.roundExists(allCB, n + 1)) continue;
 
-      const cbRoundN = allCB.filter(m => m.round === n);
-
-      const advancers: TournamentTeam[] = cbRoundN
-        .filter(m => m.winner !== undefined)
-        .map(m => m.winner === 1 ? m.team1 : m.team2);
-
-      const cbRnParticipantIds = new Set(cbRoundN.flatMap(m => [m.team1.id, m.team2.id]));
-      const expectedPool = getCBExpectedPool(n, cbSeeds, allCB);
-      for (const team of expectedPool) {
-        if (!cbRnParticipantIds.has(team.id)) advancers.push(team);
-      }
+      const advancers: TournamentTeam[] = [...getCBExpectedPool(n + 1, cbSeeds, allCB)];
 
       if (advancers.length < 2 && n + 1 < totalWBRounds && this.wbRoundFullyDecided(winnersMatches, n + 1)) {
         for (const m of winnersMatches.filter(m => m.round === n + 1 && m.winner !== undefined)) {
-          advancers.push(m.winner === 1 ? m.team2 : m.team1);
+          advancers.push(loserOf(m));
         }
       }
 
@@ -252,11 +246,18 @@ export class EliminationTournament extends Tournament {
   }
 
   start(teams: TournamentTeam[], numberOfCourts: number): EliminationTournament {
-    const shuffled = shuffleArray(teams);
-    const bracketSize = nextPowerOf2(shuffled.length);
-    const setup = new EliminationTournament({ ...this._state, teams: shuffled, numberOfCourts, bracketSize });
+    return this.startSeeded(shuffleArray(teams), numberOfCourts);
+  }
+
+  /**
+   * Start the bracket from an already-ordered team list (no shuffle), so a
+   * caller can supply its own seeding — e.g. group-stage qualifiers.
+   */
+  startSeeded(teams: TournamentTeam[], numberOfCourts: number): EliminationTournament {
+    const bracketSize = nextPowerOf2(teams.length);
+    const setup = new EliminationTournament({ ...this._state, teams, numberOfCourts, bracketSize });
     const matches = setup.generateWinnersFirstRound();
-    return new EliminationTournament({ ...setup._state, phase: 'active', matches });
+    return new EliminationTournament({ ...setup._state, matches });
   }
 
   override withMatchResult(
@@ -267,16 +268,13 @@ export class EliminationTournament extends Tournament {
     const existing = this._state.matches.find(m => m.id === matchId);
     if (!existing) return this;
 
-    let updatedMatches = this._state.matches.map(m =>
-      m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m,
-    );
+    let updatedMatches = this.replaceMatch(this._state.matches, matchId, winner, sets);
     if (existing.winner !== undefined && existing.winner !== winner) {
       updatedMatches = this.withoutDependentMatches(updatedMatches, existing);
     }
     const followUp = this.generateFollowUpMatches(updatedMatches);
     const allMatches = [...updatedMatches, ...followUp];
-    const phase = allMatches.length > 0 && allMatches.every(m => m.winner !== undefined) ? 'completed' : 'active';
-    return new EliminationTournament({ ...this._state, matches: allMatches, phase }) as unknown as this;
+    return this.rebuild({ ...this._state, matches: allMatches });
   }
 
   /**
@@ -324,6 +322,14 @@ export class EliminationTournament extends Tournament {
    * semi-final loser, consolation final — then by fewest losses. Semi-final losers
    * are only ranked once the final is decided, so a pending finalist stays ahead.
    */
+  override standingsSubtitle(): string {
+    return this.isComplete() ? 'Final Results' : 'In Progress';
+  }
+
+  override showsPoints(): boolean {
+    return false;
+  }
+
   calculateStandings(): TournamentStandingRow[] {
     const { matches } = this._state;
     const standings = this.tallyStandings();
@@ -346,8 +352,8 @@ export class EliminationTournament extends Tournament {
     };
     const placeMatchResult = (match: TournamentMatch | undefined) => {
       if (!match?.winner) return;
-      placeTeam((match.winner === 1 ? match.team1 : match.team2).id);
-      placeTeam((match.winner === 1 ? match.team2 : match.team1).id);
+      placeTeam(winnerOf(match).id);
+      placeTeam(loserOf(match).id);
     };
 
     const totalRounds = this.totalRounds();
@@ -362,11 +368,11 @@ export class EliminationTournament extends Tournament {
 
     const unplaced = Array.from(standings.values())
       .filter(r => !placedIds.has(r.team.id))
-      .sort((a, b) => {
-        if (a.lost !== b.lost) return a.lost - b.lost;
-        if (b.won !== a.won) return b.won - a.won;
-        return this.compareByTeamName(a, b);
-      });
+      .sort(this.orderStandings([
+        (a, b) => a.lost - b.lost,
+        (a, b) => b.won - a.won,
+        (a, b) => this.compareByTeamName(a, b),
+      ]));
 
     return [...placed, ...unplaced];
   }
@@ -384,8 +390,6 @@ export class EliminationTournament extends Tournament {
   }
 
   isComplete(): boolean {
-    const { matches } = this._state;
-    if (matches.length === 0) return false;
-    return matches.every(m => m.winner !== undefined);
+    return this.allDecided();
   }
 }

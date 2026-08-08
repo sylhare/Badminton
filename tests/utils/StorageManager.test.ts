@@ -67,6 +67,25 @@ describe('StorageManager', () => {
       expect(loaded.assignments).toEqual(mockAssignments);
     });
 
+    it('migrates a legacy court score into a one-entry sets array on load', async () => {
+      const legacy = {
+        app: {
+          players: [], numberOfCourts: 1,
+          assignments: [
+            { courtNumber: 1, players: [], teams: { team1: [], team2: [] }, winner: 1, score: { team1: 21, team2: 15 } },
+            { courtNumber: 2, players: [] },
+          ],
+        },
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+      const loaded = await storageManager.loadApp();
+
+      expect(loaded.assignments?.[0].sets).toEqual([{ team1: 21, team2: 15 }]);
+      expect((loaded.assignments?.[0] as { score?: unknown }).score).toBeUndefined();
+      expect(loaded.assignments?.[1].sets).toBeUndefined();
+    });
+
     it('should return empty object when no saved state exists', async () => {
       const loaded = await storageManager.loadApp();
       expect(loaded).toEqual({});

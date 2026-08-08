@@ -10,53 +10,18 @@ import type {
   TournamentTeam,
 } from './types';
 import { DEFAULT_TOURNAMENT_STATE } from './types';
-
-function makeTeamId(index: number): string {
-  return `team-${Date.now()}-${index}`;
-}
-
-function makeMatchId(index: number): string {
-  return `match-${Date.now()}-${index}`;
-}
+import { roundRobinPairings } from './schedule';
+import { makeId } from './ids';
 
 function generateMatches(teams: TournamentTeam[], numberOfCourts: number): TournamentMatch[] {
-  const n = teams.length;
-  if (n < 2) return [];
-
-  const hasBye = n % 2 !== 0;
-  const paddedTeams: (TournamentTeam | null)[] = hasBye ? [...teams, null] : [...teams];
-  const m = paddedTeams.length;
-
-  const matches: TournamentMatch[] = [];
-  let matchIndex = 0;
-
-  const rotating = paddedTeams.slice(1);
-
-  for (let round = 0; round < m - 1; round++) {
-    const roundTeams = [paddedTeams[0], ...rotating];
-
-    for (let i = 0; i < m / 2; i++) {
-      const t1 = roundTeams[i];
-      const t2 = roundTeams[m - 1 - i];
-
-      if (t1 === null || t2 === null) continue;
-
-      matches.push({
-        id: makeMatchId(matchIndex),
-        round: round + 1,
-        courtNumber: (matchIndex % numberOfCourts) + 1,
-        team1: t1,
-        team2: t2,
-        sets: [],
-      });
-      matchIndex++;
-    }
-
-    const last = rotating.pop()!;
-    rotating.unshift(last);
-  }
-
-  return matches;
+  return roundRobinPairings(teams).map((pairing, i) => ({
+    id: makeId('match', i),
+    round: pairing.round,
+    courtNumber: (i % numberOfCourts) + 1,
+    team1: pairing.team1,
+    team2: pairing.team2,
+    sets: [],
+  }));
 }
 
 export class RoundRobinTournament extends Tournament {
@@ -79,11 +44,11 @@ export class RoundRobinTournament extends Tournament {
 
   static createTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
     if (format === 'singles') {
-      return players.map((p, i) => ({ id: makeTeamId(i), players: [p] }));
+      return players.map((p, i) => ({ id: makeId('team', i), players: [p] }));
     }
     const teams: TournamentTeam[] = [];
     for (let i = 0; i < players.length; i += 2) {
-      teams.push({ id: makeTeamId(i), players: players.slice(i, i + 2) });
+      teams.push({ id: makeId('team', i), players: players.slice(i, i + 2) });
     }
     return teams;
   }
@@ -96,7 +61,6 @@ export class RoundRobinTournament extends Tournament {
     const shuffled = shuffleArray(teams);
     return new RoundRobinTournament({
       ...this._state,
-      phase: 'active',
       teams: shuffled,
       numberOfCourts,
       matches: generateMatches(shuffled, numberOfCourts),
@@ -105,12 +69,12 @@ export class RoundRobinTournament extends Tournament {
 
   calculateStandings(): TournamentStandingRow[] {
     const standings = this.tallyStandings(2);
-    return Array.from(standings.values()).sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
-      if (b.scoreDiff !== a.scoreDiff) return b.scoreDiff - a.scoreDiff;
-      return this.compareByTeamName(a, b);
-    });
+    return Array.from(standings.values()).sort(this.orderStandings([
+      (a, b) => b.points - a.points,
+      (a, b) => b.setDiff - a.setDiff,
+      (a, b) => b.scoreDiff - a.scoreDiff,
+      (a, b) => this.compareByTeamName(a, b),
+    ]));
   }
 
   completedRounds(): number {
@@ -157,13 +121,13 @@ export class RoundRobinTournament extends Tournament {
   }
 
   isComplete(): boolean {
-    return this._state.matches.length > 0 && this._state.matches.every(m => m.winner !== undefined);
+    return this.allDecided();
   }
 
   currentRound(): number {
     const rounds = this.roundNumbers();
     for (const r of rounds) {
-      if (this.matchesForRound(r).some(m => m.winner === undefined)) return r;
+      if (!this.isRoundComplete(r)) return r;
     }
     return rounds[rounds.length - 1] ?? 1;
   }

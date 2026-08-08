@@ -30,26 +30,22 @@ export const GRAPH_GLOW_COLORS = {
 /** Legend labels used in graph components */
 export const GRAPH_LEGEND_LABELS = ['1×', '2×', '3×', '4×+'] as const;
 
-/**
- * Returns the color for a given count value.
- * @param count - The repetition count
- * @returns The appropriate color from GRAPH_COLORS
- */
-export function getColorForCount(count: number): string {
-  if (count >= 4) return GRAPH_COLORS.count4Plus;
-  if (count === 3) return GRAPH_COLORS.count3;
-  if (count === 2) return GRAPH_COLORS.count2;
-  return GRAPH_COLORS.count1;
+type CountTier = 'count1' | 'count2' | 'count3' | 'count4Plus';
+
+/** Bucket a repetition count into its colour tier. */
+function countTier(count: number): CountTier {
+  if (count >= 4) return 'count4Plus';
+  if (count === 3) return 'count3';
+  if (count === 2) return 'count2';
+  return 'count1';
 }
 
-/**
- * Returns the glow/border color for a given count value.
- * @param count - The repetition count
- * @returns The appropriate semi-transparent glow color
- */
+/** The node colour for a given repetition count. */
+export function getColorForCount(count: number): string {
+  return GRAPH_COLORS[countTier(count)];
+}
+
+/** The glow/border colour for a given repetition count. */
 export function getGlowColorForCount(count: number): string {
-  if (count >= 4) return GRAPH_GLOW_COLORS.count4Plus;
-  if (count === 3) return GRAPH_GLOW_COLORS.count3;
-  if (count === 2) return GRAPH_GLOW_COLORS.count2;
-  return GRAPH_GLOW_COLORS.count1;
+  return GRAPH_GLOW_COLORS[countTier(count)];
 }

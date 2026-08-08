@@ -3,16 +3,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { GenericCourtDisplay } from '../../../../src/components/court/display';
+import { DoublesMatch } from '../../../../src/components/court/display';
 import { TEST_PLAYERS } from '../../../data/testData';
 
-describe('GenericCourtDisplay', () => {
+describe('DoublesMatch — variable team sizes', () => {
   const team1Players = [TEST_PLAYERS[0], TEST_PLAYERS[1]];
   const team2Players = [TEST_PLAYERS[2]];
 
   it('renders team 1 players', () => {
     render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={team1Players}
         team2Players={[]}
       />,
@@ -24,7 +24,7 @@ describe('GenericCourtDisplay', () => {
 
   it('renders both teams when team 2 has players', () => {
     render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={team1Players}
         team2Players={team2Players}
       />,
@@ -38,7 +38,7 @@ describe('GenericCourtDisplay', () => {
 
   it('does not render VS divider when team 2 is empty', () => {
     render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={team1Players}
         team2Players={[]}
       />,
@@ -49,7 +49,7 @@ describe('GenericCourtDisplay', () => {
 
   it('does not render team 2 when empty', () => {
     const { container } = render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={team1Players}
         team2Players={[]}
       />,
@@ -60,7 +60,7 @@ describe('GenericCourtDisplay', () => {
 
   it('highlights winning team 1', () => {
     const { container } = render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={team1Players}
         team2Players={team2Players}
         winner={1}
@@ -73,7 +73,7 @@ describe('GenericCourtDisplay', () => {
 
   it('highlights winning team 2', () => {
     const { container } = render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={team1Players}
         team2Players={team2Players}
         winner={2}
@@ -89,7 +89,7 @@ describe('GenericCourtDisplay', () => {
     const mockOnTeamClick = vi.fn();
 
     const { container } = render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={team1Players}
         team2Players={team2Players}
         isClickable={true}
@@ -106,7 +106,7 @@ describe('GenericCourtDisplay', () => {
 
   it('applies animating-blur class when isAnimating is true', () => {
     const { container } = render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={team1Players}
         team2Players={team2Players}
         isAnimating={true}
@@ -122,7 +122,7 @@ describe('GenericCourtDisplay', () => {
     const triplePlayers = [TEST_PLAYERS[1], TEST_PLAYERS[2], TEST_PLAYERS[3]];
 
     render(
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={singlePlayer}
         team2Players={triplePlayers}
       />,

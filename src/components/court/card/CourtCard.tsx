@@ -1,8 +1,7 @@
 import React, { useRef, useState } from 'react';
 
-import type { Court } from '../../../types';
-import type { SetScore } from '../../../tournament/types';
-import { DoublesMatch, GenericCourtDisplay, NoTeamsDisplay, SinglesMatch } from '../display';
+import type { Court, SetScore } from '../../../types';
+import { DoublesMatch, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 import { useAnalytics } from '../../../hooks/useAnalytics';
@@ -13,7 +12,7 @@ import CourtHeader from './CourtHeader';
 interface CourtCardProps {
   court: Court;
   onWinnerChange?: (courtNumber: number, teamNumber: number) => void;
-  onScoreChange?: (courtNumber: number, score?: SetScore) => void;
+  onScoreChange?: (courtNumber: number, sets?: SetScore[]) => void;
   onRotateTeams?: (courtNumber: number) => void;
   isAnimating?: boolean;
   isSmartEngineEnabled?: boolean;
@@ -56,10 +55,9 @@ const CourtCard: React.FC<CourtCardProps> = ({
   const handleRotateTeams = onRotateTeams ? () => onRotateTeams(court.courtNumber) : undefined;
   const handleModalConfirm = (winner: 1 | 2, sets: SetScore[]) => {
     if (pendingWinner === null || !onWinnerChange) return;
-    const score = sets[0];
-    trackGameAction('set_winner', { gameType: score && (score.team1 > 0 || score.team2 > 0) ? 'with_score' : 'no_score', courtNumber: court.courtNumber });
+    trackGameAction('set_winner', { gameType: 'with_score', courtNumber: court.courtNumber });
     onWinnerChange(court.courtNumber, winner);
-    onScoreChange?.(court.courtNumber, score);
+    onScoreChange?.(court.courtNumber, sets);
     triggerConfetti(clickCoordsRef.current.x, clickCoordsRef.current.y, 30);
     setPendingWinner(null);
   };
@@ -112,7 +110,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
     );
   } else {
     matchContent = (
-      <GenericCourtDisplay
+      <DoublesMatch
         team1Players={teams.team1}
         team2Players={teams.team2}
         winner={court.winner}

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createPlayersFromNames, shuffleArray, validatePlayerNames } from '../../src/utils/playerUtils';
+import { createPlayersFromNames, parsePlayerInput, shuffleArray, validatePlayerNames } from '../../src/utils/playerUtils';
 
 describe('Player Utils', () => {
   describe('createPlayersFromNames', () => {
@@ -138,6 +138,41 @@ describe('Player Utils', () => {
       it(description, () => {
         const result = validatePlayerNames(input);
         expect(result).toEqual(expected);
+      });
+    });
+  });
+
+  describe('parsePlayerInput', () => {
+    it('splits on backticks and labels the separator', () => {
+      expect(parsePlayerInput('Alice`Bob`Carol')).toEqual({
+        names: ['Alice', 'Bob', 'Carol'],
+        separator: 'backticks',
+      });
+    });
+
+    it('splits on commas and newlines', () => {
+      expect(parsePlayerInput('Alice, Bob\nCarol')).toEqual({
+        names: ['Alice', 'Bob', 'Carol'],
+        separator: 'commas/newlines',
+      });
+    });
+
+    it('treats a lone entry as a single name with no separator', () => {
+      expect(parsePlayerInput('  Alice  ')).toEqual({ names: ['Alice'], separator: null });
+    });
+
+    it('drops empty fragments so the count matches what is added', () => {
+      expect(parsePlayerInput('Alice,,Bob,')).toEqual({
+        names: ['Alice', 'Bob'],
+        separator: 'commas/newlines',
+      });
+    });
+
+    it('backticks win over commas, so the parsed count cannot drift from the committed names', () => {
+      // Old bug: submit split only on backticks (2 names) while the count split on both (3).
+      expect(parsePlayerInput('Alice`Bob,Carol')).toEqual({
+        names: ['Alice', 'Bob,Carol'],
+        separator: 'backticks',
       });
     });
   });
