@@ -1,4 +1,5 @@
 import type {
+  SetScore,
   TournamentFormat,
   TournamentMatch,
   TournamentPhase,
@@ -6,6 +7,7 @@ import type {
   TournamentState,
   TournamentTeam,
 } from './types';
+import { setsWonBy, totalPoints } from './types';
 
 export abstract class Tournament {
   protected readonly _state: TournamentState;
@@ -37,12 +39,12 @@ export abstract class Tournament {
   withMatchResult(
     matchId: string,
     winner: 1 | 2,
-    score?: { team1: number; team2: number },
+    sets?: SetScore[],
   ): this {
     const newState: TournamentState = {
       ...this._state,
       matches: this._state.matches.map(m =>
-        m.id === matchId ? { ...m, winner, score: score ?? m.score } : m,
+        m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m,
       ),
     };
     return new (this.constructor as new (s: TournamentState) => this)(newState);
@@ -53,12 +55,12 @@ export abstract class Tournament {
     return (a.team.players[0]?.name ?? '').localeCompare(b.team.players[0]?.name ?? '');
   }
 
-  /** Seeds a standings row per team and tallies played/won/lost/points/scoreDiff over all decided matches. */
+  /** Seeds a standings row per team and tallies played/won/lost/points/setDiff/scoreDiff over all decided matches. */
   protected tallyStandings(pointsPerWin = 0): Map<string, TournamentStandingRow> {
     const { teams, matches } = this._state;
     const standings = new Map<string, TournamentStandingRow>();
     for (const team of teams) {
-      standings.set(team.id, { team, played: 0, won: 0, lost: 0, points: 0, scoreDiff: 0 });
+      standings.set(team.id, { team, played: 0, won: 0, lost: 0, points: 0, setDiff: 0, scoreDiff: 0 });
     }
     for (const match of matches) {
       if (match.winner === undefined) continue;
@@ -73,11 +75,13 @@ export abstract class Tournament {
       winRow.points += pointsPerWin;
       lossRow.lost++;
 
-      if (match.score) {
-        const diff = match.score.team1 - match.score.team2;
-        row1.scoreDiff += diff;
-        row2.scoreDiff -= diff;
-      }
+      const sets = setsWonBy(match);
+      row1.setDiff += sets.team1 - sets.team2;
+      row2.setDiff += sets.team2 - sets.team1;
+
+      const points = totalPoints(match);
+      row1.scoreDiff += points.team1 - points.team2;
+      row2.scoreDiff += points.team2 - points.team1;
     }
     return standings;
   }

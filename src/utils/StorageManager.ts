@@ -1,6 +1,6 @@
 import type { AppState, CourtEngineState, EngineType } from '../types';
 import { DEFAULT_TOURNAMENT_STATE } from '../tournament/types';
-import type { TournamentState } from '../tournament/types';
+import type { SetScore, TournamentMatch, TournamentState } from '../tournament/types';
 
 interface StorageData {
   app: AppState;
@@ -32,6 +32,17 @@ interface CompactEngineState {
   pc: Record<string, [number, number]>;
   lh?: number[][];
   rp?: number;
+}
+
+/**
+ * Migrates a persisted match to the sets model: matches saved before best-of-N
+ * carried a single `score`, which becomes a one-entry `sets` array.
+ */
+function migrateMatchSets(match: TournamentMatch): TournamentMatch {
+  const legacy = match as TournamentMatch & { score?: SetScore };
+  if (legacy.sets) return match;
+  const { score, ...rest } = legacy;
+  return { ...rest, sets: score ? [score] : [] };
 }
 
 export async function readAllChunks(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<Uint8Array> {
@@ -176,7 +187,8 @@ class StorageManager {
     try {
       const data = await this.read();
       if (!data.tournament) return null;
-      return { ...DEFAULT_TOURNAMENT_STATE, ...data.tournament };
+      const state = { ...DEFAULT_TOURNAMENT_STATE, ...data.tournament };
+      return { ...state, matches: state.matches.map(migrateMatchSets) };
     } catch {
       return null;
     }
