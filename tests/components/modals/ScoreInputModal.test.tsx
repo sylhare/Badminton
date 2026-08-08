@@ -69,13 +69,13 @@ describe('ScoreInputModal', () => {
     it('calls onConfirm with winner 1 and {team1: 21, team2: 18} when team 1 wins and loser is empty', async () => {
       const { confirmBtn, onConfirm } = renderModal(1);
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(1, { team1: 21, team2: 18 });
+      expect(onConfirm).toHaveBeenCalledWith(1, [{ team1: 21, team2: 18 }]);
     });
 
     it('calls onConfirm with winner 2 and {team1: 18, team2: 21} when team 2 wins and loser is empty', async () => {
       const { confirmBtn, onConfirm } = renderModal(2);
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(2, { team1: 18, team2: 21 });
+      expect(onConfirm).toHaveBeenCalledWith(2, [{ team1: 18, team2: 21 }]);
     });
 
     it('calls onConfirm with entered scores when both are filled', async () => {
@@ -84,7 +84,7 @@ describe('ScoreInputModal', () => {
       await user.type(input1(), '21');
       await user.type(input2(), '15');
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(1, { team1: 21, team2: 15 });
+      expect(onConfirm).toHaveBeenCalledWith(1, [{ team1: 21, team2: 15 }]);
     });
   });
 
@@ -95,7 +95,7 @@ describe('ScoreInputModal', () => {
       await user.clear(input2());
       await user.type(input2(), '18');
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(1, { team1: 21, team2: 18 });
+      expect(onConfirm).toHaveBeenCalledWith(1, [{ team1: 21, team2: 18 }]);
     });
 
     it('keeps the clicked team as winner on a tie', async () => {
@@ -104,7 +104,7 @@ describe('ScoreInputModal', () => {
       await user.clear(input2());
       await user.type(input2(), '20');
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(2, { team1: 20, team2: 20 });
+      expect(onConfirm).toHaveBeenCalledWith(2, [{ team1: 20, team2: 20 }]);
     });
 
     it('updates the title to the score-derived winner', async () => {
@@ -158,6 +158,64 @@ describe('ScoreInputModal', () => {
       await user.clear(input1());
       await user.type(input2(), '23');
       expect(input1().value).toBe('');
+    });
+  });
+
+  describe('best-of-N sets', () => {
+    function renderBestOf(bestOf: number, winnerTeam: 1 | 2 = 1) {
+      const onConfirm = vi.fn();
+      render(
+        <ScoreInputModal
+          isOpen
+          winnerTeam={winnerTeam}
+          team1Players={team1}
+          team2Players={team2}
+          bestOf={bestOf}
+          onConfirm={onConfirm}
+          onCancel={vi.fn()}
+        />,
+      );
+      return {
+        onConfirm,
+        confirmBtn: () => screen.getByTestId('score-modal-confirm'),
+        set: (i: number) => ({
+          t1: () => screen.getByTestId(`score-input-team1-${i}`) as HTMLInputElement,
+          t2: () => screen.getByTestId(`score-input-team2-${i}`) as HTMLInputElement,
+        }),
+      };
+    }
+
+    it('renders one input row per set for best of 3', () => {
+      renderBestOf(3);
+      expect(screen.getByTestId('score-input-team1-0')).toBeInTheDocument();
+      expect(screen.getByTestId('score-input-team1-1')).toBeInTheDocument();
+      expect(screen.getByTestId('score-input-team1-2')).toBeInTheDocument();
+      expect(screen.queryByTestId('score-input-team1-3')).not.toBeInTheDocument();
+    });
+
+    it('derives the winner from the majority of sets and emits only played sets', async () => {
+      const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
+      // Team 2 wins the first set, team 1 wins the next two; third set left blank-skipped later.
+      await user.clear(set(0).t1()); await user.type(set(0).t1(), '15');
+      await user.type(set(0).t2(), '21');
+      await user.type(set(1).t1(), '21'); await user.type(set(1).t2(), '18');
+      await user.type(set(2).t1(), '21'); await user.type(set(2).t2(), '15');
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(1, [
+        { team1: 15, team2: 21 }, { team1: 21, team2: 18 }, { team1: 21, team2: 15 },
+      ]);
+    });
+
+    it('ignores unplayed (blank) sets and lets the played sets decide the winner', async () => {
+      const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
+      await user.clear(set(0).t1()); await user.type(set(0).t1(), '18');
+      await user.type(set(0).t2(), '21');
+      await user.type(set(1).t1(), '19'); await user.type(set(1).t2(), '21');
+      // Third set left blank — team 2 already took both played sets.
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(2, [
+        { team1: 18, team2: 21 }, { team1: 19, team2: 21 },
+      ]);
     });
   });
 

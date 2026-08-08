@@ -95,7 +95,7 @@ describe('RoundRobinMatches', () => {
       await user.click(screen.getByTestId('score-modal-confirm'));
 
       expect(onMatchResult).toHaveBeenCalledOnce();
-      expect(onMatchResult).toHaveBeenCalledWith('m1', 1, { team1: 21, team2: 15 });
+      expect(onMatchResult).toHaveBeenCalledWith('m1', 1, [{ team1: 21, team2: 15 }]);
     });
 
     it('confirming without entering scores uses defaults', async () => {
@@ -106,7 +106,7 @@ describe('RoundRobinMatches', () => {
       await user.click(screen.getByTestId('score-modal-confirm'));
 
       expect(onMatchResult).toHaveBeenCalledOnce();
-      expect(onMatchResult).toHaveBeenCalledWith('m1', 1, { team1: 21, team2: 18 });
+      expect(onMatchResult).toHaveBeenCalledWith('m1', 1, [{ team1: 21, team2: 18 }]);
     });
 
     it('cancelling does not call onMatchResult', async () => {

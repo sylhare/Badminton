@@ -1256,12 +1256,37 @@ h1 {
     font-weight: 500;
 }
 
+.score-modal-sets {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.score-modal-set-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.score-modal-set-label {
+    min-width: 48px;
+    text-align: right;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-soft);
+}
+
 .score-modal-inputs {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     margin-top: 10px;
+}
+
+.score-modal-set-row .score-modal-inputs {
+    margin-top: 0;
 }
 
 .score-modal-inputs input[type="number"] {
