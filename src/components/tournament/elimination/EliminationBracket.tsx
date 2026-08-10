@@ -94,7 +94,7 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
         />
       ))}
 
-      {scoreModal(tournament.state().bestOf)}
+      {scoreModal(tournament.state().bestOf, tournament.state().setSize)}
     </div>
   );
 };

@@ -1,6 +1,8 @@
 import type { Player, SetScore } from '../types';
+import { DEFAULT_SET_SIZE, formatPlayerNames } from '../types';
 
 export type { SetScore };
+export { DEFAULT_SET_SIZE };
 
 export type TournamentFormat = 'singles' | 'doubles';
 
@@ -52,14 +54,29 @@ export interface TournamentState {
   bracketSize?: number;
   /** Total sets in a match (best-of-N); the winner is the side that takes a majority. Defaults to 1. */
   bestOf: number;
+  /** Points a side plays to in a single set (used for the modal's default scores). Defaults to 21. */
+  setSize?: number;
   /** group-knockout: target teams per group in the round-robin phase. */
   groupSize?: number;
   /** group-knockout: how many teams advance from each group to the knockout bracket. */
   qualifiersPerGroup?: number;
+  /**
+   * User-set tie-break points, keyed by team id (higher = ranked higher). Awarded when the
+   * user manually orders a tie the metrics can't split (equal wins/points/set-diff/score-diff),
+   * and fed into the standings sort as one more descending-points step — so the existing
+   * comparator resolves the tie with no bespoke logic. Two teams are ordered only when *both*
+   * carry manual points; teams without an entry keep their computed order.
+   */
+  manualPoints?: Record<string, number>;
 }
 
 export function formatTeamName(team: TournamentTeam): string {
-  return team.players.map(p => p.name).join(' & ');
+  return formatPlayerNames(team.players);
+}
+
+/** True when two standing rows are level on every metric the standings rank by. */
+export function standingsTied(a: TournamentStandingRow, b: TournamentStandingRow): boolean {
+  return a.points === b.points && a.setDiff === b.setDiff && a.scoreDiff === b.scoreDiff;
 }
 
 export const DEFAULT_TOURNAMENT_STATE: TournamentState = {
