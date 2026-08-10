@@ -1,4 +1,5 @@
 import type { SetScore } from '../types';
+import { DEFAULT_SET_SIZE } from '../types';
 
 /** The Elo-facing view of a match result: who won, and the per-game score used to weight the rating change. */
 export interface EloResult {
@@ -7,7 +8,16 @@ export interface EloResult {
   eloScore(): SetScore | undefined;
 }
 
-export type RawSet = { team1: number | null; team2: number | null };
+/** One score cell straight from an input: a number, a raw text value, or null/'' when unplayed. */
+export type RawCell = number | string | null;
+export type RawSet = { team1: RawCell; team2: RawCell };
+
+/** Normalise a raw cell to a number, or null when blank/non-numeric — the one parse point for scores. */
+function cellValue(cell: RawCell): number | null {
+  if (cell === null || cell === '') return null;
+  const n = typeof cell === 'number' ? cell : parseInt(cell, 10);
+  return Number.isNaN(n) ? null : n;
+}
 
 /** Sets won by each side across a list of sets. */
 function tally(sets: SetScore[]): SetScore {
@@ -28,13 +38,29 @@ function sideWithMoreSets(sets: SetScore[]): 1 | 2 | undefined {
   return undefined;
 }
 
-/** The side that has clinched a majority of sets (ceil(bestOf/2)), else undefined. */
-function clinchWinner(sets: SetScore[], bestOf: number): 1 | 2 | undefined {
-  const t = tally(sets);
-  if (t.team1 === t.team2) return undefined;
-  const winner = t.team1 > t.team2 ? 1 : 2;
-  const won = winner === 1 ? t.team1 : t.team2;
-  return won >= Math.ceil(bestOf / 2) ? winner : undefined;
+/** Sets needed to win a best-of-N match. */
+export function setsToClinch(bestOf: number): number {
+  return Math.ceil(Math.max(1, bestOf) / 2);
+}
+
+/**
+ * Walk the sets in order and stop as soon as one side clinches the majority
+ * (ceil(bestOf/2)): a best-of-3 ends 2–0 or 2–1, never 3–0. Returns the winner
+ * and the sets actually needed to decide the match — any trailing sets are
+ * impossible and dropped.
+ */
+function clinchInOrder(sets: SetScore[], bestOf: number): { winner: 1 | 2; sets: SetScore[] } | null {
+  const need = setsToClinch(bestOf);
+  let team1 = 0;
+  let team2 = 0;
+  for (let i = 0; i < sets.length; i++) {
+    const s = sets[i];
+    if (s.team1 > s.team2) team1++;
+    else if (s.team2 > s.team1) team2++;
+    if (team1 >= need) return { winner: 1, sets: sets.slice(0, i + 1) };
+    if (team2 >= need) return { winner: 2, sets: sets.slice(0, i + 1) };
+  }
+  return null;
 }
 
 /**
@@ -53,29 +79,54 @@ export class MatchScore implements EloResult {
     return new MatchScore(sets, winner);
   }
 
-  /** Single-set score for a click-only win: winner 21, loser 18. */
-  static defaultSingle(clicked: 1 | 2): SetScore {
-    return clicked === 1 ? { team1: 21, team2: 18 } : { team1: 18, team2: 21 };
+  /** Single-set score for a click-only win: winner `setSize` (21), loser `setSize − 3` (18). */
+  static defaultSingle(clicked: 1 | 2, setSize = DEFAULT_SET_SIZE): SetScore {
+    const win = setSize;
+    const lose = Math.max(0, setSize - 3);
+    return clicked === 1 ? { team1: win, team2: lose } : { team1: lose, team2: win };
   }
 
   /**
    * The one resolution authority for every match, from raw per-set inputs (null = blank).
-   * best-of-1: the clicked team wins and a blank set defaults to 21–18 (a real score can still
-   * flip it). best-of-N: a winner is recorded only once one side clinches a majority of sets
-   * (ceil(bestOf/2)); a lead short of that, or a tie, yields null.
+   * best-of-1: the clicked team wins and a blank set defaults to `setSize`–(setSize−3) (a real
+   * score can still flip it). best-of-N: a winner is recorded only once one side clinches a
+   * majority of sets (ceil(bestOf/2)); a lead short of that, or a tie, yields null. Sets played
+   * after the clinch are impossible and dropped.
    */
-  static resolve(rawSets: RawSet[], clicked: 1 | 2, bestOf: number): MatchScore | null {
+  static resolve(rawSets: RawSet[], clicked: 1 | 2, bestOf: number, setSize = DEFAULT_SET_SIZE): MatchScore | null {
+    const cells = rawSets.map(s => ({ team1: cellValue(s.team1), team2: cellValue(s.team2) }));
     if (Math.max(1, bestOf) === 1) {
-      const raw = rawSets[0];
-      const d = MatchScore.defaultSingle(clicked);
-      const set: SetScore = { team1: raw?.team1 ?? d.team1, team2: raw?.team2 ?? d.team2 };
+      const raw = cells[0] ?? { team1: null, team2: null };
+      const d = MatchScore.defaultSingle(clicked, setSize);
+      const winnerRaw = clicked === 1 ? raw.team1 : raw.team2;
+      const loserRaw = clicked === 1 ? raw.team2 : raw.team1;
+      const winnerDefault = clicked === 1 ? d.team1 : d.team2;
+      const loserDefault = clicked === 1 ? d.team2 : d.team1;
+      const winScore = winnerRaw ?? winnerDefault;
+      const loseScore = loserRaw ?? (winScore > setSize ? winScore - 2 : loserDefault);
+      const set: SetScore = clicked === 1
+        ? { team1: winScore, team2: loseScore }
+        : { team1: loseScore, team2: winScore };
       return new MatchScore([set], sideWithMoreSets([set]) ?? clicked);
     }
-    const sets = rawSets
+    const sets = cells
       .filter(s => s.team1 !== null || s.team2 !== null)
-      .map(s => ({ team1: s.team1 ?? 0, team2: s.team2 ?? 0 }));
-    const winner = clinchWinner(sets, bestOf);
-    return winner ? new MatchScore(sets, winner) : null;
+      .map(s => ({ team1: s.team1 ?? 0, team2: s.team2 ?? 0 }))
+      .filter(s => s.team1 !== s.team2);
+    const clinched = clinchInOrder(sets, bestOf);
+    return clinched ? new MatchScore(clinched.sets, clinched.winner) : null;
+  }
+
+  /**
+   * The set index at which one side clinches the best-of-N majority — every later set is
+   * impossible and should be locked. -1 when nothing has clinched yet or for a best-of-1.
+   * Blank sets are skipped but keep their position, so the index lines up with the inputs.
+   */
+  static clinchSetIndex(rawSets: RawSet[], bestOf: number): number {
+    if (Math.max(1, bestOf) === 1) return -1;
+    const cells = rawSets.map(s => ({ team1: cellValue(s.team1) ?? 0, team2: cellValue(s.team2) ?? 0 }));
+    const clinched = clinchInOrder(cells, bestOf);
+    return clinched ? clinched.sets.length - 1 : -1;
   }
 
   isDecided(): boolean {

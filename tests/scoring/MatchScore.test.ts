@@ -8,6 +8,11 @@ describe('MatchScore', () => {
       expect(MatchScore.defaultSingle(1)).toEqual({ team1: 21, team2: 18 });
       expect(MatchScore.defaultSingle(2)).toEqual({ team1: 18, team2: 21 });
     });
+
+    it('scales the default to a configured set size (winner setSize, loser setSize − 3)', () => {
+      expect(MatchScore.defaultSingle(1, 15)).toEqual({ team1: 15, team2: 12 });
+      expect(MatchScore.defaultSingle(2, 11)).toEqual({ team1: 8, team2: 11 });
+    });
   });
 
   describe('resolve — best-of-1', () => {
@@ -27,6 +32,11 @@ describe('MatchScore', () => {
       const r = MatchScore.resolve([{ team1: 15, team2: 21 }], 1, 1);
       expect(r?.winner).toBe(2);
       expect(r?.sets).toEqual([{ team1: 15, team2: 21 }]);
+    });
+
+    it('settles a blank loser to win-by-two once the winner runs past setSize (deuce)', () => {
+      expect(MatchScore.resolve([{ team1: 23, team2: null }], 1, 1)?.sets).toEqual([{ team1: 23, team2: 21 }]);
+      expect(MatchScore.resolve([{ team1: null, team2: 25 }], 2, 1)?.sets).toEqual([{ team1: 23, team2: 25 }]);
     });
   });
 
@@ -55,6 +65,19 @@ describe('MatchScore', () => {
       );
       expect(r?.winner).toBe(1);
       expect(r?.sets).toHaveLength(3);
+    });
+
+    it('drops sets played after the clinch — no 3–0 in a best of 3', () => {
+      const r = MatchScore.resolve(
+        [{ team1: 21, team2: 15 }, { team1: 21, team2: 10 }, { team1: 21, team2: 5 }], 1, 3,
+      );
+      expect(r?.winner).toBe(1);
+      expect(r?.sets).toEqual([{ team1: 21, team2: 15 }, { team1: 21, team2: 10 }]);
+    });
+
+    it('honours the set size for a blank best-of-1 default', () => {
+      const r = MatchScore.resolve([{ team1: null, team2: null }], 1, 1, 15);
+      expect(r?.sets).toEqual([{ team1: 15, team2: 12 }]);
     });
   });
 
