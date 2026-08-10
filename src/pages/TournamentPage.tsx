@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAppState } from '../providers/AppStateProvider';
 import type { AnyTournament } from '../providers/AppStateProvider';
 import { Tournament } from '../components/tournament/Tournament';
+import type { Tournament as TournamentBase } from '../tournament/Tournament';
 import Footer from '../components/Footer';
 import { TOURNAMENT_FACTORY } from '../tournament/tournamentFactory';
 import { tournamentToScoredGames } from '../engines/levelAdapters';
@@ -35,11 +36,20 @@ const TournamentPage = (): React.ReactElement => {
     bestOf: number,
     groupSize?: number,
     qualifiersPerGroup?: number,
+    setSize?: number,
   ) => {
     flushIfActive();
-    const created = TOURNAMENT_FACTORY[type].create({ format, numberOfCourts, bestOf, groupSize, qualifiersPerGroup });
+    const created = TOURNAMENT_FACTORY[type].create({
+      format, numberOfCourts, bestOf, setSize, groupSize, qualifiersPerGroup,
+    });
     setTournament(created.start(teams, numberOfCourts));
     setShowSetup(false);
+  };
+
+  /** Commit the tournament as it moves from active to complete (records ELO once). */
+  const commitTournament = (next: AnyTournament) => {
+    setTournament(next);
+    if (tournament && !tournament.isComplete() && next.isComplete()) commitElo(next);
   };
 
   const handleMatchResult = (
@@ -48,9 +58,12 @@ const TournamentPage = (): React.ReactElement => {
     sets?: SetScore[],
   ) => {
     if (!tournament) return;
-    const next = tournament.withMatchResult(matchId, winner, sets);
-    setTournament(next);
-    if (!tournament.isComplete() && next.isComplete()) commitElo(next);
+    commitTournament(tournament.withMatchResult(matchId, winner, sets));
+  };
+
+  /** Replace the tournament wholesale (e.g. a manual tie-break re-order). */
+  const handleUpdateTournament = (next: TournamentBase) => {
+    commitTournament(next as AnyTournament);
   };
 
   const handleReset = () => {
@@ -101,6 +114,7 @@ const TournamentPage = (): React.ReactElement => {
           initialNumberOfCourts={numberOfCourts}
           onStart={handleStart}
           onMatchResult={handleMatchResult}
+          onUpdateTournament={handleUpdateTournament}
           onReset={handleReset}
           onAddPlayers={handleAddPlayers}
           onTogglePlayer={handlePlayerToggle}
