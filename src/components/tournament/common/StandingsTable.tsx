@@ -12,11 +12,14 @@ interface StandingsTableProps {
   rankCell: (rank: number) => React.ReactNode;
   rowClass: (rank: number) => string;
   testIdFor: (rank: number) => string;
-  showPoints: boolean;
-  showScoreDiff: boolean;
+  /** Show the Pts / Sets / Score Diff metric columns (they always appear together). */
+  showMetrics: boolean;
   /** Extra class on the <table> (e.g. 'group-standings'). */
   extraClassName?: string;
 }
+
+/** Render a differential as a signed value ('+3', '0', '-2'). */
+const signed = (value: number): string => (value > 0 ? `+${value}` : String(value));
 
 /** The standings table shared by the combined view and the per-group tables. */
 export const StandingsTable: React.FC<StandingsTableProps> = ({
@@ -25,8 +28,7 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({
   rankCell,
   rowClass,
   testIdFor,
-  showPoints,
-  showScoreDiff,
+  showMetrics,
   extraClassName,
 }) => (
   <div className="standings-table-wrapper">
@@ -37,8 +39,9 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({
           <th>Team</th>
           <th>W</th>
           <th>L</th>
-          {showPoints && <th>Pts</th>}
-          {showScoreDiff && <th>Score Diff</th>}
+          {showMetrics && <th>Pts</th>}
+          {showMetrics && <th>Sets</th>}
+          {showMetrics && <th>Score Diff</th>}
         </tr>
       </thead>
       <tbody>
@@ -48,11 +51,12 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({
             <td>{formatTeamName(row.team)}</td>
             <td>{row.won}</td>
             <td>{row.lost}</td>
-            {showPoints && <td>{row.points}</td>}
-            {showScoreDiff && (
-              <td data-testid={`score-diff-${rank}`}>
-                {row.scoreDiff > 0 ? `+${row.scoreDiff}` : row.scoreDiff}
-              </td>
+            {showMetrics && <td>{row.points}</td>}
+            {showMetrics && (
+              <td data-testid={`set-diff-${rank}`}>{signed(row.setDiff)}</td>
+            )}
+            {showMetrics && (
+              <td data-testid={`score-diff-${rank}`}>{signed(row.scoreDiff)}</td>
             )}
           </tr>
         ))}

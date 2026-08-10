@@ -16,6 +16,17 @@ function decideAll(
   return current;
 }
 
+/** Decide every match with the smaller-id team winning, giving each group a strict (tie-free) order. */
+function decideStrict(tournament: GroupKnockoutTournament): GroupKnockoutTournament {
+  let current = tournament;
+  for (const { id, team1, team2 } of tournament.matches()) {
+    const winner: 1 | 2 = team1.id < team2.id ? 1 : 2;
+    const sets = winner === 1 ? [{ team1: 21, team2: 10 }] : [{ team1: 10, team2: 21 }];
+    current = current.withMatchResult(id, winner, sets);
+  }
+  return current;
+}
+
 const start = (teamIds: string[], groupSize: number, qualifiersPerGroup: number) =>
   GroupKnockoutTournament
     .create('doubles', 2, 1, groupSize, qualifiersPerGroup)
@@ -110,7 +121,7 @@ describe('GroupKnockoutTournament — group phase', () => {
     });
 
     it('builds a four-team knockout from two groups of four', () => {
-      const decided = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
+      const decided = decideStrict(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
       expect(decided.bracketSize()).toBe(4);
       expect(decided.knockoutMatches().filter(m => m.round === 1)).toHaveLength(2);
     });
@@ -164,5 +175,64 @@ describe('GroupKnockoutTournament — group phase', () => {
       expect(finalAfter?.winner).toBe(1);
       expect(edited.isComplete()).toBe(true);
     });
+  });
+});
+
+describe('GroupKnockoutTournament.validateConfig', () => {
+  const teams = (n: number) =>
+    createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
+
+  it('allows 3 qualifiers from a group of 4 (the reported false positive)', () => {
+    expect(GroupKnockoutTournament.validateConfig(teams(4), 4, 3)).toBeNull();
+  });
+
+  it('allows uneven groups where a smaller group sends everyone but a larger one still cuts', () => {
+    expect(GroupKnockoutTournament.validateConfig(teams(7), 4, 3)).toBeNull();
+  });
+
+  it('warns only when every team would advance', () => {
+    expect(GroupKnockoutTournament.validateConfig(teams(6), 3, 3)).toMatch(/every team/i);
+  });
+
+  it('warns when too few teams would qualify for a knockout', () => {
+    expect(GroupKnockoutTournament.validateConfig(teams(2), 2, 1)).toMatch(/too few/i);
+  });
+});
+
+describe('GroupKnockoutTournament — final standings & manual order', () => {
+  it('ranks the knockout champion first and tallies points across both phases', () => {
+    let t = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
+    const final = t.knockoutMatches()[0];
+    t = t.withMatchResult(final.id, 1, [{ team1: 21, team2: 15 }]);
+
+    const standings = t.overallStandings();
+    expect(t.isComplete()).toBe(true);
+    expect(standings).toHaveLength(4);
+    expect(standings[0].team.id).toBe(final.team1.id);
+    expect(standings[0].points).toBe(4);
+  });
+
+  it('re-seeds the knockout through a manual tie-break, promoting the chosen team into a slot', () => {
+    const decided = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
+    expect(decided.knockoutStarted()).toBe(true);
+    expect(decided.bracketSize()).toBe(4);
+
+    const tie = decided.groupStandings(0).slice(1).map(r => r.team.id);
+    const promoted = tie[tie.length - 1];
+    const resolved = decided.withManualOrder([promoted, ...tie.slice(0, -1)]);
+
+    expect(resolved.qualifiers().map(q => q.id)).toContain(promoted);
+    expect(resolved.knockoutStarted()).toBe(true);
+    expect(resolved.knockoutMatches().every(m => m.winner === undefined)).toBe(true);
+  });
+
+  it('records a manual order and keeps the played bracket when qualifiers are unchanged', () => {
+    const t = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
+    const before = t.qualifiers().map(q => q.id);
+
+    const reordered = t.withManualOrder(['unrelated-id']);
+    expect(reordered.state().manualPoints).toEqual({ 'unrelated-id': 1 });
+    expect(reordered.qualifiers().map(q => q.id)).toEqual(before);
+    expect(reordered.knockoutMatches()).toHaveLength(t.knockoutMatches().length);
   });
 });
