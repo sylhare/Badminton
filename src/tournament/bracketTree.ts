@@ -248,12 +248,6 @@ export class WinnersBracket extends Bracket {
     }
     return completed;
   }
-
-  firstRoundLosers(): TournamentTeam[] {
-    return Array.from({ length: positionsInRound(this._bracketSize, 1) }, (_, pos) =>
-      getWinnersFirstRoundLoser(pos, this._seeds, this._matches),
-    ).filter((l): l is TournamentTeam => l !== null);
-  }
 }
 
 /**
