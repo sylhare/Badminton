@@ -164,7 +164,7 @@ describe('ConsolationBracket.computeTree', () => {
       let t = EliminationTournament.create().start(createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4);
       for (const m of t.winners.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
 
-      const cbSeeds = t.winners.firstRoundLosers();
+      const cbSeeds = t.consolation.seeds();
       const cbR1 = t.consolation.matchesForRound(1);
       let tree = new ConsolationBracket(cbSeeds, cbR1, 8).computeTree();
       expect(tree[1][0].type).toBe('tbd');
@@ -232,7 +232,7 @@ describe('ConsolationBracket.computeTree', () => {
       t = t.withMatchResult(t.consolation.matchesForRound(1)[0].id, 1);
       t = t.withMatchResult(t.winners.matchesForRound(2)[0].id, 1);
 
-      const cbSeeds = t.winners.firstRoundLosers();
+      const cbSeeds = t.consolation.seeds();
       const tree = new ConsolationBracket(cbSeeds, t.consolation.matches(), 8).computeTree();
       expect(tree).toHaveLength(2);
       expect(tree[1][0].type).toBe('match');
@@ -276,7 +276,7 @@ describe('ConsolationBracket.computeTree', () => {
       for (const m of t.winners.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
       for (const m of t.winners.matchesForRound(3)) t = t.withMatchResult(m.id, 1);
 
-      const cbSeeds = t.winners.firstRoundLosers();
+      const cbSeeds = t.consolation.seeds();
       const tree = new ConsolationBracket(cbSeeds, t.consolation.matches(), 16).computeTree();
       expect(tree).toHaveLength(3);
       expect(tree[2][0].type).toBe('match');
