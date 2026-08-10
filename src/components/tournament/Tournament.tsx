@@ -21,8 +21,10 @@ interface TournamentProps {
     bestOf: number,
     groupSize?: number,
     qualifiersPerGroup?: number,
+    setSize?: number,
   ) => void;
   onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+  onUpdateTournament: (next: TournamentBase) => void;
   onReset: () => void;
   onAddPlayers: (names: string[]) => void;
   onTogglePlayer: (id: string) => void;
@@ -35,6 +37,7 @@ export const Tournament: React.FC<TournamentProps> = ({
   initialNumberOfCourts,
   onStart,
   onMatchResult,
+  onUpdateTournament,
   onReset,
   onAddPlayers,
   onTogglePlayer,
@@ -66,8 +69,8 @@ export const Tournament: React.FC<TournamentProps> = ({
           initialPlayers={initialPlayers}
           initialNumberOfCourts={initialNumberOfCourts}
           type={selectedType}
-          onStart={(teams, courts, format, bestOf, groupSize, qualifiersPerGroup) =>
-            onStart(teams, courts, format, selectedType, bestOf, groupSize, qualifiersPerGroup)}
+          onStart={(teams, courts, format, bestOf, groupSize, qualifiersPerGroup, setSize) =>
+            onStart(teams, courts, format, selectedType, bestOf, groupSize, qualifiersPerGroup, setSize)}
           onAddPlayers={onAddPlayers}
           onTogglePlayer={onTogglePlayer}
         />
@@ -80,7 +83,7 @@ export const Tournament: React.FC<TournamentProps> = ({
 
   return (
     <div className="tournament-active-layout">
-      {kind.renderMatches(tournament, onMatchResult)}
+      {kind.renderMatches(tournament, onMatchResult, onUpdateTournament)}
       {tournament.showsCombinedStandings() && (
         <TournamentStandings
           standings={standings}

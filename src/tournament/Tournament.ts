@@ -1,5 +1,6 @@
 import { MatchScore } from '../scoring/MatchScore';
 
+import { DEFAULT_SET_SIZE, standingsTied } from './types';
 import type {
   SetScore,
   TournamentFormat,
@@ -73,9 +74,41 @@ export abstract class Tournament {
     });
   }
 
-  /** Stable standings tiebreak: alphabetical by the team's first player name. */
+  /**
+   * The standings tiebreak for teams the metrics can't separate: a user-set manual order first
+   * (more manual points ranks higher, just like the points column), then alphabetically by the
+   * team's first player name. Only exact-tied teams ever reach this, and the tie-break modal
+   * always ranks a whole tied run at once, so an unranked team is never dragged past a ranked one.
+   */
   protected compareByTeamName(a: TournamentStandingRow, b: TournamentStandingRow): number {
-    return (a.team.players[0]?.name ?? '').localeCompare(b.team.players[0]?.name ?? '');
+    const points = this._state.manualPoints ?? {};
+    const manual = (points[b.team.id] ?? 0) - (points[a.team.id] ?? 0);
+    return manual || (a.team.players[0]?.name ?? '').localeCompare(b.team.players[0]?.name ?? '');
+  }
+
+  /**
+   * Runs of two or more adjacent standings rows the metrics can't separate — each is a tie the
+   * user must order by hand. Returns the row indices per run (only runs of length ≥ 2).
+   */
+  tieGroups(rows: TournamentStandingRow[]): number[][] {
+    const groups: number[][] = [];
+    let run: number[] = [];
+    const flush = () => { if (run.length >= 2) groups.push(run); };
+    for (let i = 0; i < rows.length; i++) {
+      if (run.length === 0 || standingsTied(rows[run[0]], rows[i])) {
+        run.push(i);
+      } else {
+        flush();
+        run = [i];
+      }
+    }
+    flush();
+    return groups;
+  }
+
+  /** Points a side plays to in a set; drives the score modal's defaults. */
+  setSize(): number {
+    return this._state.setSize ?? DEFAULT_SET_SIZE;
   }
 
   /** Seeds a standings row per team and tallies played/won/lost/points/setDiff/scoreDiff over all decided matches. */
