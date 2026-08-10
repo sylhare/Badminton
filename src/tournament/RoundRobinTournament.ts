@@ -9,7 +9,7 @@ import type {
   TournamentState,
   TournamentTeam,
 } from './types';
-import { DEFAULT_TOURNAMENT_STATE } from './types';
+import { DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import { roundRobinPairings } from './schedule';
 import { makeId } from './ids';
 
@@ -29,12 +29,14 @@ export class RoundRobinTournament extends Tournament {
     format: TournamentFormat = 'doubles',
     numberOfCourts = 4,
     bestOf = 1,
+    setSize = DEFAULT_SET_SIZE,
   ): RoundRobinTournament {
     return new RoundRobinTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       format,
       numberOfCourts,
       bestOf,
+      setSize,
     });
   }
 
