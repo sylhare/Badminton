@@ -169,7 +169,6 @@ describe('Player Utils', () => {
     });
 
     it('backticks win over commas, so the parsed count cannot drift from the committed names', () => {
-      // Old bug: submit split only on backticks (2 names) while the count split on both (3).
       expect(parsePlayerInput('Alice`Bob,Carol')).toEqual({
         names: ['Alice', 'Bob,Carol'],
         separator: 'backticks',
