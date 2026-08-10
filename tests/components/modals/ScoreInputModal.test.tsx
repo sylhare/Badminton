@@ -124,40 +124,29 @@ describe('ScoreInputModal', () => {
     });
   });
 
-  describe('loser auto-fill when winner scores above 21', () => {
-    it('sets loser score to winner − 2 when team 1 winner scores 23', async () => {
-      const { input1, input2 } = renderModal(1);
+  describe('settles the loser score from the winner score at deuce', () => {
+    it('records winner − 2 when team 1 winner scores 23 and the loser is left blank', async () => {
+      const { input1, confirmBtn, onConfirm } = renderModal(1);
       await user.clear(input1());
       await user.type(input1(), '23');
-      expect(input2().value).toBe('21');
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(1, [{ team1: 23, team2: 21 }]);
     });
 
-    it('sets loser score to winner − 2 when team 1 winner scores 25', async () => {
-      const { input1, input2 } = renderModal(1);
-      await user.clear(input1());
-      await user.type(input1(), '25');
-      expect(input2().value).toBe('23');
-    });
-
-    it('sets loser score to winner − 2 when team 2 winner scores 23', async () => {
-      const { input1, input2 } = renderModal(2);
+    it('records winner − 2 when team 2 winner scores 25 and the loser is left blank', async () => {
+      const { input2, confirmBtn, onConfirm } = renderModal(2);
       await user.clear(input2());
-      await user.type(input2(), '23');
-      expect(input1().value).toBe('21');
+      await user.type(input2(), '25');
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(2, [{ team1: 23, team2: 25 }]);
     });
 
-    it('does not auto-fill loser when winner scores exactly 21', async () => {
-      const { input1, input2 } = renderModal(1);
+    it('uses the standard 18 margin when the winner scores exactly 21', async () => {
+      const { input1, confirmBtn, onConfirm } = renderModal(1);
       await user.clear(input1());
       await user.type(input1(), '21');
-      expect(input2().value).toBe('');
-    });
-
-    it('does not auto-fill winner when loser score changes above 21', async () => {
-      const { input1, input2 } = renderModal(1);
-      await user.clear(input1());
-      await user.type(input2(), '23');
-      expect(input1().value).toBe('');
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(1, [{ team1: 21, team2: 18 }]);
     });
   });
 
@@ -193,32 +182,41 @@ describe('ScoreInputModal', () => {
       expect(screen.queryByTestId('score-input-team1-3')).not.toBeInTheDocument();
     });
 
-    it('starts every set blank and disables confirm until a set majority exists', async () => {
+    it('pre-fills every set with the winner default and confirms a 2–0 clinch', async () => {
       const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
-      expect(set(0).t1().value).toBe('');
-      expect(set(0).t2().value).toBe('');
-      expect(confirmBtn()).toBeDisabled();
-      await user.click(confirmBtn());
-      expect(onConfirm).not.toHaveBeenCalled();
-    });
-
-    it('derives the winner from the majority of sets and emits only played sets', async () => {
-      const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
-      await user.clear(set(0).t1()); await user.type(set(0).t1(), '15');
-      await user.type(set(0).t2(), '21');
-      await user.type(set(1).t1(), '21'); await user.type(set(1).t2(), '18');
-      await user.type(set(2).t1(), '21'); await user.type(set(2).t2(), '15');
+      expect(set(0).t1().value).toBe('21');
+      expect(set(0).t2().value).toBe('18');
+      expect(set(1).t1().value).toBe('21');
+      expect(confirmBtn()).toBeEnabled();
       await user.click(confirmBtn());
       expect(onConfirm).toHaveBeenCalledWith(1, [
-        { team1: 15, team2: 21 }, { team1: 21, team2: 18 }, { team1: 21, team2: 15 },
+        { team1: 21, team2: 18 }, { team1: 21, team2: 18 },
       ]);
     });
 
-    it('ignores unplayed (blank) sets and lets the played sets decide the winner', async () => {
+    it('locks the deciding set once a side has taken the first two', () => {
+      const { set } = renderBestOf(3, 1);
+      expect(set(2).t1()).toBeDisabled();
+      expect(set(2).t2()).toBeDisabled();
+    });
+
+    it('unlocks and records the decider when the first two sets split', async () => {
+      const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
+      await user.clear(set(0).t1()); await user.type(set(0).t1(), '15');
+      await user.clear(set(0).t2()); await user.type(set(0).t2(), '21');
+      expect(set(2).t1()).toBeEnabled();
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(1, [
+        { team1: 15, team2: 21 }, { team1: 21, team2: 18 }, { team1: 21, team2: 18 },
+      ]);
+    });
+
+    it('lets the entered sets flip the winner', async () => {
       const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
       await user.clear(set(0).t1()); await user.type(set(0).t1(), '18');
-      await user.type(set(0).t2(), '21');
-      await user.type(set(1).t1(), '19'); await user.type(set(1).t2(), '21');
+      await user.clear(set(0).t2()); await user.type(set(0).t2(), '21');
+      await user.clear(set(1).t1()); await user.type(set(1).t1(), '19');
+      await user.clear(set(1).t2()); await user.type(set(1).t2(), '21');
       await user.click(confirmBtn());
       expect(onConfirm).toHaveBeenCalledWith(2, [
         { team1: 18, team2: 21 }, { team1: 19, team2: 21 },
