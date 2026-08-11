@@ -7,8 +7,9 @@ import { Tournament } from '../components/tournament/Tournament';
 import type { Tournament as TournamentBase } from '../tournament/Tournament';
 import Footer from '../components/Footer';
 import { TOURNAMENT_FACTORY } from '../tournament/tournamentFactory';
+import type { CreateTournamentOptions } from '../tournament/tournamentFactory';
 import { tournamentToScoredGames } from '../engines/levelAdapters';
-import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
+import type { SetScore, TournamentTeam } from '../tournament/types';
 import './TournamentPage.css';
 
 const TournamentPage = (): React.ReactElement => {
@@ -28,21 +29,10 @@ const TournamentPage = (): React.ReactElement => {
     if (tournament && !tournament.isComplete()) commitElo(tournament);
   };
 
-  const handleStart = (
-    teams: TournamentTeam[],
-    numberOfCourts: number,
-    format: TournamentFormat,
-    type: TournamentType,
-    bestOf: number,
-    groupSize?: number,
-    qualifiersPerGroup?: number,
-    setSize?: number,
-  ) => {
+  const handleStart = (teams: TournamentTeam[], options: CreateTournamentOptions) => {
     flushIfActive();
-    const created = TOURNAMENT_FACTORY[type].create({
-      format, numberOfCourts, bestOf, setSize, groupSize, qualifiersPerGroup,
-    });
-    setTournament(created.start(teams, numberOfCourts));
+    const created = TOURNAMENT_FACTORY[options.type].create(options);
+    setTournament(created.start(teams, options.numberOfCourts));
     setShowSetup(false);
   };
 
