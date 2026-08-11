@@ -4,7 +4,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { TournamentSetup } from '../../../../src/components/tournament/TournamentSetup';
-import type { TournamentFormat, TournamentTeam } from '../../../../src/tournament/types';
+import type { TournamentTeam } from '../../../../src/tournament/types';
+import type { CreateTournamentOptions } from '../../../../src/tournament/tournamentFactory';
 import type { Player } from '../../../../src/types';
 import { createMockPlayer } from '../../../data/testFactories';
 
@@ -184,13 +185,12 @@ describe('TournamentSetup', () => {
       await user.click(screen.getByTestId('start-tournament-button'));
 
       expect(onStart).toHaveBeenCalledOnce();
-      const [teams, numberOfCourts, format, bestOf]: [TournamentTeam[], number, TournamentFormat, number] =
-        onStart.mock.calls[0];
-      expect(format).toBe('doubles');
-      expect(numberOfCourts).toBe(2);
+      const [teams, options]: [TournamentTeam[], CreateTournamentOptions] = onStart.mock.calls[0];
+      expect(options.format).toBe('doubles');
+      expect(options.numberOfCourts).toBe(2);
       expect(teams).toHaveLength(2);
       expect(teams[0].players).toHaveLength(2);
-      expect(bestOf).toBe(1);
+      expect(options.bestOf).toBe(1);
     });
 
     it('passes the selected best-of value to the callback', async () => {
@@ -200,8 +200,8 @@ describe('TournamentSetup', () => {
       await user.click(screen.getByTestId('best-of-pill-3'));
       await user.click(screen.getByTestId('start-tournament-button'));
 
-      const [, , , bestOf] = onStart.mock.calls[0];
-      expect(bestOf).toBe(3);
+      const [, options] = onStart.mock.calls[0];
+      expect(options.bestOf).toBe(3);
     });
 
     it('reflects updated court count in the callback', async () => {
@@ -211,8 +211,8 @@ describe('TournamentSetup', () => {
       fireEvent.change(screen.getByTestId('tournament-court-count'), { target: { value: '3' } });
       await user.click(screen.getByTestId('start-tournament-button'));
 
-      const [, numberOfCourts] = onStart.mock.calls[0];
-      expect(numberOfCourts).toBe(3);
+      const [, options] = onStart.mock.calls[0];
+      expect(options.numberOfCourts).toBe(3);
     });
   });
 
