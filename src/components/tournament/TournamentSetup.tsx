@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
 import { DEFAULT_SET_SIZE, formatTeamName } from '../../tournament/types';
+import type { CreateTournamentOptions } from '../../tournament/tournamentFactory';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
 import type { SlotAddr } from '../../utils/slotSwap';
@@ -18,15 +19,7 @@ interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   type?: TournamentType;
-  onStart: (
-    teams: TournamentTeam[],
-    numberOfCourts: number,
-    format: TournamentFormat,
-    bestOf: number,
-    groupSize: number,
-    qualifiersPerGroup: number,
-    setSize: number,
-  ) => void;
+  onStart: (teams: TournamentTeam[], options: CreateTournamentOptions) => void;
   onAddPlayers?: (names: string[]) => void;
   onTogglePlayer?: (id: string) => void;
 }
@@ -87,7 +80,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handleStart = () => {
     if (validationError || qualifierError) return;
-    onStart(teams, numberOfCourts, format, bestOf, groupSize, qualifiersPerGroup, setSize);
+    onStart(teams, { type, format, numberOfCourts, bestOf, setSize, groupSize, qualifiersPerGroup });
   };
 
   return (

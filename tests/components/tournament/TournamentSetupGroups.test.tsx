@@ -47,10 +47,10 @@ describe('TournamentSetup — group-knockout config', () => {
     fireEvent.change(screen.getByTestId('qualifiers-input'), { target: { value: '1' } });
     await user.click(screen.getByTestId('start-tournament-button'));
 
-    const [, , , bestOf, groupSize, qualifiersPerGroup] = onStart.mock.calls[0];
-    expect(bestOf).toBe(1);
-    expect(groupSize).toBe(3);
-    expect(qualifiersPerGroup).toBe(1);
+    const [, options] = onStart.mock.calls[0];
+    expect(options.bestOf).toBe(1);
+    expect(options.groupSize).toBe(3);
+    expect(options.qualifiersPerGroup).toBe(1);
   });
 
   it('warns when every team in a group would qualify', () => {

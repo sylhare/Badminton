@@ -7,6 +7,7 @@ import type { TournamentFormat, TournamentState, TournamentType } from './types'
 export type AnyTournament = RoundRobinTournament | EliminationTournament | GroupKnockoutTournament;
 
 export interface CreateTournamentOptions {
+  type: TournamentType;
   format: TournamentFormat;
   numberOfCourts: number;
   bestOf: number;
