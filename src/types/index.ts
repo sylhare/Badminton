@@ -46,6 +46,8 @@ export interface ScoredGame {
   court: Court;
   /** Multiplier applied to this game's rating change (default 1 — see ELO_DEFAULT_IMPORTANCE). */
   importance?: number;
+  /** Points a side played to in a set; scores are normalised to the reference length. Defaults to 21. */
+  setSize?: number;
 }
 
 export interface AppState {

@@ -68,7 +68,9 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
     [format, numberOfCourts],
   );
   const validationError = tournament.validate(teams, format);
-  const matchesPerRound = RoundRobinTournament.matchesPerRound(teams);
+  const matchesPerRound = type === 'group-knockout'
+    ? GroupKnockoutTournament.matchesPerRound(teams, groupSize)
+    : RoundRobinTournament.matchesPerRound(teams);
   const courtWarning =
     !validationError && matchesPerRound > numberOfCourts
       ? `${matchesPerRound} matches per round but only ${numberOfCourts} court${numberOfCourts > 1 ? 's' : ''} — some matches will need to wait.`
