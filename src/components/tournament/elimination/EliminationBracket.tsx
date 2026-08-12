@@ -87,10 +87,8 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
           key={section.key}
           title={section.title}
           testId={section.testId}
-          tree={section.tree}
           height={section.height}
-          roundLabel={section.roundLabel}
-          onTeamClick={handleTeamClick}
+          view={{ tree: section.tree, roundLabel: section.roundLabel, onTeamClick: handleTeamClick }}
         />
       ))}
 
