@@ -104,18 +104,27 @@ export class GroupKnockoutTournament extends Tournament {
     return this._state.qualifiersPerGroup ?? DEFAULT_QUALIFIERS_PER_GROUP;
   }
 
+  /** Peak concurrent group-stage matches: every group plays its same-numbered round at once. */
+  static matchesPerRound(teams: TournamentTeam[], groupSize: number): number {
+    return partitionIntoGroups(teams, groupSize)
+      .reduce((total, group) => total + RoundRobinTournament.matchesPerRound(group), 0);
+  }
+
   private static generateGroupMatches(
     groups: TournamentTeam[][],
     numberOfCourts: number,
   ): TournamentMatch[] {
     const matches: TournamentMatch[] = [];
+    const courtsUsedInRound = new Map<number, number>();
     let index = 0;
     groups.forEach((groupTeams, groupIndex) => {
       for (const pairing of roundRobinPairings(groupTeams)) {
+        const usedInRound = courtsUsedInRound.get(pairing.round) ?? 0;
+        courtsUsedInRound.set(pairing.round, usedInRound + 1);
         matches.push({
           id: makeId('gk-match', index),
           round: pairing.round,
-          courtNumber: (index % numberOfCourts) + 1,
+          courtNumber: (usedInRound % numberOfCourts) + 1,
           team1: pairing.team1,
           team2: pairing.team2,
           sets: [],
@@ -189,11 +198,26 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   private computeQualifiers(): TournamentTeam[] {
-    if (!this.groupPhaseComplete()) return [];
+    if (!this.groupPhaseComplete() || this.hasUnresolvedBoundaryTie()) return [];
     const perGroup = this.groups().map((_, groupIndex) =>
       this.groupStandings(groupIndex).slice(0, this.qualifiersPerGroup()).map(row => row.team),
     );
     return seedQualifiers(perGroup);
+  }
+
+  /** True while a metrics tie straddles a group's qualification cut-off and lacks a hand-set order. */
+  private hasUnresolvedBoundaryTie(): boolean {
+    const cut = this.qualifiersPerGroup();
+    const points = this._state.manualPoints ?? {};
+    return this.groups().some((_, groupIndex) => {
+      const standings = this.groupStandings(groupIndex);
+      return this.tieGroups(standings).some(run => {
+        const straddles = run.some(rank => rank < cut) && run.some(rank => rank >= cut);
+        if (!straddles) return false;
+        const ranked = run.map(rank => points[standings[rank].team.id]);
+        return ranked.some(v => v === undefined) || new Set(ranked).size !== ranked.length;
+      });
+    });
   }
 
   /** Knockout-phase (bracket) matches. */
@@ -237,9 +261,9 @@ export class GroupKnockoutTournament extends Tournament {
     return this.rebuild({ ...this._state, matches, bracketSize: bracketSize ?? this._state.bracketSize });
   }
 
-  /** A fresh instance holding only the given group matches (knockout dropped, ready to re-seed). */
-  private withGroupMatches(groupMatches: TournamentMatch[]): GroupKnockoutTournament {
-    return new GroupKnockoutTournament({ ...this._state, matches: groupMatches, bracketSize: undefined });
+  /** A copy holding only the group phase (bracket dropped), the starting point for a (re)seed. */
+  private regroupedWith(matches: TournamentMatch[], manualPoints?: Record<string, number>): GroupKnockoutTournament {
+    return new GroupKnockoutTournament({ ...this._state, manualPoints, matches, bracketSize: undefined });
   }
 
   override withMatchResult(matchId: string, winner: 1 | 2, sets?: SetScore[]): this {
@@ -252,7 +276,8 @@ export class GroupKnockoutTournament extends Tournament {
     }
 
     const groupMatches = this.replaceMatch(this.groupMatches(), matchId, winner, sets);
-    return this.reseedFrom(this.withGroupMatches(groupMatches)) as this;
+    const manualPoints = existing.winner === winner ? this._state.manualPoints : undefined;
+    return this.reseedFrom(this.regroupedWith(groupMatches, manualPoints)) as this;
   }
 
   /**
@@ -281,12 +306,7 @@ export class GroupKnockoutTournament extends Tournament {
   withManualOrder(orderedIds: string[]): GroupKnockoutTournament {
     const manualPoints = { ...(this._state.manualPoints ?? {}) };
     orderedIds.forEach((id, index) => { manualPoints[id] = orderedIds.length - index; });
-    return this.reseedFrom(new GroupKnockoutTournament({
-      ...this._state,
-      manualPoints,
-      matches: this.groupMatches(),
-      bracketSize: undefined,
-    }));
+    return this.reseedFrom(this.regroupedWith(this.groupMatches(), manualPoints));
   }
 
   /** The group phase renders its own per-group standings tables, so the combined table is hidden. */
@@ -296,11 +316,6 @@ export class GroupKnockoutTournament extends Tournament {
 
   calculateStandings(): TournamentStandingRow[] {
     return this.groups().flatMap((_, groupIndex) => this.groupStandings(groupIndex));
-  }
-
-  /** Every match (group + knockout) tallied as one round-robin, for a combined W/L/Pts table. */
-  private combinedAsRoundRobin(): RoundRobinTournament {
-    return this.asRoundRobin();
   }
 
   /**
@@ -313,7 +328,7 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   private computeOverallStandings(): TournamentStandingRow[] {
-    const combined = this.combinedAsRoundRobin().calculateStandings();
+    const combined = this.asRoundRobin().calculateStandings();
     if (!this.knockoutStarted()) return combined;
 
     const byId = new Map(combined.map(row => [row.team.id, row]));
@@ -351,7 +366,9 @@ export class GroupKnockoutTournament extends Tournament {
 
   isComplete(): boolean {
     if (!this.groupPhaseComplete()) return false;
-    if (!this.knockoutStarted()) return this.qualifiers().length < MIN_KNOCKOUT_TEAMS;
+    if (!this.knockoutStarted()) {
+      return !this.hasUnresolvedBoundaryTie() && this.qualifiers().length < MIN_KNOCKOUT_TEAMS;
+    }
     return this.allDecided();
   }
 }

@@ -40,8 +40,8 @@ function winnersFinalRound(matches: TournamentMatch[], fallback: number): number
   return rounds.length ? Math.max(...rounds) : fallback;
 }
 
-/** A tournament match is a court result carrying its Elo importance. */
-function matchToScoredGame(match: TournamentMatch, finalRound: number): ScoredGame {
+/** A tournament match is a court result carrying its Elo importance and set size. */
+function matchToScoredGame(match: TournamentMatch, finalRound: number, setSize: number): ScoredGame {
   return {
     court: {
       courtNumber: match.courtNumber,
@@ -51,6 +51,7 @@ function matchToScoredGame(match: TournamentMatch, finalRound: number): ScoredGa
       sets: match.sets,
     },
     importance: resolveMatchImportance(match, finalRound),
+    setSize,
   };
 }
 
@@ -59,6 +60,7 @@ export function tournamentToScoredGames(tournament: Tournament): { baseline: Pla
   const baseline = tournament.teams().flatMap(team => team.players);
   const allMatches = tournament.matches();
   const finalRound = winnersFinalRound(allMatches, tournament.totalRounds());
+  const setSize = tournament.setSize();
   const games: ScoredGame[] = allMatches
     .filter(match => match.winner)
     .sort((a, b) =>
@@ -66,6 +68,6 @@ export function tournamentToScoredGames(tournament: Tournament): { baseline: Pla
       a.round - b.round ||
       bracketRank(a) - bracketRank(b) ||
       a.courtNumber - b.courtNumber)
-    .map(match => matchToScoredGame(match, finalRound));
+    .map(match => matchToScoredGame(match, finalRound, setSize));
   return { baseline, games };
 }
