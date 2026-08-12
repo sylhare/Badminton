@@ -1,16 +1,12 @@
 import React from 'react';
 
-import type { BracketNode } from '../../../tournament/bracketTree';
-import type { TournamentMatch } from '../../../tournament/types';
-
 import { BracketColumn, COLUMN_GAP, COLUMN_WIDTH, HEADER_HEIGHT } from './BracketColumn';
 import { BracketConnectors } from './BracketConnectors';
+import type { BracketView } from './bracketView';
 
 interface BracketTreeDesktopProps {
-  tree: BracketNode[][];
+  view: BracketView;
   height: number;
-  roundLabel: (round: number, totalRounds: number) => string;
-  onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
 }
 
 /**
@@ -18,10 +14,8 @@ interface BracketTreeDesktopProps {
  * columns with doubling vertical spacing and SVG elbow connectors between them.
  */
 export const BracketTreeDesktop: React.FC<BracketTreeDesktopProps> = ({
-  tree,
+  view: { tree, roundLabel, onTeamClick },
   height,
-  roundLabel,
-  onTeamClick,
 }) => {
   return (
     <div

@@ -1,16 +1,12 @@
 import React from 'react';
 
-import type { BracketNode } from '../../../tournament/bracketTree';
-import type { TournamentMatch } from '../../../tournament/types';
-
 import { BracketMatchNode } from './BracketMatchNode';
+import type { BracketView } from './bracketView';
 
 const MOBILE_CARD_HEIGHT = 72;
 
 interface BracketRoundsCarouselProps {
-  tree: BracketNode[][];
-  roundLabel: (round: number, totalRounds: number) => string;
-  onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
+  view: BracketView;
 }
 
 /**
@@ -20,9 +16,7 @@ interface BracketRoundsCarouselProps {
  * round peeks at the edge to hint the swipe.
  */
 export const BracketRoundsCarousel: React.FC<BracketRoundsCarouselProps> = ({
-  tree,
-  roundLabel,
-  onTeamClick,
+  view: { tree, roundLabel, onTeamClick },
 }) => {
   return (
     <div className="bracket-carousel" data-testid="bracket-carousel">
