@@ -70,6 +70,16 @@ export interface TournamentState {
   manualPoints?: Record<string, number>;
 }
 
+/** Options for building a fresh tournament; every field defaults, so `create()` can be called bare. */
+export interface TournamentCreateOptions {
+  format?: TournamentFormat;
+  numberOfCourts?: number;
+  bestOf?: number;
+  setSize?: number;
+  groupSize?: number;
+  qualifiersPerGroup?: number;
+}
+
 /** Handler a matches view calls to record a result: match id, winning side, and the set scores (absent = click-only win). */
 export type OnMatchResult = (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
 
