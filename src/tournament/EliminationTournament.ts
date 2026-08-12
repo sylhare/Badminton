@@ -1,4 +1,3 @@
-import type { Player } from '../types';
 import { shuffleArray } from '../utils/playerUtils';
 
 import { Tournament } from './Tournament';
@@ -6,13 +5,11 @@ import { BracketKind, DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types
 import type {
   SetScore,
   TournamentCreateOptions,
-  TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
   TournamentState,
   TournamentTeam,
 } from './types';
-import { RoundRobinTournament } from './RoundRobinTournament';
 import { makeId } from './ids';
 import type { SeedSlots } from './bracketTree';
 import {
@@ -45,10 +42,6 @@ export class EliminationTournament extends Tournament {
 
   static fromState(state: TournamentState): EliminationTournament {
     return new EliminationTournament(state);
-  }
-
-  static createTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
-    return RoundRobinTournament.createTeams(players, format);
   }
 
   private makeMatch(

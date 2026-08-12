@@ -1,4 +1,3 @@
-import type { Player } from '../types';
 import { shuffleArray } from '../utils/playerUtils';
 
 import { Tournament } from './Tournament';
@@ -11,7 +10,6 @@ import { DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
   SetScore,
   TournamentCreateOptions,
-  TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
   TournamentState,
@@ -98,10 +96,6 @@ export class GroupKnockoutTournament extends Tournament {
     return new GroupKnockoutTournament(state);
   }
 
-  static createTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
-    return RoundRobinTournament.createTeams(players, format);
-  }
-
   groupSize(): number {
     return this._state.groupSize ?? DEFAULT_GROUP_SIZE;
   }
@@ -159,18 +153,18 @@ export class GroupKnockoutTournament extends Tournament {
     return (this._groupsMemo ??= partitionIntoGroups(this._state.teams, this.groupSize()));
   }
 
+  /** Reinterpret this tournament's state as a plain round-robin, optionally over a team/match subset. */
+  private asRoundRobin(overrides?: Partial<TournamentState>): RoundRobinTournament {
+    return RoundRobinTournament.fromState({ ...this._state, type: 'round-robin', ...overrides });
+  }
+
   /** A single group's matches as a round-robin sub-tournament, for standings and match rendering. */
   groupTournament(groupIndex: number): RoundRobinTournament {
     const cached = this._groupTournamentMemo.get(groupIndex);
     if (cached) return cached;
     const groupTeams = this.groups()[groupIndex] ?? [];
     const groupMatches = this.groupMatches().filter(m => m.group === groupIndex);
-    const tournament = RoundRobinTournament.fromState({
-      ...this._state,
-      type: 'round-robin',
-      teams: groupTeams,
-      matches: groupMatches,
-    });
+    const tournament = this.asRoundRobin({ teams: groupTeams, matches: groupMatches });
     this._groupTournamentMemo.set(groupIndex, tournament);
     return tournament;
   }
@@ -306,7 +300,7 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** Every match (group + knockout) tallied as one round-robin, for a combined W/L/Pts table. */
   private combinedAsRoundRobin(): RoundRobinTournament {
-    return RoundRobinTournament.fromState({ ...this._state, type: 'round-robin' });
+    return this.asRoundRobin();
   }
 
   /**
@@ -333,11 +327,7 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** The whole group phase as one round-robin over every group's matches, for round counting. */
   private groupPhaseAsRoundRobin(): RoundRobinTournament {
-    return (this._groupPhaseMemo ??= RoundRobinTournament.fromState({
-      ...this._state,
-      type: 'round-robin',
-      matches: this.groupMatches(),
-    }));
+    return (this._groupPhaseMemo ??= this.asRoundRobin({ matches: this.groupMatches() }));
   }
 
   private completedGroupRounds(): number {
