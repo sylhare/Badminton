@@ -30,20 +30,20 @@ describe('EliminationBracket', () => {
 
   describe('column headers', () => {
     it('shows "Final" header for 2 teams (1-round WB)', () => {
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B']), 2);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B']), 2);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getByTestId('bracket-round-label-Final')).toBeInTheDocument();
     });
 
     it('shows "Semi Final" and "Final" headers for 4 teams', () => {
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getByTestId('bracket-round-label-Semi-Final')).toBeInTheDocument();
       expect(screen.getAllByTestId('bracket-round-label-Final').length).toBeGreaterThan(0);
     });
 
     it('shows "4th of Final", "Semi Final", "Final" for 8 teams', () => {
-      const t = EliminationTournament.create('singles').start(
+      const t = EliminationTournament.create({ format: 'singles' }).start(
         makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']),
         4,
       );
@@ -55,14 +55,14 @@ describe('EliminationBracket', () => {
 
   describe('match nodes', () => {
     it('renders match nodes in round 1', () => {
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getAllByTestId(/^bracket-node-match$/).length).toBeGreaterThanOrEqual(2);
     });
 
     it('clicking a team opens ScoreInputModal', async () => {
       const user = userEvent.setup();
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
 
       const firstR1Team = screen.getAllByTestId(/^bracket-team-1-/)[0];
@@ -73,7 +73,7 @@ describe('EliminationBracket', () => {
 
     it('confirming score modal calls onMatchResult', async () => {
       const user = userEvent.setup();
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
 
       const firstR1Team = screen.getAllByTestId(/^bracket-team-1-/)[0];
@@ -86,7 +86,7 @@ describe('EliminationBracket', () => {
 
     it('cancelling modal does not call onMatchResult', async () => {
       const user = userEvent.setup();
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
 
       const firstR1Team = screen.getAllByTestId(/^bracket-team-1-/)[0];
@@ -99,7 +99,7 @@ describe('EliminationBracket', () => {
 
   describe('tbd nodes', () => {
     it('renders tbd nodes for undecided future rounds', () => {
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getAllByTestId('bracket-node-tbd').length).toBeGreaterThan(0);
     });
@@ -107,14 +107,14 @@ describe('EliminationBracket', () => {
 
   describe('bye-advance nodes', () => {
     it('renders a bye-advance node when one team has a bye (3 teams)', () => {
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C']), 4);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C']), 4);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getAllByTestId('bracket-node-bye').length).toBeGreaterThan(0);
     });
 
     it('bye-advance node has no buttons — winner cannot be changed or unselected via click', async () => {
       const user = userEvent.setup();
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C']), 4);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C']), 4);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
 
       const byeNodes = screen.getAllByTestId('bracket-node-bye');
@@ -127,7 +127,7 @@ describe('EliminationBracket', () => {
 
     it('CB bye-passer (L4) remains visible as bye-advance in CB R2 after CB R1 is complete (10-team)', () => {
       const teamNames = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
-      let t = EliminationTournament.create('singles').start(makeTeams(teamNames), 4);
+      let t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(teamNames), 4);
       for (const m of t.winners.matchesForRound(1)) {
         t = t.withMatchResult(m.id, 1);
       }
@@ -138,7 +138,7 @@ describe('EliminationBracket', () => {
 
     it('CB R3 final is visible as a match node for 10 teams after all prior rounds complete', async () => {
       const teamNames = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
-      let t = EliminationTournament.create('singles').start(makeTeams(teamNames), 4);
+      let t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(teamNames), 4);
 
       for (const m of t.winners.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
       for (const m of t.consolation.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
@@ -159,7 +159,7 @@ describe('EliminationBracket', () => {
 
   describe('consolation bracket', () => {
     it('shows CB slots as TBD (never as false byes) while WB R1 is partially decided', () => {
-      let t = EliminationTournament.create('singles').start(
+      let t = EliminationTournament.create({ format: 'singles' }).start(
         makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4,
       );
       const [m0, , m2] = t.winners.matchesForRound(1);
@@ -175,7 +175,7 @@ describe('EliminationBracket', () => {
 
     it('shows CB section after WB R1 is complete', async () => {
       const [A, B, C, D] = makeTeams(['A', 'B', 'C', 'D']);
-      let t = EliminationTournament.create('singles').start([A, B, C, D], 4);
+      let t = EliminationTournament.create({ format: 'singles' }).start([A, B, C, D], 4);
       const [m0, m1] = t.winners.matchesForRound(1);
       t = t.withMatchResult(m0.id, 1);
       t = t.withMatchResult(m1.id, 1);
@@ -187,7 +187,7 @@ describe('EliminationBracket', () => {
 
   describe('3rd place section', () => {
     it('shows 3rd Place section for 8 teams (two semi-final losers)', () => {
-      let t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4);
+      let t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']), 4);
       for (let r = 1; r <= 2; r++) { t = playWBRound(t, r); t = playAllCBRounds(t); }
 
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
@@ -195,7 +195,7 @@ describe('EliminationBracket', () => {
     });
 
     it('does not show 3rd Place section for 6 teams (single semi-final loser)', () => {
-      let t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F']), 4);
+      let t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F']), 4);
       for (let r = 1; r <= 3; r++) { t = playWBRound(t, r); t = playAllCBRounds(t); }
 
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
@@ -203,7 +203,7 @@ describe('EliminationBracket', () => {
     });
 
     it('does not show 3rd Place section for 4 teams', () => {
-      const t = playFullTournament(EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4));
+      const t = playFullTournament(EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4));
 
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.queryByTestId('tp-section')).not.toBeInTheDocument();
@@ -212,7 +212,7 @@ describe('EliminationBracket', () => {
 
   describe('winners bracket section', () => {
     it('always shows WB section', () => {
-      const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B']), 2);
+      const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B']), 2);
       render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
       expect(screen.getByTestId('wb-section')).toBeInTheDocument();
     });

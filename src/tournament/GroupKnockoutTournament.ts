@@ -10,6 +10,7 @@ import { makeId } from './ids';
 import { DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
   SetScore,
+  TournamentCreateOptions,
   TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
@@ -41,14 +42,15 @@ export class GroupKnockoutTournament extends Tournament {
     return a.length === b.length && a.every((team, i) => team.id === b[i].id);
   }
 
-  static create(
-    format: TournamentFormat = 'doubles',
-    numberOfCourts = 4,
-    bestOf = 1,
-    groupSize = DEFAULT_GROUP_SIZE,
-    qualifiersPerGroup = DEFAULT_QUALIFIERS_PER_GROUP,
-    setSize = DEFAULT_SET_SIZE,
-  ): GroupKnockoutTournament {
+  static create(options: TournamentCreateOptions = {}): GroupKnockoutTournament {
+    const {
+      format = 'doubles',
+      numberOfCourts = 4,
+      bestOf = 1,
+      groupSize = DEFAULT_GROUP_SIZE,
+      qualifiersPerGroup = DEFAULT_QUALIFIERS_PER_GROUP,
+      setSize = DEFAULT_SET_SIZE,
+    } = options;
     return new GroupKnockoutTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       type: 'group-knockout',
@@ -226,8 +228,9 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** Seed the knockout bracket from the group qualifiers, appending its first-round matches. */
   private startKnockout(qualifiers: TournamentTeam[]): GroupKnockoutTournament {
+    const { format, numberOfCourts, bestOf, setSize } = this._state;
     const seeded = EliminationTournament
-      .create(this._state.format, this._state.numberOfCourts, this._state.bestOf, this._state.setSize)
+      .create({ format, numberOfCourts, bestOf, setSize })
       .startSeeded(qualifiers, this._state.numberOfCourts);
     return new GroupKnockoutTournament({
       ...this._state,

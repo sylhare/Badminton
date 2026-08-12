@@ -5,6 +5,7 @@ import { Tournament } from './Tournament';
 import { BracketKind, DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
   SetScore,
+  TournamentCreateOptions,
   TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
@@ -30,12 +31,8 @@ import {
 } from './bracketTree';
 
 export class EliminationTournament extends Tournament {
-  static create(
-    format: TournamentFormat = 'doubles',
-    numberOfCourts = 4,
-    bestOf = 1,
-    setSize = DEFAULT_SET_SIZE,
-  ): EliminationTournament {
+  static create(options: TournamentCreateOptions = {}): EliminationTournament {
+    const { format = 'doubles', numberOfCourts = 4, bestOf = 1, setSize = DEFAULT_SET_SIZE } = options;
     return new EliminationTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       type: 'elimination',

@@ -64,7 +64,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   }, [initialPlayers, format, clearSelection]);
 
   const tournament = useMemo(
-    () => RoundRobinTournament.create(format, numberOfCourts),
+    () => RoundRobinTournament.create({ format, numberOfCourts }),
     [format, numberOfCourts],
   );
   const validationError = tournament.validate(teams, format);
