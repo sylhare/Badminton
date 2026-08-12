@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 
-import type { SetScore, TournamentMatch } from '../../tournament/types';
+import type { OnMatchResult, SetScore, TournamentMatch } from '../../tournament/types';
 import ScoreInputModal from '../modals/ScoreInputModal';
-
-type MatchResultFn = (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
 
 interface UseMatchModalResult {
   modalMatch: TournamentMatch | null;
@@ -15,7 +13,7 @@ interface UseMatchModalResult {
   scoreModal: (bestOf: number, setSize?: number) => React.ReactNode;
 }
 
-export function useMatchModal(onMatchResult: MatchResultFn): UseMatchModalResult {
+export function useMatchModal(onMatchResult: OnMatchResult): UseMatchModalResult {
   const [pending, setPending] = useState<{ match: TournamentMatch; winner: 1 | 2 } | null>(null);
 
   const handleTeamClick = (match: TournamentMatch, teamNumber: 1 | 2) => {

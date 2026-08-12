@@ -70,6 +70,9 @@ export interface TournamentState {
   manualPoints?: Record<string, number>;
 }
 
+/** Handler a matches view calls to record a result: match id, winning side, and the set scores (absent = click-only win). */
+export type OnMatchResult = (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+
 export function formatTeamName(team: TournamentTeam): string {
   return formatPlayerNames(team.players);
 }
