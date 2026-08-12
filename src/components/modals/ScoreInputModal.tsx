@@ -46,7 +46,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     if (!isOpen) return;
     const seededSet = (): SetInput => isSingle
       ? { s1: winnerTeam === 1 ? String(defaults.team1) : '', s2: winnerTeam === 2 ? String(defaults.team2) : '' }
-      : { s1: String(defaults.team1), s2: String(defaults.team2) };
+      : emptySet();
     setSets(Array.from({ length: setCount }, seededSet));
   }, [isOpen, winnerTeam, setCount, isSingle, defaults]);
 
@@ -55,7 +55,12 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   };
 
   const rawSets = sets.map(s => ({ team1: s.s1, team2: s.s2 }));
-  const result = MatchScore.resolve(rawSets, winnerTeam, setCount, setSize);
+  const effectiveSets = rawSets.map(s =>
+    s.team1 === '' && s.team2 === ''
+      ? { team1: String(defaults.team1), team2: String(defaults.team2) }
+      : s,
+  );
+  const result = MatchScore.resolve(effectiveSets, winnerTeam, setCount, setSize);
   const canConfirm = result !== null;
   const resolvedWinner: 1 | 2 = result?.winner ?? winnerTeam;
 
@@ -80,7 +85,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
             value={set.s1}
             disabled={locked}
             onChange={(e) => updateSet(index, 's1', e.target.value)}
-            placeholder={isSingle ? String(defaults.team1) : '0'}
+            placeholder={String(defaults.team1)}
             aria-label={`Team 1 score${isSingle ? '' : ` set ${index + 1}`}`}
             data-testid={`score-input-team1${suffix}`}
           />
@@ -91,7 +96,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
             value={set.s2}
             disabled={locked}
             onChange={(e) => updateSet(index, 's2', e.target.value)}
-            placeholder={isSingle ? String(defaults.team2) : '0'}
+            placeholder={String(defaults.team2)}
             aria-label={`Team 2 score${isSingle ? '' : ` set ${index + 1}`}`}
             data-testid={`score-input-team2${suffix}`}
           />

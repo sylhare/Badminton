@@ -75,15 +75,15 @@ export abstract class Tournament {
   }
 
   /**
-   * The standings tiebreak for teams the metrics can't separate: a user-set manual order first
-   * (more manual points ranks higher, just like the points column), then alphabetically by the
-   * team's first player name. Only exact-tied teams ever reach this, and the tie-break modal
-   * always ranks a whole tied run at once, so an unranked team is never dragged past a ranked one.
+   * Final tiebreak for teams the metrics can't separate: manual points when *both* teams carry an
+   * entry (a ranked team never drags an unranked one past its place), else the first player's name.
    */
   protected compareByTeamName(a: TournamentStandingRow, b: TournamentStandingRow): number {
     const points = this._state.manualPoints ?? {};
-    const manual = (points[b.team.id] ?? 0) - (points[a.team.id] ?? 0);
-    return manual || (a.team.players[0]?.name ?? '').localeCompare(b.team.players[0]?.name ?? '');
+    const pa = points[a.team.id];
+    const pb = points[b.team.id];
+    if (pa !== undefined && pb !== undefined && pa !== pb) return pb - pa;
+    return (a.team.players[0]?.name ?? '').localeCompare(b.team.players[0]?.name ?? '');
   }
 
   /**

@@ -178,6 +178,35 @@ describe('LevelTracker', () => {
       expect(p2Final.averageScore).toBe(17.5);
       expect(p2Final.scoredGames).toBe(2);
     });
+
+    it('normalises a larger set size to the reference length (a 30-point game reads like a 21)', () => {
+      const court = makeCourt([p1], [p2], 1, { team1: 30, team2: 20 });
+      const [winner, ...rest] = tracker.updatePlayersLevels([{ court, setSize: 30 }], [p1, p2]);
+      const loser = rest.find(p => p.id === 'p2')!;
+      expect(winner.averageScore).toBe(21);
+      expect(loser.averageScore).toBe(14);
+    });
+
+    it('scales a shorter set size up to the reference length', () => {
+      const court = makeCourt([p1], [p2], 1, { team1: 15, team2: 5 });
+      const [winner] = tracker.updatePlayersLevels([{ court, setSize: 15 }], [p1, p2]);
+      expect(winner.averageScore).toBe(21);
+    });
+
+    it('moves the winner level on a larger set size instead of collapsing to the deuce K-factor', () => {
+      const p1Base = makePlayer('p1', 50);
+      const p2Base = makePlayer('p2', 50);
+      const scaled = tracker.updatePlayersLevels(
+        [{ court: makeCourt([p1Base], [p2Base], 1, { team1: 30, team2: 4 }), setSize: 30 }],
+        [p1Base, p2Base],
+      );
+      const reference = tracker.updatePlayersLevels(
+        [{ court: makeCourt([p1Base], [p2Base], 1, { team1: 21, team2: 3 }) }],
+        [p1Base, p2Base],
+      );
+      const delta = (list: Player[]) => (list.find(p => p.id === 'p1')!.level ?? 50) - 50;
+      expect(delta(scaled)).toBeCloseTo(delta(reference), 5);
+    });
   });
 
   describe('updatePlayersLevels — importance weighting', () => {
@@ -291,6 +320,7 @@ describe('tournamentToScoredGames', () => {
       teams: () => [cb.team1, cb.team2, wb.team1, wb.team2],
       totalRounds: () => 2,
       matches: () => [cb, wb],
+      setSize: () => 21,
     } as never);
 
     expect(games.map(g => g.court.courtNumber)).toEqual([2, 1]);
@@ -308,6 +338,7 @@ describe('tournamentToScoredGames', () => {
       teams: () => [third, cons, win].flatMap(m => [m.team1, m.team2]),
       totalRounds: () => 2,
       matches: () => [third, cons, win],
+      setSize: () => 21,
     } as never);
 
     expect(games.map(g => g.court.players[0].name)).toEqual(['Player wb-a', 'Player cb-a', 'Player tp-a']);
