@@ -210,7 +210,7 @@ describe('tournamentToScoredGames', () => {
   const teamC = team('c', [makePlayer('c1', 50), makePlayer('c2', 50)]);
 
   function startTournament() {
-    return RoundRobinTournament.create('doubles', 2).start([teamA, teamB, teamC], 2);
+    return RoundRobinTournament.create({ format: 'doubles', numberOfCourts: 2 }).start([teamA, teamB, teamC], 2);
   }
 
   it('feeds the average set score (not the sum) so best-of-N keeps a meaningful K-factor', () => {
@@ -225,7 +225,7 @@ describe('tournamentToScoredGames', () => {
   });
 
   it('replays group matches before the knockout and boosts the knockout final', () => {
-    let t = GroupKnockoutTournament.create('doubles', 2, 1, 2, 1)
+    let t = GroupKnockoutTournament.create({ format: 'doubles', numberOfCourts: 2, bestOf: 1, groupSize: 2, qualifiersPerGroup: 1 })
       .start([teamA, teamB, teamC, team('d', [makePlayer('d1'), makePlayer('d2')])], 2);
     for (const id of t.groupMatches().map(m => m.id)) {
       t = t.withMatchResult(id, 1, [{ team1: 21, team2: 10 }]);
@@ -359,7 +359,7 @@ describe('tournamentToScoredGames — elimination final weighting', () => {
   it('weights final > semi-final > early rounds across a full 8-team bracket', () => {
     const teams = Array.from({ length: 8 }, (_, i) =>
       team(`t${i}`, [makePlayer(`p${i}`, 50)]));
-    let tournament = EliminationTournament.create('singles', 4).start(teams, 4);
+    let tournament = EliminationTournament.create({ format: 'singles', numberOfCourts: 4 }).start(teams, 4);
 
     let guard = 0;
     while (!tournament.isComplete() && guard++ < 40) {

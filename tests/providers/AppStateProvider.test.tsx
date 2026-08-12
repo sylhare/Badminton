@@ -195,7 +195,7 @@ describe('AppStateProvider', () => {
     function singlesTournament() {
       const teamA: TournamentTeam = { id: 'a', players: [alice] };
       const teamB: TournamentTeam = { id: 'b', players: [bob] };
-      return RoundRobinTournament.create('singles', 1).start([teamA, teamB], 1);
+      return RoundRobinTournament.create({ format: 'singles', numberOfCourts: 1 }).start([teamA, teamB], 1);
     }
 
     function applyResult(tournament: RoundRobinTournament) {

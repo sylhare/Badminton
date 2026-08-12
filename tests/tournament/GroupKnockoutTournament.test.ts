@@ -29,7 +29,7 @@ function decideStrict(tournament: GroupKnockoutTournament): GroupKnockoutTournam
 
 const start = (teamIds: string[], groupSize: number, qualifiersPerGroup: number) =>
   GroupKnockoutTournament
-    .create('doubles', 2, 1, groupSize, qualifiersPerGroup)
+    .create({ format: 'doubles', numberOfCourts: 2, bestOf: 1, groupSize, qualifiersPerGroup })
     .start(createTournamentTeams(teamIds), 2);
 
 describe('GroupKnockoutTournament — group phase', () => {

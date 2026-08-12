@@ -34,14 +34,14 @@ describe('EliminationBracket (mobile carousel)', () => {
   });
 
   it('renders the carousel instead of the desktop tree on mobile', () => {
-    const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+    const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
     render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
     expect(screen.getAllByTestId('bracket-carousel').length).toBeGreaterThan(0);
     expect(document.querySelector('.bracket-tree')).toBeNull();
   });
 
   it('renders one snap page per round within the winners bracket', () => {
-    const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+    const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
     render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
     const wb = within(screen.getByTestId('wb-section'));
     expect(wb.getByTestId('bracket-carousel-page-1')).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('EliminationBracket (mobile carousel)', () => {
   });
 
   it('shows round labels as page headers', () => {
-    const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+    const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
     render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
     const wb = within(screen.getByTestId('wb-section'));
     expect(wb.getByTestId('bracket-round-label-Semi-Final')).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe('EliminationBracket (mobile carousel)', () => {
 
   it('clicking a team still opens the score modal', async () => {
     const user = userEvent.setup();
-    const t = EliminationTournament.create('singles').start(makeTeams(['A', 'B', 'C', 'D']), 4);
+    const t = EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D']), 4);
     render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
 
     const firstR1Team = screen.getAllByTestId(/^bracket-team-1-/)[0];
