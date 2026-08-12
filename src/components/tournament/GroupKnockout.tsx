@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import type { SetScore, TournamentTeam } from '../../tournament/types';
+import type { OnMatchResult, TournamentTeam } from '../../tournament/types';
 import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
 import ManualOrderModal from '../modals/ManualOrderModal';
 
@@ -11,7 +11,7 @@ import { TournamentStandings } from './TournamentStandings';
 
 interface GroupKnockoutProps {
   tournament: GroupKnockoutTournament;
-  onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+  onMatchResult: OnMatchResult;
   onUpdateTournament: (next: GroupKnockoutTournament) => void;
 }
 

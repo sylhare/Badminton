@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { SetScore, TournamentType } from '../../tournament/types';
+import type { OnMatchResult, TournamentType } from '../../tournament/types';
 import type { Tournament } from '../../tournament/Tournament';
 import type { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import type { EliminationTournament } from '../../tournament/EliminationTournament';
@@ -10,7 +10,6 @@ import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { EliminationBracket } from './elimination/EliminationBracket';
 import { GroupKnockout } from './GroupKnockout';
 
-type OnMatchResult = (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
 type OnUpdateTournament = (next: Tournament) => void;
 
 export interface TournamentKind {

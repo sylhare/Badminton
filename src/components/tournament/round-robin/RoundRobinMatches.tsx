@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { SetScore, TournamentMatch } from '../../../tournament/types';
+import type { OnMatchResult, TournamentMatch } from '../../../tournament/types';
 import { MatchScore } from '../../../scoring/MatchScore';
 import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
@@ -11,7 +11,7 @@ import { useExpandedRounds } from './useExpandedRounds';
 
 interface RoundRobinMatchesProps {
   tournament: RoundRobinTournament;
-  onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+  onMatchResult: OnMatchResult;
 }
 
 export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
