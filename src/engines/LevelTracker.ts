@@ -24,7 +24,7 @@ export function getKFactor(
   const loserScore = winner === 1 ? score.team2 : score.team1;
 
   let rawK = LevelTrackerConfig.K_MAX;
-  if (winnerScore > LevelTrackerConfig.REFERENCE_LENGTH || winnerScore <= 0) {
+  if (winnerScore <= 0) {
     rawK = LevelTrackerConfig.K_DEFAULT;
   } else {
     const diff = (winnerScore - loserScore) * (LevelTrackerConfig.REFERENCE_LENGTH / winnerScore);
