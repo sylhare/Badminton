@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { ConsolationBracket, WinnersBracket, roundLabel } from '../../src/tournament/bracketTree';
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
+import { BracketKind } from '../../src/tournament/types';
+import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
 import { createTournamentTeam, createTournamentTeams } from '../data/testFactories';
+
+/** A decided/undecided consolation match at a given round, for tree-shape tests. */
+const cbMatch = (round: number, team1: TournamentTeam, team2: TournamentTeam): TournamentMatch =>
+  ({ id: `cb-r${round}`, round, courtNumber: 1, bracket: BracketKind.Consolation, team1, team2, sets: [] });
 
 describe('roundLabel', () => {
   it('last round is Final', () => {
@@ -53,7 +59,7 @@ describe('WinnersBracket.computeTree', () => {
       t = t.withMatchResult(m0.id, 1);
       t = t.withMatchResult(m1.id, 1);
 
-      const tree = new WinnersBracket(t.teams(), t.winners.matches(), bracketSize).computeTree();
+      const tree = t.winners.computeTree();
       expect(tree[1][0].type).toBe('match');
     });
 
@@ -224,22 +230,14 @@ describe('ConsolationBracket.computeTree', () => {
       expect(r2[0].type).toBe('tbd');
     });
 
-    it('round 2 becomes match node once CB R2 match is generated', () => {
-      let t = EliminationTournament.create().start(createTournamentTeams(['A', 'B', 'C', 'D', 'E']), 4);
-      const [m0, m1] = t.winners.matchesForRound(1);
-      t = t.withMatchResult(m0.id, 1);
-      t = t.withMatchResult(m1.id, 1);
-      t = t.withMatchResult(t.consolation.matchesForRound(1)[0].id, 1);
-      t = t.withMatchResult(t.winners.matchesForRound(2)[0].id, 1);
-
-      const cbSeeds = t.consolation.seeds();
-      const tree = new ConsolationBracket(cbSeeds, t.consolation.matches(), 8).computeTree();
+    it('round 2 becomes a match node once a CB round-2 match is generated', () => {
+      const tree = new ConsolationBracket(seeds, [cbMatch(2, seeds[0], seeds[1])], 8).computeTree();
       expect(tree).toHaveLength(2);
       expect(tree[1][0].type).toBe('match');
     });
   });
 
-  describe('5 CB seeds (bracketSize=16, from 10-team WB R1)', () => {
+  describe('5 CB seeds (bracketSize=16)', () => {
     it('produces 3 rounds', () => {
       const seeds = createTournamentTeams(['L0', 'L1', 'L2', 'L3', 'L4']);
       expect(new ConsolationBracket(seeds, [], 16).computeTree()).toHaveLength(3);
@@ -266,20 +264,5 @@ describe('ConsolationBracket.computeTree', () => {
       expect(r2.find(n => n.type === 'bye-advance')?.team?.id).toBe('L4');
     });
 
-    it('round 3 (CB final) shows as a match node after CB R2 winner and L4 advance', () => {
-      let t = EliminationTournament.create().start(
-        createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']), 4,
-      );
-      for (const m of t.winners.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
-      for (const m of t.consolation.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
-      for (const m of t.consolation.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
-      for (const m of t.winners.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
-      for (const m of t.winners.matchesForRound(3)) t = t.withMatchResult(m.id, 1);
-
-      const cbSeeds = t.consolation.seeds();
-      const tree = new ConsolationBracket(cbSeeds, t.consolation.matches(), 16).computeTree();
-      expect(tree).toHaveLength(3);
-      expect(tree[2][0].type).toBe('match');
-    });
   });
 });

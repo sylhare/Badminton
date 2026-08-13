@@ -1,4 +1,5 @@
 import type { TournamentTeam } from './types';
+import { nextPowerOf2 } from './bracketTree';
 
 /**
  * Split teams into balanced groups, targeting `groupSize` teams each. The team
@@ -25,30 +26,37 @@ export function partitionIntoGroups(teams: TournamentTeam[], groupSize: number):
 }
 
 /**
- * Order group qualifiers for the knockout bracket so group winners are kept
- * apart and face lower-ranked qualifiers first. Builds an overall strength list
- * (all group winners, then all runners-up, …) then folds strongest against
- * weakest into adjacent pairs — the order the bracket generator pairs up.
+ * Order group qualifiers into knockout seed ranks (all group winners, then all runners-up, …). The
+ * bracket then places rank r against rank size−1−r in round 1, so this only has to reorder ranks to
+ * dodge same-group rematches: whenever two same-group teams would meet, the lower one is swapped with
+ * another real seed. Bye placement is left to standard seeding, which already favours the top seeds.
  *
  * `qualifiersByGroup[g]` is group g's advancing teams, best-first.
  */
 export function seedQualifiers(qualifiersByGroup: TournamentTeam[][]): TournamentTeam[] {
   const maxRank = Math.max(0, ...qualifiersByGroup.map(group => group.length));
-  const strength: TournamentTeam[] = [];
+  const seeds: TournamentTeam[] = [];
+  const groupOf = new Map<TournamentTeam, number>();
   for (let rank = 0; rank < maxRank; rank++) {
-    for (const group of qualifiersByGroup) {
-      if (group[rank]) strength.push(group[rank]);
-    }
+    qualifiersByGroup.forEach((group, g) => {
+      if (group[rank]) { groupOf.set(group[rank], g); seeds.push(group[rank]); }
+    });
   }
 
-  const order: TournamentTeam[] = [];
-  let lo = 0;
-  let hi = strength.length - 1;
-  while (lo <= hi) {
-    order.push(strength[lo]);
-    if (lo !== hi) order.push(strength[hi]);
-    lo++;
-    hi--;
+  const size = nextPowerOf2(seeds.length);
+  const opponent = (r: number) => size - 1 - r;
+  const isReal = (r: number) => r < seeds.length && opponent(r) < seeds.length;
+  const sameGroup = (a: number, b: number) => groupOf.get(seeds[a]) === groupOf.get(seeds[b]);
+
+  for (let r = 0; r < size / 2; r++) {
+    if (!isReal(r) || !sameGroup(r, opponent(r))) continue;
+    for (let k = 0; k < seeds.length; k++) {
+      if (k === r || k === opponent(r) || !isReal(k)) continue;
+      if (!sameGroup(r, k) && !sameGroup(opponent(r), opponent(k))) {
+        [seeds[opponent(r)], seeds[k]] = [seeds[k], seeds[opponent(r)]];
+        break;
+      }
+    }
   }
-  return order;
+  return seeds;
 }

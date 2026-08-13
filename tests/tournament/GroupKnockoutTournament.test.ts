@@ -130,6 +130,33 @@ describe('GroupKnockoutTournament — group phase', () => {
       expect(decideAll(start(['a', 'b', 'c', 'd'], 2, 1)).totalRounds()).toBe(2);
     });
 
+    it('never pairs two qualifiers from the same group in knockout round 1', () => {
+      const t = decideStrict(start(
+        ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
+      ));
+      expect(t.knockoutStarted()).toBe(true);
+      const groups = t.groups();
+      const groupOf = (id: string) => groups.findIndex(g => g.some(team => team.id === id));
+
+      for (const m of t.knockoutMatches().filter(m => m.round === 1)) {
+        expect(groupOf(m.team1.id)).not.toBe(groupOf(m.team2.id));
+      }
+    });
+
+    it('gives knockout byes to group winners, not runners-up', () => {
+      // 3 groups × top-2 = 6 qualifiers in an 8-bracket → 2 byes, which should go to top seeds.
+      const t = decideStrict(start(
+        ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
+      ));
+      const groups = t.groups();
+      const isGroupWinner = (id: string) => groups.some((_, g) => t.groupStandings(g)[0]?.team.id === id);
+      const r1Ids = new Set(t.knockoutMatches().filter(m => m.round === 1).flatMap(m => [m.team1.id, m.team2.id]));
+      const byeTeams = t.qualifiers().filter(q => !r1Ids.has(q.id));
+
+      expect(byeTeams.length).toBeGreaterThan(0);
+      for (const bye of byeTeams) expect(isGroupWinner(bye.id)).toBe(true);
+    });
+
     it('does not seed the knockout while the group phase is unfinished', () => {
       const t = start(['a', 'b', 'c', 'd', 'e', 'f'], 3, 2);
       expect(t.knockoutStarted()).toBe(false);

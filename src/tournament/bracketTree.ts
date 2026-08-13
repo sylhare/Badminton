@@ -21,8 +21,29 @@ export function positionsInRound(bracketSize: number, round: number): number {
   return bracketSize / 2 ** round;
 }
 
+/** Standard single-elimination seed order: `[slot] → 0-based seed rank`, so seed r meets seed size−1−r in round 1. */
+export function seedOrder(size: number): number[] {
+  let slots = [0];
+  while (slots.length < size) {
+    const mirror = slots.length * 2 - 1;
+    slots = slots.flatMap(s => [s, mirror - s]);
+  }
+  return slots;
+}
+
+/**
+ * Arrange seed-ranked teams into standard bracket slots (top seeds spread apart, byes falling on the
+ * top seeds). A slot whose seed rank is past the team count is left empty — a bye — so the same
+ * positional `teams[2p]/[2p+1]` reading the bracket already uses keeps working unchanged.
+ */
+export function seedSlots(teams: readonly TournamentTeam[], size: number): TournamentTeam[] {
+  const slots: TournamentTeam[] = [];
+  seedOrder(size).forEach((rank, slot) => { if (teams[rank]) slots[slot] = teams[rank]; });
+  return slots;
+}
+
 /** The winning / losing team of a decided match (assumes `winner` is set). */
-export const winnerOf = (m: TournamentMatch): TournamentTeam => (m.winner === 1 ? m.team1 : m.team2);
+const winnerOf = (m: TournamentMatch): TournamentTeam => (m.winner === 1 ? m.team1 : m.team2);
 export const loserOf = (m: TournamentMatch): TournamentTeam => (m.winner === 1 ? m.team2 : m.team1);
 
 export function findMatchBetween(

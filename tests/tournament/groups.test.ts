@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { partitionIntoGroups, seedQualifiers } from '../../src/tournament/groups';
+import { nextPowerOf2, seedSlots } from '../../src/tournament/bracketTree';
 import { createTournamentTeams } from '../data/testFactories';
+import type { TournamentTeam } from '../../src/tournament/types';
 
 describe('partitionIntoGroups', () => {
   it('splits an even count into equal groups', () => {
@@ -42,17 +44,30 @@ describe('partitionIntoGroups', () => {
 });
 
 describe('seedQualifiers', () => {
-  it('cross-pairs group winners against runners-up of other groups', () => {
+  /** Build `nGroups` groups of `perGroup` teams, ids tagged `g-rank`, plus a group lookup. */
+  const groupsOf = (nGroups: number, perGroup: number) => {
+    const groups: TournamentTeam[][] = Array.from({ length: nGroups }, (_, g) =>
+      createTournamentTeams(Array.from({ length: perGroup }, (_, r) => `${g}-${r}`)));
+    const groupOf = new Map(groups.flatMap((grp, g) => grp.map(t => [t.id, g] as const)));
+    return { groups, groupOf };
+  };
+
+  it('seeds all group winners ahead of the runners-up, so byes fall on the top seeds', () => {
     const [a1, a2, b1, b2] = createTournamentTeams(['a1', 'a2', 'b1', 'b2']);
     const order = seedQualifiers([[a1, a2], [b1, b2]]);
-    expect(order.map(t => t.id)).toEqual(['a1', 'b2', 'b1', 'a2']);
+    expect(order.slice(0, 2).map(t => t.id).sort()).toEqual(['a1', 'b1']);
   });
 
-  it('places the strongest against the weakest for four groups of two', () => {
-    const teams = createTournamentTeams(['a1', 'a2', 'b1', 'b2', 'c1', 'c2', 'd1', 'd2']);
-    const [a1, a2, b1, b2, c1, c2, d1, d2] = teams;
-    const order = seedQualifiers([[a1, a2], [b1, b2], [c1, c2], [d1, d2]]);
-    expect(order.map(t => t.id)).toEqual(['a1', 'd2', 'b1', 'c2', 'c1', 'b2', 'd1', 'a2']);
+  it('never pairs a group against itself in round 1, across group counts', () => {
+    for (const [nGroups, perGroup] of [[2, 2], [3, 2], [3, 3], [5, 2], [5, 3], [6, 2], [7, 2]] as const) {
+      const { groups, groupOf } = groupsOf(nGroups, perGroup);
+      const order = seedQualifiers(groups);
+      const slots = seedSlots(order, nextPowerOf2(order.length));
+      for (let p = 0; p < nextPowerOf2(order.length) / 2; p++) {
+        const a = slots[2 * p], b = slots[2 * p + 1];
+        if (a && b) expect(groupOf.get(a.id)).not.toBe(groupOf.get(b.id));
+      }
+    }
   });
 
   it('returns an empty list when no group qualifies', () => {
