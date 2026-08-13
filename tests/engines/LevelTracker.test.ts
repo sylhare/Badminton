@@ -321,6 +321,7 @@ describe('tournamentToScoredGames', () => {
       totalRounds: () => 2,
       matches: () => [cb, wb],
       setSize: () => 21,
+      state: () => ({ bracketSize: 4 }),
     } as never);
 
     expect(games.map(g => g.court.courtNumber)).toEqual([2, 1]);
@@ -339,6 +340,7 @@ describe('tournamentToScoredGames', () => {
       totalRounds: () => 2,
       matches: () => [third, cons, win],
       setSize: () => 21,
+      state: () => ({ bracketSize: 4 }),
     } as never);
 
     expect(games.map(g => g.court.players[0].name)).toEqual(['Player wb-a', 'Player cb-a', 'Player tp-a']);
@@ -406,5 +408,17 @@ describe('tournamentToScoredGames — elimination final weighting', () => {
     expect(importances.has(LevelTrackerConfig.WB_SEMIFINAL_IMPORTANCE)).toBe(true);
     expect(importances.has(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE)).toBe(true);
     expect(Math.max(...importances)).toBe(LevelTrackerConfig.WB_FINAL_IMPORTANCE);
+  });
+
+  it('weights an incomplete bracket by its true final round, not the deepest played round', () => {
+    const teams = Array.from({ length: 8 }, (_, i) => team(`t${i}`, [makePlayer(`p${i}`, 50)]));
+    let tournament = EliminationTournament.create({ format: 'singles', numberOfCourts: 4 }).start(teams, 4);
+    for (const m of tournament.winners.matchesForRound(1)) {
+      tournament = tournament.withMatchResult(m.id, 1, [{ team1: 21, team2: 10 }]);
+    }
+
+    const { games } = tournamentToScoredGames(tournament);
+    expect(games).toHaveLength(4);
+    expect(games.every(g => g.importance === LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE)).toBe(true);
   });
 });

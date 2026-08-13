@@ -36,10 +36,10 @@ const TournamentPage = (): React.ReactElement => {
     setShowSetup(false);
   };
 
-  /** Commit the tournament as it moves from active to complete (records ELO once). */
+  /** Record ELO whenever a complete result is touched: on completion, and on any later edit of a finished tournament. */
   const commitTournament = (next: AnyTournament) => {
     setTournament(next);
-    if (tournament && !tournament.isComplete() && next.isComplete()) commitElo(next);
+    if (next.isComplete() || tournament?.isComplete()) commitElo(next);
   };
 
   const handleMatchResult = (

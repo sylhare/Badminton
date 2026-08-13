@@ -34,10 +34,12 @@ function phaseRank(match: TournamentMatch): number {
   return match.bracket === undefined ? 0 : 1;
 }
 
-/** The winners bracket's final round, used to locate the final/semi for the importance boost. */
-function winnersFinalRound(matches: TournamentMatch[], fallback: number): number {
-  const rounds = matches.filter(m => m.bracket === BracketKind.Winners).map(m => m.round);
-  return rounds.length ? Math.max(...rounds) : fallback;
+/**
+ * The winners bracket's final round, from the seeded bracket size — independent of which matches
+ * exist yet, so a bracket committed mid-play (abandon/reset) still weights its true final/semi.
+ */
+function winnersFinalRound(bracketSize: number | undefined, fallback: number): number {
+  return bracketSize ? Math.log2(bracketSize) : fallback;
 }
 
 /** A tournament match is a court result carrying its Elo importance and set size. */
@@ -59,7 +61,7 @@ function matchToScoredGame(match: TournamentMatch, finalRound: number, setSize: 
 export function tournamentToScoredGames(tournament: Tournament): { baseline: Player[]; games: ScoredGame[] } {
   const baseline = tournament.teams().flatMap(team => team.players);
   const allMatches = tournament.matches();
-  const finalRound = winnersFinalRound(allMatches, tournament.totalRounds());
+  const finalRound = winnersFinalRound(tournament.state().bracketSize, tournament.totalRounds());
   const setSize = tournament.setSize();
   const games: ScoredGame[] = allMatches
     .filter(match => match.winner)
