@@ -5,13 +5,14 @@ import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tou
 import { DEFAULT_SET_SIZE, formatTeamName } from '../../tournament/types';
 import type { CreateTournamentOptions } from '../../tournament/tournamentFactory';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
-import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
 import type { SlotAddr } from '../../utils/slotSwap';
 import { swapInGroups } from '../../utils/slotSwap';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 import { SegmentedControl } from '../common/SegmentedControl';
 import { NumberField } from '../common/NumberField';
+
+import { TOURNAMENT_KINDS } from './tournamentKinds';
 
 const BEST_OF_OPTIONS = [1, 3, 5];
 
@@ -67,18 +68,18 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
     () => RoundRobinTournament.create({ format, numberOfCourts }),
     [format, numberOfCourts],
   );
+  const kind = TOURNAMENT_KINDS[type];
+  const setupConfig = { groupSize, qualifiersPerGroup, setGroupSize, setQualifiersPerGroup };
+
   const validationError = tournament.validate(teams, format);
-  const matchesPerRound = type === 'group-knockout'
-    ? GroupKnockoutTournament.matchesPerRound(teams, groupSize)
-    : RoundRobinTournament.matchesPerRound(teams);
+  const matchesPerRound = kind.matchesPerRound?.(teams, setupConfig)
+    ?? RoundRobinTournament.matchesPerRound(teams);
   const courtWarning =
     !validationError && matchesPerRound > numberOfCourts
       ? `${matchesPerRound} matches per round but only ${numberOfCourts} court${numberOfCourts > 1 ? 's' : ''} — some matches will need to wait.`
       : null;
 
-  const qualifierError = type === 'group-knockout'
-    ? GroupKnockoutTournament.validateConfig(teams, groupSize, qualifiersPerGroup)
-    : null;
+  const qualifierError = kind.validateSetup?.(teams, setupConfig) ?? null;
 
   const handleStart = () => {
     if (validationError || qualifierError) return;
@@ -141,38 +142,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
         </label>
       </div>
 
-      {type === 'group-knockout' && (
-        <div className="setup-section" data-testid="group-knockout-config">
-          <h3>Groups + Knockout</h3>
-          <div className="group-knockout-fields">
-            <label className="group-knockout-field">
-              Teams per group
-              <NumberField
-                value={groupSize}
-                min={2}
-                onChange={next => {
-                  setGroupSize(next);
-                  setQualifiersPerGroup(q => Math.min(q, next - 1));
-                }}
-                testId="group-size-input"
-              />
-            </label>
-            <label className="group-knockout-field">
-              Qualifiers per group
-              <NumberField
-                value={qualifiersPerGroup}
-                min={1}
-                max={groupSize - 1}
-                onChange={setQualifiersPerGroup}
-                testId="qualifiers-input"
-              />
-            </label>
-          </div>
-          {qualifierError && (
-            <p className="setup-warning" data-testid="qualifiers-warning">{qualifierError}</p>
-          )}
-        </div>
-      )}
+      {kind.renderSetupConfig?.(setupConfig, qualifierError)}
 
       {teams.length > 0 && (
         <div className="setup-section">
