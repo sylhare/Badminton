@@ -37,8 +37,12 @@ describe('LevelTracker', () => {
       expect(tracker.getKFactor()).toBe(LevelTrackerConfig.K_DEFAULT);
     });
 
-    it('returns K_DEFAULT for a deuce win (winner score ≠ 21)', () => {
-      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(LevelTrackerConfig.K_DEFAULT);
+    it('treats a deuce win (23–21) as a close win, normalised past the reference length', () => {
+      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(LevelTrackerConfig.K_SCALE[0].k);
+    });
+
+    it('weights a dominant best-of-N average (23–12) by margin, not the deuce default', () => {
+      expect(tracker.getKFactor({ team1: 23, team2: 12 }, 1)).toBeGreaterThan(LevelTrackerConfig.K_SCALE[1].k);
     });
 
     it('returns K_SCALE[0].k for a close win (loser 18–20)', () => {
