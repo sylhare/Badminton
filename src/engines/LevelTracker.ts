@@ -62,7 +62,7 @@ export function updatePlayersLevels(games: ScoredGame[], players: Player[]): Pla
     if (!court.winner || !court.teams) continue;
 
     const result = MatchScore.of(court.sets ?? [], court.winner);
-    const scale = LevelTrackerConfig.REFERENCE_LENGTH / (setSize ?? DEFAULT_SET_SIZE);
+    const scale = LevelTrackerConfig.REFERENCE_LENGTH / (setSize && setSize > 0 ? setSize : DEFAULT_SET_SIZE);
     const raw = result.eloScore();
     const score = raw ? { team1: raw.team1 * scale, team2: raw.team2 * scale } : undefined;
     const weight = importance ?? LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE;

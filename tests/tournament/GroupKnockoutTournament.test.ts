@@ -244,6 +244,20 @@ describe('GroupKnockoutTournament — final standings & manual order', () => {
     expect(flipped.state().manualPoints).toBeUndefined();
   });
 
+  it('clears only the edited group’s manual order, preserving another group’s', () => {
+    let t = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
+    const groupATeamIds = new Set(t.groups()[0].map(team => team.id));
+    t = t.withManualOrder(t.groupStandings(0).slice(1).map(r => r.team.id));
+    t = t.withManualOrder(t.groupStandings(1).slice(1).map(r => r.team.id));
+
+    const groupAMatch = t.groupMatches().find(m => m.group === 0)!;
+    const edited = t.withMatchResult(groupAMatch.id, groupAMatch.winner === 1 ? 2 : 1, [{ team1: 10, team2: 21 }]);
+
+    const remaining = edited.state().manualPoints ?? {};
+    expect(Object.keys(remaining).length).toBeGreaterThan(0);
+    expect(Object.keys(remaining).some(id => groupATeamIds.has(id))).toBe(false);
+  });
+
   it('records a manual order and keeps the played bracket when qualifiers are unchanged', () => {
     const t = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
     const before = t.qualifiers().map(q => q.id);
