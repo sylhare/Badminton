@@ -32,6 +32,13 @@ describe('Tournament', () => {
       expect(updated.matches()[0].sets).toEqual([{ team1: 21, team2: 10 }]);
     });
 
+    it('drops the stale sets when a decided winner is flipped without new scores', () => {
+      const decided = makeTournament().withMatchResult('m1', 1, [{ team1: 21, team2: 10 }]);
+      const flipped = decided.withMatchResult('m1', 2);
+      expect(flipped.matches()[0].winner).toBe(2);
+      expect(flipped.matches()[0].sets).toEqual([]);
+    });
+
     it('does not mutate the original instance', () => {
       const tournament = makeTournament();
       tournament.withMatchResult('m1', 1, [{ team1: 21, team2: 15 }]);

@@ -1,13 +1,6 @@
 import type { SetScore } from '../types';
 import { DEFAULT_SET_SIZE } from '../types';
 
-/** The Elo-facing view of a match result: who won, and the per-game score used to weight the rating change. */
-export interface EloResult {
-  readonly winner: 1 | 2 | undefined;
-  /** Points per side normalised to a single ~21-point game, or undefined when no set was scored. */
-  eloScore(): SetScore | undefined;
-}
-
 /** One score cell straight from an input: a number, a raw text value, or null/'' when unplayed. */
 export type RawCell = number | string | null;
 export type RawSet = { team1: RawCell; team2: RawCell };
@@ -39,7 +32,7 @@ function sideWithMoreSets(sets: SetScore[]): 1 | 2 | undefined {
 }
 
 /** Sets needed to win a best-of-N match. */
-export function setsToClinch(bestOf: number): number {
+function setsToClinch(bestOf: number): number {
   return Math.ceil(Math.max(1, bestOf) / 2);
 }
 
@@ -68,7 +61,7 @@ function clinchInOrder(sets: SetScore[], bestOf: number): { winner: 1 | 2; sets:
  * tallies and the Elo score. Every match is a series of sets: casual play is a best-of-1,
  * tournaments configure best-of 1/3/5, and all of them share this one type.
  */
-export class MatchScore implements EloResult {
+export class MatchScore {
   private constructor(
     readonly sets: SetScore[],
     readonly winner: 1 | 2 | undefined,
@@ -103,7 +96,7 @@ export class MatchScore implements EloResult {
       const winnerDefault = clicked === 1 ? d.team1 : d.team2;
       const loserDefault = clicked === 1 ? d.team2 : d.team1;
       const winScore = winnerRaw ?? winnerDefault;
-      const loseScore = loserRaw ?? (winScore > setSize ? winScore - 2 : loserDefault);
+      const loseScore = loserRaw ?? (winScore > setSize ? winScore - 2 : Math.min(loserDefault, Math.max(0, winScore - 1)));
       const set: SetScore = clicked === 1
         ? { team1: winScore, team2: loseScore }
         : { team1: loseScore, team2: winScore };
