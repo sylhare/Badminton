@@ -27,7 +27,7 @@ test.describe('Tournament Page - Group + Knockout', () => {
     await expect(page.getByTestId('qualifiers-input')).toBeVisible();
   });
 
-  test('blocks Start when every team in a group would qualify', async ({ page }) => {
+  test('warns but still allows Start when every team would qualify', async ({ page }) => {
     await tournamentPage.setup(DEFAULT_PLAYERS);
     await page.getByTestId('format-pill-singles').click();
     await tournamentPage.selectType('group-knockout');
@@ -35,7 +35,7 @@ test.describe('Tournament Page - Group + Knockout', () => {
     await tournamentPage.setGroupConfig(3, 2);
 
     await expect(page.getByTestId('qualifiers-warning')).toBeVisible();
-    await expect(page.getByTestId('start-tournament-button')).toBeDisabled();
+    await expect(page.getByTestId('start-tournament-button')).toBeEnabled();
   });
 
   test('full play-through: group stage then knockout final', async ({ page }) => {

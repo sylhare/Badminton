@@ -21,6 +21,12 @@ export interface SetupConfig {
   setQualifiersPerGroup: (n: number) => void;
 }
 
+/** Setup validation split into a blocking error (disables Start) and an advisory warning. */
+export interface SetupIssues {
+  error: string | null;
+  warning: string | null;
+}
+
 export interface TournamentKind {
   /** Label for the mode-selector pill. */
   label: string;
@@ -37,10 +43,10 @@ export interface TournamentKind {
   ) => React.ReactNode;
   /** Peak concurrent matches per round for the setup court warning; defaults to the round-robin count. */
   matchesPerRound?: (teams: TournamentTeam[], config: SetupConfig) => number;
-  /** Extra setup validation (e.g. qualifier count); null when the config is fine. */
-  validateSetup?: (teams: TournamentTeam[], config: SetupConfig) => string | null;
+  /** Extra setup validation (e.g. qualifier count), split into a blocking error and an advisory warning. */
+  validateSetup?: (teams: TournamentTeam[], config: SetupConfig) => SetupIssues;
   /** Format-specific setup fields, rendered in the setup form under the shared ones. */
-  renderSetupConfig?: (config: SetupConfig, error: string | null) => React.ReactNode;
+  renderSetupConfig?: (config: SetupConfig, issues: SetupIssues, teams: TournamentTeam[]) => React.ReactNode;
 }
 
 /**
@@ -72,8 +78,11 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
       />
     ),
     matchesPerRound: (teams, c) => GroupKnockoutTournament.matchesPerRound(teams, c.groupSize),
-    validateSetup: (teams, c) => GroupKnockoutTournament.validateConfig(teams, c.groupSize, c.qualifiersPerGroup),
-    renderSetupConfig: (c, error) => (
+    validateSetup: (teams, c) => ({
+      error: GroupKnockoutTournament.validateConfig(teams, c.groupSize, c.qualifiersPerGroup),
+      warning: GroupKnockoutTournament.configWarning(teams, c.groupSize, c.qualifiersPerGroup),
+    }),
+    renderSetupConfig: (c, issues, teams) => (
       <div className="setup-section" data-testid="group-knockout-config">
         <h3>Groups + Knockout</h3>
         <div className="group-knockout-fields">
@@ -84,7 +93,7 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
               min={2}
               onChange={next => {
                 c.setGroupSize(next);
-                c.setQualifiersPerGroup(Math.min(c.qualifiersPerGroup, next - 1));
+                c.setQualifiersPerGroup(Math.min(c.qualifiersPerGroup, next));
               }}
               testId="group-size-input"
             />
@@ -94,13 +103,19 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
             <NumberField
               value={c.qualifiersPerGroup}
               min={1}
-              max={c.groupSize - 1}
+              max={c.groupSize}
               onChange={c.setQualifiersPerGroup}
               testId="qualifiers-input"
             />
           </label>
         </div>
-        {error && <p className="setup-warning" data-testid="qualifiers-warning">{error}</p>}
+        {teams.length > 0 && (
+          <p className="setup-hint" data-testid="group-preview">
+            {GroupKnockoutTournament.describeGroups(teams, c.groupSize)}
+          </p>
+        )}
+        {issues.error && <p className="setup-error" data-testid="qualifiers-error">{issues.error}</p>}
+        {issues.warning && <p className="setup-warning" data-testid="qualifiers-warning">{issues.warning}</p>}
       </div>
     ),
   },

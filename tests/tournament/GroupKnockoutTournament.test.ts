@@ -218,12 +218,42 @@ describe('GroupKnockoutTournament.validateConfig', () => {
     expect(GroupKnockoutTournament.validateConfig(teams(7), 4, 3)).toBeNull();
   });
 
-  it('warns only when every team would advance', () => {
-    expect(GroupKnockoutTournament.validateConfig(teams(6), 3, 3)).toMatch(/every team/i);
+  it('does not block when every team would advance — that is a valid (if unusual) setup', () => {
+    expect(GroupKnockoutTournament.validateConfig(teams(6), 3, 3)).toBeNull();
   });
 
-  it('warns when too few teams would qualify for a knockout', () => {
+  it('blocks only when too few teams would qualify for a knockout', () => {
     expect(GroupKnockoutTournament.validateConfig(teams(2), 2, 1)).toMatch(/too few/i);
+  });
+});
+
+describe('GroupKnockoutTournament.configWarning', () => {
+  const teams = (n: number) =>
+    createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
+
+  it('warns when every team advances (world-cup group of 4, all 4 qualify)', () => {
+    expect(GroupKnockoutTournament.configWarning(teams(4), 4, 4)).toMatch(/every team advances/i);
+  });
+
+  it('stays silent for the world-cup shape where some teams are cut (2 groups of 4, top 3 advance)', () => {
+    expect(GroupKnockoutTournament.configWarning(teams(8), 4, 3)).toBeNull();
+  });
+});
+
+describe('GroupKnockoutTournament.describeGroups', () => {
+  const teams = (n: number) =>
+    createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
+
+  it('previews the real split and flags a group size the roster cannot reach', () => {
+    expect(GroupKnockoutTournament.describeGroups(teams(6), 4)).toBe('6 teams → 2 groups of 3 (4 per group needs more teams)');
+  });
+
+  it('previews an honoured, uniform split without a caveat', () => {
+    expect(GroupKnockoutTournament.describeGroups(teams(8), 4)).toBe('8 teams → 2 groups of 4');
+  });
+
+  it('lists uneven group sizes', () => {
+    expect(GroupKnockoutTournament.describeGroups(teams(7), 4)).toBe('7 teams → 2 groups of 4, 3');
   });
 });
 
