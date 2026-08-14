@@ -150,7 +150,7 @@ test.describe('Tournament Page', () => {
     await expect(page.getByTestId('manage-players-section')).toContainText('Eve');
   });
 
-  test('best-of-3: blank sets with default placeholders, locks the decider after two, records a 2-set clinch', async ({ page }) => {
+  test('best-of-3: blank sets with default placeholders, locks the decider by default, records a 2-set clinch', async ({ page }) => {
     await tournamentPage.setup(DEFAULT_PLAYERS);
 
     await page.getByTestId('best-of-pill-3').click();
@@ -170,18 +170,21 @@ test.describe('Tournament Page', () => {
       await expect(page.getByTestId('score-modal-confirm')).toBeEnabled();
     });
 
-    await test.step('the deciding set stays editable until a side takes the first two, then locks', async () => {
-      await expect(page.getByTestId('score-input-team1-2')).toBeEnabled();
-      await page.getByTestId('score-input-team1-0').fill('21');
-      await page.getByTestId('score-input-team2-0').fill('18');
-      await page.getByTestId('score-input-team1-1').fill('21');
-      await page.getByTestId('score-input-team2-1').fill('18');
+    await test.step('the deciding set is locked by default since the winner clinches in two', async () => {
       await expect(page.getByTestId('score-input-team1-2')).toBeDisabled();
       await expect(page.getByTestId('score-input-team2-2')).toBeDisabled();
     });
 
-    await test.step('adjust the first set’s loser score', async () => {
+    await test.step('splitting the first two sets unlocks the decider, then a clinch re-locks it', async () => {
+      await page.getByTestId('score-input-team1-0').fill('18');
+      await page.getByTestId('score-input-team2-0').fill('21');
+      await expect(page.getByTestId('score-input-team1-2')).toBeEnabled();
+      await page.getByTestId('score-input-team1-0').fill('21');
       await page.getByTestId('score-input-team2-0').fill('15');
+      await page.getByTestId('score-input-team1-1').fill('21');
+      await page.getByTestId('score-input-team2-1').fill('18');
+      await expect(page.getByTestId('score-input-team1-2')).toBeDisabled();
+      await expect(page.getByTestId('score-input-team2-2')).toBeDisabled();
     });
 
     await page.getByTestId('score-modal-confirm').click();
