@@ -63,7 +63,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   const canConfirm = result !== null;
   const resolvedWinner: 1 | 2 = result?.winner ?? winnerTeam;
 
-  const clinchIndex = MatchScore.clinchSetIndex(rawSets, setCount);
+  const clinchIndex = MatchScore.clinchSetIndex(effectiveSets, setCount);
   const isLocked = (index: number) => clinchIndex >= 0 && index > clinchIndex;
 
   const handleConfirm = () => {

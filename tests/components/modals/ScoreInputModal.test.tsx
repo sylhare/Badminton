@@ -194,13 +194,14 @@ describe('ScoreInputModal', () => {
       ]);
     });
 
-    it('leaves the deciding set editable while blank and locks it once a side takes the first two', async () => {
+    it('locks the deciding set by default since the winner clinches in two, and unlocks it once the first two split', async () => {
       const { set } = renderBestOf(3, 1);
-      expect(set(2).t1()).toBeEnabled();
-      await user.type(set(0).t1(), '21'); await user.type(set(0).t2(), '18');
-      await user.type(set(1).t1(), '21'); await user.type(set(1).t2(), '18');
       expect(set(2).t1()).toBeDisabled();
       expect(set(2).t2()).toBeDisabled();
+      await user.type(set(0).t1(), '18'); await user.type(set(0).t2(), '21');
+      await user.type(set(1).t1(), '21'); await user.type(set(1).t2(), '18');
+      expect(set(2).t1()).toBeEnabled();
+      expect(set(2).t2()).toBeEnabled();
     });
 
     it('records every entered set when the first two split and the decider is played out', async () => {
