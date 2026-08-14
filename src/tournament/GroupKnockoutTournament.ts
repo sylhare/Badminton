@@ -315,10 +315,10 @@ export class GroupKnockoutTournament extends Tournament {
    * through the very same path a group-result edit uses — a re-order is just another change to
    * the group standings, so the knockout re-seeds (or stays put) by the existing rules.
    */
-  withManualOrder(orderedIds: string[]): GroupKnockoutTournament {
+  override withManualOrder(orderedIds: string[]): this {
     const manualPoints = { ...(this._state.manualPoints ?? {}) };
     orderedIds.forEach((id, index) => { manualPoints[id] = orderedIds.length - index; });
-    return this.reseedFrom(this.regroupedWith(this.groupMatches(), manualPoints));
+    return this.reseedFrom(this.regroupedWith(this.groupMatches(), manualPoints)) as this;
   }
 
   /** The group phase renders its own per-group standings tables, so the combined table is hidden. */

@@ -321,6 +321,24 @@
     font-size: 0.7rem;
 }
 
+/* Single tie-break action shown below the combined standings when rows are tied. */
+.standings-tie-break {
+    margin-top: 0.75rem;
+    gap: 6px;
+}
+
+.standing-rank-tied {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tie-warning {
+    color: var(--color-warning, #d98324);
+    font-size: 0.8rem;
+    cursor: help;
+}
+
 .group-knockout-final {
     margin-top: 1.5rem;
 }
