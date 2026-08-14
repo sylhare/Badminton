@@ -160,6 +160,16 @@ describe('EliminationBracket', () => {
       expect(cbSection.querySelectorAll('[data-testid="bracket-node-match"]').length).toBe(0);
     });
 
+    it('does not pull the semi-final losers into the consolation bracket when a 3rd-place match exists (6 teams)', () => {
+      const t = playFullTournament(EliminationTournament.create({ format: 'singles' }).start(makeTeams(['A', 'B', 'C', 'D', 'E', 'F']), 4));
+
+      render(<EliminationBracket tournament={t} onMatchResult={onMatchResult} />);
+      const cbSection = screen.getByTestId('cb-section');
+
+      expect(screen.getByTestId('tp-section')).toBeInTheDocument();
+      expect(cbSection.querySelectorAll('[data-testid="bracket-node-match"]').length).toBe(1);
+    });
+
     it('shows CB section after WB R1 is complete', async () => {
       const [A, B, C, D] = makeTeams(['A', 'B', 'C', 'D']);
       let t = EliminationTournament.create({ format: 'singles' }).start([A, B, C, D], 4);

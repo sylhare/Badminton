@@ -422,6 +422,20 @@ describe('EliminationTournament', () => {
       expect(standings).toHaveLength(6);
     });
 
+    it('6 teams: semi-final losers go to the 3rd-place match, never the consolation bracket', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F']);
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
+
+      const sfLoserIds = t.winners
+        .matchesForRound(t.totalRounds() - 1)
+        .map(m => (m.winner === 1 ? m.team2 : m.team1).id);
+      expect(sfLoserIds).toHaveLength(2);
+      expect(t.thirdPlaceMatch).toBeDefined();
+
+      const cbTeamIds = new Set(t.consolation.matches().flatMap(m => [m.team1.id, m.team2.id]));
+      for (const id of sfLoserIds) expect(cbTeamIds.has(id)).toBe(false);
+    });
+
     it.each(Array.from({ length: 28 }, (_, i) => i + 5))(
       '%i teams (size >= 8 has a real semi-final): finalists outrank eliminated semi-final losers before the final is played',
       (teamCount) => {
