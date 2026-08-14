@@ -45,4 +45,35 @@ describe('Tournament', () => {
       expect(tournament.matches()[0].winner).toBeUndefined();
     });
   });
+
+  describe('tieGroups — flags only ties not yet ordered by hand', () => {
+    const teamC = createTournamentTeam('c', ['Charlie']);
+
+    function threeTiedTeams(manualPoints?: Record<string, number>) {
+      return RoundRobinTournament.fromState({
+        format: 'singles',
+        type: 'round-robin',
+        numberOfCourts: 1,
+        bestOf: 1,
+        teams: [teamA, teamB, teamC],
+        matches: [],
+        manualPoints,
+      });
+    }
+
+    it('groups adjacent rows the metrics cannot separate', () => {
+      const t = threeTiedTeams();
+      expect(t.tieGroups(t.calculateStandings())).toEqual([[0, 1, 2]]);
+    });
+
+    it('drops a run once a saved order gives every team a distinct tie-break point', () => {
+      const resolved = threeTiedTeams().withManualOrder(['a', 'b', 'c']);
+      expect(resolved.tieGroups(resolved.calculateStandings())).toEqual([]);
+    });
+
+    it('keeps flagging a run that is only partly ordered', () => {
+      const partial = threeTiedTeams({ a: 2, b: 1 });
+      expect(partial.tieGroups(partial.calculateStandings())).toHaveLength(1);
+    });
+  });
 });

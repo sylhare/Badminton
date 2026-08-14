@@ -139,6 +139,17 @@ export class MatchScore {
     );
   }
 
+  /**
+   * Team 1's average point margin per set (rounded), positive when team 1 scored more. Averaged
+   * rather than summed so a best-of-N match reads on the same ~single-game scale as a best-of-1
+   * and playing more sets doesn't inflate a team's standings score differential. Zero with no sets.
+   */
+  averagePointMargin(): number {
+    if (!this.sets.length) return 0;
+    const total = this.points();
+    return Math.round((total.team1 - total.team2) / this.sets.length);
+  }
+
   /** Render the sets as "21 – 14, 18 – 21", or null when nothing was scored. */
   formatted(): string | null {
     return this.sets.length ? this.sets.map(s => `${s.team1} – ${s.team2}`).join(', ') : null;

@@ -196,6 +196,58 @@ test.describe('Tournament Page', () => {
     await expect(page.locator('.match-score').first()).toContainText('21 – 15, 21 – 18');
   });
 
+  test('best-of-3: an untouched set defaults to the clicked winner so a part-entered match still confirms', async ({ page }) => {
+    await tournamentPage.setup(DEFAULT_PLAYERS);
+
+    await page.getByTestId('best-of-pill-3').click();
+    await tournamentPage.start();
+
+    await page.locator('[data-testid="team-1"]').first().click();
+    const modal = page.getByTestId('score-input-modal');
+    await expect(modal).toBeVisible();
+
+    await test.step('give the second set to the other team and leave the rest blank', async () => {
+      await page.getByTestId('score-input-team1-1').fill('15');
+      await page.getByTestId('score-input-team2-1').fill('21');
+      await expect(page.getByTestId('score-modal-confirm')).toBeEnabled();
+    });
+
+    await page.getByTestId('score-modal-confirm').click();
+    await expect(modal).not.toBeVisible();
+
+    await expect(page.getByTestId('round-1')).toHaveClass(/round-complete/);
+    await page.getByTestId('round-header-1').click();
+    await expect(page.locator('.match-score').first()).toContainText('21 – 18, 15 – 21, 21 – 18');
+  });
+
+  test('a completed round-robin tie clears its warning icon once an order is saved', async ({ page }) => {
+    await tournamentPage.setup(['Alice', 'Bob', 'Charlie']);
+
+    await page.getByTestId('format-pill-singles').click();
+    await tournamentPage.start();
+
+    const beats: Record<string, string> = { Alice: 'Bob', Bob: 'Charlie', Charlie: 'Alice' };
+
+    for (let round = 1; round <= 3; round++) {
+      const roundMatches = page.getByTestId('round-matches');
+      await expect(roundMatches.locator('.singles-player-winner')).toHaveCount(0);
+      const players = roundMatches.locator('[data-testid^="singles-player-team"]');
+      await expect(players).toHaveCount(2);
+      const [x, y] = (await players.allInnerTexts()).map(name => name.replace('👑', '').trim());
+      const winner = beats[x] === y ? x : y;
+      await roundMatches.getByText(winner, { exact: true }).click();
+      await page.getByTestId('score-modal-confirm').click();
+      await expect(page.getByTestId('score-input-modal')).not.toBeVisible();
+    }
+
+    await expect(page.getByTestId('standing-tie-flag-0')).toBeVisible();
+
+    await page.getByTestId('standings-tie-break').click();
+    await page.getByTestId('manual-order-save').click();
+
+    await expect(page.getByTestId('standing-tie-flag-0')).toHaveCount(0);
+  });
+
   test('doubles tournament: start, record match, start new tournament', async ({ page }) => {
     await tournamentPage.setup(DEFAULT_PLAYERS);
     await tournamentPage.start();

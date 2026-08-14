@@ -36,8 +36,9 @@ export const Tournament: React.FC<TournamentProps> = ({
   onTogglePlayer,
   showSetup,
 }) => {
-  const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
+  const [typeOverride, setTypeOverride] = useState<TournamentType | null>(null);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const selectedType = typeOverride ?? tournament?.state().type ?? 'round-robin';
   const isSetupPhase = !tournament || tournament.phase() === 'setup';
   const standings = useMemo(
     () => (isSetupPhase || showSetup || !(tournament?.showsCombinedStandings() ?? true))
@@ -54,7 +55,7 @@ export const Tournament: React.FC<TournamentProps> = ({
           <SegmentedControl
             options={TOURNAMENT_TYPES}
             selected={selectedType}
-            onSelect={setSelectedType}
+            onSelect={setTypeOverride}
             label={type => TOURNAMENT_KINDS[type].label}
             testIdFor={type => `type-pill-${type}`}
           />
@@ -63,6 +64,7 @@ export const Tournament: React.FC<TournamentProps> = ({
           initialPlayers={initialPlayers}
           initialNumberOfCourts={initialNumberOfCourts}
           type={selectedType}
+          initialConfig={tournament?.state()}
           onStart={onStart}
           onAddPlayers={onAddPlayers}
           onTogglePlayer={onTogglePlayer}

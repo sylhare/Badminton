@@ -143,7 +143,7 @@ describe('RoundRobinTournament', () => {
       const standings = makeStandingsTournament(
         [
           createTournamentMatch('m1', 1, alice, bob, 1, [
-            { team1: 21, team2: 10 }, { team1: 10, team2: 21 }, { team1: 21, team2: 15 },
+            { team1: 21, team2: 5 }, { team1: 5, team2: 21 }, { team1: 21, team2: 5 },
           ]),
           createTournamentMatch('m2', 2, charlie, bob, 1, [
             { team1: 21, team2: 19 }, { team1: 21, team2: 19 },
@@ -157,6 +157,52 @@ describe('RoundRobinTournament', () => {
       expect(rowC.setDiff).toBe(2);
       expect(rowA.scoreDiff).toBeGreaterThan(rowC.scoreDiff);
       expect(standings.map(r => r.team.id)).toEqual(['c', 'a', 'b']);
+    });
+
+    describe('best-of-N differentials stay on a single-game scale', () => {
+      it('a best-of-3 2–0 contributes the same per-set margin as a single game, not the summed points', () => {
+        const single = makeStandingsTournament(
+          [createTournamentMatch('m1', 1, alice, bob, 1, [{ team1: 21, team2: 11 }])],
+          [alice, bob],
+        ).calculateStandings().find(r => r.team.id === 'a')!;
+        const bestOf3 = makeStandingsTournament(
+          [createTournamentMatch('m1', 1, alice, bob, 1, [{ team1: 21, team2: 11 }, { team1: 21, team2: 11 }])],
+          [alice, bob],
+        ).calculateStandings().find(r => r.team.id === 'a')!;
+        expect(single.scoreDiff).toBe(10);
+        expect(bestOf3.scoreDiff).toBe(10);
+        expect(bestOf3.setDiff).toBe(2);
+      });
+
+      it('credits the loser of a 2–1 with the set they won and splits the diff symmetrically', () => {
+        const standings = makeStandingsTournament(
+          [createTournamentMatch('m1', 1, alice, bob, 1, [
+            { team1: 21, team2: 10 }, { team1: 15, team2: 21 }, { team1: 21, team2: 19 },
+          ])],
+          [alice, bob],
+        ).calculateStandings();
+        const winner = standings.find(r => r.team.id === 'a')!;
+        const loser = standings.find(r => r.team.id === 'b')!;
+        expect(winner.setDiff).toBe(1);
+        expect(loser.setDiff).toBe(-1);
+        expect(winner.scoreDiff).toBe(2);
+        expect(loser.scoreDiff).toBe(-2);
+      });
+
+      it('does not balloon a differential just because a team played more sets across matches', () => {
+        const twoOne = [{ team1: 21, team2: 15 }, { team1: 15, team2: 21 }, { team1: 21, team2: 18 }];
+        const rowA = makeStandingsTournament(
+          [
+            createTournamentMatch('m1', 1, alice, bob, 1, twoOne),
+            createTournamentMatch('m2', 2, alice, charlie, 1, twoOne),
+            createTournamentMatch('m3', 3, bob, charlie, 1, twoOne),
+          ],
+          [alice, bob, charlie],
+        ).calculateStandings().find(r => r.team.id === 'a')!;
+        expect(rowA.won).toBe(2);
+        expect(rowA.setDiff).toBe(2);
+        expect(rowA.scoreDiff).toBe(2);
+      });
     });
 
     it('breaks ties by name when points and scoreDiff equal', () => {
