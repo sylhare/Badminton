@@ -110,7 +110,10 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
           </label>
         </div>
         {teams.length > 0 && (
-          <p className="setup-hint" data-testid="group-preview">
+          <p
+            className={GroupKnockoutTournament.groupsUndersized(teams, c.groupSize) ? 'setup-warning' : 'setup-hint'}
+            data-testid="group-preview"
+          >
             {GroupKnockoutTournament.describeGroups(teams, c.groupSize)}
           </p>
         )}

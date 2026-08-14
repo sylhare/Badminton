@@ -98,6 +98,29 @@ describe('MatchScore', () => {
       expect(s.points()).toEqual({ team1: 36, team2: 31 });
     });
 
+    describe('averagePointMargin — per-set so best-of-N stays on a single-game scale', () => {
+      it('is the plain margin for a single set', () => {
+        expect(MatchScore.of([{ team1: 21, team2: 15 }], 1).averagePointMargin()).toBe(6);
+      });
+
+      it('averages the per-set margins rather than summing them', () => {
+        const s = MatchScore.of([{ team1: 21, team2: 11 }, { team1: 21, team2: 15 }], 1);
+        expect(s.points()).toEqual({ team1: 42, team2: 26 });
+        expect(s.averagePointMargin()).toBe(8);
+      });
+
+      it('rounds the average and stays symmetric for the losing side', () => {
+        const win = MatchScore.of([{ team1: 21, team2: 5 }, { team1: 5, team2: 21 }, { team1: 21, team2: 5 }], 1);
+        const loss = MatchScore.of([{ team1: 5, team2: 21 }, { team1: 21, team2: 5 }, { team1: 5, team2: 21 }], 2);
+        expect(win.averagePointMargin()).toBe(5);
+        expect(loss.averagePointMargin()).toBe(-5);
+      });
+
+      it('is zero when no set was scored', () => {
+        expect(MatchScore.of([], 1).averagePointMargin()).toBe(0);
+      });
+    });
+
     it('renders sets as a dash-joined string, or null when empty', () => {
       expect(MatchScore.of([{ team1: 21, team2: 14 }, { team1: 18, team2: 21 }], 1).formatted()).toBe('21 – 14, 18 – 21');
       expect(MatchScore.of([], 1).formatted()).toBeNull();

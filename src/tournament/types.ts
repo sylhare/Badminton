@@ -41,7 +41,10 @@ export interface TournamentStandingRow {
   points: number;
   /** Set-win differential (sets won minus sets lost) across all decided matches. */
   setDiff: number;
-  /** Total-point differential across every set of every decided match. */
+  /**
+   * Sum of each decided match's average per-set point margin. Per-match averaging keeps a
+   * best-of-N match on the same scale as a best-of-1, so longer matches don't balloon the diff.
+   */
   scoreDiff: number;
 }
 

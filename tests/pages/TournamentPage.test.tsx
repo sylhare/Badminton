@@ -237,6 +237,37 @@ describe('TournamentPage', () => {
       expect(screen.queryByTestId('elimination-bracket')).not.toBeInTheDocument();
     });
 
+    it('pre-fills the setup form from the current tournament when setup is re-opened', async () => {
+      const [A, B, C, D] = [mockPlayers[0], mockPlayers[1], mockPlayers[2], mockPlayers[3]];
+      const t = (id: string, p: typeof A) => ({ id, players: [p] });
+      await storageManager.saveTournament({
+        phase: 'active' as const,
+        format: 'singles' as const,
+        type: 'elimination' as const,
+        numberOfCourts: 3,
+        bracketSize: 4,
+        bestOf: 3,
+        teams: [t('t1', A), t('t2', B), t('t3', C), t('t4', D)],
+        matches: [
+          { id: 'm1', round: 1, courtNumber: 1, bracket: BracketKind.Winners, team1: t('t1', A), team2: t('t2', B) },
+          { id: 'm2', round: 1, courtNumber: 2, bracket: BracketKind.Winners, team1: t('t3', C), team2: t('t4', D) },
+        ],
+      });
+      await flushPendingSaves();
+
+      const user = userEvent.setup();
+      renderWithProvider(<TournamentPage />);
+      await waitFor(() => expect(screen.getByTestId('elimination-bracket')).toBeInTheDocument());
+
+      await user.click(screen.getByTestId('back-to-setup'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('type-pill-elimination')).toHaveClass('format-pill-active');
+        expect(screen.getByTestId('best-of-pill-3')).toHaveClass('format-pill-active');
+        expect(screen.getByTestId('tournament-court-count')).toHaveValue(3);
+      });
+    });
+
     it('restores elimination tournament from saved state', async () => {
       const [A, B, C, D] = [mockPlayers[0], mockPlayers[1], mockPlayers[2], mockPlayers[3]];
       const savedState = {

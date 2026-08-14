@@ -99,6 +99,15 @@ export class GroupKnockoutTournament extends Tournament {
     return null;
   }
 
+  /**
+   * True when no group reaches the requested size — the split still works but forms smaller groups
+   * than asked for. It's a cosmetic downgrade, not a blocking error, so the setup flags it in orange.
+   */
+  static groupsUndersized(teams: TournamentTeam[], groupSize: number): boolean {
+    const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
+    return sizes.length > 0 && Math.max(...sizes) < groupSize;
+  }
+
   /** Human summary of the groups a config actually forms, so the setup can preview the real split. */
   static describeGroups(teams: TournamentTeam[], groupSize: number): string {
     const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
@@ -107,7 +116,9 @@ export class GroupKnockoutTournament extends Tournament {
     const uniform = sizes.every(size => size === sizes[0]);
     const shape = uniform ? `${sizes.length} ${noun} of ${sizes[0]}` : `${sizes.length} ${noun} of ${sizes.join(', ')}`;
     const summary = `${teams.length} teams → ${shape}`;
-    return Math.max(...sizes) < groupSize ? `${summary} (${groupSize} per group needs more teams)` : summary;
+    return GroupKnockoutTournament.groupsUndersized(teams, groupSize)
+      ? `${summary} (${groupSize} per group needs more teams)`
+      : summary;
   }
 
   static fromState(state: TournamentState): GroupKnockoutTournament {
@@ -226,15 +237,9 @@ export class GroupKnockoutTournament extends Tournament {
   /** True while a metrics tie touching a group's qualifying band (who advances, or their seed order) lacks a hand-set order. */
   private hasUnresolvedBoundaryTie(): boolean {
     const cut = this.qualifiersPerGroup();
-    const points = this._state.manualPoints ?? {};
     return this.groups().some((_, groupIndex) => {
       const standings = this.groupStandings(groupIndex);
-      return this.tieGroups(standings).some(run => {
-        const affectsQualifiers = run.some(rank => rank < cut);
-        if (!affectsQualifiers) return false;
-        const ranked = run.map(rank => points[standings[rank].team.id]);
-        return ranked.some(v => v === undefined) || new Set(ranked).size !== ranked.length;
-      });
+      return this.tieGroups(standings).some(run => run.some(rank => rank < cut));
     });
   }
 

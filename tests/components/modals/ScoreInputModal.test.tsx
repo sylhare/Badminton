@@ -216,10 +216,14 @@ describe('ScoreInputModal', () => {
       ]);
     });
 
-    it('does not fabricate blank sets: an incomplete best-of-N cannot be confirmed', async () => {
-      const { set, confirmBtn } = renderBestOf(3, 1);
-      await user.type(set(0).t1(), '19'); await user.type(set(0).t2(), '21');
-      expect(confirmBtn()).toBeDisabled();
+    it('defaults untouched sets to the clicked winner so a partly-entered best-of-N still confirms', async () => {
+      const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
+      await user.type(set(1).t1(), '15'); await user.type(set(1).t2(), '21');
+      expect(confirmBtn()).toBeEnabled();
+      await user.click(confirmBtn());
+      expect(onConfirm).toHaveBeenCalledWith(1, [
+        { team1: 21, team2: 18 }, { team1: 15, team2: 21 }, { team1: 21, team2: 18 },
+      ]);
     });
 
     it('lets the entered sets flip the winner', async () => {
