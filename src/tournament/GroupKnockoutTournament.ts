@@ -75,21 +75,39 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   /**
-   * Config error, else null. The knockout is only pointless when *every* team advances
-   * (the group stage eliminates no one) — a group whose whole roster qualifies is fine
-   * as long as some other group still cuts teams. Counting actual advancers avoids a
-   * false alarm when uneven groups leave one group with exactly `qualifiersPerGroup` teams.
+   * Blocking config error (the config can't form a knockout at all), else null. Only fires
+   * when fewer than two teams would advance. Counting actual advancers avoids a false alarm
+   * when uneven groups leave one group with exactly `qualifiersPerGroup` teams.
    */
   static validateConfig(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
     if (teams.length === 0) return null;
-    const advancing = GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup);
-    if (advancing >= teams.length) {
-      return 'Every team would qualify — lower the qualifiers or raise the group size.';
-    }
-    if (advancing < MIN_KNOCKOUT_TEAMS) {
+    if (GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup) < MIN_KNOCKOUT_TEAMS) {
       return 'Too few teams would qualify for a knockout — add teams or lower the group size.';
     }
     return null;
+  }
+
+  /**
+   * Advisory (non-blocking) config note, else null. Everyone advancing is a valid setup — the
+   * group stage just seeds a full knockout — but the user probably wants to know no one is cut.
+   */
+  static configWarning(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
+    if (teams.length === 0) return null;
+    if (GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup) >= teams.length) {
+      return 'No one will be eliminated in the group phase — every team advances. Is that what you want?';
+    }
+    return null;
+  }
+
+  /** Human summary of the groups a config actually forms, so the setup can preview the real split. */
+  static describeGroups(teams: TournamentTeam[], groupSize: number): string {
+    const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
+    if (sizes.length === 0) return '';
+    const noun = sizes.length === 1 ? 'group' : 'groups';
+    const uniform = sizes.every(size => size === sizes[0]);
+    const shape = uniform ? `${sizes.length} ${noun} of ${sizes[0]}` : `${sizes.length} ${noun} of ${sizes.join(', ')}`;
+    const summary = `${teams.length} teams → ${shape}`;
+    return Math.max(...sizes) < groupSize ? `${summary} (${groupSize} per group needs more teams)` : summary;
   }
 
   static fromState(state: TournamentState): GroupKnockoutTournament {

@@ -79,7 +79,8 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
       ? `${matchesPerRound} matches per round but only ${numberOfCourts} court${numberOfCourts > 1 ? 's' : ''} — some matches will need to wait.`
       : null;
 
-  const qualifierError = kind.validateSetup?.(teams, setupConfig) ?? null;
+  const setupIssues = kind.validateSetup?.(teams, setupConfig) ?? { error: null, warning: null };
+  const qualifierError = setupIssues.error;
 
   const handleStart = () => {
     if (validationError || qualifierError) return;
@@ -142,7 +143,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
         </label>
       </div>
 
-      {kind.renderSetupConfig?.(setupConfig, qualifierError)}
+      {kind.renderSetupConfig?.(setupConfig, setupIssues, teams)}
 
       {teams.length > 0 && (
         <div className="setup-section">

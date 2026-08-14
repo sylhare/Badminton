@@ -53,13 +53,34 @@ describe('TournamentSetup — group-knockout config', () => {
     expect(options.qualifiersPerGroup).toBe(1);
   });
 
-  it('warns when every team in a group would qualify', () => {
+  it('warns but still allows Start when every team would qualify', () => {
     render(
       <TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} type="group-knockout" onStart={onStart} />,
     );
 
     fireEvent.change(screen.getByTestId('group-size-input'), { target: { value: '3' } });
     fireEvent.change(screen.getByTestId('qualifiers-input'), { target: { value: '2' } });
-    expect(screen.getByTestId('qualifiers-warning')).toBeInTheDocument();
+
+    expect(screen.getByTestId('qualifiers-warning')).toHaveTextContent(/every team advances/i);
+    expect(screen.getByTestId('start-tournament-button')).toBeEnabled();
+  });
+
+  it('previews the real group split, flagging a size the roster cannot reach', () => {
+    render(
+      <TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} type="group-knockout" onStart={onStart} />,
+    );
+
+    fireEvent.change(screen.getByTestId('group-size-input'), { target: { value: '3' } });
+    expect(screen.getByTestId('group-preview')).toHaveTextContent('4 teams → 2 groups of 2 (3 per group needs more teams)');
+  });
+
+  it('lets qualifiers reach the full group size (world-cup style)', () => {
+    render(
+      <TournamentSetup initialPlayers={presentPlayers} initialNumberOfCourts={2} type="group-knockout" onStart={onStart} />,
+    );
+
+    fireEvent.change(screen.getByTestId('group-size-input'), { target: { value: '4' } });
+    fireEvent.change(screen.getByTestId('qualifiers-input'), { target: { value: '4' } });
+    expect(screen.getByTestId('qualifiers-input')).toHaveValue(4);
   });
 });
