@@ -109,6 +109,17 @@ export abstract class Tournament {
     return groups;
   }
 
+  /**
+   * Persist a hand-chosen finishing order for otherwise-tied teams (best first) as tie-break
+   * points, consumed as the last resort by {@link compareByTeamName}. Formats that must re-seed
+   * a later phase from the reordered standings override this.
+   */
+  withManualOrder(orderedIds: string[]): this {
+    const manualPoints = { ...(this._state.manualPoints ?? {}) };
+    orderedIds.forEach((id, index) => { manualPoints[id] = orderedIds.length - index; });
+    return this.rebuild({ ...this._state, manualPoints });
+  }
+
   /** Points a side plays to in a set; drives the score modal's defaults. */
   setSize(): number {
     return this._state.setSize ?? DEFAULT_SET_SIZE;

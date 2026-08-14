@@ -73,6 +73,9 @@ export const Tournament: React.FC<TournamentProps> = ({
 
   const isComplete = tournament.isComplete();
   const kind = TOURNAMENT_KINDS[tournament.state().type];
+  const tieGroups = isComplete && tournament.state().type === 'round-robin'
+    ? tournament.tieGroups(standings)
+    : [];
 
   return (
     <div className="tournament-active-layout">
@@ -83,6 +86,8 @@ export const Tournament: React.FC<TournamentProps> = ({
           isComplete={isComplete}
           subtitle={tournament.standingsSubtitle()}
           showPoints={tournament.showsPoints()}
+          tieGroups={tieGroups}
+          onResolveTies={ids => onUpdateTournament(tournament.withManualOrder(ids))}
         />
       )}
       <button

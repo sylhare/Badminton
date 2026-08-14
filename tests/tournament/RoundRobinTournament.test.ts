@@ -381,6 +381,11 @@ describe('RoundRobinTournament', () => {
         .toEqual(['c', 'a', 'b']);
     });
 
+    it('withManualOrder ranks the tied teams in the chosen order', () => {
+      const ordered = makeTournament(cyclicMatches).withManualOrder(['b', 'c', 'a']);
+      expect(ordered.calculateStandings().map(r => r.team.id)).toEqual(['b', 'c', 'a']);
+    });
+
     it('never overrides teams the metrics already separate', () => {
       const decisive = [
         createTournamentMatch('m1', 1, teamA, teamB, 1, [{ team1: 21, team2: 10 }]),
