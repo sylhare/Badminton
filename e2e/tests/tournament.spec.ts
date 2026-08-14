@@ -135,7 +135,7 @@ test.describe('Tournament Page', () => {
     await expect(page.getByTestId('start-tournament-button')).not.toBeDisabled();
     await tournamentPage.start();
 
-    await page.getByTestId('new-tournament-button').click();
+    await tournamentPage.startNew();
 
     await expect(page.getByTestId('player-selection')).toContainText('Eve');
   });
@@ -206,7 +206,7 @@ test.describe('Tournament Page', () => {
     await page.getByTestId('score-modal-confirm').click();
 
     await expect(page.getByTestId('new-tournament-button')).toBeVisible();
-    await page.getByTestId('new-tournament-button').click();
+    await tournamentPage.startNew();
 
     await expect(page.getByTestId('start-tournament-button')).toBeVisible();
   });

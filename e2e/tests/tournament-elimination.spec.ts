@@ -131,7 +131,7 @@ test.describe('Tournament Page - Elimination', () => {
     await tournamentPage.selectType('elimination');
     await tournamentPage.startElimination();
 
-    await page.getByTestId('new-tournament-button').click();
+    await tournamentPage.startNew();
 
     await expect(page.getByTestId('tournament-type-selector')).toBeVisible();
     await expect(page.getByTestId('start-tournament-button')).toBeVisible();
