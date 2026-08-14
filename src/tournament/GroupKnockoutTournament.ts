@@ -100,25 +100,28 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   /**
-   * True when no group reaches the requested size — the split still works but forms smaller groups
-   * than asked for. It's a cosmetic downgrade, not a blocking error, so the setup flags it in orange.
+   * The setup preview for a config, computed from a single partition: the human summary of the
+   * groups actually formed plus `undersized` — true when no group reaches the requested size (the
+   * split still works but forms smaller groups than asked for; a cosmetic downgrade the setup flags
+   * in orange, not a blocking error).
    */
-  static groupsUndersized(teams: TournamentTeam[], groupSize: number): boolean {
+  static previewGroups(teams: TournamentTeam[], groupSize: number): { summary: string; undersized: boolean } {
     const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
-    return sizes.length > 0 && Math.max(...sizes) < groupSize;
-  }
-
-  /** Human summary of the groups a config actually forms, so the setup can preview the real split. */
-  static describeGroups(teams: TournamentTeam[], groupSize: number): string {
-    const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
-    if (sizes.length === 0) return '';
+    if (sizes.length === 0) return { summary: '', undersized: false };
+    const undersized = Math.max(...sizes) < groupSize;
     const noun = sizes.length === 1 ? 'group' : 'groups';
     const uniform = sizes.every(size => size === sizes[0]);
     const shape = uniform ? `${sizes.length} ${noun} of ${sizes[0]}` : `${sizes.length} ${noun} of ${sizes.join(', ')}`;
     const summary = `${teams.length} teams → ${shape}`;
-    return GroupKnockoutTournament.groupsUndersized(teams, groupSize)
-      ? `${summary} (${groupSize} per group needs more teams)`
-      : summary;
+    return {
+      summary: undersized ? `${summary} (${groupSize} per group needs more teams)` : summary,
+      undersized,
+    };
+  }
+
+  /** Human summary of the groups a config actually forms, so the setup can preview the real split. */
+  static describeGroups(teams: TournamentTeam[], groupSize: number): string {
+    return GroupKnockoutTournament.previewGroups(teams, groupSize).summary;
   }
 
   static fromState(state: TournamentState): GroupKnockoutTournament {

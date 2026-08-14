@@ -82,7 +82,9 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
       error: GroupKnockoutTournament.validateConfig(teams, c.groupSize, c.qualifiersPerGroup),
       warning: GroupKnockoutTournament.configWarning(teams, c.groupSize, c.qualifiersPerGroup),
     }),
-    renderSetupConfig: (c, issues, teams) => (
+    renderSetupConfig: (c, issues, teams) => {
+      const preview = teams.length > 0 ? GroupKnockoutTournament.previewGroups(teams, c.groupSize) : null;
+      return (
       <div className="setup-section" data-testid="group-knockout-config">
         <h3>Groups + Knockout</h3>
         <div className="group-knockout-fields">
@@ -109,18 +111,19 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
             />
           </label>
         </div>
-        {teams.length > 0 && (
+        {preview && (
           <p
-            className={GroupKnockoutTournament.groupsUndersized(teams, c.groupSize) ? 'setup-warning' : 'setup-hint'}
+            className={preview.undersized ? 'setup-warning' : 'setup-hint'}
             data-testid="group-preview"
           >
-            {GroupKnockoutTournament.describeGroups(teams, c.groupSize)}
+            {preview.summary}
           </p>
         )}
         {issues.error && <p className="setup-error" data-testid="qualifiers-error">{issues.error}</p>}
         {issues.warning && <p className="setup-warning" data-testid="qualifiers-warning">{issues.warning}</p>}
       </div>
-    ),
+      );
+    },
   },
 };
 
