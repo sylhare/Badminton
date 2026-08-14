@@ -212,7 +212,7 @@ export class EliminationTournament extends Tournament {
 
       const advancers: TournamentTeam[] = [...getCBExpectedPool(n + 1, cbSeeds, allCB)];
 
-      if (advancers.length < 2 && n + 1 < totalWBRounds && this.wbRoundFullyDecided(winnersMatches, n + 1)) {
+      if (advancers.length < 2 && n + 1 < totalWBRounds - 1 && this.wbRoundFullyDecided(winnersMatches, n + 1)) {
         for (const m of winnersMatches.filter(m => m.round === n + 1 && m.winner !== undefined)) {
           advancers.push(loserOf(m));
         }
