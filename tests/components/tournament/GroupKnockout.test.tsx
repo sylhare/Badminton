@@ -117,6 +117,34 @@ describe('GroupKnockout', () => {
     expect(onUpdateTournament.mock.calls[0][0].state().manualPoints).toEqual({ b: 3, a: 2, c: 1 });
   });
 
+  it('warns that a tie blocks the knockout, and clears the warning once it is resolved', () => {
+    const tied = tiedGroupTournament();
+    const { rerender } = render(
+      <GroupKnockout tournament={tied} onMatchResult={vi.fn()} onUpdateTournament={vi.fn()} />,
+    );
+
+    expect(screen.getByTestId('knockout-tie-warning')).toBeInTheDocument();
+    expect(screen.queryByTestId('knockout-stage')).not.toBeInTheDocument();
+
+    rerender(
+      <GroupKnockout
+        tournament={tied.withManualOrder(['a', 'b', 'c'])}
+        onMatchResult={vi.fn()}
+        onUpdateTournament={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('knockout-tie-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('knockout-stage')).toBeInTheDocument();
+  });
+
+  it('does not warn about ties when the group phase is still in progress', () => {
+    const tournament = startTournament(['a', 'b', 'c', 'd'], 2, 1);
+    render(<GroupKnockout tournament={tournament} onMatchResult={vi.fn()} onUpdateTournament={vi.fn()} />);
+
+    expect(screen.queryByTestId('knockout-tie-warning')).not.toBeInTheDocument();
+  });
+
   it('hides the tie-break control once the knockout has started', () => {
     const decided = decideGroupPhase(startTournament(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 1));
     render(<GroupKnockout tournament={decided} onMatchResult={vi.fn()} onUpdateTournament={vi.fn()} />);
