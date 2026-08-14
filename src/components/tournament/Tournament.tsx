@@ -5,6 +5,7 @@ import type { OnMatchResult, TournamentTeam, TournamentType } from '../../tourna
 import type { Tournament as TournamentBase } from '../../tournament/Tournament';
 import type { CreateTournamentOptions } from '../../tournament/tournamentFactory';
 import { SegmentedControl } from '../common/SegmentedControl';
+import ConfirmModal from '../modals/ConfirmModal';
 
 import { TournamentSetup } from './TournamentSetup';
 import { TournamentStandings } from './TournamentStandings';
@@ -36,6 +37,7 @@ export const Tournament: React.FC<TournamentProps> = ({
   showSetup,
 }) => {
   const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const isSetupPhase = !tournament || tournament.phase() === 'setup';
   const standings = useMemo(
     () => (isSetupPhase || showSetup || !(tournament?.showsCombinedStandings() ?? true))
@@ -85,11 +87,20 @@ export const Tournament: React.FC<TournamentProps> = ({
       )}
       <button
         className="button button-primary"
-        onClick={onReset}
+        onClick={() => setConfirmingReset(true)}
         data-testid="new-tournament-button"
       >
         Start a New Tournament
       </button>
+      <ConfirmModal
+        isOpen={confirmingReset}
+        title="Start a new tournament?"
+        message="This discards the current tournament and its results. Are you sure you want to start a new one?"
+        confirmText="Start new"
+        isDestructive
+        onConfirm={() => { setConfirmingReset(false); onReset(); }}
+        onCancel={() => setConfirmingReset(false)}
+      />
     </div>
   );
 };

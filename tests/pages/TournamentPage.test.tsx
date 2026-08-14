@@ -107,8 +107,28 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('score-modal-confirm'));
 
     await user.click(screen.getByTestId('new-tournament-button'));
+    await user.click(screen.getByTestId('confirm-modal-confirm'));
 
     expect(screen.getByTestId('start-tournament-button')).toBeInTheDocument();
+  });
+
+  it('cancelling the Start a New Tournament confirmation keeps the current tournament', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<TournamentPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
+    }, { timeout: 3000 });
+
+    await user.click(screen.getByTestId('start-tournament-button'));
+    await user.click(screen.getByTestId('new-tournament-button'));
+
+    expect(screen.getByTestId('confirm-modal')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByTestId('confirm-modal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
+    expect(screen.queryByTestId('start-tournament-button')).not.toBeInTheDocument();
   });
 
   it('restores an in-progress tournament from saved state on mount', async () => {
@@ -153,6 +173,7 @@ describe('TournamentPage', () => {
     await user.click(aliceEl);
     await user.click(screen.getByTestId('score-modal-confirm'));
     await user.click(screen.getByTestId('new-tournament-button'));
+    await user.click(screen.getByTestId('confirm-modal-confirm'));
 
     await waitFor(() => {
       expect(saveSpy.mock.calls.at(-1)?.[0]).toBeNull();
@@ -306,6 +327,7 @@ describe('TournamentPage', () => {
       expect(levelOf('p1')).toBeUndefined();
 
       await user.click(screen.getByTestId('new-tournament-button'));
+    await user.click(screen.getByTestId('confirm-modal-confirm'));
       await waitFor(() => expect(levelOf('p1')!).toBeGreaterThan(50));
     });
 
