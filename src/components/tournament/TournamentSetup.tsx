@@ -43,7 +43,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const [groupSize, setGroupSize] = useState(initialConfig?.groupSize ?? 4);
   const [qualifiersPerGroup, setQualifiersPerGroup] = useState(initialConfig?.qualifiersPerGroup ?? 2);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
-    RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
+    RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), initialConfig?.format ?? 'doubles'),
   );
 
   const handleSwap = useCallback((from: SlotAddr, to: SlotAddr) => {
