@@ -271,6 +271,44 @@ describe('GroupKnockoutTournament.describeGroups', () => {
   });
 });
 
+describe('GroupKnockoutTournament.setupSummary', () => {
+  const teams = (n: number) =>
+    createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
+
+  it('returns null with no teams', () => {
+    expect(GroupKnockoutTournament.setupSummary([], 4, 2)).toBeNull();
+  });
+
+  it('is a neutral hint for an honoured split that eliminates some teams', () => {
+    expect(GroupKnockoutTournament.setupSummary(teams(8), 4, 2)).toEqual({
+      message: '8 teams → 2 groups of 4.',
+      severity: 'hint',
+    });
+  });
+
+  it('flows the unreachable size and the every-team-advances note into one warning', () => {
+    expect(GroupKnockoutTournament.setupSummary(teams(4), 3, 2)).toEqual({
+      message: '4 teams can\'t fill groups of 3, so they\'ll play as 2 groups of 2. '
+        + 'With the top 2 qualifying, every team advances — no one is eliminated in the group phase.',
+      severity: 'warning',
+    });
+  });
+
+  it('warns on an unreachable size alone when the split still eliminates teams', () => {
+    expect(GroupKnockoutTournament.setupSummary(teams(6), 4, 1)).toEqual({
+      message: '6 teams can\'t fill groups of 4, so they\'ll play as 2 groups of 3.',
+      severity: 'warning',
+    });
+  });
+
+  it('continues into a blocking error when too few would qualify', () => {
+    const note = GroupKnockoutTournament.setupSummary(teams(3), 4, 1)!;
+    expect(note.severity).toBe('error');
+    expect(note.message).toContain('3 teams can\'t fill groups of 4');
+    expect(note.message).toContain('too few to seed a knockout');
+  });
+});
+
 describe('GroupKnockoutTournament — final standings & manual order', () => {
   it('ranks the knockout champion first and tallies points across both phases', () => {
     let t = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
