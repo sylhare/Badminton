@@ -99,6 +99,16 @@ export class GroupKnockoutTournament extends Tournament {
     return null;
   }
 
+  /** The bare "X groups of Y" shape a config forms, plus whether every group fell short of the requested size. */
+  private static groupShape(teams: TournamentTeam[], groupSize: number): { shape: string; undersized: boolean } {
+    const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
+    const undersized = Math.max(...sizes) < groupSize;
+    const noun = sizes.length === 1 ? 'group' : 'groups';
+    const uniform = sizes.every(size => size === sizes[0]);
+    const shape = uniform ? `${sizes.length} ${noun} of ${sizes[0]}` : `${sizes.length} ${noun} of ${sizes.join(', ')}`;
+    return { shape, undersized };
+  }
+
   /**
    * The setup preview for a config, computed from a single partition: the human summary of the
    * groups actually formed plus `undersized` — true when no group reaches the requested size (the
@@ -106,12 +116,8 @@ export class GroupKnockoutTournament extends Tournament {
    * in orange, not a blocking error).
    */
   static previewGroups(teams: TournamentTeam[], groupSize: number): { summary: string; undersized: boolean } {
-    const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
-    if (sizes.length === 0) return { summary: '', undersized: false };
-    const undersized = Math.max(...sizes) < groupSize;
-    const noun = sizes.length === 1 ? 'group' : 'groups';
-    const uniform = sizes.every(size => size === sizes[0]);
-    const shape = uniform ? `${sizes.length} ${noun} of ${sizes[0]}` : `${sizes.length} ${noun} of ${sizes.join(', ')}`;
+    if (teams.length === 0) return { summary: '', undersized: false };
+    const { shape, undersized } = GroupKnockoutTournament.groupShape(teams, groupSize);
     const summary = `${teams.length} teams → ${shape}`;
     return {
       summary: undersized ? `${summary} (${groupSize} per group needs more teams)` : summary,
@@ -122,6 +128,40 @@ export class GroupKnockoutTournament extends Tournament {
   /** Human summary of the groups a config actually forms, so the setup can preview the real split. */
   static describeGroups(teams: TournamentTeam[], groupSize: number): string {
     return GroupKnockoutTournament.previewGroups(teams, groupSize).summary;
+  }
+
+  /**
+   * The single setup note shown under the group-knockout fields: the split the config actually
+   * forms, continued in the same breath by any caveat — the requested group size can't be reached,
+   * everyone advances, or too few qualify — instead of a second message stacked underneath. Reuses
+   * {@link validateConfig} and {@link configWarning} as the conditions so the note never disagrees
+   * with them. `severity` sets the note's colour; an `error` also blocks Start (via validateConfig).
+   */
+  static setupSummary(
+    teams: TournamentTeam[],
+    groupSize: number,
+    qualifiersPerGroup: number,
+  ): { message: string; severity: 'hint' | 'warning' | 'error' } | null {
+    if (teams.length === 0) return null;
+    const { shape, undersized } = GroupKnockoutTournament.groupShape(teams, groupSize);
+    const split = undersized
+      ? `${teams.length} teams can't fill groups of ${groupSize}, so they'll play as ${shape}.`
+      : `${teams.length} teams → ${shape}.`;
+
+    if (GroupKnockoutTournament.validateConfig(teams, groupSize, qualifiersPerGroup)) {
+      return {
+        message: `${split} That leaves too few to seed a knockout — add teams or lower the group size.`,
+        severity: 'error',
+      };
+    }
+    if (GroupKnockoutTournament.configWarning(teams, groupSize, qualifiersPerGroup)) {
+      return {
+        message: `${split} With the top ${qualifiersPerGroup} qualifying, every team advances`
+          + ' — no one is eliminated in the group phase.',
+        severity: 'warning',
+      };
+    }
+    return { message: split, severity: undersized ? 'warning' : 'hint' };
   }
 
   static fromState(state: TournamentState): GroupKnockoutTournament {

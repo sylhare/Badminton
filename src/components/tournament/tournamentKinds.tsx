@@ -21,12 +21,6 @@ export interface SetupConfig {
   setQualifiersPerGroup: (n: number) => void;
 }
 
-/** Setup validation split into a blocking error (disables Start) and an advisory warning. */
-export interface SetupIssues {
-  error: string | null;
-  warning: string | null;
-}
-
 export interface TournamentKind {
   /** Label for the mode-selector pill. */
   label: string;
@@ -43,10 +37,10 @@ export interface TournamentKind {
   ) => React.ReactNode;
   /** Peak concurrent matches per round for the setup court warning; defaults to the round-robin count. */
   matchesPerRound?: (teams: TournamentTeam[], config: SetupConfig) => number;
-  /** Extra setup validation (e.g. qualifier count), split into a blocking error and an advisory warning. */
-  validateSetup?: (teams: TournamentTeam[], config: SetupConfig) => SetupIssues;
+  /** Blocking setup error (e.g. too few qualifiers) that disables Start, else null. */
+  validateSetup?: (teams: TournamentTeam[], config: SetupConfig) => string | null;
   /** Format-specific setup fields, rendered in the setup form under the shared ones. */
-  renderSetupConfig?: (config: SetupConfig, issues: SetupIssues, teams: TournamentTeam[]) => React.ReactNode;
+  renderSetupConfig?: (config: SetupConfig, teams: TournamentTeam[]) => React.ReactNode;
 }
 
 /**
@@ -78,12 +72,9 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
       />
     ),
     matchesPerRound: (teams, c) => GroupKnockoutTournament.matchesPerRound(teams, c.groupSize),
-    validateSetup: (teams, c) => ({
-      error: GroupKnockoutTournament.validateConfig(teams, c.groupSize, c.qualifiersPerGroup),
-      warning: GroupKnockoutTournament.configWarning(teams, c.groupSize, c.qualifiersPerGroup),
-    }),
-    renderSetupConfig: (c, issues, teams) => {
-      const preview = teams.length > 0 ? GroupKnockoutTournament.previewGroups(teams, c.groupSize) : null;
+    validateSetup: (teams, c) => GroupKnockoutTournament.validateConfig(teams, c.groupSize, c.qualifiersPerGroup),
+    renderSetupConfig: (c, teams) => {
+      const note = GroupKnockoutTournament.setupSummary(teams, c.groupSize, c.qualifiersPerGroup);
       return (
       <div className="setup-section" data-testid="group-knockout-config">
         <h3>Groups + Knockout</h3>
@@ -111,16 +102,11 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
             />
           </label>
         </div>
-        {preview && (
-          <p
-            className={preview.undersized ? 'setup-warning' : 'setup-hint'}
-            data-testid="group-preview"
-          >
-            {preview.summary}
+        {note && (
+          <p className={`setup-${note.severity}`} data-testid="group-preview">
+            {note.message}
           </p>
         )}
-        {issues.error && <p className="setup-error" data-testid="qualifiers-error">{issues.error}</p>}
-        {issues.warning && <p className="setup-warning" data-testid="qualifiers-warning">{issues.warning}</p>}
       </div>
       );
     },
