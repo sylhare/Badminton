@@ -158,6 +158,20 @@ describe('GroupKnockoutTournament — group phase', () => {
       for (const bye of byeTeams) expect(isGroupWinner(bye.id)).toBe(true);
     });
 
+    it('gives a six-team knockout a single-match consolation bracket, with no phantom TBD final', () => {
+      // 3 groups × top-2 = 6 qualifiers in an 8-bracket → only two first-round losers, so the
+      // consolation bracket is one match. The other losers are semi-finalists who play for 3rd.
+      const t = decideStrict(start(
+        ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
+      ));
+      expect(t.qualifiers()).toHaveLength(6);
+      expect(t.bracketSize()).toBe(8);
+
+      const consolation = t.knockout().consolation;
+      expect(consolation.totalRounds()).toBe(1);
+      expect(consolation.computeTree()).toHaveLength(1);
+    });
+
     it('does not seed the knockout while the group phase is unfinished', () => {
       const t = start(['a', 'b', 'c', 'd', 'e', 'f'], 3, 2);
       expect(t.knockoutStarted()).toBe(false);

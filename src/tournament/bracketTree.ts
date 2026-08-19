@@ -291,8 +291,18 @@ export class ConsolationBracket extends Bracket {
     return this._seeds;
   }
 
+  /**
+   * CB depth. Its seed rounds host the winners' first-round losers. A bracket of 16+
+   * teams can additionally pull in losers from winners rounds *before* the semi-final
+   * (a semi-final loser plays for 3rd place, never the CB), extending the CB out to one
+   * round short of the winners' final. A bracket of 8 or fewer has no such intermediate
+   * round to pull from — its round 2 is already the semi-final — so its CB is exactly
+   * its seed rounds, with no phantom extra "final".
+   */
   totalRounds(): number {
-    return Math.max(this.cbSeedRounds, Math.log2(this._bracketSize) - 1);
+    const winnersRounds = Math.log2(this._bracketSize);
+    if (winnersRounds < 4) return this.cbSeedRounds;
+    return Math.max(this.cbSeedRounds, winnersRounds - 1);
   }
 
   protected roundNodes(r: number): BracketNode[] {

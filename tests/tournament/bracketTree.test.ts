@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ConsolationBracket, WinnersBracket, roundLabel } from '../../src/tournament/bracketTree';
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
-import { BracketKind } from '../../src/tournament/types';
-import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
 import { createTournamentTeam, createTournamentTeams } from '../data/testFactories';
-
-/** A decided/undecided consolation match at a given round, for tree-shape tests. */
-const cbMatch = (round: number, team1: TournamentTeam, team2: TournamentTeam): TournamentMatch =>
-  ({ id: `cb-r${round}`, round, courtNumber: 1, bracket: BracketKind.Consolation, team1, team2, sets: [] });
 
 describe('roundLabel', () => {
   it('last round is Final', () => {
@@ -211,29 +205,18 @@ describe('ConsolationBracket.computeTree', () => {
     });
   });
 
-  describe('2 CB seeds (from 5-player WB R1, bracketSize=8)', () => {
+  describe('2 CB seeds (bracketSize=8)', () => {
     const seeds = createTournamentTeams(['L1', 'L2']);
 
-    it('produces 2 rounds (CB R1 + extra CB Final from WB R2 loser)', () => {
-      expect(new ConsolationBracket(seeds, [], 8).computeTree()).toHaveLength(2);
+    it('produces 1 round (CB final only): the two first-round losers, no phantom round', () => {
+      const tree = new ConsolationBracket(seeds, [], 8).computeTree();
+      expect(tree).toHaveLength(1);
     });
 
     it('round 1 has 1 tbd node', () => {
       const r1 = new ConsolationBracket(seeds, [], 8).computeTree()[0];
       expect(r1).toHaveLength(1);
       expect(r1[0].type).toBe('tbd');
-    });
-
-    it('round 2 (extra) is tbd before CB R2 match generated', () => {
-      const r2 = new ConsolationBracket(seeds, [], 8).computeTree()[1];
-      expect(r2).toHaveLength(1);
-      expect(r2[0].type).toBe('tbd');
-    });
-
-    it('round 2 becomes a match node once a CB round-2 match is generated', () => {
-      const tree = new ConsolationBracket(seeds, [cbMatch(2, seeds[0], seeds[1])], 8).computeTree();
-      expect(tree).toHaveLength(2);
-      expect(tree[1][0].type).toBe('match');
     });
   });
 

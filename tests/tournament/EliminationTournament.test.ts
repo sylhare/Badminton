@@ -436,6 +436,16 @@ describe('EliminationTournament', () => {
       for (const id of sfLoserIds) expect(cbTeamIds.has(id)).toBe(false);
     });
 
+    it('6 teams: the consolation bracket is a single final, with no phantom TBD round', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F']);
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
+
+      expect(t.consolation.totalRounds()).toBe(1);
+      expect(t.consolation.computeTree()).toHaveLength(1);
+      expect(t.consolation.matchesForRound(1)).toHaveLength(1);
+      expect(t.consolation.matchesForRound(2)).toHaveLength(0);
+    });
+
     it.each(Array.from({ length: 28 }, (_, i) => i + 5))(
       '%i teams (size >= 8 has a real semi-final): finalists outrank eliminated semi-final losers before the final is played',
       (teamCount) => {
