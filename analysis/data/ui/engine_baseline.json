@@ -1,0 +1,22 @@
+{
+  "params": {
+    "playerCount": 16,
+    "courts": 4,
+    "rounds": 10,
+    "runs": 100
+  },
+  "sa": {
+    "timePerRoundMs": 1.744,
+    "zeroRepeatPct": 10,
+    "avgRepeatPairs": 1.66,
+    "perfectBalancedPct": 19.625,
+    "strongerWinPct": 89.60000000000001
+  },
+  "sl": {
+    "timePerRoundMs": 1.66,
+    "zeroRepeatPct": 51,
+    "avgRepeatPairs": 0.69,
+    "perfectBalancedPct": 61.25000000000001,
+    "strongerWinPct": 69.525
+  }
+}
