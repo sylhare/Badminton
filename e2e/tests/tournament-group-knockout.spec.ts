@@ -34,7 +34,8 @@ test.describe('Tournament Page - Group + Knockout', () => {
 
     await tournamentPage.setGroupConfig(3, 2);
 
-    await expect(page.getByTestId('qualifiers-warning')).toBeVisible();
+    await expect(page.getByTestId('group-preview')).toHaveClass(/setup-warning/);
+    await expect(page.getByTestId('group-preview')).toContainText(/every team advances/i);
     await expect(page.getByTestId('start-tournament-button')).toBeEnabled();
   });
 
