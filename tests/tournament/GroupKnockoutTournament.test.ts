@@ -145,7 +145,6 @@ describe('GroupKnockoutTournament — group phase', () => {
     });
 
     it('gives knockout byes to group winners, not runners-up', () => {
-      // 3 groups × top-2 = 6 qualifiers in an 8-bracket → 2 byes, which should go to top seeds.
       const t = decideStrict(start(
         ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
       ));
@@ -159,8 +158,6 @@ describe('GroupKnockoutTournament — group phase', () => {
     });
 
     it('gives a six-team knockout a single-match consolation bracket, with no phantom TBD final', () => {
-      // 3 groups × top-2 = 6 qualifiers in an 8-bracket → only two first-round losers, so the
-      // consolation bracket is one match. The other losers are semi-finalists who play for 3rd.
       const t = decideStrict(start(
         ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
       ));
@@ -254,23 +251,6 @@ describe('GroupKnockoutTournament.configWarning', () => {
   });
 });
 
-describe('GroupKnockoutTournament.describeGroups', () => {
-  const teams = (n: number) =>
-    createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
-
-  it('previews the real split and flags a group size the roster cannot reach', () => {
-    expect(GroupKnockoutTournament.describeGroups(teams(6), 4)).toBe('6 teams → 2 groups of 3 (4 per group needs more teams)');
-  });
-
-  it('previews an honoured, uniform split without a caveat', () => {
-    expect(GroupKnockoutTournament.describeGroups(teams(8), 4)).toBe('8 teams → 2 groups of 4');
-  });
-
-  it('lists uneven group sizes', () => {
-    expect(GroupKnockoutTournament.describeGroups(teams(7), 4)).toBe('7 teams → 2 groups of 4, 3');
-  });
-});
-
 describe('GroupKnockoutTournament.setupSummary', () => {
   const teams = (n: number) =>
     createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
@@ -282,6 +262,13 @@ describe('GroupKnockoutTournament.setupSummary', () => {
   it('is a neutral hint for an honoured split that eliminates some teams', () => {
     expect(GroupKnockoutTournament.setupSummary(teams(8), 4, 2)).toEqual({
       message: '8 teams → 2 groups of 4.',
+      severity: 'hint',
+    });
+  });
+
+  it('lists uneven group sizes in the split', () => {
+    expect(GroupKnockoutTournament.setupSummary(teams(7), 4, 2)).toEqual({
+      message: '7 teams → 2 groups of 4, 3.',
       severity: 'hint',
     });
   });
