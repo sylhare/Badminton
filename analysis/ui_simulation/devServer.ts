@@ -26,11 +26,7 @@ export interface DevServer {
   stop: () => void;
 }
 
-/**
- * Ensure a Vite dev server is running at `baseURL`. Reuses an already-running
- * server; otherwise spawns `npm run dev` from the repo root and tears it down
- * (whole process group) on stop.
- */
+/** Ensure a Vite dev server at `baseURL`: reuse a running one, else spawn `npm run dev` and kill its process group on stop. */
 export async function ensureDevServer(baseURL: string): Promise<DevServer> {
   if (await isUp(baseURL)) {
     console.log(`Reusing dev server already running at ${baseURL}`);
@@ -52,7 +48,7 @@ export async function ensureDevServer(baseURL: string): Promise<DevServer> {
     url: baseURL,
     stop: () => {
       if (child.pid) {
-        try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ }
+        try { process.kill(-child.pid, 'SIGTERM'); } catch {}
       }
     },
   };

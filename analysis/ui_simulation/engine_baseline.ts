@@ -3,27 +3,26 @@ import { resolve } from 'node:path';
 
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
 import { engineSL } from '../../src/engines/SmartEngine.ts';
-import type { Court, ICourtAssignmentEngine } from '../../src/types';
+import type { Court } from '../../src/types';
 import { pairKey } from '../../src/utils/playerUtils';
+import type { SimEngine } from '../simulation/types.ts';
 import { calculateTeamStrength, loadConfig, simulateMatchOutcome } from '../simulation/utils.ts';
 
 import { buildPlayers } from './storage.ts';
 import type { RawConfigFile, UiEngine } from './types.ts';
 
 /**
- * Direct-engine baseline for the UI comparison. Runs the SAME engines the app
- * ships (default config — no `configure()`, so SA uses its 5000-iteration
- * default like the live app) with the SAME players / courts / rounds the UI
- * harness uses, and computes the SAME teammate-repeat metric. This is the true
- * apples-to-apples reference: any gap versus the UI is a browser/UI effect, not
- * a config or player-mix difference.
+ * Direct-engine baseline for the UI comparison: same shipped engines (default
+ * config), players, courts, rounds and teammate-repeat metric as the harness,
+ * so any gap versus the UI is a browser effect, not a config or player-mix one.
  */
 
 const SCRIPT_DIR = import.meta.dirname;
 const DATA_DIR = resolve(SCRIPT_DIR, '..', 'data');
 const OUT_DIR = resolve(DATA_DIR, 'ui');
 const CONFIG_PATH = resolve(DATA_DIR, 'config.json');
-const RUNS = 100; // sessions per engine — enough for stable rates
+/** Sessions per engine; enough for stable rates. */
+const RUNS = 100;
 
 interface EngineBaseline {
   timePerRoundMs: number;
@@ -33,7 +32,7 @@ interface EngineBaseline {
   strongerWinPct: number;
 }
 
-function runEngine(engine: ICourtAssignmentEngine, players: ReturnType<typeof buildPlayers>, courts: number, rounds: number): EngineBaseline {
+function runEngine(engine: SimEngine, players: ReturnType<typeof buildPlayers>, courts: number, rounds: number): EngineBaseline {
   const levels = new Map(players.map(p => [p.id, p.level]));
   let genMs = 0;
   let genCalls = 0;
@@ -97,7 +96,7 @@ function main(): void {
   const playerCount = ui.playerCount ?? 16;
   const players = buildPlayers(playerCount, raw.playerProfiles ?? {});
 
-  const engines: Record<UiEngine, ICourtAssignmentEngine> = { sa: engineSA, sl: engineSL };
+  const engines: Record<UiEngine, SimEngine> = { sa: engineSA, sl: engineSL };
   const wanted = (ui.engines ?? ['sa', 'sl']) as UiEngine[];
 
   console.log(`Engine baseline (matched to UI): ${playerCount} players, ${courts} courts, ${rounds} rounds, ${RUNS} runs`);
