@@ -10,6 +10,7 @@ _NOTEBOOKS = [
     ("/engine_analysis", "Engine Analysis"),
     ("/smart_matching_analysis", "Smart Matching Analysis"),
     ("/level_tracker_analysis", "Level Tracker Analysis"),
+    ("/ui_load_analysis", "UI Load Analysis"),
 ]
 
 _INDEX_HTML = """\
@@ -48,6 +49,7 @@ _marimo_app = (
     .with_app(path="/engine_analysis", root="./engine_analysis.py")
     .with_app(path="/smart_matching_analysis", root="./smart_matching_analysis.py")
     .with_app(path="/level_tracker_analysis", root="./level_tracker_analysis.py")
+    .with_app(path="/ui_load_analysis", root="./ui_load_analysis.py")
     .build()
 )
 
