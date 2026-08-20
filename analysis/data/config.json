@@ -3,6 +3,16 @@
   "rounds": 10,
   "playerCounts": [15, 16, 17, 18],
   "numCourts": 4,
+  "ui": {
+    "engines": ["sa", "sl"],
+    "concurrency": [1, 2, 4, 8],
+    "durationSec": 45,
+    "runs": 4,
+    "rounds": 10,
+    "playerCount": 16,
+    "sampleIntervalMs": 250,
+    "headless": true
+  },
   "engines": {
     "random": { "iterationsPerRound": 1 },
     "mc": { "samplesPerRound": 300 },
