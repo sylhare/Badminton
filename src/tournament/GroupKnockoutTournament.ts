@@ -110,27 +110,6 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   /**
-   * The setup preview for a config, computed from a single partition: the human summary of the
-   * groups actually formed plus `undersized` — true when no group reaches the requested size (the
-   * split still works but forms smaller groups than asked for; a cosmetic downgrade the setup flags
-   * in orange, not a blocking error).
-   */
-  static previewGroups(teams: TournamentTeam[], groupSize: number): { summary: string; undersized: boolean } {
-    if (teams.length === 0) return { summary: '', undersized: false };
-    const { shape, undersized } = GroupKnockoutTournament.groupShape(teams, groupSize);
-    const summary = `${teams.length} teams → ${shape}`;
-    return {
-      summary: undersized ? `${summary} (${groupSize} per group needs more teams)` : summary,
-      undersized,
-    };
-  }
-
-  /** Human summary of the groups a config actually forms, so the setup can preview the real split. */
-  static describeGroups(teams: TournamentTeam[], groupSize: number): string {
-    return GroupKnockoutTournament.previewGroups(teams, groupSize).summary;
-  }
-
-  /**
    * The single setup note shown under the group-knockout fields: the split the config actually
    * forms, continued in the same breath by any caveat — the requested group size can't be reached,
    * everyone advances, or too few qualify — instead of a second message stacked underneath. Reuses
