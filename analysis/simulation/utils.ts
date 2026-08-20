@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 
-import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
+import type { Court, Player } from '../../src/types';
 import { pairKey } from '../../src/utils/playerUtils';
 
-import type { MatchEvent, MatchPairEvent, PairEvent, RoundResult, SimulationConfig } from './types';
+import type { MatchEvent, MatchPairEvent, PairEvent, RoundResult, SimEngine, SimulationConfig } from './types';
 
 export const loadConfig = (configPath: string): SimulationConfig => {
   if (!existsSync(configPath)) {
@@ -91,7 +91,7 @@ export const extractRoundPairs = (
   courts: Court[],
   simulationId: number,
   numPlayers: number,
-  Engine: ICourtAssignmentEngine,
+  Engine: SimEngine,
   playerLevels: Map<string, number>,
 ): RoundResult => {
   const pairToOpponent = new Map<string, string>();

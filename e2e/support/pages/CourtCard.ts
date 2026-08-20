@@ -15,14 +15,19 @@ export class CourtCard {
     return this.locator.locator(`[data-testid="team-${teamNumber}"] .team-player`).allTextContents();
   }
 
-  /** Clicks a team to select it as winner. Defaults to team 1. */
-  async selectWinner(teamNumber: 1 | 2 = 1): Promise<void> {
+  /** Click a team without asserting the winner crown (deferred by the Smart engine's score modal, or under load). */
+  async clickTeam(teamNumber: 1 | 2 = 1, options?: { timeout?: number }): Promise<void> {
     const team =
       teamNumber === 1
         ? this.locator.locator('.team-clickable').first()
         : this.locator.locator('.team-clickable').last();
-    await expect(team).toBeVisible();
-    await team.click();
+    await expect(team).toBeVisible({ timeout: options?.timeout });
+    await team.click(options);
+  }
+
+  /** Clicks a team to select it as winner. Defaults to team 1. */
+  async selectWinner(teamNumber: 1 | 2 = 1): Promise<void> {
+    await this.clickTeam(teamNumber);
     await expect(this.locator.locator('.crown')).toBeVisible();
   }
 

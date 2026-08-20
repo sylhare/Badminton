@@ -28,7 +28,7 @@ const OUT_DIR = resolve(DATA_DIR, 'ui');
 const CONFIG_PATH = resolve(DATA_DIR, 'config.json');
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:5173';
 
-// Fallback used only if config.json omits the `ui` block; kept in sync with it.
+/** Fallback when config.json omits the `ui` block. */
 const DEFAULT_UI: UiConfig = {
   engines: ['sa', 'sl'],
   concurrency: [1, 2, 4, 8],
@@ -56,11 +56,7 @@ const teamPairs = (roster: string): string[] => {
   return out;
 };
 
-/**
- * Teammate-repeat stats from the rounds actually observed in the DOM — exactly
- * `rounds` rounds, unaffected by the extra commit-generate or the app's history
- * timing. Matches the engine baseline's definition for a fair comparison.
- */
+/** Teammate-repeat stats from the rounds observed in the DOM; matches the engine baseline's definition. */
 function observedRepeats(events: Array<{ team1: string; team2: string }>): {
   teammatePairs: number; repeatTeammatePairs: number; repeatTeammateEvents: number;
 } {
@@ -94,17 +90,11 @@ interface CellOutput {
   wallMs: number;
 }
 
-/**
- * Load the app at `concurrency` in parallel. With `durationSec` set, every cell
- * runs for the same wall-clock window (equal-time load) looping sessions until
- * time is up; otherwise it runs a fixed `sessions` count.
- */
+/** Run `concurrency` sessions in parallel: an equal-time window when `durationSec` is set, else a fixed `sessions` count. */
 async function runCell(browser: Browser, engine: UiEngine, concurrency: number, cfg: CellConfig): Promise<CellOutput> {
   const contexts = await Promise.all(
     Array.from({ length: concurrency }, async () => {
       const ctx = await browser.newContext({ baseURL: BASE_URL });
-      // Seed localStorage before every navigation so each session starts fresh
-      // with no extra reload.
       await ctx.addInitScript(
         ([key, value]) => localStorage.setItem(key, value),
         [STATE_KEY, cfg.seedState] as const,
@@ -143,20 +133,20 @@ async function runCell(browser: Browser, engine: UiEngine, concurrency: number, 
           { engine, concurrency, sessionId, players: cfg.players.length, courts: cfg.courts, rounds: cfg.rounds, totalMs },
           out.latencies,
         );
-        // Override the localStorage-derived teammate counts (confounded by the extra
-        // commit-generate) with counts from exactly the rounds observed in the DOM.
         results.push({ ...derived, ...observedRepeats(out.matchEvents) });
       } catch (err) {
-        // One flaky session shouldn't abort the whole load test — log and move on.
         console.warn(`   ⚠ ${engine} c=${concurrency} session ${sessionId} failed: ${(err as Error).message.split('\n')[0]}`);
       }
     }
   };
 
-  await Promise.all(pages.map(worker));
-  const wallMs = Date.now() - wallStart;
-  await Promise.all(contexts.map(c => c.close()));
-  return { results, events, matchEvents, playerStats, wallMs };
+  try {
+    await Promise.all(pages.map(worker));
+    const wallMs = Date.now() - wallStart;
+    return { results, events, matchEvents, playerStats, wallMs };
+  } finally {
+    await Promise.all(contexts.map(c => c.close()));
+  }
 }
 
 function summarise(
@@ -208,7 +198,6 @@ async function main(): Promise<void> {
   mkdirSync(OUT_DIR, { recursive: true });
 
   const server = await ensureDevServer(BASE_URL);
-  // launchServer (not launch) so we get the browser process PID for CPU/RAM sampling.
   const browserServer = await chromium.launchServer({ headless: ui.headless });
   const browser = await chromium.connect(browserServer.wsEndpoint());
   const sampler = new ResourceSampler(browserServer.process()?.pid ?? process.pid, ui.sampleIntervalMs);

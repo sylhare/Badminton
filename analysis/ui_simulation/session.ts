@@ -1,5 +1,4 @@
 import type { Page } from '@playwright/test';
-import { expect } from '@playwright/test';
 
 import { MainPage } from '../../e2e/support/pages/MainPage';
 import { DEFAULT_LEVEL } from '../../src/types';
@@ -17,35 +16,23 @@ export interface SessionOutput {
   matchEvents: Array<Omit<UiMatchEvent, 'engine' | 'concurrency' | 'sessionId'>>;
 }
 
-/**
- * Load the app. The seed state is injected by a context init script (see
- * `runCell`), so a single navigation is enough — the app reads it on mount.
- */
-async function load(page: Page): Promise<void> {
-  await page.goto('./');
-  await expect(page.getByTestId('generate-assignments-button')).toBeVisible();
-  // Disable transitions/animations so crown/score badges don't make elements
-  // "unstable" for clicks under load.
+/** Load the app via the shared page object; seed state is injected before navigation (see `runCell`). */
+async function load(page: Page, mainPage: MainPage): Promise<void> {
+  await mainPage.goto();
   await page.addStyleTag({ content: '*,*::before,*::after{transition:none!important;animation:none!important;}' });
 }
 
-/** Click Generate and wait for the courts to render, returning the elapsed ms. */
-async function timedGenerate(page: Page): Promise<number> {
+/** Regenerate via the shared page object and return the elapsed ms. */
+async function timedGenerate(mainPage: MainPage): Promise<number> {
   const start = Date.now();
-  await page.getByTestId('generate-assignments-button').click();
-  await expect(page.locator('.court-card').first()).toBeVisible({ timeout: 15_000 });
+  await mainPage.regenerate(15_000);
   return Date.now() - start;
 }
 
 const teamLevel = (names: string[], levels: Record<string, number>): number =>
   names.reduce((sum, n) => sum + (levels[n.trim()] ?? DEFAULT_LEVEL), 0);
 
-/**
- * Decide every court on the board for one round: read each court's two teams,
- * pick a winner by team strength (same logistic model as the engine sim), click
- * that team (SL enters a matching score), and record the match. Mirrors a real
- * user recording all court results before regenerating.
- */
+/** Decide every court for one round: pick a winner by team strength, click it (SL enters a score), record the match. */
 async function decideAllCourts(
   page: Page,
   mainPage: MainPage,
@@ -59,14 +46,13 @@ async function decideAllCourts(
   for (let ci = 0; ci < courtCount; ci++) {
     const court = mainPage.court(ci + 1);
     const [team1, team2] = await Promise.all([court.getTeamPlayers(1), court.getTeamPlayers(2)]);
-    if (team1.length === 0 || team2.length === 0) continue; // bye / singles placeholder
+    if (team1.length === 0 || team2.length === 0) continue;
 
     const l1 = teamLevel(team1, levels);
     const l2 = teamLevel(team2, levels);
     const winner = simulateMatchOutcome(l1, l2);
 
-    const clickable = page.getByTestId(`court-${ci + 1}`).locator('.team-clickable');
-    await (winner === 1 ? clickable.first() : clickable.last()).click({ timeout: 8000 });
+    await court.clickTeam(winner, { timeout: 8000 });
     if (engine === 'sl') {
       await mainPage.enterScore(winner === 1 ? '21' : '15', winner === 1 ? '15' : '21');
     }
@@ -86,10 +72,7 @@ async function decideAllCourts(
   return events;
 }
 
-/**
- * Run one full session: load, then each round generate and record a realistic
- * winner on every court, with a final regenerate to commit the last round.
- */
+/** Run one full session: load, then per round generate and decide every court, with a final commit regenerate. */
 export async function runSession(
   page: Page,
   courts: number,
@@ -98,21 +81,32 @@ export async function runSession(
   levels: Record<string, number>,
 ): Promise<SessionOutput> {
   const mainPage = new MainPage(page);
-  await load(page);
+  await load(page, mainPage);
   await mainPage.setCourtCount(courts);
 
   const latencies: number[] = [];
   const matchEvents: SessionOutput['matchEvents'] = [];
   for (let r = 0; r < rounds; r++) {
-    latencies.push(await timedGenerate(page));
+    latencies.push(await timedGenerate(mainPage));
     matchEvents.push(...await decideAllCourts(page, mainPage, engine, r + 1, levels));
   }
-  // Final regenerate commits the last round's winners into the engine's tally.
-  latencies.push(await timedGenerate(page));
+  latencies.push(await timedGenerate(mainPage));
 
-  // Let the debounced save flush before reading it back.
-  await page.waitForTimeout(400);
-  const raw = await page.evaluate(key => localStorage.getItem(key) ?? '', STATE_KEY);
-
+  const raw = await readStableState(page);
   return { latencies, raw, matchEvents };
+}
+
+/** Read persisted state once the debounced save settles: poll until two reads match, capped at 400ms. */
+async function readStableState(page: Page): Promise<string> {
+  const readKey = (): Promise<string> =>
+    page.evaluate(key => localStorage.getItem(key) ?? '', STATE_KEY);
+  const deadline = Date.now() + 400;
+  let prev = await readKey();
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(50);
+    const next = await readKey();
+    if (next && next === prev) return next;
+    prev = next;
+  }
+  return prev;
 }

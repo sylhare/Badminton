@@ -12,7 +12,6 @@ async function snapshot(): Promise<Proc[]> {
   const { stdout } = await execFileAsync('ps', ['-Ao', 'pid=,ppid=,%cpu=,rss=']);
   const procs: Proc[] = [];
   for (const line of stdout.split('\n')) {
-    // %cpu may use a comma decimal separator under non-US locales (e.g. "0,0").
     const m = line.trim().match(/^(\d+)\s+(\d+)\s+([\d.,]+)\s+(\d+)$/);
     if (m) procs.push({ pid: +m[1], ppid: +m[2], cpu: +m[3].replace(',', '.'), rssKB: +m[4] });
   }
@@ -46,11 +45,7 @@ async function measureSubtree(rootPid: number): Promise<{ cpuPct: number; rssMB:
   return { cpuPct, rssMB: rssKB / 1024, procCount };
 }
 
-/**
- * Periodically samples CPU% and RSS of the browser process subtree while a
- * run is in progress. Cells run sequentially, so a single sampler is reused
- * with the label swapped between (engine, concurrency) cells.
- */
+/** Periodically samples CPU%/RSS of the browser process subtree; reused across sequential cells with the label swapped. */
 export class ResourceSampler {
   private samples: ResourceSample[] = [];
   private timer: NodeJS.Timeout | null = null;
@@ -65,12 +60,12 @@ export class ResourceSampler {
     this.engine = engine;
     this.concurrency = concurrency;
     this.startedAt = nowMs;
-    void this.tick(); // capture a t≈0 baseline before the interval fires
+    void this.tick();
     this.timer = setInterval(() => void this.tick(), this.intervalMs);
   }
 
   private async tick(): Promise<void> {
-    if (this.sampling) return; // don't pile up if a `ps` call outlives the interval
+    if (this.sampling) return;
     this.sampling = true;
     try {
       const { cpuPct, rssMB, procCount } = await measureSubtree(this.rootPid);
@@ -82,7 +77,7 @@ export class ResourceSampler {
         rssMB: Math.round(rssMB),
         procCount,
       });
-    } catch { /* transient ps failure — skip this tick */ } finally {
+    } catch {} finally {
       this.sampling = false;
     }
   }
