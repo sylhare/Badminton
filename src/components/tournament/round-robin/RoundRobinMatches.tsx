@@ -67,8 +67,8 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   const isSingles = (match: TournamentMatch) => match.team1.players.length === 1;
 
   const formatScore = (match: TournamentMatch) => {
-    if (!match.score) return null;
-    return `${match.score.team1} – ${match.score.team2}`;
+    if (!match.sets.length) return null;
+    return match.sets.map(set => `${set.team1} – ${set.team2}`).join(', ');
   };
 
   return (

@@ -1,6 +1,6 @@
 import type { Player, ScoredGame } from '../types';
 import type { Tournament } from '../tournament/Tournament';
-import { BracketKind } from '../tournament/types';
+import { BracketKind, totalPoints } from '../tournament/types';
 import type { TournamentMatch } from '../tournament/types';
 
 import { LevelTrackerConfig } from './levelTrackerConfig';
@@ -33,7 +33,7 @@ function matchToScoredGame(match: TournamentMatch, totalRounds: number): ScoredG
       players: [...match.team1.players, ...match.team2.players],
       teams: { team1: match.team1.players, team2: match.team2.players },
       winner: match.winner,
-      score: match.score,
+      score: match.sets.length ? totalPoints(match) : undefined,
     },
     importance: resolveMatchImportance(match, totalRounds),
   };

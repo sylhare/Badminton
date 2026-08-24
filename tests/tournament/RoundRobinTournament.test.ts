@@ -106,7 +106,7 @@ describe('RoundRobinTournament', () => {
 
     it('correctly counts wins and losses from partial results', () => {
       const standings = makeStandingsTournament(
-        [createTournamentMatch('m1', 1, alice, bob, 1, { team1: 21, team2: 15 })],
+        [createTournamentMatch('m1', 1, alice, bob, 1, [{ team1: 21, team2: 15 }])],
         [alice, bob],
       ).calculateStandings();
       const rowA = standings.find(r => r.team.id === 'a')!;
@@ -130,13 +130,36 @@ describe('RoundRobinTournament', () => {
     it('breaks ties by scoreDiff', () => {
       const standings = makeStandingsTournament(
         [
-          createTournamentMatch('m1', 1, alice, bob, 1, { team1: 21, team2: 10 }),
-          createTournamentMatch('m2', 2, charlie, bob, 1, { team1: 21, team2: 15 }),
+          createTournamentMatch('m1', 1, alice, bob, 1, [{ team1: 21, team2: 10 }]),
+          createTournamentMatch('m2', 2, charlie, bob, 1, [{ team1: 21, team2: 15 }]),
         ],
         [alice, bob, charlie],
       ).calculateStandings();
       expect(standings[0].team.id).toBe('a');
       expect(standings[1].team.id).toBe('c');
+    });
+
+    it('breaks ties by set differential before point differential', () => {
+      // Both A and C win once (equal points). A takes a longer, higher point-diff
+      // three-setter; C wins in straight sets for a better set differential.
+      const standings = makeStandingsTournament(
+        [
+          createTournamentMatch('m1', 1, alice, bob, 1, [
+            { team1: 21, team2: 10 }, { team1: 10, team2: 21 }, { team1: 21, team2: 15 },
+          ]),
+          createTournamentMatch('m2', 2, charlie, bob, 1, [
+            { team1: 21, team2: 19 }, { team1: 21, team2: 19 },
+          ]),
+        ],
+        [alice, bob, charlie],
+      ).calculateStandings();
+      const rowA = standings.find(r => r.team.id === 'a')!;
+      const rowC = standings.find(r => r.team.id === 'c')!;
+      expect(rowA.setDiff).toBe(1);
+      expect(rowC.setDiff).toBe(2);
+      expect(rowA.scoreDiff).toBeGreaterThan(rowC.scoreDiff);
+      // Higher set differential wins the tie despite A's larger point differential.
+      expect(standings.map(r => r.team.id)).toEqual(['c', 'a', 'b']);
     });
 
     it('breaks ties by name when points and scoreDiff equal', () => {
