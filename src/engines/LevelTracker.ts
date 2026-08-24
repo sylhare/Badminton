@@ -1,5 +1,5 @@
 import type { Player, ScoredGame, SetScore } from '../types';
-import { DEFAULT_LEVEL } from '../types';
+import { DEFAULT_LEVEL, DEFAULT_SET_SIZE } from '../types';
 import { MatchScore } from '../scoring/MatchScore';
 
 import { LevelTrackerConfig } from './levelTrackerConfig';
@@ -58,11 +58,13 @@ export function getLevelTrend(playerId: string, levelHistory: Map<string, number
 export function updatePlayersLevels(games: ScoredGame[], players: Player[]): Player[] {
   const updated = new Map<string, Player>(players.map(p => [p.id, { ...p }]));
 
-  for (const { court, importance } of games) {
+  for (const { court, importance, setSize } of games) {
     if (!court.winner || !court.teams) continue;
 
     const result = MatchScore.of(court.sets ?? [], court.winner);
-    const score = result.eloScore();
+    const scale = LevelTrackerConfig.REFERENCE_LENGTH / (setSize ?? DEFAULT_SET_SIZE);
+    const raw = result.eloScore();
+    const score = raw ? { team1: raw.team1 * scale, team2: raw.team2 * scale } : undefined;
     const weight = importance ?? LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE;
     const sides = [court.teams.team1, court.teams.team2].map((team, i) => ({
       team: team.map(p => updated.get(p.id) ?? p),
@@ -82,7 +84,7 @@ export function updatePlayersLevels(games: ScoredGame[], players: Player[]): Pla
         const merged: Player = { ...current, level };
 
         if (side.rawScore !== undefined) {
-          const cappedScore = Math.min(side.rawScore, side.won ? 21 : 20);
+          const cappedScore = Math.min(side.rawScore, side.won ? LevelTrackerConfig.REFERENCE_LENGTH : LevelTrackerConfig.REFERENCE_LENGTH - 1);
           const prevGames = current.scoredGames ?? 0;
           merged.scoredGames = prevGames + 1;
           merged.averageScore =

@@ -3,6 +3,7 @@ import { shuffleArray } from '../utils/playerUtils';
 
 import { Tournament } from './Tournament';
 import type {
+  TournamentCreateOptions,
   TournamentFormat,
   TournamentMatch,
   TournamentStandingRow,
@@ -25,12 +26,8 @@ function generateMatches(teams: TournamentTeam[], numberOfCourts: number): Tourn
 }
 
 export class RoundRobinTournament extends Tournament {
-  static create(
-    format: TournamentFormat = 'doubles',
-    numberOfCourts = 4,
-    bestOf = 1,
-    setSize = DEFAULT_SET_SIZE,
-  ): RoundRobinTournament {
+  static create(options: TournamentCreateOptions = {}): RoundRobinTournament {
+    const { format = 'doubles', numberOfCourts = 4, bestOf = 1, setSize = DEFAULT_SET_SIZE } = options;
     return new RoundRobinTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       format,

@@ -9,7 +9,7 @@ import { createTournamentTeams } from '../data/testFactories';
 describe('reconstructTournament', () => {
   it('rebuilds a group-knockout tournament from persisted state', () => {
     const t = GroupKnockoutTournament
-      .create('doubles', 2, 1, 2, 1)
+      .create({ format: 'doubles', numberOfCourts: 2, bestOf: 1, groupSize: 2, qualifiersPerGroup: 1 })
       .start(createTournamentTeams(['a', 'b', 'c', 'd']), 2);
     const rebuilt = reconstructTournament(t.state());
     expect(rebuilt).toBeInstanceOf(GroupKnockoutTournament);
@@ -18,7 +18,7 @@ describe('reconstructTournament', () => {
 
   it('preserves an in-progress knockout across reconstruction and keeps advancing', () => {
     let t = GroupKnockoutTournament
-      .create('doubles', 2, 1, 2, 1)
+      .create({ format: 'doubles', numberOfCourts: 2, bestOf: 1, groupSize: 2, qualifiersPerGroup: 1 })
       .start(createTournamentTeams(['a', 'b', 'c', 'd']), 2);
     for (const id of t.groupMatches().map(m => m.id)) {
       t = t.withMatchResult(id, 1, [{ team1: 21, team2: 10 }]);
@@ -30,10 +30,10 @@ describe('reconstructTournament', () => {
   });
 
   it('rebuilds round-robin and elimination from their state', () => {
-    const rr = RoundRobinTournament.create('singles', 1).start(createTournamentTeams(['a', 'b']), 1);
+    const rr = RoundRobinTournament.create({ format: 'singles', numberOfCourts: 1 }).start(createTournamentTeams(['a', 'b']), 1);
     expect(reconstructTournament(rr.state())).toBeInstanceOf(RoundRobinTournament);
 
-    const el = EliminationTournament.create('singles', 1).start(createTournamentTeams(['a', 'b', 'c', 'd']), 1);
+    const el = EliminationTournament.create({ format: 'singles', numberOfCourts: 1 }).start(createTournamentTeams(['a', 'b', 'c', 'd']), 1);
     expect(reconstructTournament(el.state())).toBeInstanceOf(EliminationTournament);
   });
 });

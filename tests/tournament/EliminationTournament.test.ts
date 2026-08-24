@@ -585,6 +585,67 @@ describe('EliminationTournament', () => {
     );
   });
 
+  describe('leaderboard ordering by elimination depth', () => {
+    /** The winners-bracket round a team lost in; totalRounds + 1 for the never-beaten champion. */
+    const wbLossRound = (t: EliminationTournament, teamId: string): number => {
+      const lost = t.winners.matches().find(
+        m => m.winner !== undefined && (m.winner === 1 ? m.team2.id : m.team1.id) === teamId,
+      );
+      return lost ? lost.round : t.totalRounds() + 1;
+    };
+
+    const cbChampion = (t: EliminationTournament): TournamentTeam => {
+      const cbFinal = t.consolation.matches().reduce((p, c) => (c.round > p.round ? c : p));
+      return cbFinal.winner === 1 ? cbFinal.team1 : cbFinal.team2;
+    };
+
+    it.each(Array.from({ length: 17 }, (_, i) => i + 4))(
+      '%i teams: never ranks an earlier-eliminated team above a later-eliminated one',
+      (teamCount) => {
+        const teams = createTournamentTeams(NAMES.slice(0, teamCount));
+        const t = playFullTournament(EliminationTournament.create().start(teams, 4));
+        expect(t.isComplete()).toBe(true);
+
+        const standings = t.calculateStandings();
+        expect(standings).toHaveLength(teamCount);
+        expect(new Set(standings.map(r => r.team.id)).size).toBe(teamCount);
+
+        const depths = standings.map(r => wbLossRound(t, r.team.id));
+        for (let i = 1; i < depths.length; i++) {
+          expect(depths[i]).toBeLessThanOrEqual(depths[i - 1]);
+        }
+      },
+    );
+
+    it('16 teams: a quarter-final loser outranks the consolation-bracket champion', () => {
+      const teams = createTournamentTeams(NAMES.slice(0, 16));
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
+      expect(t.totalRounds()).toBe(4);
+
+      const standings = t.calculateStandings();
+      const rank = (id: string) => standings.findIndex(r => r.team.id === id);
+      const champion = cbChampion(t);
+      const quarterFinalLosers = t.winners.matchesForRound(2).map(m => (m.winner === 1 ? m.team2 : m.team1));
+
+      expect(quarterFinalLosers.length).toBeGreaterThan(0);
+      for (const loser of quarterFinalLosers) {
+        expect(rank(loser.id)).toBeLessThan(rank(champion.id));
+      }
+    });
+
+    it('16 teams: the consolation champion is the top-ranked first-round loser', () => {
+      const teams = createTournamentTeams(NAMES.slice(0, 16));
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
+
+      const standings = t.calculateStandings();
+      const firstRoundLoserIds = new Set(
+        t.winners.matchesForRound(1).map(m => (m.winner === 1 ? m.team2.id : m.team1.id)),
+      );
+      const topFirstRoundLoser = standings.find(r => firstRoundLoserIds.has(r.team.id))!;
+      expect(topFirstRoundLoser.team.id).toBe(cbChampion(t).id);
+    });
+  });
+
   describe('validate', () => {
     it('requires at least 2 teams', () => {
       const t = EliminationTournament.create();

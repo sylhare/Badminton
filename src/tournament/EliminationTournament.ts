@@ -1,17 +1,15 @@
-import type { Player } from '../types';
 import { shuffleArray } from '../utils/playerUtils';
 
 import { Tournament } from './Tournament';
 import { BracketKind, DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
   SetScore,
-  TournamentFormat,
+  TournamentCreateOptions,
   TournamentMatch,
   TournamentStandingRow,
   TournamentState,
   TournamentTeam,
 } from './types';
-import { RoundRobinTournament } from './RoundRobinTournament';
 import { makeId } from './ids';
 import type { SeedSlots } from './bracketTree';
 import {
@@ -26,16 +24,11 @@ import {
   positionsInRound,
   resolvePosition,
   roundComplete,
-  winnerOf,
 } from './bracketTree';
 
 export class EliminationTournament extends Tournament {
-  static create(
-    format: TournamentFormat = 'doubles',
-    numberOfCourts = 4,
-    bestOf = 1,
-    setSize = DEFAULT_SET_SIZE,
-  ): EliminationTournament {
+  static create(options: TournamentCreateOptions = {}): EliminationTournament {
+    const { format = 'doubles', numberOfCourts = 4, bestOf = 1, setSize = DEFAULT_SET_SIZE } = options;
     return new EliminationTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       type: 'elimination',
@@ -48,10 +41,6 @@ export class EliminationTournament extends Tournament {
 
   static fromState(state: TournamentState): EliminationTournament {
     return new EliminationTournament(state);
-  }
-
-  static createTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
-    return RoundRobinTournament.createTeams(players, format);
   }
 
   private makeMatch(
@@ -74,10 +63,6 @@ export class EliminationTournament extends Tournament {
 
   private roundExists(matches: TournamentMatch[], round: number): boolean {
     return matches.some(m => m.round === round);
-  }
-
-  private highestRoundMatch(matches: TournamentMatch[]): TournamentMatch | undefined {
-    return matches.length > 0 ? matches.reduce((p, c) => c.round > p.round ? c : p) : undefined;
   }
 
   private pairTeamsIntoMatches(
@@ -319,11 +304,6 @@ export class EliminationTournament extends Tournament {
     );
   }
 
-  /**
-   * Ranks teams by bracket outcome — winners final, 3rd-place match or lone
-   * semi-final loser, consolation final — then by fewest losses. Semi-final losers
-   * are only ranked once the final is decided, so a pending finalist stays ahead.
-   */
   override standingsSubtitle(): string {
     return this.isComplete() ? 'Final Results' : 'In Progress';
   }
@@ -332,51 +312,24 @@ export class EliminationTournament extends Tournament {
     return false;
   }
 
+  /** Ranks teams by winners-bracket elimination depth (later exit first), then losses/wins/diffs. */
   calculateStandings(): TournamentStandingRow[] {
-    const { matches } = this._state;
     const standings = this.tallyStandings();
-
-    const wbMatches = matches.filter(m => m.bracket === BracketKind.Winners);
-    const cbMatches = matches.filter(m => m.bracket === BracketKind.Consolation);
-    const tpMatches = matches.filter(m => m.bracket === BracketKind.ThirdPlace);
-    const wbFinal = this.highestRoundMatch(wbMatches);
-    const cbFinal = this.highestRoundMatch(cbMatches);
-    const tpMatch = tpMatches.length > 0 ? tpMatches[0] : undefined;
-
-    const placed: TournamentStandingRow[] = [];
-    const placedIds = new Set<string>();
-    const placeTeam = (teamId: string) => {
-      if (placedIds.has(teamId)) return;
-      const row = standings.get(teamId);
-      if (!row) return;
-      placed.push(row);
-      placedIds.add(teamId);
-    };
-    const placeMatchResult = (match: TournamentMatch | undefined) => {
-      if (!match?.winner) return;
-      placeTeam(winnerOf(match).id);
-      placeTeam(loserOf(match).id);
-    };
-
-    const totalRounds = this.totalRounds();
-    placeMatchResult(wbFinal);
-    placeMatchResult(tpMatch);
-    if (wbFinal?.winner !== undefined && totalRounds - 1 >= 2) {
-      for (const loser of getWBSemiFinalLosers(wbMatches, totalRounds)) {
-        placeTeam(loser.id);
-      }
+    const aliveDepth = this.totalRounds() + 1;
+    const exit = new Map<string, number>();
+    for (const m of this._state.matches) {
+      if (m.bracket === BracketKind.Winners && m.winner !== undefined) exit.set(loserOf(m).id, m.round);
     }
-    placeMatchResult(cbFinal);
+    const depth = (id: string) => exit.get(id) ?? aliveDepth;
 
-    const unplaced = Array.from(standings.values())
-      .filter(r => !placedIds.has(r.team.id))
-      .sort(this.orderStandings([
-        (a, b) => a.lost - b.lost,
-        (a, b) => b.won - a.won,
-        (a, b) => this.compareByTeamName(a, b),
-      ]));
-
-    return [...placed, ...unplaced];
+    return Array.from(standings.values()).sort(this.orderStandings([
+      (a, b) => depth(b.team.id) - depth(a.team.id),
+      (a, b) => a.lost - b.lost,
+      (a, b) => b.won - a.won,
+      (a, b) => b.scoreDiff - a.scoreDiff,
+      (a, b) => b.setDiff - a.setDiff,
+      (a, b) => this.compareByTeamName(a, b),
+    ]));
   }
 
   completedRounds(): number {

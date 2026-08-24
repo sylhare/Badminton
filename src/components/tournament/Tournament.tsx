@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
-import type { SetScore, TournamentTeam, TournamentType } from '../../tournament/types';
+import type { OnMatchResult, TournamentTeam, TournamentType } from '../../tournament/types';
 import type { Tournament as TournamentBase } from '../../tournament/Tournament';
 import type { CreateTournamentOptions } from '../../tournament/tournamentFactory';
 import { SegmentedControl } from '../common/SegmentedControl';
@@ -15,7 +15,7 @@ interface TournamentProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   onStart: (teams: TournamentTeam[], options: CreateTournamentOptions) => void;
-  onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+  onMatchResult: OnMatchResult;
   onUpdateTournament: (next: TournamentBase) => void;
   onReset: () => void;
   onAddPlayers: (names: string[]) => void;

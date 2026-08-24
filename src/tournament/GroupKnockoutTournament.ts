@@ -1,4 +1,3 @@
-import type { Player } from '../types';
 import { shuffleArray } from '../utils/playerUtils';
 
 import { Tournament } from './Tournament';
@@ -10,7 +9,7 @@ import { makeId } from './ids';
 import { DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
   SetScore,
-  TournamentFormat,
+  TournamentCreateOptions,
   TournamentMatch,
   TournamentStandingRow,
   TournamentState,
@@ -41,14 +40,15 @@ export class GroupKnockoutTournament extends Tournament {
     return a.length === b.length && a.every((team, i) => team.id === b[i].id);
   }
 
-  static create(
-    format: TournamentFormat = 'doubles',
-    numberOfCourts = 4,
-    bestOf = 1,
-    groupSize = DEFAULT_GROUP_SIZE,
-    qualifiersPerGroup = DEFAULT_QUALIFIERS_PER_GROUP,
-    setSize = DEFAULT_SET_SIZE,
-  ): GroupKnockoutTournament {
+  static create(options: TournamentCreateOptions = {}): GroupKnockoutTournament {
+    const {
+      format = 'doubles',
+      numberOfCourts = 4,
+      bestOf = 1,
+      groupSize = DEFAULT_GROUP_SIZE,
+      qualifiersPerGroup = DEFAULT_QUALIFIERS_PER_GROUP,
+      setSize = DEFAULT_SET_SIZE,
+    } = options;
     return new GroupKnockoutTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       type: 'group-knockout',
@@ -96,10 +96,6 @@ export class GroupKnockoutTournament extends Tournament {
     return new GroupKnockoutTournament(state);
   }
 
-  static createTeams(players: Player[], format: TournamentFormat): TournamentTeam[] {
-    return RoundRobinTournament.createTeams(players, format);
-  }
-
   groupSize(): number {
     return this._state.groupSize ?? DEFAULT_GROUP_SIZE;
   }
@@ -108,18 +104,27 @@ export class GroupKnockoutTournament extends Tournament {
     return this._state.qualifiersPerGroup ?? DEFAULT_QUALIFIERS_PER_GROUP;
   }
 
+  /** Peak concurrent group-stage matches: every group plays its same-numbered round at once. */
+  static matchesPerRound(teams: TournamentTeam[], groupSize: number): number {
+    return partitionIntoGroups(teams, groupSize)
+      .reduce((total, group) => total + RoundRobinTournament.matchesPerRound(group), 0);
+  }
+
   private static generateGroupMatches(
     groups: TournamentTeam[][],
     numberOfCourts: number,
   ): TournamentMatch[] {
     const matches: TournamentMatch[] = [];
+    const courtsUsedInRound = new Map<number, number>();
     let index = 0;
     groups.forEach((groupTeams, groupIndex) => {
       for (const pairing of roundRobinPairings(groupTeams)) {
+        const usedInRound = courtsUsedInRound.get(pairing.round) ?? 0;
+        courtsUsedInRound.set(pairing.round, usedInRound + 1);
         matches.push({
           id: makeId('gk-match', index),
           round: pairing.round,
-          courtNumber: (index % numberOfCourts) + 1,
+          courtNumber: (usedInRound % numberOfCourts) + 1,
           team1: pairing.team1,
           team2: pairing.team2,
           sets: [],
@@ -157,18 +162,18 @@ export class GroupKnockoutTournament extends Tournament {
     return (this._groupsMemo ??= partitionIntoGroups(this._state.teams, this.groupSize()));
   }
 
+  /** Reinterpret this tournament's state as a plain round-robin, optionally over a team/match subset. */
+  private asRoundRobin(overrides?: Partial<TournamentState>): RoundRobinTournament {
+    return RoundRobinTournament.fromState({ ...this._state, type: 'round-robin', ...overrides });
+  }
+
   /** A single group's matches as a round-robin sub-tournament, for standings and match rendering. */
   groupTournament(groupIndex: number): RoundRobinTournament {
     const cached = this._groupTournamentMemo.get(groupIndex);
     if (cached) return cached;
     const groupTeams = this.groups()[groupIndex] ?? [];
     const groupMatches = this.groupMatches().filter(m => m.group === groupIndex);
-    const tournament = RoundRobinTournament.fromState({
-      ...this._state,
-      type: 'round-robin',
-      teams: groupTeams,
-      matches: groupMatches,
-    });
+    const tournament = this.asRoundRobin({ teams: groupTeams, matches: groupMatches });
     this._groupTournamentMemo.set(groupIndex, tournament);
     return tournament;
   }
@@ -193,11 +198,26 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   private computeQualifiers(): TournamentTeam[] {
-    if (!this.groupPhaseComplete()) return [];
+    if (!this.groupPhaseComplete() || this.hasUnresolvedBoundaryTie()) return [];
     const perGroup = this.groups().map((_, groupIndex) =>
       this.groupStandings(groupIndex).slice(0, this.qualifiersPerGroup()).map(row => row.team),
     );
     return seedQualifiers(perGroup);
+  }
+
+  /** True while a metrics tie straddles a group's qualification cut-off and lacks a hand-set order. */
+  private hasUnresolvedBoundaryTie(): boolean {
+    const cut = this.qualifiersPerGroup();
+    const points = this._state.manualPoints ?? {};
+    return this.groups().some((_, groupIndex) => {
+      const standings = this.groupStandings(groupIndex);
+      return this.tieGroups(standings).some(run => {
+        const straddles = run.some(rank => rank < cut) && run.some(rank => rank >= cut);
+        if (!straddles) return false;
+        const ranked = run.map(rank => points[standings[rank].team.id]);
+        return ranked.some(v => v === undefined) || new Set(ranked).size !== ranked.length;
+      });
+    });
   }
 
   /** Knockout-phase (bracket) matches. */
@@ -226,8 +246,9 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** Seed the knockout bracket from the group qualifiers, appending its first-round matches. */
   private startKnockout(qualifiers: TournamentTeam[]): GroupKnockoutTournament {
+    const { format, numberOfCourts, bestOf, setSize } = this._state;
     const seeded = EliminationTournament
-      .create(this._state.format, this._state.numberOfCourts, this._state.bestOf, this._state.setSize)
+      .create({ format, numberOfCourts, bestOf, setSize })
       .startSeeded(qualifiers, this._state.numberOfCourts);
     return new GroupKnockoutTournament({
       ...this._state,
@@ -240,9 +261,9 @@ export class GroupKnockoutTournament extends Tournament {
     return this.rebuild({ ...this._state, matches, bracketSize: bracketSize ?? this._state.bracketSize });
   }
 
-  /** A fresh instance holding only the given group matches (knockout dropped, ready to re-seed). */
-  private withGroupMatches(groupMatches: TournamentMatch[]): GroupKnockoutTournament {
-    return new GroupKnockoutTournament({ ...this._state, matches: groupMatches, bracketSize: undefined });
+  /** A copy holding only the group phase (bracket dropped), the starting point for a (re)seed. */
+  private regroupedWith(matches: TournamentMatch[], manualPoints?: Record<string, number>): GroupKnockoutTournament {
+    return new GroupKnockoutTournament({ ...this._state, manualPoints, matches, bracketSize: undefined });
   }
 
   override withMatchResult(matchId: string, winner: 1 | 2, sets?: SetScore[]): this {
@@ -255,7 +276,8 @@ export class GroupKnockoutTournament extends Tournament {
     }
 
     const groupMatches = this.replaceMatch(this.groupMatches(), matchId, winner, sets);
-    return this.reseedFrom(this.withGroupMatches(groupMatches)) as this;
+    const manualPoints = existing.winner === winner ? this._state.manualPoints : undefined;
+    return this.reseedFrom(this.regroupedWith(groupMatches, manualPoints)) as this;
   }
 
   /**
@@ -284,12 +306,7 @@ export class GroupKnockoutTournament extends Tournament {
   withManualOrder(orderedIds: string[]): GroupKnockoutTournament {
     const manualPoints = { ...(this._state.manualPoints ?? {}) };
     orderedIds.forEach((id, index) => { manualPoints[id] = orderedIds.length - index; });
-    return this.reseedFrom(new GroupKnockoutTournament({
-      ...this._state,
-      manualPoints,
-      matches: this.groupMatches(),
-      bracketSize: undefined,
-    }));
+    return this.reseedFrom(this.regroupedWith(this.groupMatches(), manualPoints));
   }
 
   /** The group phase renders its own per-group standings tables, so the combined table is hidden. */
@@ -299,11 +316,6 @@ export class GroupKnockoutTournament extends Tournament {
 
   calculateStandings(): TournamentStandingRow[] {
     return this.groups().flatMap((_, groupIndex) => this.groupStandings(groupIndex));
-  }
-
-  /** Every match (group + knockout) tallied as one round-robin, for a combined W/L/Pts table. */
-  private combinedAsRoundRobin(): RoundRobinTournament {
-    return RoundRobinTournament.fromState({ ...this._state, type: 'round-robin' });
   }
 
   /**
@@ -316,7 +328,7 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   private computeOverallStandings(): TournamentStandingRow[] {
-    const combined = this.combinedAsRoundRobin().calculateStandings();
+    const combined = this.asRoundRobin().calculateStandings();
     if (!this.knockoutStarted()) return combined;
 
     const byId = new Map(combined.map(row => [row.team.id, row]));
@@ -330,11 +342,7 @@ export class GroupKnockoutTournament extends Tournament {
 
   /** The whole group phase as one round-robin over every group's matches, for round counting. */
   private groupPhaseAsRoundRobin(): RoundRobinTournament {
-    return (this._groupPhaseMemo ??= RoundRobinTournament.fromState({
-      ...this._state,
-      type: 'round-robin',
-      matches: this.groupMatches(),
-    }));
+    return (this._groupPhaseMemo ??= this.asRoundRobin({ matches: this.groupMatches() }));
   }
 
   private completedGroupRounds(): number {
@@ -358,7 +366,9 @@ export class GroupKnockoutTournament extends Tournament {
 
   isComplete(): boolean {
     if (!this.groupPhaseComplete()) return false;
-    if (!this.knockoutStarted()) return this.qualifiers().length < MIN_KNOCKOUT_TEAMS;
+    if (!this.knockoutStarted()) {
+      return !this.hasUnresolvedBoundaryTie() && this.qualifiers().length < MIN_KNOCKOUT_TEAMS;
+    }
     return this.allDecided();
   }
 }

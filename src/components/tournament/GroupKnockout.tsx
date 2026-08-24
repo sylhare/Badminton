@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 
-import type { SetScore, TournamentTeam } from '../../tournament/types';
+import type { OnMatchResult, TournamentTeam } from '../../tournament/types';
 import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
 import ManualOrderModal from '../modals/ManualOrderModal';
+import { cx } from '../common/cx';
 
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { EliminationBracket } from './elimination/EliminationBracket';
@@ -11,7 +12,7 @@ import { TournamentStandings } from './TournamentStandings';
 
 interface GroupKnockoutProps {
   tournament: GroupKnockoutTournament;
-  onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+  onMatchResult: OnMatchResult;
   onUpdateTournament: (next: GroupKnockoutTournament) => void;
 }
 
@@ -65,10 +66,10 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
                     </button>
                   );
                 }}
-                rowClass={rank => [
-                  rank < qualifiersPerGroup ? 'qualified' : '',
-                  tieByRank.has(rank) ? 'tied' : '',
-                ].filter(Boolean).join(' ')}
+                rowClass={rank => cx(
+                  rank < qualifiersPerGroup && 'qualified',
+                  tieByRank.has(rank) && 'tied',
+                )}
                 testIdFor={rank => `group-${groupIndex}-standing-${rank}`}
                 showMetrics
                 extraClassName="group-standings"

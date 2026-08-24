@@ -29,7 +29,7 @@ function decideStrict(tournament: GroupKnockoutTournament): GroupKnockoutTournam
 
 const start = (teamIds: string[], groupSize: number, qualifiersPerGroup: number) =>
   GroupKnockoutTournament
-    .create('doubles', 2, 1, groupSize, qualifiersPerGroup)
+    .create({ format: 'doubles', numberOfCourts: 2, bestOf: 1, groupSize, qualifiersPerGroup })
     .start(createTournamentTeams(teamIds), 2);
 
 describe('GroupKnockoutTournament — group phase', () => {
@@ -212,18 +212,36 @@ describe('GroupKnockoutTournament — final standings & manual order', () => {
     expect(standings[0].points).toBe(4);
   });
 
-  it('re-seeds the knockout through a manual tie-break, promoting the chosen team into a slot', () => {
+  it('holds the knockout while a boundary tie is unresolved, then seeds it once broken by hand', () => {
     const decided = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
-    expect(decided.knockoutStarted()).toBe(true);
-    expect(decided.bracketSize()).toBe(4);
+    expect(decided.knockoutStarted()).toBe(false);
+    expect(decided.qualifiers()).toEqual([]);
 
-    const tie = decided.groupStandings(0).slice(1).map(r => r.team.id);
-    const promoted = tie[tie.length - 1];
-    const resolved = decided.withManualOrder([promoted, ...tie.slice(0, -1)]);
+    const tie0 = decided.groupStandings(0).slice(1).map(r => r.team.id);
+    const promoted = tie0[tie0.length - 1];
+    let resolved = decided.withManualOrder([promoted, ...tie0.slice(0, -1)]);
+    expect(resolved.knockoutStarted()).toBe(false);
 
-    expect(resolved.qualifiers().map(q => q.id)).toContain(promoted);
+    const tie1 = resolved.groupStandings(1).slice(1).map(r => r.team.id);
+    resolved = resolved.withManualOrder(tie1);
+
     expect(resolved.knockoutStarted()).toBe(true);
+    expect(resolved.bracketSize()).toBe(4);
+    expect(resolved.qualifiers().map(q => q.id)).toContain(promoted);
     expect(resolved.knockoutMatches().every(m => m.winner === undefined)).toBe(true);
+  });
+
+  it('clears a hand-set tie order when a group result later changes, but keeps it on a re-confirm', () => {
+    let t = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
+    t = t.withManualOrder(t.groupStandings(0).slice(1).map(r => r.team.id));
+    expect(t.state().manualPoints).toBeDefined();
+
+    const groupMatch = t.groupMatches().find(m => m.group === 0)!;
+    const reconfirmed = t.withMatchResult(groupMatch.id, groupMatch.winner!, [{ team1: 21, team2: 10 }]);
+    expect(reconfirmed.state().manualPoints).toBeDefined();
+
+    const flipped = t.withMatchResult(groupMatch.id, groupMatch.winner === 1 ? 2 : 1, [{ team1: 10, team2: 21 }]);
+    expect(flipped.state().manualPoints).toBeUndefined();
   });
 
   it('records a manual order and keeps the played bracket when qualifiers are unchanged', () => {

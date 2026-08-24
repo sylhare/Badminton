@@ -150,7 +150,7 @@ test.describe('Tournament Page', () => {
     await expect(page.getByTestId('manage-players-section')).toContainText('Eve');
   });
 
-  test('best-of-3: pre-fills set defaults, locks the decider, records a 2-set clinch', async ({ page }) => {
+  test('best-of-3: blank sets with default placeholders, locks the decider after two, records a 2-set clinch', async ({ page }) => {
     await tournamentPage.setup(DEFAULT_PLAYERS);
 
     await page.getByTestId('best-of-pill-3').click();
@@ -162,15 +162,20 @@ test.describe('Tournament Page', () => {
     const modal = page.getByTestId('score-input-modal');
     await expect(modal).toBeVisible();
 
-    await test.step('each set is pre-filled with the winner default and can be confirmed at once', async () => {
-      await expect(page.getByTestId('score-input-team1-0')).toHaveValue('21');
-      await expect(page.getByTestId('score-input-team2-0')).toHaveValue('18');
-      await expect(page.getByTestId('score-input-team1-1')).toHaveValue('21');
+    await test.step('each set starts blank with the winner default as a placeholder and can be confirmed at once', async () => {
+      await expect(page.getByTestId('score-input-team1-0')).toHaveValue('');
+      await expect(page.getByTestId('score-input-team1-0')).toHaveAttribute('placeholder', '21');
+      await expect(page.getByTestId('score-input-team2-0')).toHaveAttribute('placeholder', '18');
       await expect(modal).toContainText('Team 1 wins');
       await expect(page.getByTestId('score-modal-confirm')).toBeEnabled();
     });
 
-    await test.step('the third set is locked because the match clinches after two sets', async () => {
+    await test.step('the deciding set stays editable until a side takes the first two, then locks', async () => {
+      await expect(page.getByTestId('score-input-team1-2')).toBeEnabled();
+      await page.getByTestId('score-input-team1-0').fill('21');
+      await page.getByTestId('score-input-team2-0').fill('18');
+      await page.getByTestId('score-input-team1-1').fill('21');
+      await page.getByTestId('score-input-team2-1').fill('18');
       await expect(page.getByTestId('score-input-team1-2')).toBeDisabled();
       await expect(page.getByTestId('score-input-team2-2')).toBeDisabled();
     });
