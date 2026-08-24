@@ -11,6 +11,7 @@ import { EliminationBracket } from './elimination/EliminationBracket';
 import { GroupKnockout } from './GroupKnockout';
 
 type OnMatchResult = (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+type OnUpdateTournament = (next: Tournament) => void;
 
 export interface TournamentKind {
   /** Label for the mode-selector pill. */
@@ -18,8 +19,14 @@ export interface TournamentKind {
   /**
    * Render this format's matches view. The cast is safe because the key is taken
    * from `tournament.state().type`, which always matches the concrete class.
+   * `onUpdate` lets a view replace the whole tournament (e.g. a manual tie-break);
+   * formats that never do so simply ignore it.
    */
-  renderMatches: (tournament: Tournament, onMatchResult: OnMatchResult) => React.ReactNode;
+  renderMatches: (
+    tournament: Tournament,
+    onMatchResult: OnMatchResult,
+    onUpdate: OnUpdateTournament,
+  ) => React.ReactNode;
 }
 
 /**
@@ -43,8 +50,12 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
   },
   'group-knockout': {
     label: 'Groups + Knockout',
-    renderMatches: (t, onMatchResult) => (
-      <GroupKnockout tournament={t as GroupKnockoutTournament} onMatchResult={onMatchResult} />
+    renderMatches: (t, onMatchResult, onUpdate) => (
+      <GroupKnockout
+        tournament={t as GroupKnockoutTournament}
+        onMatchResult={onMatchResult}
+        onUpdateTournament={onUpdate as (next: GroupKnockoutTournament) => void}
+      />
     ),
   },
 };

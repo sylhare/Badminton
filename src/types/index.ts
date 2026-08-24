@@ -17,6 +17,14 @@ export interface SetScore {
   team2: number;
 }
 
+/** Points a side plays to in a single set unless a tournament configures otherwise. */
+export const DEFAULT_SET_SIZE = 21;
+
+/** Join players' names into a team label ("Alice & Bob"). */
+export function formatPlayerNames(players: Player[]): string {
+  return players.map(p => p.name).join(' & ');
+}
+
 export interface Court {
   courtNumber: number;
   players: Player[];

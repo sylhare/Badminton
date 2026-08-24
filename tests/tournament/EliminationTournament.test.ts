@@ -9,6 +9,10 @@ import { playAllCBRounds, playFullTournament, playWBRound } from '../data/tourna
 
 const NAMES = Array.from({ length: 32 }, (_, i) => `T${i + 1}`);
 
+/** The decided consolation seeds (WB first-round losers), dropping slots still pending. */
+const knownSeeds = (t: EliminationTournament): TournamentTeam[] =>
+  t.consolation.seeds().filter((s): s is TournamentTeam => s !== null);
+
 describe('nextPowerOf2', () => {
   it.each([
     [1, 1],
@@ -337,19 +341,19 @@ describe('EliminationTournament', () => {
     });
   });
 
-  describe('winners.firstRoundLosers', () => {
-    it('returns empty before any results', () => {
+  describe('consolation.seeds', () => {
+    it('has no decided seeds before any results', () => {
       const t = EliminationTournament.create().start(createTournamentTeams(['A', 'B', 'C', 'D']), 4);
-      expect(t.winners.firstRoundLosers()).toHaveLength(0);
+      expect(knownSeeds(t)).toHaveLength(0);
     });
 
-    it('returns losers after WB R1 complete', () => {
+    it('seeds the WB first-round losers after WB R1 completes', () => {
       const [A, B, C, D] = createTournamentTeams(['A', 'B', 'C', 'D']);
       let t = EliminationTournament.create().start([A, B, C, D], 4);
       const [m0, m1] = t.winners.matchesForRound(1);
       t = t.withMatchResult(m0.id, 1);
       t = t.withMatchResult(m1.id, 1);
-      const losers = t.winners.firstRoundLosers();
+      const losers = knownSeeds(t);
       expect(losers).toHaveLength(2);
       const loserIds = new Set(losers.map(l => l.id));
       expect(loserIds).toEqual(new Set([m0.team2.id, m1.team2.id]));
@@ -616,7 +620,7 @@ describe('EliminationTournament', () => {
       const cbR1Ids = new Set(
         t.consolation.matchesForRound(1).flatMap(m => [m.team1.id, m.team2.id]),
       );
-      const byePasser = t.winners.firstRoundLosers().find(l => !cbR1Ids.has(l.id));
+      const byePasser = knownSeeds(t).find(l => !cbR1Ids.has(l.id));
       expect(byePasser).toBeDefined();
     });
 
@@ -630,7 +634,7 @@ describe('EliminationTournament', () => {
       const cbR1Ids = new Set(
         t.consolation.matchesForRound(1).flatMap(m => [m.team1.id, m.team2.id]),
       );
-      const byePasser = t.winners.firstRoundLosers().find(l => !cbR1Ids.has(l.id))!;
+      const byePasser = knownSeeds(t).find(l => !cbR1Ids.has(l.id))!;
       const sfLoser = t.winners
         .matchesForRound(3)
         .map(m => (m.winner === 1 ? m.team2 : m.team1))[0];

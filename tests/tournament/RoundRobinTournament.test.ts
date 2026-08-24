@@ -356,4 +356,39 @@ describe('RoundRobinTournament', () => {
     expect(RoundRobinTournament.matchesPerRound([createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']), createTournamentTeam('c', ['C'])])).toBe(1);
     expect(RoundRobinTournament.matchesPerRound([createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']), createTournamentTeam('c', ['C']), createTournamentTeam('d', ['D'])])).toBe(2);
   });
+
+  describe('manual tie-break order', () => {
+    const cyclicMatches = [
+      createTournamentMatch('m1', 1, teamA, teamB, 1, [{ team1: 21, team2: 10 }]),
+      createTournamentMatch('m2', 2, teamB, teamC, 1, [{ team1: 21, team2: 10 }]),
+      createTournamentMatch('m3', 3, teamC, teamA, 1, [{ team1: 21, team2: 10 }]),
+    ];
+
+    const withManual = (matches: TournamentMatch[], manualPoints?: Record<string, number>) =>
+      RoundRobinTournament.fromState({
+        format: 'singles', type: 'round-robin', numberOfCourts: 1, bestOf: 1,
+        teams: [teamA, teamB, teamC], matches, manualPoints,
+      });
+
+    it('falls back to team name for an exact tie when no manual order is set', () => {
+      const standings = makeTournament(cyclicMatches).calculateStandings();
+      expect(standings.map(r => r.team.id)).toEqual(['a', 'b', 'c']);
+      expect(standings.every(r => r.points === 2 && r.setDiff === 0 && r.scoreDiff === 0)).toBe(true);
+    });
+
+    it('orders a metric-tie by the manual points', () => {
+      expect(withManual(cyclicMatches, { c: 3, a: 2, b: 1 }).calculateStandings().map(r => r.team.id))
+        .toEqual(['c', 'a', 'b']);
+    });
+
+    it('never overrides teams the metrics already separate', () => {
+      const decisive = [
+        createTournamentMatch('m1', 1, teamA, teamB, 1, [{ team1: 21, team2: 10 }]),
+        createTournamentMatch('m2', 2, teamA, teamC, 1, [{ team1: 21, team2: 10 }]),
+        createTournamentMatch('m3', 3, teamB, teamC, 1, [{ team1: 21, team2: 10 }]),
+      ];
+      expect(withManual(decisive, { c: 3, b: 2, a: 1 }).calculateStandings().map(r => r.team.id))
+        .toEqual(['a', 'b', 'c']);
+    });
+  });
 });

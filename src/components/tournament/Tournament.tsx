@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
-import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
+import type { SetScore, TournamentTeam, TournamentType } from '../../tournament/types';
 import type { Tournament as TournamentBase } from '../../tournament/Tournament';
+import type { CreateTournamentOptions } from '../../tournament/tournamentFactory';
 import { SegmentedControl } from '../common/SegmentedControl';
 
 import { TournamentSetup } from './TournamentSetup';
@@ -13,16 +14,9 @@ interface TournamentProps {
   tournament: TournamentBase | null;
   initialPlayers: Player[];
   initialNumberOfCourts: number;
-  onStart: (
-    teams: TournamentTeam[],
-    numberOfCourts: number,
-    format: TournamentFormat,
-    type: TournamentType,
-    bestOf: number,
-    groupSize?: number,
-    qualifiersPerGroup?: number,
-  ) => void;
+  onStart: (teams: TournamentTeam[], options: CreateTournamentOptions) => void;
   onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+  onUpdateTournament: (next: TournamentBase) => void;
   onReset: () => void;
   onAddPlayers: (names: string[]) => void;
   onTogglePlayer: (id: string) => void;
@@ -35,6 +29,7 @@ export const Tournament: React.FC<TournamentProps> = ({
   initialNumberOfCourts,
   onStart,
   onMatchResult,
+  onUpdateTournament,
   onReset,
   onAddPlayers,
   onTogglePlayer,
@@ -66,8 +61,7 @@ export const Tournament: React.FC<TournamentProps> = ({
           initialPlayers={initialPlayers}
           initialNumberOfCourts={initialNumberOfCourts}
           type={selectedType}
-          onStart={(teams, courts, format, bestOf, groupSize, qualifiersPerGroup) =>
-            onStart(teams, courts, format, selectedType, bestOf, groupSize, qualifiersPerGroup)}
+          onStart={onStart}
           onAddPlayers={onAddPlayers}
           onTogglePlayer={onTogglePlayer}
         />
@@ -80,7 +74,7 @@ export const Tournament: React.FC<TournamentProps> = ({
 
   return (
     <div className="tournament-active-layout">
-      {kind.renderMatches(tournament, onMatchResult)}
+      {kind.renderMatches(tournament, onMatchResult, onUpdateTournament)}
       {tournament.showsCombinedStandings() && (
         <TournamentStandings
           standings={standings}

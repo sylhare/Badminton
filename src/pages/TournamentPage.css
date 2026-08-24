@@ -294,6 +294,85 @@
     font-weight: 600;
 }
 
+.group-standings tr.tied td:first-child {
+    padding: 0;
+}
+
+/* Rank-cell control shown on rows the metrics can't separate; opens the reorder modal. */
+.tie-break-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 6px;
+    border: 1px solid var(--color-primary, #4a6cff);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-primary, #4a6cff);
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+}
+
+.tie-break-button:hover {
+    background: var(--color-primary-soft, rgba(74, 108, 255, 0.12));
+}
+
+.tie-break-flag {
+    font-size: 0.7rem;
+}
+
+.group-knockout-final {
+    margin-top: 1.5rem;
+}
+
+.set-size-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Manual tie-break reorder modal. */
+.manual-order-list {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.manual-order-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-soft, #e0e0e0);
+    border-radius: var(--radius-sm);
+}
+
+.manual-order-position {
+    min-width: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary, #4a6cff);
+}
+
+.manual-order-name {
+    flex: 1;
+}
+
+.manual-order-controls {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.manual-order-controls button {
+    padding: 2px 8px;
+    line-height: 1;
+}
+
 .knockout-stage {
     display: flex;
     flex-direction: column;

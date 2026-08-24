@@ -9,7 +9,7 @@ import type {
   TournamentState,
   TournamentTeam,
 } from './types';
-import { DEFAULT_TOURNAMENT_STATE } from './types';
+import { DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import { roundRobinPairings } from './schedule';
 import { makeId } from './ids';
 
@@ -29,12 +29,14 @@ export class RoundRobinTournament extends Tournament {
     format: TournamentFormat = 'doubles',
     numberOfCourts = 4,
     bestOf = 1,
+    setSize = DEFAULT_SET_SIZE,
   ): RoundRobinTournament {
     return new RoundRobinTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       format,
       numberOfCourts,
       bestOf,
+      setSize,
     });
   }
 
@@ -78,27 +80,11 @@ export class RoundRobinTournament extends Tournament {
   }
 
   completedRounds(): number {
-    const { matches } = this._state;
-    if (matches.length === 0) return 0;
-
-    const roundMap = new Map<number, TournamentMatch[]>();
-    for (const match of matches) {
-      if (!roundMap.has(match.round)) roundMap.set(match.round, []);
-      roundMap.get(match.round)!.push(match);
-    }
-
     let completed = 0;
-    const sortedRounds = Array.from(roundMap.keys()).sort((a, b) => a - b);
-
-    for (const round of sortedRounds) {
-      const roundMatches = roundMap.get(round)!;
-      if (roundMatches.every(m => m.winner !== undefined)) {
-        completed = round;
-      } else {
-        break;
-      }
+    for (const round of this.roundNumbers()) {
+      if (!this.isRoundComplete(round)) break;
+      completed = round;
     }
-
     return completed;
   }
 

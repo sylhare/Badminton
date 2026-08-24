@@ -150,6 +150,44 @@ test.describe('Tournament Page', () => {
     await expect(page.getByTestId('manage-players-section')).toContainText('Eve');
   });
 
+  test('best-of-3: pre-fills set defaults, locks the decider, records a 2-set clinch', async ({ page }) => {
+    await tournamentPage.setup(DEFAULT_PLAYERS);
+
+    await page.getByTestId('best-of-pill-3').click();
+    await tournamentPage.start();
+
+    const team1 = page.locator('[data-testid="team-1"]').first();
+    await team1.click();
+
+    const modal = page.getByTestId('score-input-modal');
+    await expect(modal).toBeVisible();
+
+    await test.step('each set is pre-filled with the winner default and can be confirmed at once', async () => {
+      await expect(page.getByTestId('score-input-team1-0')).toHaveValue('21');
+      await expect(page.getByTestId('score-input-team2-0')).toHaveValue('18');
+      await expect(page.getByTestId('score-input-team1-1')).toHaveValue('21');
+      await expect(modal).toContainText('Team 1 wins');
+      await expect(page.getByTestId('score-modal-confirm')).toBeEnabled();
+    });
+
+    await test.step('the third set is locked because the match clinches after two sets', async () => {
+      await expect(page.getByTestId('score-input-team1-2')).toBeDisabled();
+      await expect(page.getByTestId('score-input-team2-2')).toBeDisabled();
+    });
+
+    await test.step('adjust the first set’s loser score', async () => {
+      await page.getByTestId('score-input-team2-0').fill('15');
+    });
+
+    await page.getByTestId('score-modal-confirm').click();
+    await expect(modal).not.toBeVisible();
+
+    await expect(page.getByTestId('round-1')).toHaveClass(/round-complete/);
+    await expect(page.getByTestId('round-matches')).toBeHidden();
+    await page.getByTestId('round-header-1').click();
+    await expect(page.locator('.match-score').first()).toContainText('21 – 15, 21 – 18');
+  });
+
   test('doubles tournament: start, record match, start new tournament', async ({ page }) => {
     await tournamentPage.setup(DEFAULT_PLAYERS);
     await tournamentPage.start();

@@ -1277,6 +1277,15 @@ h1 {
     color: var(--text-soft);
 }
 
+/* A set that can no longer be played once a side has clinched the match. */
+.score-modal-set-row.score-modal-set-locked {
+    opacity: 0.4;
+}
+
+.score-modal-set-row.score-modal-set-locked input[type="number"] {
+    cursor: not-allowed;
+}
+
 .score-modal-inputs {
     display: flex;
     align-items: center;

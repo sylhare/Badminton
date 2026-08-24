@@ -30,8 +30,7 @@ export const TournamentStandings: React.FC<TournamentStandingsProps> = ({
         rankCell={rank => (isComplete && rank < 3 ? RANK_EMOJI[rank] : rank + 1)}
         rowClass={rank => (rank === 0 && standings.length > 1 ? 'top' : '')}
         testIdFor={rank => `standing-row-${rank}`}
-        showPoints={!!showPoints}
-        showScoreDiff={!!showPoints}
+        showMetrics={!!showPoints}
       />
     </div>
   );

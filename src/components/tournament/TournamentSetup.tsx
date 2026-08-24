@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Player } from '../../types';
 import type { TournamentFormat, TournamentTeam, TournamentType } from '../../tournament/types';
-import { formatTeamName } from '../../tournament/types';
+import { DEFAULT_SET_SIZE, formatTeamName } from '../../tournament/types';
+import type { CreateTournamentOptions } from '../../tournament/tournamentFactory';
 import { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
 import type { SlotAddr } from '../../utils/slotSwap';
@@ -18,14 +19,7 @@ interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   type?: TournamentType;
-  onStart: (
-    teams: TournamentTeam[],
-    numberOfCourts: number,
-    format: TournamentFormat,
-    bestOf: number,
-    groupSize: number,
-    qualifiersPerGroup: number,
-  ) => void;
+  onStart: (teams: TournamentTeam[], options: CreateTournamentOptions) => void;
   onAddPlayers?: (names: string[]) => void;
   onTogglePlayer?: (id: string) => void;
 }
@@ -41,6 +35,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const [format, setFormat] = useState<TournamentFormat>('doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
   const [bestOf, setBestOf] = useState(1);
+  const [setSize, setSetSize] = useState(DEFAULT_SET_SIZE);
   const [groupSize, setGroupSize] = useState(4);
   const [qualifiersPerGroup, setQualifiersPerGroup] = useState(2);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
@@ -85,7 +80,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
   const handleStart = () => {
     if (validationError || qualifierError) return;
-    onStart(teams, numberOfCourts, format, bestOf, groupSize, qualifiersPerGroup);
+    onStart(teams, { type, format, numberOfCourts, bestOf, setSize, groupSize, qualifiersPerGroup });
   };
 
   return (
@@ -138,6 +133,10 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
           testIdFor={n => `best-of-pill-${n}`}
           containerTestId="best-of-pills"
         />
+        <label className="set-size-field">
+          Points per set
+          <NumberField value={setSize} min={1} onChange={setSetSize} testId="set-size-input" />
+        </label>
       </div>
 
       {type === 'group-knockout' && (
