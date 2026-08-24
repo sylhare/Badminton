@@ -5,6 +5,7 @@ import type { OnMatchResult, TournamentTeam, TournamentType } from '../../tourna
 import type { Tournament as TournamentBase } from '../../tournament/Tournament';
 import type { CreateTournamentOptions } from '../../tournament/tournamentFactory';
 import { SegmentedControl } from '../common/SegmentedControl';
+import ConfirmModal from '../modals/ConfirmModal';
 
 import { TournamentSetup } from './TournamentSetup';
 import { TournamentStandings } from './TournamentStandings';
@@ -35,7 +36,9 @@ export const Tournament: React.FC<TournamentProps> = ({
   onTogglePlayer,
   showSetup,
 }) => {
-  const [selectedType, setSelectedType] = useState<TournamentType>('round-robin');
+  const [typeOverride, setTypeOverride] = useState<TournamentType | null>(null);
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const selectedType = typeOverride ?? tournament?.state().type ?? 'round-robin';
   const isSetupPhase = !tournament || tournament.phase() === 'setup';
   const standings = useMemo(
     () => (isSetupPhase || showSetup || !(tournament?.showsCombinedStandings() ?? true))
@@ -52,7 +55,7 @@ export const Tournament: React.FC<TournamentProps> = ({
           <SegmentedControl
             options={TOURNAMENT_TYPES}
             selected={selectedType}
-            onSelect={setSelectedType}
+            onSelect={setTypeOverride}
             label={type => TOURNAMENT_KINDS[type].label}
             testIdFor={type => `type-pill-${type}`}
           />
@@ -61,6 +64,7 @@ export const Tournament: React.FC<TournamentProps> = ({
           initialPlayers={initialPlayers}
           initialNumberOfCourts={initialNumberOfCourts}
           type={selectedType}
+          initialConfig={tournament?.state()}
           onStart={onStart}
           onAddPlayers={onAddPlayers}
           onTogglePlayer={onTogglePlayer}
@@ -71,6 +75,9 @@ export const Tournament: React.FC<TournamentProps> = ({
 
   const isComplete = tournament.isComplete();
   const kind = TOURNAMENT_KINDS[tournament.state().type];
+  const tieGroups = isComplete && tournament.state().type === 'round-robin'
+    ? tournament.tieGroups(standings)
+    : [];
 
   return (
     <div className="tournament-active-layout">
@@ -81,15 +88,26 @@ export const Tournament: React.FC<TournamentProps> = ({
           isComplete={isComplete}
           subtitle={tournament.standingsSubtitle()}
           showPoints={tournament.showsPoints()}
+          tieGroups={tieGroups}
+          onResolveTies={ids => onUpdateTournament(tournament.withManualOrder(ids))}
         />
       )}
       <button
         className="button button-primary"
-        onClick={onReset}
+        onClick={() => setConfirmingReset(true)}
         data-testid="new-tournament-button"
       >
         Start a New Tournament
       </button>
+      <ConfirmModal
+        isOpen={confirmingReset}
+        title="Start a new tournament?"
+        message="This discards the current tournament and its results. Are you sure you want to start a new one?"
+        confirmText="Start new"
+        isDestructive
+        onConfirm={() => { setConfirmingReset(false); onReset(); }}
+        onCancel={() => setConfirmingReset(false)}
+      />
     </div>
   );
 };

@@ -90,13 +90,15 @@ export abstract class Tournament {
   }
 
   /**
-   * Runs of two or more adjacent standings rows the metrics can't separate — each is a tie the
-   * user must order by hand. Returns the row indices per run (only runs of length ≥ 2).
+   * Runs of two or more adjacent standings rows the metrics can't separate and that the user
+   * hasn't already ordered by hand — each is a tie still needing manual ordering. Returns the
+   * row indices per run (only unresolved runs of length ≥ 2), so once an order is saved the run
+   * drops out (and its tie-break warning with it).
    */
   tieGroups(rows: TournamentStandingRow[]): number[][] {
     const groups: number[][] = [];
     let run: number[] = [];
-    const flush = () => { if (run.length >= 2) groups.push(run); };
+    const flush = () => { if (run.length >= 2 && !this.runResolved(run, rows)) groups.push(run); };
     for (let i = 0; i < rows.length; i++) {
       if (run.length === 0 || standingsTied(rows[run[0]], rows[i])) {
         run.push(i);
@@ -107,6 +109,24 @@ export abstract class Tournament {
     }
     flush();
     return groups;
+  }
+
+  /** A tie run counts as resolved once every team in it carries a distinct manual tie-break point. */
+  private runResolved(run: number[], rows: TournamentStandingRow[]): boolean {
+    const points = this._state.manualPoints ?? {};
+    const values = run.map(rank => points[rows[rank].team.id]);
+    return values.every(v => v !== undefined) && new Set(values).size === values.length;
+  }
+
+  /**
+   * Persist a hand-chosen finishing order for otherwise-tied teams (best first) as tie-break
+   * points, consumed as the last resort by {@link compareByTeamName}. Formats that must re-seed
+   * a later phase from the reordered standings override this.
+   */
+  withManualOrder(orderedIds: string[]): this {
+    const manualPoints = { ...(this._state.manualPoints ?? {}) };
+    orderedIds.forEach((id, index) => { manualPoints[id] = orderedIds.length - index; });
+    return this.rebuild({ ...this._state, manualPoints });
   }
 
   /** Points a side plays to in a set; drives the score modal's defaults. */
@@ -139,9 +159,9 @@ export abstract class Tournament {
       row1.setDiff += sets.team1 - sets.team2;
       row2.setDiff += sets.team2 - sets.team1;
 
-      const points = score.points();
-      row1.scoreDiff += points.team1 - points.team2;
-      row2.scoreDiff += points.team2 - points.team1;
+      const margin = score.averagePointMargin();
+      row1.scoreDiff += margin;
+      row2.scoreDiff -= margin;
     }
     return standings;
   }

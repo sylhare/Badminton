@@ -107,8 +107,28 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('score-modal-confirm'));
 
     await user.click(screen.getByTestId('new-tournament-button'));
+    await user.click(screen.getByTestId('confirm-modal-confirm'));
 
     expect(screen.getByTestId('start-tournament-button')).toBeInTheDocument();
+  });
+
+  it('cancelling the Start a New Tournament confirmation keeps the current tournament', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<TournamentPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-tournament-button')).not.toBeDisabled();
+    }, { timeout: 3000 });
+
+    await user.click(screen.getByTestId('start-tournament-button'));
+    await user.click(screen.getByTestId('new-tournament-button'));
+
+    expect(screen.getByTestId('confirm-modal')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByTestId('confirm-modal')).not.toBeInTheDocument();
+    expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
+    expect(screen.queryByTestId('start-tournament-button')).not.toBeInTheDocument();
   });
 
   it('restores an in-progress tournament from saved state on mount', async () => {
@@ -153,6 +173,7 @@ describe('TournamentPage', () => {
     await user.click(aliceEl);
     await user.click(screen.getByTestId('score-modal-confirm'));
     await user.click(screen.getByTestId('new-tournament-button'));
+    await user.click(screen.getByTestId('confirm-modal-confirm'));
 
     await waitFor(() => {
       expect(saveSpy.mock.calls.at(-1)?.[0]).toBeNull();
@@ -214,6 +235,37 @@ describe('TournamentPage', () => {
 
       expect(screen.getByTestId('tournament-matches')).toBeInTheDocument();
       expect(screen.queryByTestId('elimination-bracket')).not.toBeInTheDocument();
+    });
+
+    it('pre-fills the setup form from the current tournament when setup is re-opened', async () => {
+      const [A, B, C, D] = [mockPlayers[0], mockPlayers[1], mockPlayers[2], mockPlayers[3]];
+      const t = (id: string, p: typeof A) => ({ id, players: [p] });
+      await storageManager.saveTournament({
+        phase: 'active' as const,
+        format: 'singles' as const,
+        type: 'elimination' as const,
+        numberOfCourts: 3,
+        bracketSize: 4,
+        bestOf: 3,
+        teams: [t('t1', A), t('t2', B), t('t3', C), t('t4', D)],
+        matches: [
+          { id: 'm1', round: 1, courtNumber: 1, bracket: BracketKind.Winners, team1: t('t1', A), team2: t('t2', B) },
+          { id: 'm2', round: 1, courtNumber: 2, bracket: BracketKind.Winners, team1: t('t3', C), team2: t('t4', D) },
+        ],
+      });
+      await flushPendingSaves();
+
+      const user = userEvent.setup();
+      renderWithProvider(<TournamentPage />);
+      await waitFor(() => expect(screen.getByTestId('elimination-bracket')).toBeInTheDocument());
+
+      await user.click(screen.getByTestId('back-to-setup'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('type-pill-elimination')).toHaveClass('format-pill-active');
+        expect(screen.getByTestId('best-of-pill-3')).toHaveClass('format-pill-active');
+        expect(screen.getByTestId('tournament-court-count')).toHaveValue(3);
+      });
     });
 
     it('restores elimination tournament from saved state', async () => {
@@ -306,6 +358,7 @@ describe('TournamentPage', () => {
       expect(levelOf('p1')).toBeUndefined();
 
       await user.click(screen.getByTestId('new-tournament-button'));
+    await user.click(screen.getByTestId('confirm-modal-confirm'));
       await waitFor(() => expect(levelOf('p1')!).toBeGreaterThan(50));
     });
 

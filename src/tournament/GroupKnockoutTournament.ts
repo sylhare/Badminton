@@ -75,21 +75,72 @@ export class GroupKnockoutTournament extends Tournament {
   }
 
   /**
-   * Config error, else null. The knockout is only pointless when *every* team advances
-   * (the group stage eliminates no one) — a group whose whole roster qualifies is fine
-   * as long as some other group still cuts teams. Counting actual advancers avoids a
-   * false alarm when uneven groups leave one group with exactly `qualifiersPerGroup` teams.
+   * Blocking config error (the config can't form a knockout at all), else null. Only fires
+   * when fewer than two teams would advance. Counting actual advancers avoids a false alarm
+   * when uneven groups leave one group with exactly `qualifiersPerGroup` teams.
    */
   static validateConfig(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
     if (teams.length === 0) return null;
-    const advancing = GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup);
-    if (advancing >= teams.length) {
-      return 'Every team would qualify — lower the qualifiers or raise the group size.';
-    }
-    if (advancing < MIN_KNOCKOUT_TEAMS) {
+    if (GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup) < MIN_KNOCKOUT_TEAMS) {
       return 'Too few teams would qualify for a knockout — add teams or lower the group size.';
     }
     return null;
+  }
+
+  /**
+   * Advisory (non-blocking) config note, else null. Everyone advancing is a valid setup — the
+   * group stage just seeds a full knockout — but the user probably wants to know no one is cut.
+   */
+  static configWarning(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
+    if (teams.length === 0) return null;
+    if (GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup) >= teams.length) {
+      return 'No one will be eliminated in the group phase — every team advances. Is that what you want?';
+    }
+    return null;
+  }
+
+  /** The bare "X groups of Y" shape a config forms, plus whether every group fell short of the requested size. */
+  private static groupShape(teams: TournamentTeam[], groupSize: number): { shape: string; undersized: boolean } {
+    const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
+    const undersized = Math.max(...sizes) < groupSize;
+    const noun = sizes.length === 1 ? 'group' : 'groups';
+    const uniform = sizes.every(size => size === sizes[0]);
+    const shape = uniform ? `${sizes.length} ${noun} of ${sizes[0]}` : `${sizes.length} ${noun} of ${sizes.join(', ')}`;
+    return { shape, undersized };
+  }
+
+  /**
+   * The single setup note shown under the group-knockout fields: the split the config actually
+   * forms, continued in the same breath by any caveat — the requested group size can't be reached,
+   * everyone advances, or too few qualify — instead of a second message stacked underneath. Reuses
+   * {@link validateConfig} and {@link configWarning} as the conditions so the note never disagrees
+   * with them. `severity` sets the note's colour; an `error` also blocks Start (via validateConfig).
+   */
+  static setupSummary(
+    teams: TournamentTeam[],
+    groupSize: number,
+    qualifiersPerGroup: number,
+  ): { message: string; severity: 'hint' | 'warning' | 'error' } | null {
+    if (teams.length === 0) return null;
+    const { shape, undersized } = GroupKnockoutTournament.groupShape(teams, groupSize);
+    const split = undersized
+      ? `${teams.length} teams can't fill groups of ${groupSize}, so they'll play as ${shape}.`
+      : `${teams.length} teams → ${shape}.`;
+
+    if (GroupKnockoutTournament.validateConfig(teams, groupSize, qualifiersPerGroup)) {
+      return {
+        message: `${split} That leaves too few to seed a knockout — add teams or lower the group size.`,
+        severity: 'error',
+      };
+    }
+    if (GroupKnockoutTournament.configWarning(teams, groupSize, qualifiersPerGroup)) {
+      return {
+        message: `${split} With the top ${qualifiersPerGroup} qualifying, every team advances`
+          + ' — no one is eliminated in the group phase.',
+        severity: 'warning',
+      };
+    }
+    return { message: split, severity: undersized ? 'warning' : 'hint' };
   }
 
   static fromState(state: TournamentState): GroupKnockoutTournament {
@@ -208,15 +259,9 @@ export class GroupKnockoutTournament extends Tournament {
   /** True while a metrics tie touching a group's qualifying band (who advances, or their seed order) lacks a hand-set order. */
   private hasUnresolvedBoundaryTie(): boolean {
     const cut = this.qualifiersPerGroup();
-    const points = this._state.manualPoints ?? {};
     return this.groups().some((_, groupIndex) => {
       const standings = this.groupStandings(groupIndex);
-      return this.tieGroups(standings).some(run => {
-        const affectsQualifiers = run.some(rank => rank < cut);
-        if (!affectsQualifiers) return false;
-        const ranked = run.map(rank => points[standings[rank].team.id]);
-        return ranked.some(v => v === undefined) || new Set(ranked).size !== ranked.length;
-      });
+      return this.tieGroups(standings).some(run => run.some(rank => rank < cut));
     });
   }
 
@@ -315,10 +360,10 @@ export class GroupKnockoutTournament extends Tournament {
    * through the very same path a group-result edit uses — a re-order is just another change to
    * the group standings, so the knockout re-seeds (or stays put) by the existing rules.
    */
-  withManualOrder(orderedIds: string[]): GroupKnockoutTournament {
+  override withManualOrder(orderedIds: string[]): this {
     const manualPoints = { ...(this._state.manualPoints ?? {}) };
     orderedIds.forEach((id, index) => { manualPoints[id] = orderedIds.length - index; });
-    return this.reseedFrom(this.regroupedWith(this.groupMatches(), manualPoints));
+    return this.reseedFrom(this.regroupedWith(this.groupMatches(), manualPoints)) as this;
   }
 
   /** The group phase renders its own per-group standings tables, so the combined table is hidden. */

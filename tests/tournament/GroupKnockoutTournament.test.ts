@@ -145,7 +145,6 @@ describe('GroupKnockoutTournament — group phase', () => {
     });
 
     it('gives knockout byes to group winners, not runners-up', () => {
-      // 3 groups × top-2 = 6 qualifiers in an 8-bracket → 2 byes, which should go to top seeds.
       const t = decideStrict(start(
         ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
       ));
@@ -156,6 +155,18 @@ describe('GroupKnockoutTournament — group phase', () => {
 
       expect(byeTeams.length).toBeGreaterThan(0);
       for (const bye of byeTeams) expect(isGroupWinner(bye.id)).toBe(true);
+    });
+
+    it('gives a six-team knockout a single-match consolation bracket, with no phantom TBD final', () => {
+      const t = decideStrict(start(
+        ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
+      ));
+      expect(t.qualifiers()).toHaveLength(6);
+      expect(t.bracketSize()).toBe(8);
+
+      const consolation = t.knockout().consolation;
+      expect(consolation.totalRounds()).toBe(1);
+      expect(consolation.computeTree()).toHaveLength(1);
     });
 
     it('does not seed the knockout while the group phase is unfinished', () => {
@@ -218,12 +229,70 @@ describe('GroupKnockoutTournament.validateConfig', () => {
     expect(GroupKnockoutTournament.validateConfig(teams(7), 4, 3)).toBeNull();
   });
 
-  it('warns only when every team would advance', () => {
-    expect(GroupKnockoutTournament.validateConfig(teams(6), 3, 3)).toMatch(/every team/i);
+  it('does not block when every team would advance — that is a valid (if unusual) setup', () => {
+    expect(GroupKnockoutTournament.validateConfig(teams(6), 3, 3)).toBeNull();
   });
 
-  it('warns when too few teams would qualify for a knockout', () => {
+  it('blocks only when too few teams would qualify for a knockout', () => {
     expect(GroupKnockoutTournament.validateConfig(teams(2), 2, 1)).toMatch(/too few/i);
+  });
+});
+
+describe('GroupKnockoutTournament.configWarning', () => {
+  const teams = (n: number) =>
+    createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
+
+  it('warns when every team advances (world-cup group of 4, all 4 qualify)', () => {
+    expect(GroupKnockoutTournament.configWarning(teams(4), 4, 4)).toMatch(/every team advances/i);
+  });
+
+  it('stays silent for the world-cup shape where some teams are cut (2 groups of 4, top 3 advance)', () => {
+    expect(GroupKnockoutTournament.configWarning(teams(8), 4, 3)).toBeNull();
+  });
+});
+
+describe('GroupKnockoutTournament.setupSummary', () => {
+  const teams = (n: number) =>
+    createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
+
+  it('returns null with no teams', () => {
+    expect(GroupKnockoutTournament.setupSummary([], 4, 2)).toBeNull();
+  });
+
+  it('is a neutral hint for an honoured split that eliminates some teams', () => {
+    expect(GroupKnockoutTournament.setupSummary(teams(8), 4, 2)).toEqual({
+      message: '8 teams → 2 groups of 4.',
+      severity: 'hint',
+    });
+  });
+
+  it('lists uneven group sizes in the split', () => {
+    expect(GroupKnockoutTournament.setupSummary(teams(7), 4, 2)).toEqual({
+      message: '7 teams → 2 groups of 4, 3.',
+      severity: 'hint',
+    });
+  });
+
+  it('flows the unreachable size and the every-team-advances note into one warning', () => {
+    expect(GroupKnockoutTournament.setupSummary(teams(4), 3, 2)).toEqual({
+      message: '4 teams can\'t fill groups of 3, so they\'ll play as 2 groups of 2. '
+        + 'With the top 2 qualifying, every team advances — no one is eliminated in the group phase.',
+      severity: 'warning',
+    });
+  });
+
+  it('warns on an unreachable size alone when the split still eliminates teams', () => {
+    expect(GroupKnockoutTournament.setupSummary(teams(6), 4, 1)).toEqual({
+      message: '6 teams can\'t fill groups of 4, so they\'ll play as 2 groups of 3.',
+      severity: 'warning',
+    });
+  });
+
+  it('continues into a blocking error when too few would qualify', () => {
+    const note = GroupKnockoutTournament.setupSummary(teams(3), 4, 1)!;
+    expect(note.severity).toBe('error');
+    expect(note.message).toContain('3 teams can\'t fill groups of 4');
+    expect(note.message).toContain('too few to seed a knockout');
   });
 });
 

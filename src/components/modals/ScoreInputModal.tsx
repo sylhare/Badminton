@@ -55,15 +55,15 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   };
 
   const rawSets = sets.map(s => ({ team1: s.s1, team2: s.s2 }));
-  const allBlank = rawSets.every(s => s.team1 === '' && s.team2 === '');
-  const effectiveSets = allBlank
-    ? rawSets.map(() => ({ team1: String(defaults.team1), team2: String(defaults.team2) }))
-    : rawSets;
+  const effectiveSets = rawSets.map(s =>
+    s.team1 === '' && s.team2 === ''
+      ? { team1: String(defaults.team1), team2: String(defaults.team2) }
+      : s);
   const result = MatchScore.resolve(effectiveSets, winnerTeam, setCount, setSize);
   const canConfirm = result !== null;
   const resolvedWinner: 1 | 2 = result?.winner ?? winnerTeam;
 
-  const clinchIndex = MatchScore.clinchSetIndex(rawSets, setCount);
+  const clinchIndex = MatchScore.clinchSetIndex(effectiveSets, setCount);
   const isLocked = (index: number) => clinchIndex >= 0 && index > clinchIndex;
 
   const handleConfirm = () => {

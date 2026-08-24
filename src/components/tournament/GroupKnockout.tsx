@@ -31,18 +31,20 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
     setTiedTeams(null);
   };
 
+  const groupStandings = groups.map((_, groupIndex) => tournament.groupStandings(groupIndex));
+  const groupTies = groupStandings.map(standings => (canBreakTies ? tournament.tieGroups(standings) : []));
+  const hasBlockingTie = groupTies.some(ties => ties.length > 0);
+
   return (
     <div className="group-knockout" data-testid="group-knockout">
       <div className="group-stage" data-testid="group-stage">
         {groups.map((_, groupIndex) => {
           const groupTournament = tournament.groupTournament(groupIndex);
-          const standings = tournament.groupStandings(groupIndex);
+          const standings = groupStandings[groupIndex];
           const tieByRank = new Map<number, TournamentTeam[]>();
-          if (canBreakTies) {
-            for (const tie of tournament.tieGroups(standings)) {
-              const teams = tie.map(rank => standings[rank].team);
-              for (const rank of tie) tieByRank.set(rank, teams);
-            }
+          for (const tie of groupTies[groupIndex]) {
+            const teams = tie.map(rank => standings[rank].team);
+            for (const rank of tie) tieByRank.set(rank, teams);
           }
           return (
             <section key={groupIndex} className="group-section" data-testid={`group-section-${groupIndex}`}>
@@ -79,6 +81,13 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
           );
         })}
       </div>
+
+      {hasBlockingTie && (
+        <div className="knockout-tie-warning" data-testid="knockout-tie-warning" role="alert">
+          <span className="tie-break-flag" aria-hidden>⚑</span>
+          <span>A group tie must be resolved before the knockout can start — use the ⇅ button on the tied rows above.</span>
+        </div>
+      )}
 
       {knockoutStarted && (
         <div className="knockout-stage" data-testid="knockout-stage">

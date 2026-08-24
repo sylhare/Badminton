@@ -37,10 +37,10 @@ export interface TournamentKind {
   ) => React.ReactNode;
   /** Peak concurrent matches per round for the setup court warning; defaults to the round-robin count. */
   matchesPerRound?: (teams: TournamentTeam[], config: SetupConfig) => number;
-  /** Extra setup validation (e.g. qualifier count); null when the config is fine. */
+  /** Blocking setup error (e.g. too few qualifiers) that disables Start, else null. */
   validateSetup?: (teams: TournamentTeam[], config: SetupConfig) => string | null;
   /** Format-specific setup fields, rendered in the setup form under the shared ones. */
-  renderSetupConfig?: (config: SetupConfig, error: string | null) => React.ReactNode;
+  renderSetupConfig?: (config: SetupConfig, teams: TournamentTeam[]) => React.ReactNode;
 }
 
 /**
@@ -73,7 +73,9 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
     ),
     matchesPerRound: (teams, c) => GroupKnockoutTournament.matchesPerRound(teams, c.groupSize),
     validateSetup: (teams, c) => GroupKnockoutTournament.validateConfig(teams, c.groupSize, c.qualifiersPerGroup),
-    renderSetupConfig: (c, error) => (
+    renderSetupConfig: (c, teams) => {
+      const note = GroupKnockoutTournament.setupSummary(teams, c.groupSize, c.qualifiersPerGroup);
+      return (
       <div className="setup-section" data-testid="group-knockout-config">
         <h3>Groups + Knockout</h3>
         <div className="group-knockout-fields">
@@ -84,7 +86,7 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
               min={2}
               onChange={next => {
                 c.setGroupSize(next);
-                c.setQualifiersPerGroup(Math.min(c.qualifiersPerGroup, next - 1));
+                c.setQualifiersPerGroup(Math.min(c.qualifiersPerGroup, next));
               }}
               testId="group-size-input"
             />
@@ -94,15 +96,20 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
             <NumberField
               value={c.qualifiersPerGroup}
               min={1}
-              max={c.groupSize - 1}
+              max={c.groupSize}
               onChange={c.setQualifiersPerGroup}
               testId="qualifiers-input"
             />
           </label>
         </div>
-        {error && <p className="setup-warning" data-testid="qualifiers-warning">{error}</p>}
+        {note && (
+          <p className={`setup-${note.severity}`} data-testid="group-preview">
+            {note.message}
+          </p>
+        )}
       </div>
-    ),
+      );
+    },
   },
 };
 

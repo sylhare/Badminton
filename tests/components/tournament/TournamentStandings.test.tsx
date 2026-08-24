@@ -1,6 +1,7 @@
 import React from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { TournamentStandings } from '../../../src/components/tournament/TournamentStandings';
 import type { TournamentStandingRow } from '../../../src/tournament/types';
@@ -93,6 +94,50 @@ describe('TournamentStandings (round-robin / showPoints)', () => {
     expect(rows[0]).toHaveTextContent('1');
     expect(rows[1]).toHaveTextContent('2');
     expect(rows[2]).toHaveTextContent('3');
+  });
+});
+
+describe('TournamentStandings tie-break', () => {
+  it('shows no tie-break control when there are no tie groups', () => {
+    render(
+      <TournamentStandings
+        standings={standings}
+        isComplete
+        subtitle="Final Results"
+        showPoints
+        tieGroups={[]}
+        onResolveTies={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('standings-tie-break')).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^standing-tie-flag-/)).not.toBeInTheDocument();
+  });
+
+  it('flags tied rows with a warning and resolves them from a single button', async () => {
+    const user = userEvent.setup();
+    const onResolveTies = vi.fn();
+    render(
+      <TournamentStandings
+        standings={standings}
+        isComplete
+        subtitle="Final Results"
+        showPoints
+        tieGroups={[[0, 1, 2]]}
+        onResolveTies={onResolveTies}
+      />,
+    );
+
+    expect(screen.getByTestId('standing-tie-flag-0')).toBeInTheDocument();
+    expect(screen.getByTestId('standing-tie-flag-2')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('standings-tie-break'));
+    expect(screen.getByTestId('manual-order-modal')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('manual-order-down-0'));
+    await user.click(screen.getByTestId('manual-order-save'));
+
+    expect(onResolveTies).toHaveBeenCalledWith(['b', 'a', 'c']);
   });
 });
 

@@ -321,6 +321,38 @@
     font-size: 0.7rem;
 }
 
+/* Single tie-break action shown below the combined standings when rows are tied. */
+.standings-tie-break {
+    margin-top: 0.75rem;
+    gap: 6px;
+}
+
+.standing-rank-tied {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tie-warning {
+    color: var(--color-warning, #d98324);
+    font-size: 0.8rem;
+    cursor: help;
+}
+
+.knockout-tie-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-warning, #d98324);
+    border-radius: var(--radius-sm);
+    background: var(--color-warning-soft, rgba(217, 131, 36, 0.12));
+    color: var(--color-warning, #d98324);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
 .group-knockout-final {
     margin-top: 1.5rem;
 }

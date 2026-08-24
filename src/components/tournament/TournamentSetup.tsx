@@ -20,6 +20,8 @@ interface TournamentSetupProps {
   initialPlayers: Player[];
   initialNumberOfCourts: number;
   type?: TournamentType;
+  /** Settings of the current tournament, used to pre-fill the form when re-opening setup. */
+  initialConfig?: Partial<CreateTournamentOptions>;
   onStart: (teams: TournamentTeam[], options: CreateTournamentOptions) => void;
   onAddPlayers?: (names: string[]) => void;
   onTogglePlayer?: (id: string) => void;
@@ -29,18 +31,19 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   initialPlayers,
   initialNumberOfCourts,
   type = 'round-robin',
+  initialConfig,
   onStart,
   onAddPlayers,
   onTogglePlayer,
 }) => {
-  const [format, setFormat] = useState<TournamentFormat>('doubles');
-  const [numberOfCourts, setNumberOfCourts] = useState(initialNumberOfCourts);
-  const [bestOf, setBestOf] = useState(1);
-  const [setSize, setSetSize] = useState(DEFAULT_SET_SIZE);
-  const [groupSize, setGroupSize] = useState(4);
-  const [qualifiersPerGroup, setQualifiersPerGroup] = useState(2);
+  const [format, setFormat] = useState<TournamentFormat>(initialConfig?.format ?? 'doubles');
+  const [numberOfCourts, setNumberOfCourts] = useState(initialConfig?.numberOfCourts ?? initialNumberOfCourts);
+  const [bestOf, setBestOf] = useState(initialConfig?.bestOf ?? 1);
+  const [setSize, setSetSize] = useState(initialConfig?.setSize ?? DEFAULT_SET_SIZE);
+  const [groupSize, setGroupSize] = useState(initialConfig?.groupSize ?? 4);
+  const [qualifiersPerGroup, setQualifiersPerGroup] = useState(initialConfig?.qualifiersPerGroup ?? 2);
   const [teams, setTeams] = useState<TournamentTeam[]>(() =>
-    RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), 'doubles'),
+    RoundRobinTournament.createTeams(initialPlayers.filter(p => p.isPresent), initialConfig?.format ?? 'doubles'),
   );
 
   const handleSwap = useCallback((from: SlotAddr, to: SlotAddr) => {
@@ -142,7 +145,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
         </label>
       </div>
 
-      {kind.renderSetupConfig?.(setupConfig, qualifierError)}
+      {kind.renderSetupConfig?.(setupConfig, teams)}
 
       {teams.length > 0 && (
         <div className="setup-section">

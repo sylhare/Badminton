@@ -37,6 +37,12 @@ export class TournamentPage {
     await expect(this.page.getByTestId('group-knockout')).toBeVisible();
   }
 
+  /** Click Start a New Tournament and confirm the discard prompt. */
+  async startNew(): Promise<void> {
+    await this.page.getByTestId('new-tournament-button').click();
+    await this.page.getByTestId('confirm-modal-confirm').click();
+  }
+
   /** Select the tournament type before starting. */
   async selectType(type: 'round-robin' | 'elimination' | 'group-knockout'): Promise<void> {
     await this.page.getByTestId(`type-pill-${type}`).click();
