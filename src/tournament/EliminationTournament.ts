@@ -2,7 +2,7 @@ import type { Player } from '../types';
 import { shuffleArray } from '../utils/playerUtils';
 
 import { Tournament } from './Tournament';
-import { BracketKind, DEFAULT_TOURNAMENT_STATE } from './types';
+import { BracketKind, DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
   SetScore,
   TournamentFormat,
@@ -34,6 +34,7 @@ export class EliminationTournament extends Tournament {
     format: TournamentFormat = 'doubles',
     numberOfCourts = 4,
     bestOf = 1,
+    setSize = DEFAULT_SET_SIZE,
   ): EliminationTournament {
     return new EliminationTournament({
       ...DEFAULT_TOURNAMENT_STATE,
@@ -41,6 +42,7 @@ export class EliminationTournament extends Tournament {
       format,
       numberOfCourts,
       bestOf,
+      setSize,
     });
   }
 

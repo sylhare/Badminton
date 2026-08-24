@@ -1,41 +1,76 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-import type { SetScore } from '../../tournament/types';
+import type { SetScore, TournamentTeam } from '../../tournament/types';
 import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
+import ManualOrderModal from '../modals/ManualOrderModal';
 
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { EliminationBracket } from './elimination/EliminationBracket';
 import { StandingsTable } from './common/StandingsTable';
+import { TournamentStandings } from './TournamentStandings';
 
 interface GroupKnockoutProps {
   tournament: GroupKnockoutTournament;
   onMatchResult: (matchId: string, winner: 1 | 2, sets?: SetScore[]) => void;
+  onUpdateTournament: (next: GroupKnockoutTournament) => void;
 }
 
 const groupLabel = (index: number): string => `Group ${String.fromCharCode(65 + index)}`;
 
-export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatchResult }) => {
+export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatchResult, onUpdateTournament }) => {
   const groups = tournament.groups();
   const qualifiersPerGroup = tournament.qualifiersPerGroup();
   const knockoutStarted = tournament.knockoutStarted();
+  const isComplete = tournament.isComplete();
+  const canBreakTies = tournament.groupPhaseComplete();
+  const [tiedTeams, setTiedTeams] = useState<TournamentTeam[] | null>(null);
+
+  const saveOrder = (orderedTeamIds: string[]) => {
+    onUpdateTournament(tournament.withManualOrder(orderedTeamIds));
+    setTiedTeams(null);
+  };
 
   return (
     <div className="group-knockout" data-testid="group-knockout">
       <div className="group-stage" data-testid="group-stage">
         {groups.map((_, groupIndex) => {
           const groupTournament = tournament.groupTournament(groupIndex);
-          const standings = groupTournament.calculateStandings();
+          const standings = tournament.groupStandings(groupIndex);
+          const tieByRank = new Map<number, TournamentTeam[]>();
+          if (canBreakTies) {
+            for (const tie of tournament.tieGroups(standings)) {
+              const teams = tie.map(rank => standings[rank].team);
+              for (const rank of tie) tieByRank.set(rank, teams);
+            }
+          }
           return (
             <section key={groupIndex} className="group-section" data-testid={`group-section-${groupIndex}`}>
               <h3>{groupLabel(groupIndex)}</h3>
               <StandingsTable
                 rows={standings}
                 rankHeader="#"
-                rankCell={rank => rank + 1}
-                rowClass={rank => (rank < qualifiersPerGroup ? 'qualified' : '')}
+                rankCell={rank => {
+                  const tied = tieByRank.get(rank);
+                  if (!tied) return rank + 1;
+                  return (
+                    <button
+                      type="button"
+                      className="tie-break-button"
+                      onClick={() => setTiedTeams(tied)}
+                      aria-label="Set tie-break order"
+                      data-testid={`tie-break-${groupIndex}-${rank}`}
+                    >
+                      <span aria-hidden>⇅</span>
+                      <span className="tie-break-flag" aria-hidden>⚑</span>
+                    </button>
+                  );
+                }}
+                rowClass={rank => [
+                  rank < qualifiersPerGroup ? 'qualified' : '',
+                  tieByRank.has(rank) ? 'tied' : '',
+                ].filter(Boolean).join(' ')}
                 testIdFor={rank => `group-${groupIndex}-standing-${rank}`}
-                showPoints
-                showScoreDiff={false}
+                showMetrics
                 extraClassName="group-standings"
               />
               <RoundRobinMatches tournament={groupTournament} onMatchResult={onMatchResult} />
@@ -50,6 +85,24 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
           <EliminationBracket tournament={tournament.knockout()} onMatchResult={onMatchResult} />
         </div>
       )}
+
+      {isComplete && (
+        <div className="group-knockout-final" data-testid="group-knockout-final">
+          <TournamentStandings
+            standings={tournament.overallStandings()}
+            isComplete
+            subtitle="Final Results"
+            showPoints
+          />
+        </div>
+      )}
+
+      <ManualOrderModal
+        isOpen={tiedTeams !== null}
+        teams={tiedTeams ?? []}
+        onConfirm={saveOrder}
+        onCancel={() => setTiedTeams(null)}
+      />
     </div>
   );
 };

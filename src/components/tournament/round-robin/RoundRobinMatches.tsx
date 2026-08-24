@@ -95,7 +95,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
         );
       })}
 
-      {scoreModal(tournament.state().bestOf)}
+      {scoreModal(tournament.state().bestOf, tournament.state().setSize)}
     </div>
   );
 };

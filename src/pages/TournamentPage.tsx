@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom';
 import { useAppState } from '../providers/AppStateProvider';
 import type { AnyTournament } from '../providers/AppStateProvider';
 import { Tournament } from '../components/tournament/Tournament';
+import type { Tournament as TournamentBase } from '../tournament/Tournament';
 import Footer from '../components/Footer';
 import { TOURNAMENT_FACTORY } from '../tournament/tournamentFactory';
+import type { CreateTournamentOptions } from '../tournament/tournamentFactory';
 import { tournamentToScoredGames } from '../engines/levelAdapters';
-import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
+import type { SetScore, TournamentTeam } from '../tournament/types';
 import './TournamentPage.css';
 
 const TournamentPage = (): React.ReactElement => {
@@ -27,19 +29,17 @@ const TournamentPage = (): React.ReactElement => {
     if (tournament && !tournament.isComplete()) commitElo(tournament);
   };
 
-  const handleStart = (
-    teams: TournamentTeam[],
-    numberOfCourts: number,
-    format: TournamentFormat,
-    type: TournamentType,
-    bestOf: number,
-    groupSize?: number,
-    qualifiersPerGroup?: number,
-  ) => {
+  const handleStart = (teams: TournamentTeam[], options: CreateTournamentOptions) => {
     flushIfActive();
-    const created = TOURNAMENT_FACTORY[type].create({ format, numberOfCourts, bestOf, groupSize, qualifiersPerGroup });
-    setTournament(created.start(teams, numberOfCourts));
+    const created = TOURNAMENT_FACTORY[options.type].create(options);
+    setTournament(created.start(teams, options.numberOfCourts));
     setShowSetup(false);
+  };
+
+  /** Commit the tournament as it moves from active to complete (records ELO once). */
+  const commitTournament = (next: AnyTournament) => {
+    setTournament(next);
+    if (tournament && !tournament.isComplete() && next.isComplete()) commitElo(next);
   };
 
   const handleMatchResult = (
@@ -48,9 +48,12 @@ const TournamentPage = (): React.ReactElement => {
     sets?: SetScore[],
   ) => {
     if (!tournament) return;
-    const next = tournament.withMatchResult(matchId, winner, sets);
-    setTournament(next);
-    if (!tournament.isComplete() && next.isComplete()) commitElo(next);
+    commitTournament(tournament.withMatchResult(matchId, winner, sets));
+  };
+
+  /** Replace the tournament wholesale (e.g. a manual tie-break re-order). */
+  const handleUpdateTournament = (next: TournamentBase) => {
+    commitTournament(next as AnyTournament);
   };
 
   const handleReset = () => {
@@ -101,6 +104,7 @@ const TournamentPage = (): React.ReactElement => {
           initialNumberOfCourts={numberOfCourts}
           onStart={handleStart}
           onMatchResult={handleMatchResult}
+          onUpdateTournament={handleUpdateTournament}
           onReset={handleReset}
           onAddPlayers={handleAddPlayers}
           onTogglePlayer={handlePlayerToggle}

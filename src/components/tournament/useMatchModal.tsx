@@ -12,7 +12,7 @@ interface UseMatchModalResult {
   handleModalConfirm: (winner: 1 | 2, sets: SetScore[]) => void;
   handleModalCancel: () => void;
   /** The score-input modal wired to this hook; render it once in the matches view. */
-  scoreModal: (bestOf: number) => React.ReactNode;
+  scoreModal: (bestOf: number, setSize?: number) => React.ReactNode;
 }
 
 export function useMatchModal(onMatchResult: MatchResultFn): UseMatchModalResult {
@@ -36,13 +36,14 @@ export function useMatchModal(onMatchResult: MatchResultFn): UseMatchModalResult
     setPending(null);
   };
 
-  const scoreModal = (bestOf: number) => (
+  const scoreModal = (bestOf: number, setSize?: number) => (
     <ScoreInputModal
       isOpen={pending !== null}
       winnerTeam={pending?.winner ?? 1}
       team1Players={pending?.match.team1.players ?? []}
       team2Players={pending?.match.team2.players ?? []}
       bestOf={bestOf}
+      setSize={setSize}
       onConfirm={handleModalConfirm}
       onCancel={handleModalCancel}
     />
