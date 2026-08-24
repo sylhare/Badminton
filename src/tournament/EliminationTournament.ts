@@ -24,6 +24,7 @@ import {
   positionsInRound,
   resolvePosition,
   roundComplete,
+  seedSlots,
 } from './bracketTree';
 
 export class EliminationTournament extends Tournament {
@@ -41,6 +42,13 @@ export class EliminationTournament extends Tournament {
 
   static fromState(state: TournamentState): EliminationTournament {
     return new EliminationTournament(state);
+  }
+
+  private _seededSlots?: TournamentTeam[];
+
+  /** The seeded team list arranged into standard bracket slots — the single source the winners bracket reads from. */
+  private seededSlots(): TournamentTeam[] {
+    return (this._seededSlots ??= seedSlots(this._state.teams, this.bracketSize()));
   }
 
   private makeMatch(
@@ -79,11 +87,11 @@ export class EliminationTournament extends Tournament {
   }
 
   private generateWinnersFirstRound(): TournamentMatch[] {
-    const { teams } = this._state;
+    const teams = this.seededSlots();
     const bracketSize = this.bracketSize();
     const matches: TournamentMatch[] = [];
     let courtIndex = 0;
-    for (let pos = 0; pos < bracketSize / 2; pos++) {
+    for (let pos = 0; pos < positionsInRound(bracketSize, 1); pos++) {
       const team1 = teams[2 * pos];
       const team2 = teams[2 * pos + 1];
       if (team1 && team2) {
@@ -124,7 +132,7 @@ export class EliminationTournament extends Tournament {
     winnersMatches: TournamentMatch[],
     startCourtIndex: number,
   ): TournamentMatch[] {
-    const { teams } = this._state;
+    const teams = this.seededSlots();
     const bracketSize = this.bracketSize();
     const totalWBRounds = this.totalRounds();
     const newMatches: TournamentMatch[] = [];
@@ -149,7 +157,7 @@ export class EliminationTournament extends Tournament {
   private wbRoundFullyDecided(winnersMatches: TournamentMatch[], round: number): boolean {
     const positions = positionsInRound(this.bracketSize(), round);
     for (let pos = 0; pos < positions; pos++) {
-      if (resolvePosition(round, pos, this._state.teams, winnersMatches) === 'tbd') return false;
+      if (resolvePosition(round, pos, this.seededSlots(), winnersMatches) === 'tbd') return false;
     }
     return true;
   }
@@ -159,7 +167,7 @@ export class EliminationTournament extends Tournament {
    * match's loser once decided, `null` until then. Bye positions get no slot.
    */
   private cbSeedSlots(winnersMatches: TournamentMatch[]): SeedSlots {
-    const { teams } = this._state;
+    const teams = this.seededSlots();
     const slots: Array<TournamentTeam | null> = [];
     for (let pos = 0; pos < positionsInRound(this.bracketSize(), 1); pos++) {
       if (!teams[2 * pos] || !teams[2 * pos + 1]) continue;
@@ -286,7 +294,7 @@ export class EliminationTournament extends Tournament {
 
   get winners(): WinnersBracket {
     return new WinnersBracket(
-      this._state.teams,
+      this.seededSlots(),
       this._state.matches.filter(m => m.bracket === BracketKind.Winners),
       this.bracketSize(),
     );

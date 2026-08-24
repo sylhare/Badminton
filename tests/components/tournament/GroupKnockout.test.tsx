@@ -117,6 +117,14 @@ describe('GroupKnockout', () => {
     expect(onUpdateTournament.mock.calls[0][0].state().manualPoints).toEqual({ b: 3, a: 2, c: 1 });
   });
 
+  it('hides the tie-break control once the knockout has started', () => {
+    const decided = decideGroupPhase(startTournament(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 1));
+    render(<GroupKnockout tournament={decided} onMatchResult={vi.fn()} onUpdateTournament={vi.fn()} />);
+
+    expect(screen.getByTestId('knockout-stage')).toBeInTheDocument();
+    expect(screen.queryByTestId('tie-break-0-1')).not.toBeInTheDocument();
+  });
+
   it('shows the final standings table once the tournament is complete', () => {
     let decided = decideGroupPhase(startTournament(['a', 'b', 'c', 'd'], 2, 1));
     decided = decided.withMatchResult(decided.knockoutMatches()[0].id, 1, [{ team1: 21, team2: 15 }]);

@@ -23,7 +23,7 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
   const qualifiersPerGroup = tournament.qualifiersPerGroup();
   const knockoutStarted = tournament.knockoutStarted();
   const isComplete = tournament.isComplete();
-  const canBreakTies = tournament.groupPhaseComplete();
+  const canBreakTies = tournament.groupPhaseComplete() && !knockoutStarted;
   const [tiedTeams, setTiedTeams] = useState<TournamentTeam[] | null>(null);
 
   const saveOrder = (orderedTeamIds: string[]) => {

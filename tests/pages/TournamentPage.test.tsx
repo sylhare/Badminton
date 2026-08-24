@@ -321,5 +321,20 @@ describe('TournamentPage', () => {
 
       await waitFor(() => expect(levelOf('p1')!).toBeGreaterThan(50));
     });
+
+    it('re-records Elo when a decided match is edited after the tournament is already complete', async () => {
+      const user = await renderAndRecordAlice(savedRR([0, 1], [match('m1', 1, 0, 1)]));
+      await waitFor(() => expect(levelOf('p1')!).toBeGreaterThan(50));
+      const afterAliceWon = levelOf('p1')!;
+
+      await user.click(screen.getByTestId('round-header-1'));
+      await user.click(screen.getAllByText(mockPlayers[1].name)[0]);
+      await user.click(screen.getByTestId('score-modal-confirm'));
+
+      await waitFor(() => {
+        expect(levelOf('p1')!).toBeLessThan(afterAliceWon);
+        expect(levelOf('p2')!).toBeGreaterThan(50);
+      });
+    });
   });
 });

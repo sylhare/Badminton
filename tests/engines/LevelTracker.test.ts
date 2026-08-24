@@ -37,8 +37,12 @@ describe('LevelTracker', () => {
       expect(tracker.getKFactor()).toBe(LevelTrackerConfig.K_DEFAULT);
     });
 
-    it('returns K_DEFAULT for a deuce win (winner score ≠ 21)', () => {
-      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(LevelTrackerConfig.K_DEFAULT);
+    it('treats a deuce win (23–21) as a close win, normalised past the reference length', () => {
+      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(LevelTrackerConfig.K_SCALE[0].k);
+    });
+
+    it('weights a dominant best-of-N average (23–12) by margin, not the deuce default', () => {
+      expect(tracker.getKFactor({ team1: 23, team2: 12 }, 1)).toBeGreaterThan(LevelTrackerConfig.K_SCALE[1].k);
     });
 
     it('returns K_SCALE[0].k for a close win (loser 18–20)', () => {
@@ -321,6 +325,7 @@ describe('tournamentToScoredGames', () => {
       totalRounds: () => 2,
       matches: () => [cb, wb],
       setSize: () => 21,
+      state: () => ({ bracketSize: 4 }),
     } as never);
 
     expect(games.map(g => g.court.courtNumber)).toEqual([2, 1]);
@@ -339,6 +344,7 @@ describe('tournamentToScoredGames', () => {
       totalRounds: () => 2,
       matches: () => [third, cons, win],
       setSize: () => 21,
+      state: () => ({ bracketSize: 4 }),
     } as never);
 
     expect(games.map(g => g.court.players[0].name)).toEqual(['Player wb-a', 'Player cb-a', 'Player tp-a']);
@@ -406,5 +412,17 @@ describe('tournamentToScoredGames — elimination final weighting', () => {
     expect(importances.has(LevelTrackerConfig.WB_SEMIFINAL_IMPORTANCE)).toBe(true);
     expect(importances.has(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE)).toBe(true);
     expect(Math.max(...importances)).toBe(LevelTrackerConfig.WB_FINAL_IMPORTANCE);
+  });
+
+  it('weights an incomplete bracket by its true final round, not the deepest played round', () => {
+    const teams = Array.from({ length: 8 }, (_, i) => team(`t${i}`, [makePlayer(`p${i}`, 50)]));
+    let tournament = EliminationTournament.create({ format: 'singles', numberOfCourts: 4 }).start(teams, 4);
+    for (const m of tournament.winners.matchesForRound(1)) {
+      tournament = tournament.withMatchResult(m.id, 1, [{ team1: 21, team2: 10 }]);
+    }
+
+    const { games } = tournamentToScoredGames(tournament);
+    expect(games).toHaveLength(4);
+    expect(games.every(g => g.importance === LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE)).toBe(true);
   });
 });

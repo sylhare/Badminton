@@ -1,8 +1,19 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { DEFAULT_PLAYERS } from '../support/helpers';
 import { MainPage } from '../support/pages/MainPage';
 import { TournamentPage } from '../support/pages/TournamentPage';
+
+/** Decide every match (team 1 wins) across all sections until the whole bracket is complete. */
+async function playWholeBracket(page: Page): Promise<void> {
+  for (let guard = 0; guard < 40; guard++) {
+    const undecided = page.locator('[data-testid="bracket-node-match"]')
+      .filter({ hasNot: page.locator('.bracket-team-winner') });
+    if (await undecided.count() === 0) break;
+    await undecided.first().locator('[data-testid^="bracket-team-1-"]').click();
+    await page.getByTestId('score-modal-confirm').click();
+  }
+}
 
 test.describe('Tournament Page - Elimination', () => {
   let mainPage: MainPage;
@@ -58,55 +69,17 @@ test.describe('Tournament Page - Elimination', () => {
     await tournamentPage.selectType('elimination');
     await tournamentPage.startElimination();
 
-    await test.step('bye-advance node visible with odd player count', async () => {
+    await test.step('odd player count seeds byes onto the top seeds', async () => {
       await expect(page.locator('[data-testid="bracket-node-bye"]').first()).toBeVisible();
     });
 
-    await expect(page.getByTestId('cb-section')).toBeVisible();
+    await playWholeBracket(page);
 
-    const wbSection = page.getByTestId('wb-section');
-    let wbFinalLoserName: string;
-    let wbSemiLoserName: string;
-
-    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
-    await page.getByTestId('score-modal-confirm').click();
-    await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
-    await page.getByTestId('score-modal-confirm').click();
-
-    const cbSection = page.getByTestId('cb-section');
-
-    await test.step('CB has 2 rounds: R1 + Final fed by WB Semi-Final loser', async () => {
-      await expect(cbSection).toBeVisible();
-      await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(1);
-      await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
-
-      await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
-      await page.getByTestId('score-modal-confirm').click();
-      await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
-
-      const wbSemiBtn = wbSection.locator('[data-testid^="bracket-team-1-"]').nth(2);
-      const wbSemiMatchId = (await wbSemiBtn.getAttribute('data-testid'))!.replace('bracket-team-1-', '');
-      wbSemiLoserName = (await wbSection.locator(`[data-testid="bracket-team-2-${wbSemiMatchId}"]`).textContent())!.trim();
-      await wbSemiBtn.click();
-      await page.getByTestId('score-modal-confirm').click();
-      await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(0);
-      await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(2);
-
-      await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
-      await page.getByTestId('score-modal-confirm').click();
-
-      const wbFinalBtn = wbSection.locator('[data-testid^="bracket-team-1-"]').nth(3);
-      const wbFinalMatchId = (await wbFinalBtn.getAttribute('data-testid'))!.replace('bracket-team-1-', '');
-      wbFinalLoserName = (await wbSection.locator(`[data-testid="bracket-team-2-${wbFinalMatchId}"]`).textContent())!.trim();
-      await wbFinalBtn.click();
-      await page.getByTestId('score-modal-confirm').click();
-    });
-
-    await test.step('final results: gold medal visible, WB finalist 2nd, lone semi-final loser auto-3rd', async () => {
+    await test.step('final results: five players ranked with a gold medal on top', async () => {
       await expect(page.getByTestId('standings-subtitle')).toHaveText('Final Results');
       await expect(page.getByTestId('standing-row-0')).toContainText('🥇');
-      await expect(page.getByTestId('standing-row-1')).toContainText(wbFinalLoserName);
-      await expect(page.getByTestId('standing-row-2')).toContainText(wbSemiLoserName);
+      await expect(page.getByTestId('standing-row-4')).toBeVisible();
+      await expect(page.getByTestId('standing-row-5')).toHaveCount(0);
     });
   });
 
@@ -192,35 +165,17 @@ test.describe('Tournament Page - Elimination', () => {
     await expect(team1Btn).toHaveClass(/bracket-team-loser/);
   });
 
-  test('consolation bracket — 6-player: CB Final shows players after single CB R1 match (odd seeds bug)', async ({ page }) => {
+  test('6-player elimination — consolation bracket runs to a final and all six are ranked', async ({ page }) => {
     await tournamentPage.setup(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank']);
     await page.getByTestId('format-pill-singles').click();
     await tournamentPage.selectType('elimination');
     await tournamentPage.startElimination();
 
-    const wbSection = page.getByTestId('wb-section');
-    const cbSection = page.getByTestId('cb-section');
+    await expect(page.getByTestId('cb-section')).toBeVisible();
+    await playWholeBracket(page);
 
-    for (let i = 0; i < 3; i++) {
-      await wbSection.locator('[data-testid^="bracket-team-1-"]').nth(i).click();
-      await page.getByTestId('score-modal-confirm').click();
-    }
-
-    await expect(cbSection).toBeVisible();
-    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(1);
-    await expect(cbSection.locator('[data-testid="bracket-node-bye"]')).toHaveCount(1);
-
-    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(1);
-
-    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(0).click();
-    await page.getByTestId('score-modal-confirm').click();
-
-    await expect(cbSection.locator('[data-testid="bracket-node-tbd"]')).toHaveCount(0);
-    await expect(cbSection.locator('[data-testid="bracket-node-match"]')).toHaveCount(2);
-
-    await cbSection.locator('[data-testid^="bracket-team-1-"]').nth(1).click();
-    await page.getByTestId('score-modal-confirm').click();
-
-    await expect(page.getByTestId('tournament-standings')).toBeVisible();
+    await expect(page.getByTestId('standings-subtitle')).toHaveText('Final Results');
+    await expect(page.getByTestId('standing-row-0')).toContainText('🥇');
+    await expect(page.getByTestId('standing-row-5')).toBeVisible();
   });
 });

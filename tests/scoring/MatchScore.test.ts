@@ -38,6 +38,12 @@ describe('MatchScore', () => {
       expect(MatchScore.resolve([{ team1: 23, team2: null }], 1, 1)?.sets).toEqual([{ team1: 23, team2: 21 }]);
       expect(MatchScore.resolve([{ team1: null, team2: 25 }], 2, 1)?.sets).toEqual([{ team1: 23, team2: 25 }]);
     });
+
+    it('keeps the clicked team the winner when only their low score is entered', () => {
+      const r = MatchScore.resolve([{ team1: 10, team2: null }], 1, 1);
+      expect(r?.winner).toBe(1);
+      expect(r?.sets[0].team2).toBeLessThan(10);
+    });
   });
 
   describe('resolve — best-of-N', () => {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { GroupKnockoutTournament } from '../../src/tournament/GroupKnockoutTournament';
-import type { TournamentMatch } from '../../src/tournament/types';
+import { DEFAULT_TOURNAMENT_STATE } from '../../src/tournament/types';
+import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
 import { createTournamentTeams } from '../data/testFactories';
 
 /** Decide every currently-listed match, team1 winning by the given set score. */
@@ -130,6 +131,33 @@ describe('GroupKnockoutTournament — group phase', () => {
       expect(decideAll(start(['a', 'b', 'c', 'd'], 2, 1)).totalRounds()).toBe(2);
     });
 
+    it('never pairs two qualifiers from the same group in knockout round 1', () => {
+      const t = decideStrict(start(
+        ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
+      ));
+      expect(t.knockoutStarted()).toBe(true);
+      const groups = t.groups();
+      const groupOf = (id: string) => groups.findIndex(g => g.some(team => team.id === id));
+
+      for (const m of t.knockoutMatches().filter(m => m.round === 1)) {
+        expect(groupOf(m.team1.id)).not.toBe(groupOf(m.team2.id));
+      }
+    });
+
+    it('gives knockout byes to group winners, not runners-up', () => {
+      // 3 groups × top-2 = 6 qualifiers in an 8-bracket → 2 byes, which should go to top seeds.
+      const t = decideStrict(start(
+        ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'], 4, 2,
+      ));
+      const groups = t.groups();
+      const isGroupWinner = (id: string) => groups.some((_, g) => t.groupStandings(g)[0]?.team.id === id);
+      const r1Ids = new Set(t.knockoutMatches().filter(m => m.round === 1).flatMap(m => [m.team1.id, m.team2.id]));
+      const byeTeams = t.qualifiers().filter(q => !r1Ids.has(q.id));
+
+      expect(byeTeams.length).toBeGreaterThan(0);
+      for (const bye of byeTeams) expect(isGroupWinner(bye.id)).toBe(true);
+    });
+
     it('does not seed the knockout while the group phase is unfinished', () => {
       const t = start(['a', 'b', 'c', 'd', 'e', 'f'], 3, 2);
       expect(t.knockoutStarted()).toBe(false);
@@ -244,6 +272,20 @@ describe('GroupKnockoutTournament — final standings & manual order', () => {
     expect(flipped.state().manualPoints).toBeUndefined();
   });
 
+  it('clears only the edited group’s manual order, preserving another group’s', () => {
+    let t = decideAll(start(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'], 4, 2));
+    const groupATeamIds = new Set(t.groups()[0].map(team => team.id));
+    t = t.withManualOrder(t.groupStandings(0).slice(1).map(r => r.team.id));
+    t = t.withManualOrder(t.groupStandings(1).slice(1).map(r => r.team.id));
+
+    const groupAMatch = t.groupMatches().find(m => m.group === 0)!;
+    const edited = t.withMatchResult(groupAMatch.id, groupAMatch.winner === 1 ? 2 : 1, [{ team1: 10, team2: 21 }]);
+
+    const remaining = edited.state().manualPoints ?? {};
+    expect(Object.keys(remaining).length).toBeGreaterThan(0);
+    expect(Object.keys(remaining).some(id => groupATeamIds.has(id))).toBe(false);
+  });
+
   it('records a manual order and keeps the played bracket when qualifiers are unchanged', () => {
     const t = decideAll(start(['a', 'b', 'c', 'd'], 2, 1));
     const before = t.qualifiers().map(q => q.id);
@@ -252,5 +294,46 @@ describe('GroupKnockoutTournament — final standings & manual order', () => {
     expect(reordered.state().manualPoints).toEqual({ 'unrelated-id': 1 });
     expect(reordered.qualifiers().map(q => q.id)).toEqual(before);
     expect(reordered.knockoutMatches()).toHaveLength(t.knockoutMatches().length);
+  });
+
+  it('does not order cross-group teams by another group’s tie-break points in the combined table', () => {
+    const [a, x, b, y] = createTournamentTeams(['a', 'x', 'b', 'y']);
+    const win = (id: string, t1: TournamentTeam, t2: TournamentTeam, group: number): TournamentMatch =>
+      ({ id, round: 1, courtNumber: 1, team1: t1, team2: t2, winner: 1, sets: [{ team1: 21, team2: 10 }], group });
+    const t = GroupKnockoutTournament.fromState({
+      ...DEFAULT_TOURNAMENT_STATE,
+      type: 'group-knockout', format: 'singles', groupSize: 2, qualifiersPerGroup: 1,
+      teams: [a, x, b, y],
+      matches: [win('g0', a, x, 0), win('g1', b, y, 1)],
+      manualPoints: { x: 1, y: 2 },
+    });
+
+    expect(t.overallStandings().map(r => r.team.id)).toEqual(['a', 'b', 'x', 'y']);
+  });
+
+  it('holds seeding until an order-affecting tie among a group’s qualifiers is hand-ordered', () => {
+    const [a, b, c, d, e, f, g, h] = createTournamentTeams(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+    const m = (id: string, t1: TournamentTeam, t2: TournamentTeam, winner: 1 | 2, group: number): TournamentMatch => ({
+      id, round: 1, courtNumber: 1, team1: t1, team2: t2, winner,
+      sets: winner === 1 ? [{ team1: 21, team2: 10 }] : [{ team1: 10, team2: 21 }], group,
+    });
+    const t = GroupKnockoutTournament.fromState({
+      ...DEFAULT_TOURNAMENT_STATE,
+      type: 'group-knockout', format: 'singles', numberOfCourts: 2, groupSize: 4, qualifiersPerGroup: 2,
+      teams: [a, b, c, d, e, f, g, h],
+      matches: [
+        m('a0', a, c, 1, 0), m('a1', a, d, 1, 0), m('a2', a, b, 2, 0),
+        m('a3', b, c, 2, 0), m('a4', b, d, 1, 0), m('a5', c, d, 2, 0),
+        m('b0', e, f, 1, 1), m('b1', e, g, 1, 1), m('b2', e, h, 1, 1),
+        m('b3', f, g, 1, 1), m('b4', f, h, 1, 1), m('b5', g, h, 1, 1),
+      ],
+    });
+
+    expect(t.groupPhaseComplete()).toBe(true);
+    expect(t.qualifiers()).toEqual([]);
+
+    const resolved = t.withManualOrder(['a', 'b']);
+    expect(resolved.qualifiers().map(q => q.id).sort()).toEqual(['a', 'b', 'e', 'f']);
+    expect(resolved.knockoutStarted()).toBe(true);
   });
 });

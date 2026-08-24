@@ -54,11 +54,11 @@ describe('EliminationTournament', () => {
       expect(t.winners.matchesForRound(1)).toHaveLength(4);
     });
 
-    it('5 teams → bracketSize=8, 2 WB R1 matches (3 byes at end)', () => {
+    it('5 teams → bracketSize=8, 1 WB R1 match (top 3 seeds get byes)', () => {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E']);
       const t = EliminationTournament.create().start(teams, 4);
       expect(t.bracketSize()).toBe(8);
-      expect(t.winners.matchesForRound(1)).toHaveLength(2);
+      expect(t.winners.matchesForRound(1)).toHaveLength(1);
     });
 
     it('3 teams → bracketSize=4, 1 WB R1 match (A vs B; C gets bye-advance)', () => {
@@ -204,48 +204,19 @@ describe('EliminationTournament', () => {
   });
 
   describe('withMatchResult — bye handling', () => {
-    it('5 teams: WB R1 produces 2 matches; bye-advance team skips to WB R2', () => {
+    it('5 teams: 1 WB R1 match; the seeded byes advance into WB R2', () => {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E']);
       let t = EliminationTournament.create().start(teams, 4);
-      expect(t.winners.matchesForRound(1)).toHaveLength(2);
+      expect(t.winners.matchesForRound(1)).toHaveLength(1);
 
-      const [m0, m1] = t.winners.matchesForRound(1);
+      const [m0] = t.winners.matchesForRound(1);
       t = t.withMatchResult(m0.id, 1);
-      t = t.withMatchResult(m1.id, 1);
 
-      const r2 = t.winners.matchesForRound(2);
-      expect(r2.length).toBeGreaterThanOrEqual(1);
+      expect(t.winners.matchesForRound(2).length).toBeGreaterThanOrEqual(1);
     });
 
-    it('5 teams: full play-through — CB has 2 rounds (R1 + Final fed by WB Semi-Final loser)', () => {
-      const [A, B, C, D, E] = createTournamentTeams(['A', 'B', 'C', 'D', 'E']);
-      let t = EliminationTournament.create().start([A, B, C, D, E], 4);
-      expect(t.winners.matchesForRound(1)).toHaveLength(2);
-
-      const [m0, m1] = t.winners.matchesForRound(1);
-      t = t.withMatchResult(m0.id, 1);
-      t = t.withMatchResult(m1.id, 1);
-
-      expect(t.winners.matchesForRound(2)).toHaveLength(1);
-      expect(t.consolation.matchesForRound(1)).toHaveLength(1);
-      expect(t.consolation.matchesForRound(2)).toHaveLength(0);
-
-      const [cbR1] = t.consolation.matchesForRound(1);
-      t = t.withMatchResult(cbR1.id, 1);
-      expect(t.consolation.matchesForRound(2)).toHaveLength(0);
-
-      const [wbR2] = t.winners.matchesForRound(2);
-      t = t.withMatchResult(wbR2.id, 1);
-      expect(t.consolation.matchesForRound(2)).toHaveLength(1);
-
-      const [cbFinal] = t.consolation.matchesForRound(2);
-      t = t.withMatchResult(cbFinal.id, 1);
-
-      expect(t.winners.matchesForRound(3)).toHaveLength(1);
-      const [wbFinal] = t.winners.matchesForRound(3);
-      t = t.withMatchResult(wbFinal.id, 1);
-
-      expect(t.thirdPlaceMatch).toBeUndefined();
+    it('5 teams: full play-through completes with all five ranked', () => {
+      const t = playFullTournament(EliminationTournament.create().start(createTournamentTeams(['A', 'B', 'C', 'D', 'E']), 4));
       expect(t.isComplete()).toBe(true);
       expect(t.phase()).toBe('completed');
       expect(t.calculateStandings()).toHaveLength(5);
@@ -433,30 +404,22 @@ describe('EliminationTournament', () => {
       expect(standings[2].team.id).toBe(cbFinal.team1.id);
     });
 
-    it('6 teams (Case E): single semi-final loser is 3rd, no 3rd-place match', () => {
+    it('6 teams: two semi-final losers play for 3rd, ahead of the consolation winner', () => {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F']);
-      let t = EliminationTournament.create().start(teams, 4);
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
 
-      t = playWBRound(t, 1);
-      t = playAllCBRounds(t);
-      t = playWBRound(t, 2);
-      t = playAllCBRounds(t);
-
-      const semiFinal = t.winners.matchesForRound(t.totalRounds() - 1);
-      expect(semiFinal).toHaveLength(1);
-      const sfLoser = semiFinal[0].winner === 1 ? semiFinal[0].team2 : semiFinal[0].team1;
-
-      t = playWBRound(t, 3);
-      t = playAllCBRounds(t);
-
-      expect(t.thirdPlaceMatch).toBeUndefined();
+      expect(t.winners.matchesForRound(t.totalRounds() - 1)).toHaveLength(2);
+      expect(t.thirdPlaceMatch).toBeDefined();
       expect(t.isComplete()).toBe(true);
 
       const standings = t.calculateStandings();
       const wbFinal = t.winners.matchesForRound(t.totalRounds())[0];
+      const tp = t.thirdPlaceMatch!;
+      const tpWinner = tp.winner === 1 ? tp.team1 : tp.team2;
       expect(standings[0].team.id).toBe(wbFinal.team1.id);
       expect(standings[1].team.id).toBe(wbFinal.team2.id);
-      expect(standings[2].team.id).toBe(sfLoser.id);
+      expect(standings[2].team.id).toBe(tpWinner.id);
+      expect(standings).toHaveLength(6);
     });
 
     it.each(Array.from({ length: 28 }, (_, i) => i + 5))(
@@ -513,32 +476,22 @@ describe('EliminationTournament', () => {
       expect(standings[3].team.id).toBe(tpLoser.id);
     });
 
-    it('10 teams: single semi-final loser is 3rd, no 3rd-place match for CB winner', () => {
+    it('10 teams: two semi-final losers play for 3rd place', () => {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
-      let t = EliminationTournament.create().start(teams, 4);
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
 
-      t = playWBRound(t, 1);
-      t = playAllCBRounds(t);
-      t = playWBRound(t, 2);
-      t = playAllCBRounds(t);
-      t = playWBRound(t, 3);
-      t = playAllCBRounds(t);
-
-      expect(t.winners.matchesForRound(t.totalRounds() - 1)).toHaveLength(1);
-      const semiFinal = t.winners.matchesForRound(t.totalRounds() - 1)[0];
-      const sfLoser = semiFinal.winner === 1 ? semiFinal.team2 : semiFinal.team1;
-
-      t = playWBRound(t, 4);
-      t = playAllCBRounds(t);
-
-      expect(t.thirdPlaceMatch).toBeUndefined();
+      expect(t.winners.matchesForRound(t.totalRounds() - 1)).toHaveLength(2);
+      expect(t.thirdPlaceMatch).toBeDefined();
       expect(t.isComplete()).toBe(true);
 
       const standings = t.calculateStandings();
       const wbFinal = t.winners.matchesForRound(t.totalRounds())[0];
+      const tp = t.thirdPlaceMatch!;
+      const tpWinner = tp.winner === 1 ? tp.team1 : tp.team2;
       expect(standings[0].team.id).toBe(wbFinal.team1.id);
       expect(standings[1].team.id).toBe(wbFinal.team2.id);
-      expect(standings[2].team.id).toBe(sfLoser.id);
+      expect(standings[2].team.id).toBe(tpWinner.id);
+      expect(standings).toHaveLength(10);
     });
   });
 
@@ -667,7 +620,7 @@ describe('EliminationTournament', () => {
     });
   });
 
-  describe('10-team tournament — CB final (odd CB seeds: 5 losers)', () => {
+  describe('10-team tournament — consolation bracket', () => {
     function setup10Teams() {
       const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
       let t = EliminationTournament.create().start(teams, 4);
@@ -675,37 +628,20 @@ describe('EliminationTournament', () => {
       return t;
     }
 
-    it('CB R1 seeds 2 matches leaving one bye-passer (L4)', () => {
+    it('seeds consolation round 1 from the two WB first-round losers', () => {
       const t = setup10Teams();
-      expect(t.consolation.matchesForRound(1)).toHaveLength(2);
-      const cbR1Ids = new Set(
-        t.consolation.matchesForRound(1).flatMap(m => [m.team1.id, m.team2.id]),
-      );
-      const byePasser = knownSeeds(t).find(l => !cbR1Ids.has(l.id));
-      expect(byePasser).toBeDefined();
+      const cbR1 = t.consolation.matchesForRound(1);
+      expect(cbR1).toHaveLength(1);
+      const loserIds = new Set(knownSeeds(t).map(l => l.id));
+      for (const id of [cbR1[0].team1.id, cbR1[0].team2.id]) expect(loserIds.has(id)).toBe(true);
     });
 
-    it('CB R3 final pairs the CB R2 winner with the CB R1 bye-passer (not the WB SF loser)', () => {
-      let t = setup10Teams();
-      for (const m of t.consolation.matchesForRound(1)) t = t.withMatchResult(m.id, 1);
-      for (const m of t.consolation.matchesForRound(2)) t = t.withMatchResult(m.id, 1);
-      t = playWBRound(t, 2);
-      t = playWBRound(t, 3);
-
-      const cbR1Ids = new Set(
-        t.consolation.matchesForRound(1).flatMap(m => [m.team1.id, m.team2.id]),
-      );
-      const byePasser = knownSeeds(t).find(l => !cbR1Ids.has(l.id))!;
-      const sfLoser = t.winners
-        .matchesForRound(3)
-        .map(m => (m.winner === 1 ? m.team2 : m.team1))[0];
-
-      const cbR3 = t.consolation.matchesForRound(3);
-      expect(cbR3).toHaveLength(1);
-
-      const cbR3TeamIds = [cbR3[0].team1.id, cbR3[0].team2.id];
-      expect(cbR3TeamIds).toContain(byePasser.id);
-      expect(cbR3TeamIds).not.toContain(sfLoser.id);
+    it('pulls deeper WB losers so the consolation bracket still runs to a single final', () => {
+      const teams = createTournamentTeams(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']);
+      const t = playFullTournament(EliminationTournament.create().start(teams, 4));
+      expect(t.consolation.totalRounds()).toBe(3);
+      expect(t.consolation.matches().every(m => m.winner !== undefined)).toBe(true);
+      expect(t.consolation.matchesForRound(3)).toHaveLength(1);
     });
 
     it('10-team tournament completes correctly via normal play-through', () => {

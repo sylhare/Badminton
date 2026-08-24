@@ -57,7 +57,10 @@ export abstract class Tournament {
     winner: 1 | 2,
     sets?: SetScore[],
   ): TournamentMatch[] {
-    return matches.map(m => (m.id === matchId ? { ...m, winner, sets: sets ?? m.sets } : m));
+    return matches.map(m =>
+      m.id === matchId
+        ? { ...m, winner, sets: sets ?? (m.winner !== undefined && winner !== m.winner ? [] : m.sets) }
+        : m);
   }
 
   /** Compose standings comparators into one: the first non-zero result wins. */

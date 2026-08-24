@@ -203,15 +203,22 @@ describe('ScoreInputModal', () => {
       expect(set(2).t2()).toBeDisabled();
     });
 
-    it('unlocks and records the decider when the first two sets split', async () => {
+    it('records every entered set when the first two split and the decider is played out', async () => {
       const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
-      await user.clear(set(0).t1()); await user.type(set(0).t1(), '15');
-      await user.clear(set(0).t2()); await user.type(set(0).t2(), '21');
+      await user.type(set(0).t1(), '15'); await user.type(set(0).t2(), '21');
+      await user.type(set(1).t1(), '21'); await user.type(set(1).t2(), '18');
       expect(set(2).t1()).toBeEnabled();
+      await user.type(set(2).t1(), '21'); await user.type(set(2).t2(), '18');
       await user.click(confirmBtn());
       expect(onConfirm).toHaveBeenCalledWith(1, [
         { team1: 15, team2: 21 }, { team1: 21, team2: 18 }, { team1: 21, team2: 18 },
       ]);
+    });
+
+    it('does not fabricate blank sets: an incomplete best-of-N cannot be confirmed', async () => {
+      const { set, confirmBtn } = renderBestOf(3, 1);
+      await user.type(set(0).t1(), '19'); await user.type(set(0).t2(), '21');
+      expect(confirmBtn()).toBeDisabled();
     });
 
     it('lets the entered sets flip the winner', async () => {
