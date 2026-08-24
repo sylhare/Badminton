@@ -1,0 +1,89 @@
+{
+  "engines": [
+    "sa",
+    "sl"
+  ],
+  "concurrency": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "durationSec": 45,
+  "runs": 4,
+  "rounds": 10,
+  "playerCount": 16,
+  "sampleIntervalMs": 250,
+  "headless": true,
+  "courts": 4,
+  "playerProfiles": {
+    "P1": {
+      "level": 20
+    },
+    "P2": {
+      "level": 40
+    },
+    "P3": {
+      "level": 60
+    },
+    "P4": {
+      "level": 100
+    },
+    "P5": {
+      "level": 20
+    },
+    "P6": {
+      "level": 40
+    },
+    "P7": {
+      "level": 60
+    },
+    "P8": {
+      "level": 100
+    },
+    "P9": {
+      "level": 20
+    },
+    "P10": {
+      "level": 40
+    },
+    "P11": {
+      "level": 60
+    },
+    "P12": {
+      "level": 100
+    },
+    "P13": {
+      "level": 20
+    },
+    "P14": {
+      "level": 40
+    },
+    "P15": {
+      "level": 80
+    },
+    "P16": {
+      "level": 40
+    },
+    "P17": {
+      "level": 20
+    },
+    "P18": {
+      "level": 40
+    },
+    "P19": {
+      "level": 20
+    },
+    "P20": {
+      "level": 40
+    },
+    "P21": {
+      "level": 20
+    },
+    "P22": {
+      "level": 40
+    }
+  },
+  "baseUrl": "http://localhost:5173",
+  "timestamp": "2026-08-13T13:27:50.153Z"
+}

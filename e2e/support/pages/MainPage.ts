@@ -93,10 +93,10 @@ export class MainPage {
     }
   }
 
-  /** Click Generate without any setup, just waiting for courts to appear. */
-  async regenerate(): Promise<void> {
+  /** Click Generate and wait for courts; raise `timeoutMs` for load tests where render is slower. */
+  async regenerate(timeoutMs = 5000): Promise<void> {
     await this.page.getByTestId('generate-assignments-button').click();
-    await expect(this.page.locator('.court-card').first()).toBeVisible({ timeout: 5000 });
+    await expect(this.page.locator('.court-card').first()).toBeVisible({ timeout: timeoutMs });
   }
 
   /** Return a CourtCard object for the given court number. */

@@ -1,3 +1,14 @@
+import type { Court, ICourtAssignmentEngine } from '../../src/types';
+
+/**
+ * Engine as the harness uses it: adds optional `recordWins`/`stats` (present on the
+ * concrete engines, guarded at every call site) beyond `ICourtAssignmentEngine`.
+ */
+export type SimEngine = ICourtAssignmentEngine & {
+  recordWins?(courts: Court[]): void;
+  stats?(): { winCountMap: Map<string, number> };
+};
+
 /** Records a single match with team compositions, strengths, and outcome. */
 export type MatchEvent = {
   simulationId: number;
