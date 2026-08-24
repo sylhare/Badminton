@@ -63,11 +63,13 @@ export class RoundRobinTournament extends Tournament {
   static create(
     format: TournamentFormat = 'doubles',
     numberOfCourts = 4,
+    bestOf = 1,
   ): RoundRobinTournament {
     return new RoundRobinTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       format,
       numberOfCourts,
+      bestOf,
     });
   }
 

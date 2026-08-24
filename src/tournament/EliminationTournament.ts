@@ -29,12 +29,14 @@ export class EliminationTournament extends Tournament {
   static create(
     format: TournamentFormat = 'doubles',
     numberOfCourts = 4,
+    bestOf = 1,
   ): EliminationTournament {
     return new EliminationTournament({
       ...DEFAULT_TOURNAMENT_STATE,
       type: 'elimination',
       format,
       numberOfCourts,
+      bestOf,
     });
   }
 
