@@ -1,10 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 
 import type { SetScore, TournamentMatch } from '../../../tournament/types';
+import { MatchScore } from '../../../scoring/MatchScore';
 import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
-import ScoreInputModal from '../../modals/ScoreInputModal';
+import { cx } from '../../common/cx';
 import { useMatchModal } from '../useMatchModal';
+
+import { useExpandedRounds } from './useExpandedRounds';
 
 interface RoundRobinMatchesProps {
   tournament: RoundRobinTournament;
@@ -15,95 +18,47 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   tournament,
   onMatchResult,
 }) => {
-  const {
-    modalMatch,
-    pendingWinner,
-    handleTeamClick,
-    handleModalConfirm,
-    handleModalCancel,
-  } = useMatchModal(onMatchResult);
-  const [expandedRounds, setExpandedRounds] = useState<Set<number>>(() =>
-    new Set([tournament.currentRound()]),
-  );
+  const { handleTeamClick, scoreModal } = useMatchModal(onMatchResult);
 
   const currentRound = tournament.currentRound();
   const roundNums = tournament.roundNumbers();
-  const allComplete = tournament.isComplete();
-
-  const prevCurrentRoundRef = useRef(currentRound);
-  useEffect(() => {
-    const prev = prevCurrentRoundRef.current;
-    if (prev !== currentRound) {
-      setExpandedRounds(existing => {
-        const next = new Set(existing);
-        next.delete(prev);
-        next.add(currentRound);
-        return next;
-      });
-      prevCurrentRoundRef.current = currentRound;
-    }
-  }, [currentRound]);
-
-  const prevAllCompleteRef = useRef(allComplete);
-  useEffect(() => {
-    if (allComplete && !prevAllCompleteRef.current) {
-      setExpandedRounds(new Set());
-    }
-    prevAllCompleteRef.current = allComplete;
-  }, [allComplete]);
-
-  const toggleRound = (round: number) => {
-    setExpandedRounds(prev => {
-      const next = new Set(prev);
-      if (next.has(round)) {
-        next.delete(round);
-      } else {
-        next.add(round);
-      }
-      return next;
-    });
-  };
+  const { isExpanded, toggle } = useExpandedRounds(currentRound, tournament.isComplete());
 
   const isSingles = (match: TournamentMatch) => match.team1.players.length === 1;
-
-  const formatScore = (match: TournamentMatch) => {
-    if (!match.sets.length) return null;
-    return match.sets.map(set => `${set.team1} – ${set.team2}`).join(', ');
-  };
 
   return (
     <div className="tournament-matches" data-testid="tournament-matches">
       {roundNums.map(round => {
         const roundMatches = tournament.matchesForRound(round);
-        const isExpanded = expandedRounds.has(round);
+        const expanded = isExpanded(round);
         const roundDone = tournament.isRoundComplete(round);
 
         return (
           <div
             key={round}
-            className={`round-section${roundDone ? ' round-complete' : ''}`}
+            className={cx('round-section', roundDone && 'round-complete')}
             data-testid={`round-${round}`}
           >
             <div
               className="round-header"
-              onClick={() => toggleRound(round)}
+              onClick={() => toggle(round)}
               data-testid={`round-header-${round}`}
             >
               <h3>Round {round}</h3>
               <span className="round-status">
                 {roundDone ? '✓ Complete' : `${roundMatches.filter(m => m.winner).length}/${roundMatches.length} done`}
               </span>
-              <span className="collapse-indicator">{isExpanded ? '▼' : '▶'}</span>
+              <span className="collapse-indicator">{expanded ? '▼' : '▶'}</span>
             </div>
 
-            {isExpanded && (
+            {expanded && (
               <div className="round-matches" data-testid="round-matches">
                 {roundMatches.map(match => {
-                  const score = formatScore(match);
+                  const score = MatchScore.of(match.sets, match.winner).formatted();
                   return (
                     <div
                       key={match.id}
-                      className={`match-row${match.winner ? ' match-complete' : ''}`}
+                      className={cx('match-row', match.winner && 'match-complete')}
                       data-testid={`match-${match.id}`}
                     >
                       <div className="match-court">Court {match.courtNumber}</div>
@@ -140,15 +95,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
         );
       })}
 
-      <ScoreInputModal
-        isOpen={modalMatch !== null && pendingWinner !== null}
-        winnerTeam={pendingWinner ?? 1}
-        team1Players={modalMatch?.team1.players ?? []}
-        team2Players={modalMatch?.team2.players ?? []}
-        bestOf={tournament.state().bestOf ?? 1}
-        onConfirm={handleModalConfirm}
-        onCancel={handleModalCancel}
-      />
+      {scoreModal(tournament.state().bestOf)}
     </div>
   );
 };

@@ -111,8 +111,8 @@ describe('PlayerEditModal', () => {
           onCancel={mockOnCancel}
         />,
       );
-      expect(screen.getByTestId('gender-pill-F')).toHaveClass('active');
-      expect(screen.getByTestId('gender-pill-M')).not.toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-F')).toHaveClass('gender-pill-active');
+      expect(screen.getByTestId('gender-pill-M')).not.toHaveClass('gender-pill-active');
     });
 
     it('renders Save and Cancel buttons', () => {
@@ -143,8 +143,8 @@ describe('PlayerEditModal', () => {
       );
 
       await user.click(screen.getByTestId('gender-pill-M'));
-      expect(screen.getByTestId('gender-pill-M')).toHaveClass('active');
-      expect(screen.getByTestId('gender-pill-Unknown')).not.toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-M')).toHaveClass('gender-pill-active');
+      expect(screen.getByTestId('gender-pill-Unknown')).not.toHaveClass('gender-pill-active');
     });
 
     it('moving slider updates the displayed level value', async () => {
@@ -256,7 +256,7 @@ describe('PlayerEditModal', () => {
         />,
       );
 
-      expect(screen.getByTestId('gender-pill-F')).toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-F')).toHaveClass('gender-pill-active');
       expect(screen.getByText(/Level: 80/)).toBeInTheDocument();
 
       rerender(
@@ -268,7 +268,7 @@ describe('PlayerEditModal', () => {
         />,
       );
 
-      expect(screen.getByTestId('gender-pill-M')).toHaveClass('active');
+      expect(screen.getByTestId('gender-pill-M')).toHaveClass('gender-pill-active');
       expect(screen.getByText(/Level: 30/)).toBeInTheDocument();
     });
   });

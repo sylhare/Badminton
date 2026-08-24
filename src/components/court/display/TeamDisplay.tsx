@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { Player } from '../../../types';
+import { cx } from '../../common/cx';
 import TeamPlayerList from '../team/TeamPlayerList';
 import type { SlotBinding } from '../edit/slotBinding';
 
@@ -32,7 +33,7 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({
   return (
     <>
       <div
-        className={`team ${isClickable ? 'team-clickable' : ''} ${isWinner ? 'team-winner' : ''}`}
+        className={cx('team', isClickable && 'team-clickable', isWinner && 'team-winner')}
         onClick={handleClick}
         data-testid={`team-${teamNumber}`}
       >

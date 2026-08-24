@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { LevelTracker } from '../../src/engines/LevelTracker';
+import { levelTracker as tracker } from '../../src/engines/LevelTracker';
 import { resolveMatchImportance, tournamentToScoredGames } from '../../src/engines/levelAdapters';
 import { LevelTrackerConfig } from '../../src/engines/levelTrackerConfig';
+import { MatchScore } from '../../src/scoring/MatchScore';
 import type { Court, Player } from '../../src/types';
 import { BracketKind } from '../../src/tournament/types';
 import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
+import { GroupKnockoutTournament } from '../../src/tournament/GroupKnockoutTournament';
 
 function makePlayer(id: string, level?: number): Player {
   return { id, name: `Player ${id}`, isPresent: true, level };
@@ -23,13 +25,10 @@ function makeCourt(
   winner: 1 | 2,
   score?: { team1: number; team2: number },
 ): Court {
-  return { courtNumber: 1, teams: { team1, team2 }, winner, score };
+  return { courtNumber: 1, teams: { team1, team2 }, winner, sets: score ? [score] : [] };
 }
 
 describe('LevelTracker', () => {
-  let tracker: LevelTracker;
-  beforeEach(() => { tracker = new LevelTracker(); });
-
   const update = (court: Court, players: Player[], importance?: number) =>
     tracker.updatePlayersLevels([{ court, importance }], players);
 
@@ -214,6 +213,31 @@ describe('tournamentToScoredGames', () => {
     return RoundRobinTournament.create('doubles', 2).start([teamA, teamB, teamC], 2);
   }
 
+  it('feeds the average set score (not the sum) so best-of-N keeps a meaningful K-factor', () => {
+    const tournament = startTournament();
+    const first = tournament.matches()[0];
+    const decided = tournament.withMatchResult(first.id, 1, [
+      { team1: 21, team2: 15 }, { team1: 21, team2: 18 },
+    ]);
+    const { games } = tournamentToScoredGames(decided);
+    expect(MatchScore.of(games[0].court.sets ?? [], games[0].court.winner).eloScore())
+      .toEqual({ team1: 21, team2: 17 });
+  });
+
+  it('replays group matches before the knockout and boosts the knockout final', () => {
+    let t = GroupKnockoutTournament.create('doubles', 2, 1, 2, 1)
+      .start([teamA, teamB, teamC, team('d', [makePlayer('d1'), makePlayer('d2')])], 2);
+    for (const id of t.groupMatches().map(m => m.id)) {
+      t = t.withMatchResult(id, 1, [{ team1: 21, team2: 10 }]);
+    }
+    t = t.withMatchResult(t.knockoutMatches()[0].id, 1, [{ team1: 21, team2: 15 }]);
+
+    const { games } = tournamentToScoredGames(t);
+    expect(games).toHaveLength(3);
+    expect(games[games.length - 1].importance).toBe(LevelTrackerConfig.WB_FINAL_IMPORTANCE);
+    expect(games[0].importance).toBe(LevelTrackerConfig.ELO_DEFAULT_IMPORTANCE);
+  });
+
   it('baseline is every participant deduped, snapshotting start-of-play levels', () => {
     const { baseline } = tournamentToScoredGames(startTournament());
     expect(baseline.map(p => p.id).sort()).toEqual(['a1', 'a2', 'b1', 'b2', 'c1', 'c2']);
@@ -230,7 +254,7 @@ describe('tournamentToScoredGames', () => {
 
     expect(games).toHaveLength(1);
     expect(games[0].court.winner).toBe(1);
-    expect(games[0].court.score).toEqual({ team1: 21, team2: 15 });
+    expect(games[0].court.sets).toEqual([{ team1: 21, team2: 15 }]);
     expect(games[0].court.teams?.team1.map(p => p.id)).toEqual(firstMatch.team1.players.map(p => p.id));
     expect(games[0].court.teams?.team2.map(p => p.id)).toEqual(firstMatch.team2.players.map(p => p.id));
   });

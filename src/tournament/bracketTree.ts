@@ -16,6 +16,15 @@ export function nextPowerOf2(n: number): number {
   return p;
 }
 
+/** Number of match slots in a given bracket round (halves each round). */
+export function positionsInRound(bracketSize: number, round: number): number {
+  return bracketSize / 2 ** round;
+}
+
+/** The winning / losing team of a decided match (assumes `winner` is set). */
+export const winnerOf = (m: TournamentMatch): TournamentTeam => (m.winner === 1 ? m.team1 : m.team2);
+export const loserOf = (m: TournamentMatch): TournamentTeam => (m.winner === 1 ? m.team2 : m.team1);
+
 export function findMatchBetween(
   round: number,
   teamA: TournamentTeam,
@@ -38,6 +47,29 @@ type PositionResult = TournamentTeam | 'bye' | 'tbd';
  */
 export type SeedSlots = ReadonlyArray<TournamentTeam | null>;
 
+/** Read a first-round seed slot: absent → bye, `null` → tbd, a team → that team. */
+function slotToResult(slot: TournamentTeam | null | undefined): PositionResult {
+  if (slot === undefined) return 'bye';
+  if (slot === null) return 'tbd';
+  return slot;
+}
+
+/** The two feeding results for a node: raw seed slots in round 1, else the child positions. */
+function childResults(
+  round: number,
+  position: number,
+  seeds: SeedSlots,
+  matches: TournamentMatch[],
+): [PositionResult, PositionResult] {
+  if (round === 1) {
+    return [slotToResult(seeds[2 * position]), slotToResult(seeds[2 * position + 1])];
+  }
+  return [
+    resolvePosition(round - 1, 2 * position, seeds, matches),
+    resolvePosition(round - 1, 2 * position + 1, seeds, matches),
+  ];
+}
+
 function resolveChildNode(
   round: number,
   resultA: PositionResult,
@@ -49,9 +81,9 @@ function resolveChildNode(
   if (resultB === 'bye') return resultA;
   if (resultA === 'tbd' || resultB === 'tbd') return 'tbd';
 
-  const match = findMatchBetween(round, resultA as TournamentTeam, resultB as TournamentTeam, matches);
+  const match = findMatchBetween(round, resultA, resultB, matches);
   if (!match || match.winner === undefined) return 'tbd';
-  return match.winner === 1 ? match.team1 : match.team2;
+  return winnerOf(match);
 }
 
 export function resolvePosition(
@@ -60,23 +92,7 @@ export function resolvePosition(
   seeds: SeedSlots,
   matches: TournamentMatch[],
 ): PositionResult {
-  if (round === 1) {
-    const slotA = seeds[2 * position];
-    const slotB = seeds[2 * position + 1];
-
-    if (slotA === undefined && slotB === undefined) return 'bye';
-    if (slotA === undefined) return slotB ?? 'tbd';
-    if (slotB === undefined) return slotA ?? 'tbd';
-    if (slotA === null || slotB === null) return 'tbd';
-
-    const match = findMatchBetween(1, slotA, slotB, matches);
-    if (!match || match.winner === undefined) return 'tbd';
-    return match.winner === 1 ? match.team1 : match.team2;
-  }
-
-  const resultA = resolvePosition(round - 1, 2 * position, seeds, matches);
-  const resultB = resolvePosition(round - 1, 2 * position + 1, seeds, matches);
-  return resolveChildNode(round, resultA, resultB, matches);
+  return resolveChildNode(round, ...childResults(round, position, seeds, matches), matches);
 }
 
 export function roundComplete(matches: TournamentMatch[], round: number): boolean {
@@ -99,7 +115,7 @@ export function getWinnersFirstRoundLoser(
   if (!team1 || !team2) return null;
   const match = findMatchBetween(1, team1, team2, winnersMatches);
   if (!match || match.winner === undefined) return null;
-  return match.winner === 1 ? match.team2 : match.team1;
+  return loserOf(match);
 }
 
 export function getWBSemiFinalLosers(
@@ -110,7 +126,7 @@ export function getWBSemiFinalLosers(
   if (semiFinalRound < 1) return [];
   return winnersMatches
     .filter(m => m.round === semiFinalRound && m.winner !== undefined)
-    .map(m => m.winner === 1 ? m.team2 : m.team1);
+    .map(loserOf);
 }
 
 /**
@@ -130,7 +146,7 @@ export function getCBExpectedPool(
 
   const result: TournamentTeam[] = [];
   for (const m of prevMatches) {
-    if (m.winner !== undefined) result.push(m.winner === 1 ? m.team1 : m.team2);
+    if (m.winner !== undefined) result.push(winnerOf(m));
   }
   for (const team of prevPool) {
     if (!prevParticipantIds.has(team.id)) result.push(team);
@@ -146,47 +162,34 @@ export function roundLabel(roundNumber: number, totalRounds: number): string {
   return `${n}th of Final`;
 }
 
+/** Map a node's two feeding results to its render node (a match node stands as soon as the match exists). */
+function nodeFromResults(
+  round: number,
+  position: number,
+  resultA: PositionResult,
+  resultB: PositionResult,
+  matches: TournamentMatch[],
+): BracketNode {
+  if (resultA === 'bye' && resultB === 'bye') return { type: 'empty', slotIndex: position };
+  if (resultA === 'bye' || resultB === 'bye') {
+    const survivor = resultA === 'bye' ? resultB : resultA;
+    return survivor === 'tbd'
+      ? { type: 'tbd', slotIndex: position }
+      : { type: 'bye-advance', team: survivor as TournamentTeam, slotIndex: position };
+  }
+  if (resultA === 'tbd' || resultB === 'tbd') return { type: 'tbd', slotIndex: position };
+
+  const match = findMatchBetween(round, resultA, resultB, matches);
+  return match ? { type: 'match', match, slotIndex: position } : { type: 'tbd', slotIndex: position };
+}
+
 function buildNode(
   round: number,
   position: number,
   seeds: SeedSlots,
   matches: TournamentMatch[],
 ): BracketNode {
-  if (round === 1) {
-    const slotA = seeds[2 * position];
-    const slotB = seeds[2 * position + 1];
-
-    if (slotA === undefined && slotB === undefined) return { type: 'empty', slotIndex: position };
-    if (slotA === undefined) {
-      return slotB ? { type: 'bye-advance', team: slotB, slotIndex: position } : { type: 'tbd', slotIndex: position };
-    }
-    if (slotB === undefined) {
-      return slotA ? { type: 'bye-advance', team: slotA, slotIndex: position } : { type: 'tbd', slotIndex: position };
-    }
-    if (slotA === null || slotB === null) return { type: 'tbd', slotIndex: position };
-
-    const match = findMatchBetween(1, slotA, slotB, matches);
-    if (!match) return { type: 'tbd', slotIndex: position };
-    return { type: 'match', match, slotIndex: position };
-  }
-
-  const parentA = resolvePosition(round - 1, 2 * position, seeds, matches);
-  const parentB = resolvePosition(round - 1, 2 * position + 1, seeds, matches);
-
-  if (parentA === 'bye' && parentB === 'bye') return { type: 'empty', slotIndex: position };
-  if (parentA === 'bye') {
-    if (parentB === 'tbd') return { type: 'tbd', slotIndex: position };
-    return { type: 'bye-advance', team: parentB as TournamentTeam, slotIndex: position };
-  }
-  if (parentB === 'bye') {
-    if (parentA === 'tbd') return { type: 'tbd', slotIndex: position };
-    return { type: 'bye-advance', team: parentA as TournamentTeam, slotIndex: position };
-  }
-  if (parentA === 'tbd' || parentB === 'tbd') return { type: 'tbd', slotIndex: position };
-
-  const match = findMatchBetween(round, parentA as TournamentTeam, parentB as TournamentTeam, matches);
-  if (!match) return { type: 'tbd', slotIndex: position };
-  return { type: 'match', match, slotIndex: position };
+  return nodeFromResults(round, position, ...childResults(round, position, seeds, matches), matches);
 }
 
 export abstract class Bracket {
@@ -205,7 +208,7 @@ export abstract class Bracket {
   }
 
   protected buildRound(r: number, bracketSize: number): BracketNode[] {
-    const positions = bracketSize / Math.pow(2, r);
+    const positions = positionsInRound(bracketSize, r);
     const round: BracketNode[] = [];
     for (let pos = 0; pos < positions; pos++) {
       round.push(buildNode(r, pos, this._seeds, this._matches));
@@ -247,7 +250,7 @@ export class WinnersBracket extends Bracket {
   }
 
   firstRoundLosers(): TournamentTeam[] {
-    return Array.from({ length: this._bracketSize / 2 }, (_, pos) =>
+    return Array.from({ length: positionsInRound(this._bracketSize, 1) }, (_, pos) =>
       getWinnersFirstRoundLoser(pos, this._seeds, this._matches),
     ).filter((l): l is TournamentTeam => l !== null);
   }

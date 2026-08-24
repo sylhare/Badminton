@@ -40,10 +40,10 @@ describe('applyCourtSwap', () => {
   });
 
   it('clears winner and score on a court whose line-up changed', () => {
-    const courts = [doubles(1, [A, B], [C, D], { winner: 1, score: { team1: 21, team2: 15 } })];
+    const courts = [doubles(1, [A, B], [C, D], { winner: 1, sets: [{ team1: 21, team2: 15 }] })];
     const res = applyCourtSwap(courts, [X], courtSlot(0, 1, 0), benchSlot(1, 0));
     expect(res.courts[0].winner).toBeUndefined();
-    expect(res.courts[0].score).toBeUndefined();
+    expect(res.courts[0].sets).toBeUndefined();
   });
 
   it('clears winner even for an in-court swap that keeps the roster but changes teams', () => {

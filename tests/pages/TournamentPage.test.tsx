@@ -134,7 +134,7 @@ describe('TournamentPage', () => {
     await user.click(screen.getByTestId('start-tournament-button'));
 
     await waitFor(() => {
-      const activeCall = saveSpy.mock.calls.find(([s]) => s?.phase === 'active');
+      const activeCall = saveSpy.mock.calls.find(([s]) => (s?.matches?.length ?? 0) > 0);
       expect(activeCall).toBeDefined();
     });
   });

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-import type { Player } from '../../types';
-import type { SetScore } from '../../tournament/types';
-import { winningSide } from '../../tournament/types';
+import type { Player, SetScore } from '../../types';
+import { MatchScore } from '../../scoring/MatchScore';
 
 import Modal from './Modal';
 
@@ -39,15 +38,16 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    const first: SetInput = { s1: winnerTeam === 1 ? '21' : '', s2: winnerTeam === 2 ? '21' : '' };
+    const first: SetInput = isSingle
+      ? { s1: winnerTeam === 1 ? '21' : '', s2: winnerTeam === 2 ? '21' : '' }
+      : emptySet();
     setSets([first, ...Array.from({ length: setCount - 1 }, emptySet)]);
-  }, [isOpen, winnerTeam, setCount]);
+  }, [isOpen, winnerTeam, setCount, isSingle]);
 
   const updateSet = (index: number, side: 's1' | 's2', value: string) => {
     setSets(prev => prev.map((set, i) => {
       if (i !== index) return set;
       const next = { ...set, [side]: value };
-      // Single-set deuce helper: a winning score above 21 fills the loser at n-2.
       const isWinnerSide = (side === 's1' && winnerTeam === 1) || (side === 's2' && winnerTeam === 2);
       if (isSingle && isWinnerSide) {
         const n = parseInt(value, 10);
@@ -59,35 +59,23 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
     }));
   };
 
-  const singleDefaults = winnerTeam === 1 ? { team1: 21, team2: 18 } : { team1: 18, team2: 21 };
+  const singleDefaults = MatchScore.defaultSingle(winnerTeam);
 
-  const resolveSets = (): SetScore[] => {
-    const resolved: SetScore[] = [];
-    sets.forEach((set, index) => {
-      const p1 = parseInt(set.s1, 10);
-      const p2 = parseInt(set.s2, 10);
-      const blank1 = isNaN(p1);
-      const blank2 = isNaN(p2);
-      // The single-set path keeps the 21–18 default so an empty confirm still records a score.
-      if (isSingle && index === 0) {
-        resolved.push({
-          team1: blank1 ? singleDefaults.team1 : p1,
-          team2: blank2 ? singleDefaults.team2 : p2,
-        });
-        return;
-      }
-      if (blank1 && blank2) return; // an unplayed set contributes nothing
-      resolved.push({ team1: blank1 ? 0 : p1, team2: blank2 ? 0 : p2 });
-    });
-    return resolved;
+  const parseScore = (value: string): number | null => {
+    const n = parseInt(value, 10);
+    return isNaN(n) ? null : n;
   };
-
-  const resolvedSets = resolveSets();
-  // The sets decide the winner; a tie keeps the clicked team.
-  const resolvedWinner: 1 | 2 = winningSide(resolvedSets) ?? winnerTeam;
+  const result = MatchScore.resolve(
+    sets.map(s => ({ team1: parseScore(s.s1), team2: parseScore(s.s2) })),
+    winnerTeam,
+    setCount,
+  );
+  const canConfirm = result !== null;
+  const resolvedWinner: 1 | 2 = result?.winner ?? winnerTeam;
 
   const handleConfirm = () => {
-    onConfirm(resolvedWinner, resolvedSets);
+    if (!result || !result.winner) return;
+    onConfirm(result.winner, result.sets);
     setSets([emptySet()]);
   };
 
@@ -131,7 +119,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      title={`🏆 Team ${resolvedWinner} wins!`}
+      title={canConfirm ? `🏆 Team ${resolvedWinner} wins!` : 'Enter the set scores'}
       onClose={handleCancel}
       testId="score-input-modal"
     >
@@ -151,6 +139,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
         <button
           className="button button-primary"
           onClick={handleConfirm}
+          disabled={!canConfirm}
           data-testid="score-modal-confirm"
         >
           Confirm

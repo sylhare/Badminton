@@ -5,8 +5,7 @@ import { useAppState } from '../providers/AppStateProvider';
 import type { AnyTournament } from '../providers/AppStateProvider';
 import { Tournament } from '../components/tournament/Tournament';
 import Footer from '../components/Footer';
-import { RoundRobinTournament } from '../tournament/RoundRobinTournament';
-import { EliminationTournament } from '../tournament/EliminationTournament';
+import { TOURNAMENT_FACTORY } from '../tournament/tournamentFactory';
 import { tournamentToScoredGames } from '../engines/levelAdapters';
 import type { SetScore, TournamentFormat, TournamentTeam, TournamentType } from '../tournament/types';
 import './TournamentPage.css';
@@ -23,19 +22,23 @@ const TournamentPage = (): React.ReactElement => {
     if (games.length) applyGameResults(games, baseline);
   };
 
+  /** Commit the outgoing tournament's ELO before it is replaced or discarded, if still in progress. */
+  const flushIfActive = () => {
+    if (tournament && !tournament.isComplete()) commitElo(tournament);
+  };
+
   const handleStart = (
     teams: TournamentTeam[],
     numberOfCourts: number,
     format: TournamentFormat,
     type: TournamentType,
     bestOf: number,
+    groupSize?: number,
+    qualifiersPerGroup?: number,
   ) => {
-    if (tournament && !tournament.isComplete()) commitElo(tournament);
-    if (type === 'elimination') {
-      setTournament(EliminationTournament.create(format, numberOfCourts, bestOf).start(teams, numberOfCourts));
-    } else {
-      setTournament(RoundRobinTournament.create(format, numberOfCourts, bestOf).start(teams, numberOfCourts));
-    }
+    flushIfActive();
+    const created = TOURNAMENT_FACTORY[type].create({ format, numberOfCourts, bestOf, groupSize, qualifiersPerGroup });
+    setTournament(created.start(teams, numberOfCourts));
     setShowSetup(false);
   };
 
@@ -51,7 +54,7 @@ const TournamentPage = (): React.ReactElement => {
   };
 
   const handleReset = () => {
-    if (tournament && !tournament.isComplete()) commitElo(tournament);
+    flushIfActive();
     setTournament(null);
     setShowSetup(false);
   };

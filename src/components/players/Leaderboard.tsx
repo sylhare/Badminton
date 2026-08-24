@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CaretDown, CaretUp } from '@phosphor-icons/react';
 
 import type { Player } from '../../types';
+import { DEFAULT_LEVEL } from '../../types';
 import { useAppState } from '../../providers/AppStateProvider';
 
 interface LeaderboardProps {
@@ -13,19 +14,10 @@ interface LeaderboardProps {
 type SortColumn = 'wins' | 'level' | 'avgScore';
 type SortDir = 'asc' | 'desc';
 
-const medalForRank = (idx: number): string => {
-  if (idx === 0) return '🥇 ';
-  if (idx === 1) return '🥈 ';
-  if (idx === 2) return '🥉 ';
-  return '';
-};
-
-const cryingForRank = (idx: number): string => {
-  if (idx === 0) return '💩 ';
-  if (idx === 1) return '😬 ';
-  if (idx === 2) return '😐 ';
-  return '';
-};
+const RANK_MEDALS = ['🥇 ', '🥈 ', '🥉 '];
+const RANK_FROWNS = ['💩 ', '😬 ', '😐 '];
+const medalForRank = (idx: number): string => RANK_MEDALS[idx] ?? '';
+const cryingForRank = (idx: number): string => RANK_FROWNS[idx] ?? '';
 
 const SortIcon: React.FC<{ col: SortColumn; sortCol: SortColumn; sortDir: SortDir }> = ({ col, sortCol, sortDir }) => {
   if (col !== sortCol) return <span className="sort-icon sort-icon--inactive">⇅</span>;
@@ -60,7 +52,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
     const ranked = [...filtered].sort((a, b) => {
       let diff = 0;
       if (sortCol === 'wins') diff = a.wins - b.wins;
-      else if (sortCol === 'level') diff = (a.level ?? 50) - (b.level ?? 50);
+      else if (sortCol === 'level') diff = (a.level ?? DEFAULT_LEVEL) - (b.level ?? DEFAULT_LEVEL);
       else diff = (a.averageScore ?? 0) - (b.averageScore ?? 0);
       if (diff !== 0) return sortDir === 'desc' ? -diff : diff;
       return a.name.localeCompare(b.name);

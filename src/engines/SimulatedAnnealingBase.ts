@@ -34,13 +34,23 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
       if (court.players.length === 2) {
         totalCost += this.calculateSinglesCost(court.players, this.SINGLES_REPEAT_PENALTY);
       }
-      totalCost += this.calculateTeammateCost(court.teams.team1, this.TEAMMATE_REPEAT_PENALTY);
-      totalCost += this.calculateTeammateCost(court.teams.team2, this.TEAMMATE_REPEAT_PENALTY);
-      totalCost += this.calculateOpponentCost(court.teams.team1, court.teams.team2, this.OPPONENT_REPEAT_PENALTY);
-      totalCost += this.calculateWinBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
+      totalCost += this.sharedTeamCost(court.teams.team1, court.teams.team2);
       totalCost += this.courtSpecificCost(court);
     }
     return totalCost;
+  }
+
+  /** The four cost terms every SA engine shares: teammate repeats, opponent repeats, and win balance. */
+  protected sharedTeamCost(team1: Player[], team2: Player[]): number {
+    return this.calculateTeammateCost(team1, this.TEAMMATE_REPEAT_PENALTY)
+      + this.calculateTeammateCost(team2, this.TEAMMATE_REPEAT_PENALTY)
+      + this.calculateOpponentCost(team1, team2, this.OPPONENT_REPEAT_PENALTY)
+      + this.calculateWinBalanceCost(team1, team2, this.BALANCE_PENALTY);
+  }
+
+  /** Split cost defaults to the shared terms; Smart adds gender/level on top. */
+  protected evaluateTeamSplitCost(team1: Player[], team2: Player[]): number {
+    return this.sharedTeamCost(team1, team2);
   }
 
   /** Per-court cost terms specific to each engine's matching model, summed on top of the shared terms above. */

@@ -193,9 +193,17 @@ describe('ScoreInputModal', () => {
       expect(screen.queryByTestId('score-input-team1-3')).not.toBeInTheDocument();
     });
 
+    it('starts every set blank and disables confirm until a set majority exists', async () => {
+      const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
+      expect(set(0).t1().value).toBe('');
+      expect(set(0).t2().value).toBe('');
+      expect(confirmBtn()).toBeDisabled();
+      await user.click(confirmBtn());
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
     it('derives the winner from the majority of sets and emits only played sets', async () => {
       const { set, confirmBtn, onConfirm } = renderBestOf(3, 1);
-      // Team 2 wins the first set, team 1 wins the next two; third set left blank-skipped later.
       await user.clear(set(0).t1()); await user.type(set(0).t1(), '15');
       await user.type(set(0).t2(), '21');
       await user.type(set(1).t1(), '21'); await user.type(set(1).t2(), '18');
@@ -211,7 +219,6 @@ describe('ScoreInputModal', () => {
       await user.clear(set(0).t1()); await user.type(set(0).t1(), '18');
       await user.type(set(0).t2(), '21');
       await user.type(set(1).t1(), '19'); await user.type(set(1).t2(), '21');
-      // Third set left blank — team 2 already took both played sets.
       await user.click(confirmBtn());
       expect(onConfirm).toHaveBeenCalledWith(2, [
         { team1: 18, team2: 21 }, { team1: 19, team2: 21 },
