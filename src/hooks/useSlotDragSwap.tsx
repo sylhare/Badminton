@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 
 import type { SlotAddr } from '../utils/slotSwap';
 import { sameSlot } from '../utils/slotSwap';
+import { decideMoveAction, decideUpAction, resolveDropTarget, sameAddrOrBothNull } from '../utils/slotDragGesture';
 
 /**
  * Unified pointer-based drag-to-swap gesture, shared by the court assignments
@@ -186,46 +187,46 @@ export function useSlotDragSwap({
       const movedPast = Math.hypot(dx, dy) > moveTolerancePx;
       if (movedPast) gesture.moved = true;
 
-      const isTouch = gesture.pointerType === 'touch';
+      const action = decideMoveAction({
+        isTouch: gesture.pointerType === 'touch',
+        armed: gesture.armed,
+        dragging: gesture.dragging,
+        movedPast,
+      });
 
-      if (!gesture.dragging) {
-        if (isTouch) {
-          if (movedPast && !gesture.armed) {
-            endGesture();
-            return;
-          }
-          if (!gesture.armed) return;
-        } else if (!movedPast) {
-          return;
-        }
+      if (action === 'cancel') {
+        endGesture();
+        return;
+      }
+      if (action === 'ignore') return;
+
+      if (action === 'startDrag') {
         gesture.dragging = true;
         setDraggingAddr(gesture.source);
-        positionGhost(event.clientX, event.clientY);
         setGhostLabel(labelForSlot(gesture.source));
       }
 
       event.preventDefault();
       positionGhost(event.clientX, event.clientY);
       const target = slotFromPoint(event.clientX, event.clientY);
-      const next = target && !sameSlot(target, gesture.source) ? target : null;
-      setDropAddr(prev =>
-        prev === next || (prev && next && sameSlot(prev, next)) ? prev : next,
-      );
+      const next = resolveDropTarget(gesture.source, target);
+      setDropAddr(prev => (sameAddrOrBothNull(prev, next) ? prev : next));
     };
 
     const handleUp = (event: PointerEvent) => {
       const gesture = gestureRef.current;
       if (!gesture) return;
 
-      if (gesture.dragging) {
+      const action = decideUpAction(gesture);
+      if (action === 'swap') {
         justDraggedRef.current = true;
         const target = slotFromPoint(event.clientX, event.clientY);
         if (target && !sameSlot(target, gesture.source)) {
           onSwapRef.current(gesture.source, target);
         }
-      } else if (gesture.longPressed) {
+      } else if (action === 'suppressClick') {
         justDraggedRef.current = true;
-      } else if (!gesture.moved) {
+      } else if (action === 'tap') {
         onTapRef.current?.(gesture.source);
       }
       endGesture();
