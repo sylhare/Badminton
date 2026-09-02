@@ -1,6 +1,7 @@
 import { countTier } from '../constants/graphColors';
 import type { CountTier } from '../constants/graphColors';
-import type { EngineSnapshot, Player } from '../types';
+import type { Player } from '../types';
+import { splitPairKey } from '../utils/playerUtils';
 
 export type CountMap = Record<string, number>;
 
@@ -12,6 +13,7 @@ export interface DiagnosticMaps {
   win: CountMap;
   loss: CountMap;
   levelHistory?: Record<string, number[]>;
+  roundsPlayed?: number;
 }
 
 /**
@@ -83,7 +85,7 @@ export const getPlayerName = (players: Player[], playerId: string): string => {
  * @param separator - The separator to use between names (e.g., " & " or " vs ")
  */
 export const formatPair = (players: Player[], pairKey: string, separator: string): string => {
-  const [id1, id2] = pairKey.split('|');
+  const [id1, id2] = splitPairKey(pairKey);
   return `${getPlayerName(players, id1)}${separator}${getPlayerName(players, id2)}`;
 };
 
@@ -139,21 +141,18 @@ export const getWarningThreshold = (expectedAvg: number): number =>
   Math.max(4, Math.ceil(expectedAvg * 2), Math.ceil(expectedAvg) + 3);
 
 /**
- * Computes comprehensive diagnostic statistics from the engine state.
+ * Computes comprehensive diagnostic statistics from the engine state maps.
  * Analyzes bench distribution, teammate/opponent repetitions, singles matches,
  * and generates context-aware warnings when fairness thresholds are exceeded.
  * @returns DiagnosticStats object or null if no data available
  */
 export function computeDiagnostics(
-  engineState: EngineSnapshot | null,
   maps: DiagnosticMaps,
   players: Player[],
 ): DiagnosticStats | null {
-  if (!engineState) return null;
-
   const playersFromTeammates = new Set<string>();
   Object.keys(maps.teammate).forEach(pair => {
-    const [id1, id2] = pair.split('|');
+    const [id1, id2] = splitPairKey(pair);
     playersFromTeammates.add(id1);
     playersFromTeammates.add(id2);
   });
@@ -179,7 +178,7 @@ export function computeDiagnostics(
   const matchesPerRound = Math.max(1, Math.floor(playersPerRound / 4) + (playersPerRound % 4 >= 2 ? 1 : 0));
   const roundsFromMatches = matchesPerRound > 0 ? Math.ceil(totalMatchesEstimate / matchesPerRound) : 0;
   const internalRounds = Math.max(maxBenchFromData, roundsFromMatches, 1);
-  const storedRoundsPlayed = engineState?.roundsPlayed ?? 0;
+  const storedRoundsPlayed = maps.roundsPlayed ?? 0;
   const totalRounds = storedRoundsPlayed > 0 ? storedRoundsPlayed : internalRounds;
 
   const benchCounts = Object.values(maps.bench);

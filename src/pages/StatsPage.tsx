@@ -26,6 +26,7 @@ function StatsPage(): React.ReactElement {
     win: engineState?.winCountMap || {},
     loss: engineState?.lossCountMap || {},
     levelHistory: engineState?.levelHistory,
+    roundsPlayed: engineState?.roundsPlayed,
   }), [engineState]);
 
   /** Gender map for TeammateGraph node colouring (smart engine only) */
@@ -34,7 +35,7 @@ function StatsPage(): React.ReactElement {
     [players],
   );
 
-  const diagnostics = useMemo(() => computeDiagnostics(engineState, maps, players), [engineState, maps, players]);
+  const diagnostics = useMemo(() => computeDiagnostics(maps, players), [maps, players]);
   const hasData = diagnostics !== null;
 
   const resolvePlayerName = useCallback((playerId: string) => getPlayerName(players, playerId), [players]);

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 
 import { getColorForCount, GRAPH_COLORS } from '../../constants/graphColors';
+import { splitPairKey } from '../../utils/playerUtils';
 
 type GraphVariant = 'teammate' | 'opponent';
 
@@ -90,7 +91,7 @@ export function TeammateGraph({
 
     Object.entries(teammateData).forEach(([pair, count]) => {
       if (count < 1) return;
-      const [id1, id2] = pair.split('|');
+      const [id1, id2] = splitPairKey(pair);
       playerIds.add(id1);
       playerIds.add(id2);
       edgeList.push({ source: id1, target: id2, count });
