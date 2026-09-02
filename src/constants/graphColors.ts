@@ -30,10 +30,10 @@ export const GRAPH_GLOW_COLORS = {
 /** Legend labels used in graph components */
 export const GRAPH_LEGEND_LABELS = ['1×', '2×', '3×', '4×+'] as const;
 
-type CountTier = 'count1' | 'count2' | 'count3' | 'count4Plus';
+export type CountTier = 'count1' | 'count2' | 'count3' | 'count4Plus';
 
 /** Bucket a repetition count into its colour tier. */
-function countTier(count: number): CountTier {
+export function countTier(count: number): CountTier {
   if (count >= 4) return 'count4Plus';
   if (count === 3) return 'count3';
   if (count === 2) return 'count2';
