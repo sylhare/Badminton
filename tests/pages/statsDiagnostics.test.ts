@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import type { EngineSnapshot } from '../../src/types';
 import {
   computeDiagnostics,
   formatPair,
@@ -30,8 +29,6 @@ const emptyMaps = {
   win: {},
   loss: {},
 };
-
-const engineState = {} as EngineSnapshot;
 
 describe('sumValues / hasEntries / getMin / getMax', () => {
   it('sums, detects entries, and finds min/max, defaulting to 0 when empty', () => {
@@ -92,16 +89,12 @@ describe('getWarningThreshold', () => {
 });
 
 describe('computeDiagnostics', () => {
-  it('returns null when there is no engine state', () => {
-    expect(computeDiagnostics(null, emptyMaps, players)).toBeNull();
-  });
-
   it('returns null when no players appear in any map', () => {
-    expect(computeDiagnostics(engineState, emptyMaps, players)).toBeNull();
+    expect(computeDiagnostics(emptyMaps, players)).toBeNull();
   });
 
   it('computes totals and fairness score from bench data', () => {
-    const diagnostics = computeDiagnostics(engineState, {
+    const diagnostics = computeDiagnostics({
       ...emptyMaps,
       bench: { '1': 2, '2': 0, '3': 0 },
       win: { '1': 1 },
@@ -116,8 +109,7 @@ describe('computeDiagnostics', () => {
 
   it('uses the stored roundsPlayed when present instead of the estimate', () => {
     const diagnostics = computeDiagnostics(
-      { ...engineState, roundsPlayed: 7 },
-      { ...emptyMaps, bench: { '1': 1 } },
+      { ...emptyMaps, bench: { '1': 1 }, roundsPlayed: 7 },
       players,
     );
 
@@ -125,7 +117,7 @@ describe('computeDiagnostics', () => {
   });
 
   it('flags a bench imbalance warning when the spread is too wide', () => {
-    const diagnostics = computeDiagnostics(engineState, {
+    const diagnostics = computeDiagnostics({
       ...emptyMaps,
       bench: { '1': 10, '2': 0, '3': 0 },
       win: { '1': 1, '2': 1 },
@@ -135,7 +127,7 @@ describe('computeDiagnostics', () => {
   });
 
   it('flags repeated teammate and opponent warnings above threshold', () => {
-    const diagnostics = computeDiagnostics(engineState, {
+    const diagnostics = computeDiagnostics({
       ...emptyMaps,
       bench: { '1': 0, '2': 0, '3': 0 },
       teammate: { '1|2': 5 },
@@ -147,7 +139,7 @@ describe('computeDiagnostics', () => {
   });
 
   it('flags a singles-overplay warning when one player dominates singles', () => {
-    const diagnostics = computeDiagnostics(engineState, {
+    const diagnostics = computeDiagnostics({
       ...emptyMaps,
       single: { '1': 6, '2': 0, '3': 0 },
     }, players);
@@ -157,7 +149,7 @@ describe('computeDiagnostics', () => {
   });
 
   it('produces no warnings for a balanced session', () => {
-    const diagnostics = computeDiagnostics(engineState, {
+    const diagnostics = computeDiagnostics({
       ...emptyMaps,
       bench: { '1': 1, '2': 1, '3': 1 },
       teammate: { '1|2': 1 },
