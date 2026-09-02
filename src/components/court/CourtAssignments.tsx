@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowsLeftRight } from '@phosphor-icons/react';
 
 import type { Court, Player, SetScore, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -7,8 +6,11 @@ import { useSlotSwap } from '../../hooks/useSlotSwap';
 import type { SlotAddr } from '../../utils/slotSwap';
 import { benchSlot, courtSlot } from '../../utils/courtSwap';
 
+import AssignmentsEmptyState from './AssignmentsEmptyState';
+import BenchSection from './BenchSection';
 import { CourtCard } from './card';
-import { TeamPlayerList } from './team';
+import { clampCourtCount, isValidCourtCount } from './courtCountUtils';
+import CourtSettingsBar from './CourtSettingsBar';
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
 
@@ -91,19 +93,17 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     setCourtInputValue(inputValue);
 
     const value = parseInt(inputValue, 10);
-    if (!isNaN(value) && value > 0 && value <= 20) {
+    if (isValidCourtCount(value)) {
       onNumberOfCourtsChange(value);
     }
   };
 
   const handleCourtsBlur = () => {
     const value = parseInt(courtInputValue, 10);
-    if (isNaN(value) || value < 1) {
-      setCourtInputValue('1');
-      onNumberOfCourtsChange(1);
-    } else if (value > 20) {
-      setCourtInputValue('20');
-      onNumberOfCourtsChange(20);
+    if (!isValidCourtCount(value)) {
+      const clamped = clampCourtCount(isNaN(value) ? 1 : value);
+      setCourtInputValue(String(clamped));
+      onNumberOfCourtsChange(clamped);
     }
   };
 
@@ -136,35 +136,14 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   return (
     <div className={`court-assignments-container${isEditMode ? ' edit-mode' : ''}`}>
       {swap.dragGhost}
-      <div className="court-settings-inline">
-        <div className="court-input-group">
-          <label htmlFor="courts">Courts:</label>
-          <input
-            id="courts"
-            type="number"
-            min="1"
-            max="20"
-            value={courtInputValue}
-            onChange={handleCourtsChange}
-            onBlur={handleCourtsBlur}
-            className="court-input"
-            data-testid="court-count-input"
-          />
-        </div>
-
-        {canRearrange && (
-          <button
-            onClick={() => (isEditMode ? exitEditMode() : enterEditMode())}
-            className={`rearrange-button ${isEditMode ? 'active' : ''}`}
-            data-testid="rearrange-button"
-            aria-pressed={isEditMode}
-            data-tooltip="Drag a player onto another to swap them between teams, courts and the bench — or tap two players."
-          >
-            <ArrowsLeftRight size={16} weight="bold" />
-            Rearrange players
-          </button>
-        )}
-      </div>
+      <CourtSettingsBar
+        courtInputValue={courtInputValue}
+        onCourtsChange={handleCourtsChange}
+        onCourtsBlur={handleCourtsBlur}
+        canRearrange={canRearrange}
+        isEditMode={isEditMode}
+        onToggleEditMode={() => (isEditMode ? exitEditMode() : enterEditMode())}
+      />
 
       {isEditMode && (
         <div className="edit-mode-banner" data-testid="edit-mode-banner">
@@ -203,27 +182,12 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
           </div>
 
           {benchedPlayers.length > 0 && (
-            <div className={`bench-section ${isAnimating ? 'animating-blur' : ''}`}>
-              <div className="bench-header">
-                🪑 Bench ({benchedPlayers.length} player{benchedPlayers.length !== 1 ? 's' : ''})
-              </div>
-              <div className="bench-players">
-                <TeamPlayerList
-                  players={benchedPlayers}
-                  className="bench-player"
-                  slotBinding={onSwapPlayers ? swap.binding(i => benchSlot(assignments.length, i)) : undefined}
-                />
-              </div>
-              {onViewBenchCounts && (
-                <button
-                  onClick={onViewBenchCounts}
-                  className="view-bench-counts-button"
-                  data-testid="view-bench-counts-button"
-                >
-                  View bench counts &amp; manage
-                </button>
-              )}
-            </div>
+            <BenchSection
+              benchedPlayers={benchedPlayers}
+              isAnimating={isAnimating}
+              slotBinding={onSwapPlayers ? swap.binding(i => benchSlot(assignments.length, i)) : undefined}
+              onViewBenchCounts={onViewBenchCounts}
+            />
           )}
 
           {onWinnerChange && !hasHistoricalWinners && !assignments.some(c => c.winner !== undefined) && (
@@ -252,36 +216,12 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
         </>
       )}
 
-      {!hasAssignments && hasPlayers && (
-        <div className="no-assignments-hint">
-          <p>
-            <strong>How it works:</strong> Players will be randomly assigned to courts.
-            Doubles (4 players) is preferred, but singles (2 players) will be used for odd numbers.
-            Extra players will be benched.
-          </p>
-          <button
-            onClick={handleGenerateAssignments}
-            disabled={!hasPlayers}
-            className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
-            data-testid="generate-assignments-button"
-          >
-            🎲 Generate Assignments
-          </button>
-        </div>
-      )}
-
-      {!hasPlayers && (
-        <div className="no-players-hint">
-          <p>Add some players above to start generating court assignments.</p>
-          <button
-            disabled
-            className="generate-button"
-            data-testid="generate-assignments-button"
-          >
-            🎲 Generate Assignments
-          </button>
-        </div>
-      )}
+      <AssignmentsEmptyState
+        hasAssignments={hasAssignments}
+        hasPlayers={hasPlayers}
+        isButtonShaking={isButtonShaking}
+        onGenerate={handleGenerateAssignments}
+      />
     </div>
   );
 };
