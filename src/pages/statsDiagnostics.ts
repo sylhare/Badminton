@@ -3,8 +3,6 @@ import type { CountTier } from '../constants/graphColors';
 import type { EngineSnapshot, Player } from '../types';
 import { splitPairKey } from '../utils/playerUtils';
 
-export type { EngineSnapshot };
-
 /**
  * Diagnostic statistics for the current session.
  * Provides insights into algorithm fairness and player distribution.
@@ -58,6 +56,34 @@ export const getChipClass = (count: number): string => CHIP_CLASS_BY_TIER[countT
 
 export const hasEntries = (map: Record<string, number>): boolean => Object.keys(map).length > 0;
 
+function formatRepeatedPairs(
+  players: Player[],
+  map: Record<string, number>,
+  separator: string,
+): Array<{ pair: string; count: number }> {
+  return Object.entries(map)
+    .filter(([, count]) => count > 1)
+    .map(([pair, count]) => {
+      const [id1, id2] = splitPairKey(pair);
+      return { pair: `${getPlayerName(players, id1)} ${separator} ${getPlayerName(players, id2)}`, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+}
+
+function addPairWarning(
+  warnings: string[],
+  pairs: Array<{ pair: string; count: number }>,
+  expectedAvg: number,
+  label: string,
+): void {
+  const threshold = Math.max(4, Math.ceil(expectedAvg * 2), Math.ceil(expectedAvg) + 3);
+  const highPairs = pairs.filter(p => p.count >= threshold);
+  if (highPairs.length > 0) {
+    warnings.push(`${highPairs.length} pair(s) ${label} ${threshold}+ times (avg is ${expectedAvg.toFixed(1)})`);
+  }
+}
+
 export function computeDiagnostics(
   snapshot: EngineSnapshot | null,
   players: Player[],
@@ -83,28 +109,11 @@ export function computeDiagnostics(
   const avgBench = benchCounts.length > 0
     ? benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length
     : 0;
-  const benchVariance = benchCounts.length > 0
-    ? benchCounts.reduce((sum, c) => sum + Math.pow(c - avgBench, 2), 0) / benchCounts.length
-    : 0;
+  const benchVariance = benchCounts.reduce((sum, c) => sum + Math.pow(c - avgBench, 2), 0) / benchCounts.length;
   const benchFairnessScore = Math.round(Math.sqrt(benchVariance) * 100) / 100;
 
-  const repeatedTeammates = Object.entries(snapshot.teammateCountMap)
-    .filter(([, count]) => count > 1)
-    .map(([pair, count]) => {
-      const [id1, id2] = splitPairKey(pair);
-      return { pair: `${getPlayerName(players, id1)} & ${getPlayerName(players, id2)}`, count };
-    })
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-
-  const repeatedOpponents = Object.entries(snapshot.opponentCountMap)
-    .filter(([, count]) => count > 1)
-    .map(([pair, count]) => {
-      const [id1, id2] = splitPairKey(pair);
-      return { pair: `${getPlayerName(players, id1)} vs ${getPlayerName(players, id2)}`, count };
-    })
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+  const repeatedTeammates = formatRepeatedPairs(players, snapshot.teammateCountMap, '&');
+  const repeatedOpponents = formatRepeatedPairs(players, snapshot.opponentCountMap, 'vs');
 
   const singlesPlayers = Object.entries(snapshot.singleCountMap)
     .map(([playerId, count]) => ({ player: getPlayerName(players, playerId), count }))
@@ -112,43 +121,27 @@ export function computeDiagnostics(
   const playersWithMultipleSingles = singlesPlayers.filter(p => p.count > 1).length;
 
   const warnings: string[] = [];
-  const possiblePairs = totalPlayers > 1 ? (totalPlayers * (totalPlayers - 1)) / 2 : 1;
+  const possiblePairs = (totalPlayers * (totalPlayers - 1)) / 2;
 
   const totalTeammatePairings = Object.values(snapshot.teammateCountMap).reduce((a, b) => a + b, 0);
   const totalOpponentPairings = Object.values(snapshot.opponentCountMap).reduce((a, b) => a + b, 0);
   const totalSinglesPlayed = Object.values(snapshot.singleCountMap).reduce((a, b) => a + b, 0);
-
-  const expectedTeammateAvg = possiblePairs > 0 ? totalTeammatePairings / possiblePairs : 0;
-  const expectedOpponentAvg = possiblePairs > 0 ? totalOpponentPairings / possiblePairs : 0;
-  const expectedSinglesPerPlayer = totalPlayers > 0 ? totalSinglesPlayed / totalPlayers : 0;
 
   const expectedBenchSpread = Math.ceil(Math.sqrt(totalRounds)) + 1;
   if (maxBenchCount - minBenchCount > expectedBenchSpread + 2) {
     warnings.push(`Bench imbalance: spread of ${maxBenchCount - minBenchCount} (expected ~${expectedBenchSpread} for ${totalRounds} rounds)`);
   }
 
-  const maxSingles = singlesPlayers.length > 0 ? singlesPlayers[0].count : 0;
-  if (maxSingles > expectedSinglesPerPlayer + 1.5 && totalSinglesPlayed > 0) {
-    const overPlayedSingles = singlesPlayers.filter(p => p.count > expectedSinglesPerPlayer + 1);
+  if (singlesPlayers.length > 0 && singlesPlayers[0].count > totalSinglesPlayed / totalPlayers + 1.5) {
+    const overPlayedSingles = singlesPlayers.filter(p => p.count > totalSinglesPlayed / totalPlayers + 1);
     if (overPlayedSingles.length > 0) {
-      warnings.push(`${overPlayedSingles.length} player(s) played singles ${Math.round(expectedSinglesPerPlayer + 1.5)}+ times (expected ~${expectedSinglesPerPlayer.toFixed(1)} each)`);
+      const expected = (totalSinglesPlayed / totalPlayers).toFixed(1);
+      warnings.push(`${overPlayedSingles.length} player(s) played singles ${Math.round(totalSinglesPlayed / totalPlayers + 1.5)}+ times (expected ~${expected} each)`);
     }
   }
 
-  const getWarningThreshold = (expectedAvg: number): number =>
-    Math.max(4, Math.ceil(expectedAvg * 2), Math.ceil(expectedAvg) + 3);
-
-  const teammateThreshold = getWarningThreshold(expectedTeammateAvg);
-  const highRepeatTeammates = repeatedTeammates.filter(t => t.count >= teammateThreshold);
-  if (highRepeatTeammates.length > 0) {
-    warnings.push(`${highRepeatTeammates.length} pair(s) teamed up ${teammateThreshold}+ times (avg is ${expectedTeammateAvg.toFixed(1)})`);
-  }
-
-  const opponentThreshold = getWarningThreshold(expectedOpponentAvg);
-  const highRepeatOpponents = repeatedOpponents.filter(o => o.count >= opponentThreshold);
-  if (highRepeatOpponents.length > 0) {
-    warnings.push(`${highRepeatOpponents.length} pair(s) faced each other ${opponentThreshold}+ times (avg is ${expectedOpponentAvg.toFixed(1)})`);
-  }
+  addPairWarning(warnings, repeatedTeammates, totalTeammatePairings / possiblePairs, 'teamed up');
+  addPairWarning(warnings, repeatedOpponents, totalOpponentPairings / possiblePairs, 'faced each other');
 
   return {
     totalPlayers,
