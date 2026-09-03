@@ -1,20 +1,9 @@
 import { countTier } from '../constants/graphColors';
 import type { CountTier } from '../constants/graphColors';
-import type { Player } from '../types';
+import type { EngineSnapshot, Player } from '../types';
 import { splitPairKey } from '../utils/playerUtils';
 
-export type CountMap = Record<string, number>;
-
-export interface DiagnosticMaps {
-  bench: CountMap;
-  teammate: CountMap;
-  opponent: CountMap;
-  single: CountMap;
-  win: CountMap;
-  loss: CountMap;
-  levelHistory?: Record<string, number[]>;
-  roundsPlayed?: number;
-}
+export type { EngineSnapshot };
 
 /**
  * Diagnostic statistics for the current session.
@@ -47,53 +36,11 @@ export interface DiagnosticStats {
   warnings: string[];
 }
 
-/** Sums all values in a count map */
-export const sumValues = (map: CountMap): number =>
-  Object.values(map).reduce((a, b) => a + b, 0);
-
-/** Checks if a count map has any entries */
-export const hasEntries = (map: CountMap): boolean =>
-  Object.keys(map).length > 0;
-
-/** Gets min value from count map, or 0 if empty */
-export const getMin = (map: CountMap): number => {
-  const values = Object.values(map);
-  return values.length > 0 ? Math.min(...values) : 0;
-};
-
-/** Gets max value from count map, or 0 if empty */
-export const getMax = (map: CountMap): number => {
-  const values = Object.values(map);
-  return values.length > 0 ? Math.max(...values) : 0;
-};
-
-/**
- * Resolves a player ID to their display name.
- * @param players - Roster to search
- * @param playerId - The unique identifier for the player
- * @returns The player's name, or 'removed' if not found
- */
 export const getPlayerName = (players: Player[], playerId: string): string => {
   const player = players.find(p => p.id === playerId);
   return player?.name || 'removed';
 };
 
-/**
- * Formats a pair key (e.g., "id1|id2") using player names.
- * @param players - Roster to resolve names from
- * @param pairKey - The pipe-separated pair of player IDs
- * @param separator - The separator to use between names (e.g., " & " or " vs ")
- */
-export const formatPair = (players: Player[], pairKey: string, separator: string): string => {
-  const [id1, id2] = splitPairKey(pairKey);
-  return `${getPlayerName(players, id1)}${separator}${getPlayerName(players, id2)}`;
-};
-
-/**
- * Returns the CSS class for fairness score styling.
- * @param score - The fairness score (standard deviation of bench counts)
- * @returns CSS class name: 'good' (<1), 'neutral' (<2), or 'warning'
- */
 export const getFairnessClass = (score: number): string => {
   if (score < 1) return 'good';
   if (score < 2) return 'neutral';
@@ -107,86 +54,31 @@ const CHIP_CLASS_BY_TIER: Record<CountTier, string> = {
   count4Plus: 'high',
 };
 
-/**
- * Returns the CSS class for bench count chip styling.
- * @param count - The number of times a player has been benched
- * @returns CSS class name based on severity: 'low', 'medium', 'medium-high', or 'high'
- */
 export const getChipClass = (count: number): string => CHIP_CLASS_BY_TIER[countTier(count)];
 
-/**
- * Extracts repeated pairs from a count map.
- * @param players - Roster to resolve names from
- * @param map - The count map (teammate or opponent)
- * @param separator - The separator for display (' & ' or ' vs ')
- * @returns Top 10 pairs with count > 1, sorted descending
- */
-export const getRepeatedPairs = (
-  players: Player[],
-  map: CountMap,
-  separator: string,
-): Array<{ pair: string; count: number }> =>
-  Object.entries(map)
-    .filter(([, count]) => count > 1)
-    .map(([pair, count]) => ({ pair: formatPair(players, pair, separator), count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+export const hasEntries = (map: Record<string, number>): boolean => Object.keys(map).length > 0;
 
-/**
- * Calculates warning threshold for repeated pairings.
- * @param expectedAvg - The expected average pairings
- * @returns Threshold: max of 4, 2x average, or average + 3
- */
-export const getWarningThreshold = (expectedAvg: number): number =>
-  Math.max(4, Math.ceil(expectedAvg * 2), Math.ceil(expectedAvg) + 3);
-
-/**
- * Computes comprehensive diagnostic statistics from the engine state maps.
- * Analyzes bench distribution, teammate/opponent repetitions, singles matches,
- * and generates context-aware warnings when fairness thresholds are exceeded.
- * @returns DiagnosticStats object or null if no data available
- */
 export function computeDiagnostics(
-  maps: DiagnosticMaps,
+  snapshot: EngineSnapshot | null,
   players: Player[],
 ): DiagnosticStats | null {
-  const playersFromTeammates = new Set<string>();
-  Object.keys(maps.teammate).forEach(pair => {
-    const [id1, id2] = splitPairKey(pair);
-    playersFromTeammates.add(id1);
-    playersFromTeammates.add(id2);
-  });
+  if (!snapshot || players.length === 0) return null;
 
-  const allPlayers = new Set([
-    ...playersFromTeammates,
-    ...Object.keys(maps.bench),
-    ...Object.keys(maps.win),
-    ...Object.keys(maps.loss),
-    ...Object.keys(maps.single),
-  ]);
+  const hasAnyData = hasEntries(snapshot.benchCountMap) || hasEntries(snapshot.teammateCountMap) || 
+    hasEntries(snapshot.opponentCountMap) || hasEntries(snapshot.singleCountMap) || 
+    hasEntries(snapshot.winCountMap) || hasEntries(snapshot.lossCountMap);
+  
+  if (!hasAnyData) return null;
 
-  const totalPlayers = allPlayers.size;
-  if (totalPlayers === 0) return null;
+  const totalPlayers = players.length;
+  const totalRounds = snapshot.roundsPlayed ?? 1;
 
-  const totalTeammatePairings = sumValues(maps.teammate);
-  const totalSinglesMatches = sumValues(maps.single) / 2;
-  const totalDoublesMatches = totalTeammatePairings / 2;
-  const maxBenchFromData = getMax(maps.bench);
-  const totalMatchesEstimate = totalDoublesMatches + totalSinglesMatches;
-
-  const playersPerRound = Math.max(4, totalPlayers - 1);
-  const matchesPerRound = Math.max(1, Math.floor(playersPerRound / 4) + (playersPerRound % 4 >= 2 ? 1 : 0));
-  const roundsFromMatches = matchesPerRound > 0 ? Math.ceil(totalMatchesEstimate / matchesPerRound) : 0;
-  const internalRounds = Math.max(maxBenchFromData, roundsFromMatches, 1);
-  const storedRoundsPlayed = maps.roundsPlayed ?? 0;
-  const totalRounds = storedRoundsPlayed > 0 ? storedRoundsPlayed : internalRounds;
-
-  const benchCounts = Object.values(maps.bench);
+  const benchCounts = Object.values(snapshot.benchCountMap);
   const benchedOnce = benchCounts.filter(c => c === 1).length;
   const benchedMultiple = benchCounts.filter(c => c > 1).length;
-  const neverBenched = totalPlayers - Object.keys(maps.bench).length;
-  const maxBenchCount = maxBenchFromData;
-  const minBenchCount = getMin(maps.bench);
+  const neverBenched = totalPlayers - Object.keys(snapshot.benchCountMap).length;
+  const maxBenchCount = benchCounts.length > 0 ? Math.max(...benchCounts) : 0;
+  const minBenchCount = benchCounts.length > 0 ? Math.min(...benchCounts) : 0;
 
   const avgBench = benchCounts.length > 0
     ? benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length
@@ -196,10 +88,25 @@ export function computeDiagnostics(
     : 0;
   const benchFairnessScore = Math.round(Math.sqrt(benchVariance) * 100) / 100;
 
-  const repeatedTeammates = getRepeatedPairs(players, maps.teammate, ' & ');
-  const repeatedOpponents = getRepeatedPairs(players, maps.opponent, ' vs ');
+  const repeatedTeammates = Object.entries(snapshot.teammateCountMap)
+    .filter(([, count]) => count > 1)
+    .map(([pair, count]) => {
+      const [id1, id2] = splitPairKey(pair);
+      return { pair: `${getPlayerName(players, id1)} & ${getPlayerName(players, id2)}`, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 
-  const singlesPlayers = Object.entries(maps.single)
+  const repeatedOpponents = Object.entries(snapshot.opponentCountMap)
+    .filter(([, count]) => count > 1)
+    .map(([pair, count]) => {
+      const [id1, id2] = splitPairKey(pair);
+      return { pair: `${getPlayerName(players, id1)} vs ${getPlayerName(players, id2)}`, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const singlesPlayers = Object.entries(snapshot.singleCountMap)
     .map(([playerId, count]) => ({ player: getPlayerName(players, playerId), count }))
     .sort((a, b) => b.count - a.count);
   const playersWithMultipleSingles = singlesPlayers.filter(p => p.count > 1).length;
@@ -207,14 +114,17 @@ export function computeDiagnostics(
   const warnings: string[] = [];
   const possiblePairs = totalPlayers > 1 ? (totalPlayers * (totalPlayers - 1)) / 2 : 1;
 
+  const totalTeammatePairings = Object.values(snapshot.teammateCountMap).reduce((a, b) => a + b, 0);
+  const totalOpponentPairings = Object.values(snapshot.opponentCountMap).reduce((a, b) => a + b, 0);
+  const totalSinglesPlayed = Object.values(snapshot.singleCountMap).reduce((a, b) => a + b, 0);
+
   const expectedTeammateAvg = possiblePairs > 0 ? totalTeammatePairings / possiblePairs : 0;
-  const expectedOpponentAvg = possiblePairs > 0 ? sumValues(maps.opponent) / possiblePairs : 0;
-  const totalSinglesPlayed = sumValues(maps.single);
+  const expectedOpponentAvg = possiblePairs > 0 ? totalOpponentPairings / possiblePairs : 0;
   const expectedSinglesPerPlayer = totalPlayers > 0 ? totalSinglesPlayed / totalPlayers : 0;
 
-  const expectedBenchSpread = Math.ceil(Math.sqrt(internalRounds)) + 1;
+  const expectedBenchSpread = Math.ceil(Math.sqrt(totalRounds)) + 1;
   if (maxBenchCount - minBenchCount > expectedBenchSpread + 2) {
-    warnings.push(`Bench imbalance: spread of ${maxBenchCount - minBenchCount} (expected ~${expectedBenchSpread} for ${internalRounds} rounds)`);
+    warnings.push(`Bench imbalance: spread of ${maxBenchCount - minBenchCount} (expected ~${expectedBenchSpread} for ${totalRounds} rounds)`);
   }
 
   const maxSingles = singlesPlayers.length > 0 ? singlesPlayers[0].count : 0;
@@ -224,6 +134,9 @@ export function computeDiagnostics(
       warnings.push(`${overPlayedSingles.length} player(s) played singles ${Math.round(expectedSinglesPerPlayer + 1.5)}+ times (expected ~${expectedSinglesPerPlayer.toFixed(1)} each)`);
     }
   }
+
+  const getWarningThreshold = (expectedAvg: number): number =>
+    Math.max(4, Math.ceil(expectedAvg * 2), Math.ceil(expectedAvg) + 3);
 
   const teammateThreshold = getWarningThreshold(expectedTeammateAvg);
   const highRepeatTeammates = repeatedTeammates.filter(t => t.count >= teammateThreshold);
