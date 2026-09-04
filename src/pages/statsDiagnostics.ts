@@ -1,6 +1,7 @@
 import { countTier } from '../constants/graphColors';
 import type { CountTier } from '../constants/graphColors';
 import type { EngineSnapshot, Player } from '../types';
+import { sum } from '../utils/numberUtils';
 import { splitPairKey } from '../utils/playerUtils';
 
 /**
@@ -57,7 +58,7 @@ export const getChipClass = (count: number): string => CHIP_CLASS_BY_TIER[countT
 export const hasEntries = (map: Record<string, number>): boolean => Object.keys(map).length > 0;
 
 function formatRepeatedPairs(
-  players: Player[],
+  playerNameMap: Map<string, string>,
   map: Record<string, number>,
   separator: string,
 ): Array<{ pair: string; count: number }> {
@@ -65,7 +66,7 @@ function formatRepeatedPairs(
     .filter(([, count]) => count > 1)
     .map(([pair, count]) => {
       const [id1, id2] = splitPairKey(pair);
-      return { pair: `${getPlayerName(players, id1)} ${separator} ${getPlayerName(players, id2)}`, count };
+      return { pair: `${playerNameMap.get(id1) || 'removed'} ${separator} ${playerNameMap.get(id2) || 'removed'}`, count };
     })
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
@@ -99,6 +100,8 @@ export function computeDiagnostics(
   const totalPlayers = players.length;
   const totalRounds = snapshot.roundsPlayed ?? 1;
 
+  const playerNameMap = new Map(players.map(p => [p.id, p.name]));
+
   const benchCounts = Object.values(snapshot.benchCountMap);
   const benchedOnce = benchCounts.filter(c => c === 1).length;
   const benchedMultiple = benchCounts.filter(c => c > 1).length;
@@ -107,36 +110,39 @@ export function computeDiagnostics(
   const minBenchCount = benchCounts.length > 0 ? Math.min(...benchCounts) : 0;
 
   const avgBench = benchCounts.length > 0
-    ? benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length
+    ? sum(benchCounts) / benchCounts.length
     : 0;
-  const benchVariance = benchCounts.reduce((sum, c) => sum + Math.pow(c - avgBench, 2), 0) / benchCounts.length;
+  const benchVariance = benchCounts.length > 0
+    ? benchCounts.reduce((sum, c) => sum + Math.pow(c - avgBench, 2), 0) / benchCounts.length
+    : 0;
   const benchFairnessScore = Math.round(Math.sqrt(benchVariance) * 100) / 100;
 
-  const repeatedTeammates = formatRepeatedPairs(players, snapshot.teammateCountMap, '&');
-  const repeatedOpponents = formatRepeatedPairs(players, snapshot.opponentCountMap, 'vs');
+  const repeatedTeammates = formatRepeatedPairs(playerNameMap, snapshot.teammateCountMap, '&');
+  const repeatedOpponents = formatRepeatedPairs(playerNameMap, snapshot.opponentCountMap, 'vs');
 
   const singlesPlayers = Object.entries(snapshot.singleCountMap)
-    .map(([playerId, count]) => ({ player: getPlayerName(players, playerId), count }))
+    .map(([playerId, count]) => ({ player: playerNameMap.get(playerId) || 'removed', count }))
     .sort((a, b) => b.count - a.count);
   const playersWithMultipleSingles = singlesPlayers.filter(p => p.count > 1).length;
 
   const warnings: string[] = [];
-  const possiblePairs = (totalPlayers * (totalPlayers - 1)) / 2;
+  const possiblePairs = Math.max(1, (totalPlayers * (totalPlayers - 1)) / 2);
 
-  const totalTeammatePairings = Object.values(snapshot.teammateCountMap).reduce((a, b) => a + b, 0);
-  const totalOpponentPairings = Object.values(snapshot.opponentCountMap).reduce((a, b) => a + b, 0);
-  const totalSinglesPlayed = Object.values(snapshot.singleCountMap).reduce((a, b) => a + b, 0);
+  const totalTeammatePairings = sum(Object.values(snapshot.teammateCountMap));
+  const totalOpponentPairings = sum(Object.values(snapshot.opponentCountMap));
+  const totalSinglesPlayed = sum(Object.values(snapshot.singleCountMap));
+  const expectedSinglesPerPlayer = totalSinglesPlayed / totalPlayers;
 
   const expectedBenchSpread = Math.ceil(Math.sqrt(totalRounds)) + 1;
   if (maxBenchCount - minBenchCount > expectedBenchSpread + 2) {
     warnings.push(`Bench imbalance: spread of ${maxBenchCount - minBenchCount} (expected ~${expectedBenchSpread} for ${totalRounds} rounds)`);
   }
 
-  if (singlesPlayers.length > 0 && singlesPlayers[0].count > totalSinglesPlayed / totalPlayers + 1.5) {
-    const overPlayedSingles = singlesPlayers.filter(p => p.count > totalSinglesPlayed / totalPlayers + 1);
+  if (singlesPlayers.length > 0 && singlesPlayers[0].count > expectedSinglesPerPlayer + 1.5) {
+    const overPlayedSingles = singlesPlayers.filter(p => p.count > expectedSinglesPerPlayer + 1);
     if (overPlayedSingles.length > 0) {
-      const expected = (totalSinglesPlayed / totalPlayers).toFixed(1);
-      warnings.push(`${overPlayedSingles.length} player(s) played singles ${Math.round(totalSinglesPlayed / totalPlayers + 1.5)}+ times (expected ~${expected} each)`);
+      const expected = expectedSinglesPerPlayer.toFixed(1);
+      warnings.push(`${overPlayedSingles.length} player(s) played singles ${Math.round(expectedSinglesPerPlayer + 1.5)}+ times (expected ~${expected} each)`);
     }
   }
 
