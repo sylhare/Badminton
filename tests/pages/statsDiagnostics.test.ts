@@ -133,4 +133,28 @@ describe('computeDiagnostics', () => {
 
     expect(diagnostics?.warnings).toEqual([]);
   });
+
+  it('handles single player without division by zero', () => {
+    const singlePlayer = [createMockPlayer({ id: '1', name: 'Alice' })];
+    const diagnostics = computeDiagnostics({
+      ...emptySnapshot,
+      benchCountMap: { '1': 1 },
+    }, singlePlayer);
+
+    expect(diagnostics).not.toBeNull();
+    expect(Number.isNaN(diagnostics?.benchFairnessScore)).toBe(false);
+    expect(diagnostics?.warnings.some(w => w.includes('Infinity'))).toBe(false);
+    expect(diagnostics?.totalPlayers).toBe(1);
+  });
+
+  it('handles empty benchCounts without NaN in fairness score', () => {
+    const diagnostics = computeDiagnostics({
+      ...emptySnapshot,
+      singleCountMap: { '1': 1 },
+    }, players);
+
+    expect(diagnostics).not.toBeNull();
+    expect(Number.isNaN(diagnostics?.benchFairnessScore)).toBe(false);
+    expect(diagnostics?.benchFairnessScore).toBe(0);
+  });
 });
