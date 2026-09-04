@@ -34,6 +34,9 @@ interface CompactEngineState {
   rp?: number;
 }
 
+/** The scalar per-player count maps, in the order they're packed into `ps`. */
+const SCALAR_FIELDS = ['benchCountMap', 'singleCountMap', 'winCountMap', 'lossCountMap'] as const;
+
 /** Tournament match: a saved single `score` becomes a one-entry `sets` array. */
 function migrateMatchSets(match: TournamentMatch): TournamentMatch {
   const legacy = match as TournamentMatch & { score?: SetScore };
@@ -262,12 +265,7 @@ class StorageManager {
   }
 
   private toCompact(state: CourtEngineState): CompactEngineState {
-    const allPlayerIds = new Set([
-      ...Object.keys(state.benchCountMap),
-      ...Object.keys(state.singleCountMap),
-      ...Object.keys(state.winCountMap),
-      ...Object.keys(state.lossCountMap),
-    ]);
+    const allPlayerIds = new Set(SCALAR_FIELDS.flatMap(field => Object.keys(state[field])));
 
     const pairKeys = [...new Set([...Object.keys(state.teammateCountMap), ...Object.keys(state.opponentCountMap)])];
     for (const key of pairKeys) {
@@ -278,12 +276,10 @@ class StorageManager {
     const pi = [...allPlayerIds];
     const idToIndex = new Map(pi.map((id, i) => [id, i] as [string, number]));
 
-    const ps: Array<[number, number, number, number]> = pi.map(id => [
-      state.benchCountMap[id] ?? 0,
-      state.singleCountMap[id] ?? 0,
-      state.winCountMap[id] ?? 0,
-      state.lossCountMap[id] ?? 0,
-    ]);
+    const ps: Array<[number, number, number, number]> = pi.map(id => {
+      const [bench, single, win, loss] = SCALAR_FIELDS.map(field => state[field][id] ?? 0);
+      return [bench, single, win, loss];
+    });
 
     const pc: Record<string, [number, number]> = {};
     for (const key of pairKeys) {
