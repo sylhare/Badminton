@@ -4,7 +4,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import Footer from '../components/Footer';
 import './NotFoundPage.css';
 
-const KNOWN_ROUTES = ['/stats', '/algorithm', '/engine', '/level-tracker', '/tournament'];
+const KNOWN_ROUTES = ['/stats', '/tournament'];
 
 const NotFoundPage: React.FC = () => {
   const { pathname } = useLocation();

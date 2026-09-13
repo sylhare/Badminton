@@ -13,7 +13,6 @@ function ScrollToTop() {
 }
 
 const StatsPage      = React.lazy(() => import('./pages/StatsPage.tsx'));
-const NotebookPage   = React.lazy(() => import('./pages/NotebookPage.tsx'));
 const TournamentPage = React.lazy(() => import('./pages/TournamentPage.tsx'));
 const NotFoundPage   = React.lazy(() => import('./pages/NotFoundPage.tsx'));
 
@@ -28,9 +27,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/" element={<App />} />
             <Route path="/stats" element={<StatsPage />} />
-            <Route path="/algorithm" element={<NotebookPage notebookUrl={`${basePath}analysis/algorithm_docs.html`} title="Algorithm Documentation" />} />
-            <Route path="/engine" element={<NotebookPage notebookUrl={`${basePath}analysis/engine_analysis.html`} title="Engine Comparison" />} />
-            <Route path="/level-tracker" element={<NotebookPage notebookUrl={`${basePath}analysis/level_tracker_analysis.html`} title="Level Tracker Analysis" />} />
             <Route path="/tournament" element={<TournamentPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

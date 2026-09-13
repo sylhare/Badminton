@@ -60,25 +60,24 @@
     line-height: 1.5;
 }
 
-/* Notebook Links Section */
-.notebook-links {
+.analysis-links {
     margin-bottom: 50px;
 }
 
-.notebook-links h2 {
+.analysis-links h2 {
     color: #f0f6fc;
     font-size: 1.3rem;
     margin-bottom: 20px;
     font-weight: 600;
 }
 
-.notebooks-grid {
+.analysis-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 20px;
 }
 
-.notebook-card {
+.analysis-card {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -90,14 +89,14 @@
     transition: all 0.25s ease;
 }
 
-.notebook-card:hover {
+.analysis-card:hover {
     background: linear-gradient(135deg, rgba(56, 139, 253, 0.15) 0%, rgba(136, 60, 234, 0.15) 100%);
     border-color: rgba(56, 139, 253, 0.5);
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(56, 139, 253, 0.15);
 }
 
-.notebook-icon {
+.analysis-icon {
     font-size: 2rem;
     width: 56px;
     height: 56px;
@@ -109,32 +108,32 @@
     flex-shrink: 0;
 }
 
-.notebook-content {
+.analysis-content {
     flex: 1;
 }
 
-.notebook-content h3 {
+.analysis-content h3 {
     color: #f0f6fc;
     font-size: 1.1rem;
     margin: 0 0 8px 0;
     font-weight: 600;
 }
 
-.notebook-content p {
+.analysis-content p {
     color: #8b949e;
     font-size: 0.9rem;
     margin: 0;
     line-height: 1.5;
 }
 
-.notebook-arrow {
+.analysis-arrow {
     color: #58a6ff;
     font-size: 1.5rem;
     opacity: 0.6;
     transition: all 0.2s ease;
 }
 
-.notebook-card:hover .notebook-arrow {
+.analysis-card:hover .analysis-arrow {
     opacity: 1;
     transform: translateX(4px);
 }
@@ -544,15 +543,15 @@
         font-size: 1rem;
     }
 
-    .notebooks-grid {
+    .analysis-grid {
         grid-template-columns: 1fr;
     }
 
-    .notebook-card {
+    .analysis-card {
         padding: 20px;
     }
 
-    .notebook-icon {
+    .analysis-icon {
         width: 48px;
         height: 48px;
         font-size: 1.5rem;

@@ -12,6 +12,8 @@ import Footer from '../components/Footer';
 import { computeDiagnostics, getChipClass, getFairnessClass, hasEntries } from './statsDiagnostics';
 import './StatsPage.css';
 
+const analysisUrl = 'https://github.com/sylhare/Badminton/tree/main/analysis';
+
 function StatsPage(): React.ReactElement {
   const { players, isSmartEngineEnabled: isSmartEngine, engineState, engineName, engineDescription } = useAppState();
 
@@ -240,56 +242,62 @@ function StatsPage(): React.ReactElement {
           )}
         </section>
 
-        <section className="notebook-links">
-          <h2>📓 Analysis Notebooks</h2>
-          <div className="notebooks-grid">
-            <Link
-              to="/algorithm"
-              className="notebook-card"
+        <section className="analysis-links">
+          <h2>📊 GitHub Analysis</h2>
+          <div className="analysis-grid">
+            <a
+              href={analysisUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="analysis-card"
               data-testid="algorithm-link"
             >
-              <div className="notebook-icon">📐</div>
-              <div className="notebook-content">
+              <div className="analysis-icon">📐</div>
+              <div className="analysis-content">
                 <h3>Algorithm Documentation</h3>
                 <p>
                   Mathematical foundations and proofs for Monte Carlo, Simulated Annealing,
                   and Conflict Graph algorithms with convergence analysis.
                 </p>
               </div>
-              <span className="notebook-arrow">→</span>
-            </Link>
+              <span className="analysis-arrow">→</span>
+            </a>
 
-            <Link
-              to="/engine"
-              className="notebook-card"
+            <a
+              href={analysisUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="analysis-card"
               data-testid="engine-link"
             >
-              <div className="notebook-icon">⚙️</div>
-              <div className="notebook-content">
+              <div className="analysis-icon">⚙️</div>
+              <div className="analysis-content">
                 <h3>Engine Comparison</h3>
                 <p>
                   Comprehensive comparison of court assignment engines including
                   performance benchmarks, fairness metrics, and quality analysis.
                 </p>
               </div>
-              <span className="notebook-arrow">→</span>
-            </Link>
+              <span className="analysis-arrow">→</span>
+            </a>
 
-            <Link
-              to="/level-tracker"
-              className="notebook-card"
+            <a
+              href={analysisUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="analysis-card"
               data-testid="level-tracker-link"
             >
-              <div className="notebook-icon">📊</div>
-              <div className="notebook-content">
+              <div className="analysis-icon">📊</div>
+              <div className="analysis-content">
                 <h3>Level Tracker Analysis</h3>
                 <p>
                   Elo-style rating system simulation with K-factor curves, team balance
                   factors, and level progression visualizations.
                 </p>
               </div>
-              <span className="notebook-arrow">→</span>
-            </Link>
+              <span className="analysis-arrow">→</span>
+            </a>
           </div>
         </section>
 
