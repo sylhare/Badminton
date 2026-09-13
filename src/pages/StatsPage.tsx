@@ -250,50 +250,14 @@ function StatsPage(): React.ReactElement {
               target="_blank"
               rel="noopener noreferrer"
               className="analysis-card"
-              data-testid="algorithm-link"
-            >
-              <div className="analysis-icon">📐</div>
-              <div className="analysis-content">
-                <h3>Algorithm Documentation</h3>
-                <p>
-                  Mathematical foundations and proofs for Monte Carlo, Simulated Annealing,
-                  and Conflict Graph algorithms with convergence analysis.
-                </p>
-              </div>
-              <span className="analysis-arrow">→</span>
-            </a>
-
-            <a
-              href={analysisUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="analysis-card"
-              data-testid="engine-link"
-            >
-              <div className="analysis-icon">⚙️</div>
-              <div className="analysis-content">
-                <h3>Engine Comparison</h3>
-                <p>
-                  Comprehensive comparison of court assignment engines including
-                  performance benchmarks, fairness metrics, and quality analysis.
-                </p>
-              </div>
-              <span className="analysis-arrow">→</span>
-            </a>
-
-            <a
-              href={analysisUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="analysis-card"
-              data-testid="level-tracker-link"
+              data-testid="analysis-link"
             >
               <div className="analysis-icon">📊</div>
               <div className="analysis-content">
-                <h3>Level Tracker Analysis</h3>
+                <h3>Explore the Analysis</h3>
                 <p>
-                  Elo-style rating system simulation with K-factor curves, team balance
-                  factors, and level progression visualizations.
+                  Read the algorithm documentation, engine comparisons, and level tracker
+                  analysis on GitHub.
                 </p>
               </div>
               <span className="analysis-arrow">→</span>

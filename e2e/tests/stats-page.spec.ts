@@ -54,21 +54,14 @@ test.describe('Stats Page', () => {
       await expect(page.getByText('Start a Game →')).toBeVisible();
     });
 
-    await test.step('analysis links point to GitHub', async () => {
-      const algorithmLink = page.getByTestId('algorithm-link');
-      await expect(algorithmLink).toBeVisible();
-      await expect(algorithmLink).toContainText('Algorithm Documentation');
-      const engineLink = page.getByTestId('engine-link');
-      await expect(engineLink).toBeVisible();
-      await expect(engineLink).toContainText('Engine Comparison');
-      const levelTrackerLink = page.getByTestId('level-tracker-link');
-      await expect(levelTrackerLink).toBeVisible();
-      await expect(levelTrackerLink).toContainText('Level Tracker Analysis');
-      for (const link of [algorithmLink, engineLink, levelTrackerLink]) {
-        await expect(link).toHaveAttribute('href', 'https://github.com/sylhare/Badminton/tree/main/analysis');
-        await expect(link).toHaveAttribute('target', '_blank');
-        await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-      }
+    await test.step('single analysis link points to GitHub', async () => {
+      const analysisLink = page.getByTestId('analysis-link');
+      await expect(analysisLink).toBeVisible();
+      await expect(analysisLink).toContainText('Explore the Analysis');
+      await expect(page.locator('a[href="https://github.com/sylhare/Badminton/tree/main/analysis"]')).toHaveCount(1);
+      await expect(analysisLink).toHaveAttribute('href', 'https://github.com/sylhare/Badminton/tree/main/analysis');
+      await expect(analysisLink).toHaveAttribute('target', '_blank');
+      await expect(analysisLink).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
     await test.step('GitHub feedback link in footer', async () => {

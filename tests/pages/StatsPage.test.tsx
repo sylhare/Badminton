@@ -92,16 +92,18 @@ describe('StatsPage Component', () => {
     expect(backLink).toHaveTextContent('Court Manager');
   });
 
-  it('renders GitHub analysis links', () => {
+  it('renders one GitHub analysis link', () => {
     renderWithProvider(<StatsPage />);
 
     expect(screen.getByText('📊 GitHub Analysis')).toBeInTheDocument();
-    for (const testId of ['algorithm-link', 'engine-link', 'level-tracker-link']) {
-      const link = screen.getByTestId(testId);
-      expect(link).toHaveAttribute('href', 'https://github.com/sylhare/Badminton/tree/main/analysis');
-      expect(link).toHaveAttribute('target', '_blank');
-      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    }
+    const analysisLinks = screen.getAllByTestId('analysis-link');
+    expect(analysisLinks).toHaveLength(1);
+    expect(analysisLinks[0]).toHaveAttribute(
+      'href',
+      'https://github.com/sylhare/Badminton/tree/main/analysis',
+    );
+    expect(analysisLinks[0]).toHaveAttribute('target', '_blank');
+    expect(analysisLinks[0]).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('renders diagnostic sections when data exists', async () => {
