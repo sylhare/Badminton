@@ -1,15 +1,46 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../src/App';
+import { storageManager } from '../src/utils/StorageManager';
 
 import { addPlayers, clearTestState, generateAndWaitForAssignments, renderWithProvider } from './shared';
 
 describe('App', () => {
   beforeEach(async () => await clearTestState());
-  afterEach(async () => await clearTestState());
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await clearTestState();
+  });
+
+  describe('Lazy modal integration', () => {
+    it('loads the share modal after sharing from its App parent', async () => {
+      const user = userEvent.setup();
+      renderWithProvider(<App />);
+      await addPlayers(user, 'Alice');
+
+      await user.click(screen.getByTestId('share-button'));
+
+      expect(await screen.findByTestId('share-modal')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Share Session' })).toBeInTheDocument();
+    });
+
+    it('loads the import modal after App detects a shared state', async () => {
+      const originalUrl = window.location.href;
+      history.replaceState(null, '', '/?state=shared-state');
+      vi.spyOn(storageManager, 'isValidState').mockResolvedValue(true);
+      vi.spyOn(storageManager, 'getRawState').mockReturnValue(null);
+      vi.spyOn(storageManager, 'getImportTimestamps').mockResolvedValue({ sharedSavedAt: 1700000000000 });
+
+      renderWithProvider(<App />);
+
+      expect(await screen.findByTestId('import-state-modal')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Load Shared Session' })).toBeInTheDocument();
+      history.replaceState(null, '', originalUrl);
+    });
+  });
 
   describe('UI Structure', () => {
     const user = userEvent.setup();

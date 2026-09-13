@@ -1,10 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 
 import './App.css';
 import ManualPlayerEntry from './components/players/ManualPlayerEntry';
 import PlayerList from './components/players/PlayerList';
-import ShareModal from './components/modals/ShareModal';
-import ImportStateModal from './components/modals/ImportStateModal';
 import { CourtAssignments } from './components/court';
 import { useShareState } from './hooks/useShareState';
 import Leaderboard from './components/players/Leaderboard';
@@ -14,6 +12,9 @@ import { benchedPlayers } from './utils/playerUtils';
 import { applyCourtSwap } from './utils/courtSwap';
 import type { SlotAddr } from './utils/slotSwap';
 import type { Court, SetScore, WinnerSelection } from './types';
+
+const ShareModal = lazy(() => import('./components/modals/ShareModal'));
+const ImportStateModal = lazy(() => import('./components/modals/ImportStateModal'));
 
 export function rotateCourtTeams(court: Court): Court {
   const { teams, players } = court;
@@ -231,20 +232,28 @@ function App(): React.ReactElement {
         />
       </div>
 
-      <ShareModal
-        isOpen={shareUrl !== null}
-        shareUrl={shareUrl ?? ''}
-        onClose={() => setShareUrl(null)}
-      />
+      {shareUrl !== null && (
+        <Suspense fallback={null}>
+          <ShareModal
+            isOpen
+            shareUrl={shareUrl}
+            onClose={() => setShareUrl(null)}
+          />
+        </Suspense>
+      )}
 
-      <ImportStateModal
-        isOpen={importState !== null}
-        currentBackupUrl={importState?.backupUrl ?? ''}
-        sharedSavedAt={importState?.sharedSavedAt}
-        currentSavedAt={importState?.currentSavedAt}
-        onAccept={handleImportAccept}
-        onDecline={handleImportDecline}
-      />
+      {importState !== null && (
+        <Suspense fallback={null}>
+          <ImportStateModal
+            isOpen
+            currentBackupUrl={importState.backupUrl}
+            sharedSavedAt={importState.sharedSavedAt}
+            currentSavedAt={importState.currentSavedAt}
+            onAccept={handleImportAccept}
+            onDecline={handleImportDecline}
+          />
+        </Suspense>
+      )}
 
       <Footer showTournamentLink={winCounts.size > 0 || isSmartEngineEnabled} />
     </div>
