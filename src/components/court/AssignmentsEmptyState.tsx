@@ -17,31 +17,23 @@ const AssignmentsEmptyState: React.FC<AssignmentsEmptyStateProps> = ({
 }) => {
   if (hasAssignments) return null;
 
-  if (hasPlayers) {
-    return (
-      <div className="no-assignments-hint">
-        <p>
-          <strong>How it works:</strong> Players will be randomly assigned to courts.
-          Doubles (4 players) is preferred, but singles (2 players) will be used for odd numbers.
-          Extra players will be benched.
-        </p>
-        <button
-          onClick={onGenerate}
-          className={cx('generate-button', isButtonShaking && 'button-shake')}
-          data-testid="generate-assignments-button"
-        >
-          🎲 Generate Assignments
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="no-players-hint">
-      <p>Add some players above to start generating court assignments.</p>
+    <div className={hasPlayers ? 'no-assignments-hint' : 'no-players-hint'}>
+      <p>
+        {hasPlayers ? (
+          <>
+            <strong>How it works:</strong> Players will be randomly assigned to courts.
+            Doubles (4 players) is preferred, but singles (2 players) will be used for odd numbers.
+            Extra players will be benched.
+          </>
+        ) : (
+          'Add some players above to start generating court assignments.'
+        )}
+      </p>
       <button
-        disabled
-        className="generate-button"
+        onClick={hasPlayers ? onGenerate : undefined}
+        disabled={!hasPlayers}
+        className={cx('generate-button', isButtonShaking && 'button-shake')}
         data-testid="generate-assignments-button"
       >
         🎲 Generate Assignments

@@ -37,12 +37,6 @@ function StatsPage(): React.ReactElement {
     [playerNameMap],
   );
 
-  const benchData = useMemo(() => (
-    Object.entries(benchCountMap)
-      .map(([playerId, count]) => ({ player: resolvePlayerName(playerId), count }))
-      .sort((a, b) => b.count - a.count)
-  ), [benchCountMap, resolvePlayerName]);
-
   return (
     <div className="stats-page">
       <nav className="stats-banner" data-testid="stats-banner">
@@ -124,16 +118,16 @@ function StatsPage(): React.ReactElement {
                   </div>
                 </div>
 
-                {benchData.length > 0 && (
+                {diagnostics.benchPlayers.length > 0 && (
                   <details className="collapsible-section">
-                    <summary>View bench counts per player ({benchData.length})</summary>
+                    <summary>View bench counts per player ({diagnostics.benchPlayers.length})</summary>
                     <div style={{ padding: '16px' }}>
                       <BenchGraph
                         benchData={benchCountMap}
                         getPlayerName={resolvePlayerName}
                       />
                       <div className="player-chips" style={{ marginTop: '16px' }}>
-                        {benchData.map(({ player, count }) => (
+                        {diagnostics.benchPlayers.map(({ player, count }) => (
                           <span key={player} className={`chip ${getChipClass(count)}`}>
                             {player}: {count}
                           </span>

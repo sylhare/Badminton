@@ -79,6 +79,7 @@ describe('computeDiagnostics', () => {
     expect(diagnostics?.benchedMultiple).toBe(1);
     expect(diagnostics?.maxBenchCount).toBe(2);
     expect(diagnostics?.minBenchCount).toBe(0);
+    expect(diagnostics?.benchPlayers[0]).toEqual({ player: 'Alice', count: 2 });
   });
 
   it('uses the stored roundsPlayed when present', () => {

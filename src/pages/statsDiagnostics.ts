@@ -27,6 +27,8 @@ export interface DiagnosticStats {
   repeatedTeammates: Array<{ pair: string; count: number }>;
   /** Top 10 pairs who have faced each other more than once */
   repeatedOpponents: Array<{ pair: string; count: number }>;
+  /** Players who have been benched, sorted by count */
+  benchPlayers: Array<{ player: string; count: number }>;
   /** Players who have played singles matches, sorted by count */
   singlesPlayers: Array<{ player: string; count: number }>;
   /** Number of players who played singles more than once */
@@ -95,11 +97,11 @@ export function computeDiagnostics(
 ): DiagnosticStats | null {
   if (!snapshot || players.length === 0) return null;
 
-  const hasAnyData = hasEntries(snapshot.benchCountMap) || hasEntries(snapshot.teammateCountMap) ||
-    hasEntries(snapshot.opponentCountMap) || hasEntries(snapshot.singleCountMap) ||
-    hasEntries(snapshot.winCountMap) || hasEntries(snapshot.lossCountMap);
-
-  if (!hasAnyData) return null;
+  const maps = [
+    snapshot.benchCountMap, snapshot.teammateCountMap, snapshot.opponentCountMap,
+    snapshot.singleCountMap, snapshot.winCountMap, snapshot.lossCountMap,
+  ];
+  if (!maps.some(hasEntries)) return null;
 
   const totalPlayers = players.length;
   const totalRounds = snapshot.roundsPlayed || 1;
@@ -109,7 +111,7 @@ export function computeDiagnostics(
   const benchCounts = Object.values(snapshot.benchCountMap);
   const benchedOnce = benchCounts.filter(c => c === 1).length;
   const benchedMultiple = benchCounts.filter(c => c > 1).length;
-  const neverBenched = totalPlayers - Object.keys(snapshot.benchCountMap).length;
+  const neverBenched = totalPlayers - benchCounts.length;
   const maxBenchCount = benchCounts.length > 0 ? Math.max(...benchCounts) : 0;
   const minBenchCount = benchCounts.length > 0 ? Math.min(...benchCounts) : 0;
 
@@ -121,6 +123,10 @@ export function computeDiagnostics(
 
   const repeatedTeammates = formatRepeatedPairs(playerNameMap, snapshot.teammateCountMap, '&');
   const repeatedOpponents = formatRepeatedPairs(playerNameMap, snapshot.opponentCountMap, 'vs');
+
+  const benchPlayers = Object.entries(snapshot.benchCountMap)
+    .map(([playerId, count]) => ({ player: playerNameMap.get(playerId) || 'removed', count }))
+    .sort((a, b) => b.count - a.count);
 
   const singlesPlayers = Object.entries(snapshot.singleCountMap)
     .map(([playerId, count]) => ({ player: playerNameMap.get(playerId) || 'removed', count }))
@@ -162,6 +168,7 @@ export function computeDiagnostics(
     benchFairnessScore,
     repeatedTeammates,
     repeatedOpponents,
+    benchPlayers,
     singlesPlayers,
     playersWithMultipleSingles,
     warnings,
