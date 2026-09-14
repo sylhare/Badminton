@@ -182,28 +182,30 @@ export function useSlotDragSwap({
       const gesture = gestureRef.current;
       if (!gesture) return;
 
-      const dx = event.clientX - gesture.startX;
-      const dy = event.clientY - gesture.startY;
-      const movedPast = Math.hypot(dx, dy) > moveTolerancePx;
-      if (movedPast) gesture.moved = true;
+      if (!gesture.dragging) {
+        const dx = event.clientX - gesture.startX;
+        const dy = event.clientY - gesture.startY;
+        const movedPast = Math.hypot(dx, dy) > moveTolerancePx;
+        if (movedPast) gesture.moved = true;
 
-      const action = decideMoveAction({
-        isTouch: gesture.pointerType === 'touch',
-        armed: gesture.armed,
-        dragging: gesture.dragging,
-        movedPast,
-      });
+        const action = decideMoveAction({
+          isTouch: gesture.pointerType === 'touch',
+          armed: gesture.armed,
+          dragging: gesture.dragging,
+          movedPast,
+        });
 
-      if (action === 'cancel') {
-        endGesture();
-        return;
-      }
-      if (action === 'ignore') return;
+        if (action === 'cancel') {
+          endGesture();
+          return;
+        }
+        if (action === 'ignore') return;
 
-      if (action === 'startDrag') {
-        gesture.dragging = true;
-        setDraggingAddr(gesture.source);
-        setGhostLabel(labelForSlot(gesture.source));
+        if (action === 'startDrag') {
+          gesture.dragging = true;
+          setDraggingAddr(gesture.source);
+          setGhostLabel(labelForSlot(gesture.source));
+        }
       }
 
       event.preventDefault();
@@ -220,8 +222,8 @@ export function useSlotDragSwap({
       const action = decideUpAction(gesture);
       if (action === 'swap') {
         justDraggedRef.current = true;
-        const target = slotFromPoint(event.clientX, event.clientY);
-        if (target && !sameSlot(target, gesture.source)) {
+        const target = resolveDropTarget(gesture.source, slotFromPoint(event.clientX, event.clientY));
+        if (target) {
           onSwapRef.current(gesture.source, target);
         }
       } else if (action === 'suppressClick') {

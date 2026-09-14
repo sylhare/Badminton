@@ -1,6 +1,8 @@
 import React from 'react';
 import { ArrowsLeftRight } from '@phosphor-icons/react';
 
+import { cx } from '../common/cx';
+
 import { MAX_COURTS, MIN_COURTS } from './courtCountUtils';
 
 interface CourtSettingsBarProps {
@@ -39,7 +41,7 @@ const CourtSettingsBar: React.FC<CourtSettingsBarProps> = ({
     {canRearrange && (
       <button
         onClick={onToggleEditMode}
-        className={`rearrange-button ${isEditMode ? 'active' : ''}`}
+        className={cx('rearrange-button', isEditMode && 'active')}
         data-testid="rearrange-button"
         aria-pressed={isEditMode}
         data-tooltip="Drag a player onto another to swap them between teams, courts and the bench — or tap two players."
@@ -51,4 +53,4 @@ const CourtSettingsBar: React.FC<CourtSettingsBarProps> = ({
   </div>
 );
 
-export default CourtSettingsBar;
+export default React.memo(CourtSettingsBar);

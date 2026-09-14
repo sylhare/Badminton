@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { Player } from '../../types';
+import { cx } from '../common/cx';
 
 import type { SlotBinding } from './edit/slotBinding';
 import { TeamPlayerList } from './team';
@@ -18,7 +19,7 @@ const BenchSection: React.FC<BenchSectionProps> = ({
   slotBinding,
   onViewBenchCounts,
 }) => (
-  <div className={`bench-section ${isAnimating ? 'animating-blur' : ''}`}>
+  <div className={cx('bench-section', isAnimating && 'animating-blur')}>
     <div className="bench-header">
       🪑 Bench ({benchedPlayers.length} player{benchedPlayers.length !== 1 ? 's' : ''})
     </div>
@@ -41,4 +42,4 @@ const BenchSection: React.FC<BenchSectionProps> = ({
   </div>
 );
 
-export default BenchSection;
+export default React.memo(BenchSection);

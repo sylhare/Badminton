@@ -9,31 +9,39 @@ import PairsGraph from '../components/graphs/PairsGraph';
 import LevelHistoryGraph from '../components/graphs/LevelHistoryGraph';
 import Footer from '../components/Footer';
 
-import { computeDiagnostics, getChipClass, getFairnessClass, getPlayerName, hasEntries } from './statsDiagnostics';
+import { computeDiagnostics, getChipClass, getFairnessClass, hasEntries } from './statsDiagnostics';
 import './StatsPage.css';
 
 function StatsPage(): React.ReactElement {
   const { players, isSmartEngineEnabled: isSmartEngine, engineState, engineName, engineDescription } = useAppState();
 
-  const basePath = '/';
+  const {
+    benchCountMap = {},
+    teammateCountMap = {},
+    opponentCountMap = {},
+    singleCountMap = {},
+    levelHistory = {},
+  } = engineState ?? {};
 
   const playerGenderMap = useMemo(
-    () => Object.fromEntries(players.filter(p => p.gender).map(p => [p.id, p.gender!])),
+    () => Object.fromEntries(players.flatMap(p => (p.gender ? [[p.id, p.gender]] : []))),
     [players],
   );
 
   const diagnostics = useMemo(() => computeDiagnostics(engineState, players), [engineState, players]);
   const hasData = diagnostics !== null;
 
-  const resolvePlayerName = useCallback((playerId: string) => getPlayerName(players, playerId), [players]);
+  const playerNameMap = useMemo(() => new Map(players.map(p => [p.id, p.name])), [players]);
+  const resolvePlayerName = useCallback(
+    (playerId: string) => playerNameMap.get(playerId) || 'removed',
+    [playerNameMap],
+  );
 
   const benchData = useMemo(() => (
-    engineState?.benchCountMap && hasEntries(engineState.benchCountMap)
-      ? Object.entries(engineState.benchCountMap)
-        .map(([playerId, count]) => ({ player: resolvePlayerName(playerId), count }))
-        .sort((a, b) => b.count - a.count)
-      : []
-  ), [engineState?.benchCountMap, resolvePlayerName]);
+    Object.entries(benchCountMap)
+      .map(([playerId, count]) => ({ player: resolvePlayerName(playerId), count }))
+      .sort((a, b) => b.count - a.count)
+  ), [benchCountMap, resolvePlayerName]);
 
   return (
     <div className="stats-page">
@@ -121,7 +129,7 @@ function StatsPage(): React.ReactElement {
                     <summary>View bench counts per player ({benchData.length})</summary>
                     <div style={{ padding: '16px' }}>
                       <BenchGraph
-                        benchData={engineState?.benchCountMap || {}}
+                        benchData={benchCountMap}
                         getPlayerName={resolvePlayerName}
                       />
                       <div className="player-chips" style={{ marginTop: '16px' }}>
@@ -139,10 +147,10 @@ function StatsPage(): React.ReactElement {
               {/* Repeated Teammates */}
               <div className="diagnostic-section">
                 <h3>👥 Teammate Connections</h3>
-                {engineState?.teammateCountMap && hasEntries(engineState.teammateCountMap) ? (
+                {hasEntries(teammateCountMap) ? (
                   <>
                     <TeammateGraph
-                      teammateData={engineState.teammateCountMap}
+                      teammateData={teammateCountMap}
                       getPlayerName={resolvePlayerName}
                       playerGender={isSmartEngine ? playerGenderMap : undefined}
                     />
@@ -163,10 +171,10 @@ function StatsPage(): React.ReactElement {
               {/* Repeated Opponents */}
               <div className="diagnostic-section">
                 <h3>⚔️ Opponent Matchups</h3>
-                {engineState?.opponentCountMap && hasEntries(engineState.opponentCountMap) ? (
+                {hasEntries(opponentCountMap) ? (
                   <>
                     <TeammateGraph
-                      teammateData={engineState.opponentCountMap}
+                      teammateData={opponentCountMap}
                       getPlayerName={resolvePlayerName}
                       variant="opponent"
                       playerGender={isSmartEngine ? playerGenderMap : undefined}
@@ -188,7 +196,7 @@ function StatsPage(): React.ReactElement {
               {/* Singles Distribution */}
               <div className="diagnostic-section">
                 <h3>🎯 Singles Matches</h3>
-                {engineState?.singleCountMap && hasEntries(engineState.singleCountMap) ? (
+                {hasEntries(singleCountMap) ? (
                   <>
                     <div className="singles-summary">
                       <span>{diagnostics.singlesPlayers.length} players have played singles</span>
@@ -199,7 +207,7 @@ function StatsPage(): React.ReactElement {
                       )}
                     </div>
                     <SinglesGraph
-                      singlesData={engineState.singleCountMap}
+                      singlesData={singleCountMap}
                       getPlayerName={resolvePlayerName}
                     />
                     <details className="collapsible-section">
@@ -218,11 +226,11 @@ function StatsPage(): React.ReactElement {
                 )}
               </div>
               {/* Level Progression - Smart Engine only */}
-              {isSmartEngine && engineState?.levelHistory && Object.keys(engineState.levelHistory).length > 0 && (
+              {isSmartEngine && hasEntries(levelHistory) && (
                 <div className="diagnostic-section">
                   <h3>📈 Level Progression</h3>
                   <LevelHistoryGraph
-                    levelHistory={engineState.levelHistory}
+                    levelHistory={levelHistory}
                     getPlayerName={resolvePlayerName}
                   />
                 </div>
@@ -242,7 +250,7 @@ function StatsPage(): React.ReactElement {
           <h2>📓 Analysis Notebooks</h2>
           <div className="notebooks-grid">
             <Link
-              to={`${basePath}algorithm`}
+              to="/algorithm"
               className="notebook-card"
               data-testid="algorithm-link"
             >
@@ -258,7 +266,7 @@ function StatsPage(): React.ReactElement {
             </Link>
 
             <Link
-              to={`${basePath}engine`}
+              to="/engine"
               className="notebook-card"
               data-testid="engine-link"
             >
@@ -274,7 +282,7 @@ function StatsPage(): React.ReactElement {
             </Link>
 
             <Link
-              to={`${basePath}level-tracker`}
+              to="/level-tracker"
               className="notebook-card"
               data-testid="level-tracker-link"
             >

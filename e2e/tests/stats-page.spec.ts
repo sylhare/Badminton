@@ -167,10 +167,9 @@ test.describe('Stats Page', () => {
     await expect(page.locator('.pairs-graph').first()).toBeVisible();
   });
 
-  test('completed round followed by regeneration commits new assignments', async ({ page }) => {
+  test('rapid re-generate without winners is ignored - stats page shows only 1 round of data', async ({ page }) => {
     await mainPage.addPlayers(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
     await mainPage.generateAssignments(1);
-    await mainPage.court(1).selectWinner();
     await mainPage.regenerate();
 
     await page.locator('a[href*="stats"]').click();

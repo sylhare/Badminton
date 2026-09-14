@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import type { Court, Player, SetScore, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -133,6 +133,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
     }
   };
 
+  const handleToggleEditMode = useCallback(
+    () => (isEditMode ? exitEditMode() : enterEditMode()),
+    [isEditMode, enterEditMode, exitEditMode],
+  );
+
   return (
     <div className={`court-assignments-container${isEditMode ? ' edit-mode' : ''}`}>
       {swap.dragGhost}
@@ -142,7 +147,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
         onCourtsBlur={handleCourtsBlur}
         canRearrange={canRearrange}
         isEditMode={isEditMode}
-        onToggleEditMode={() => (isEditMode ? exitEditMode() : enterEditMode())}
+        onToggleEditMode={handleToggleEditMode}
       />
 
       {isEditMode && (

@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { cx } from '../common/cx';
+
 interface AssignmentsEmptyStateProps {
   hasAssignments: boolean;
   hasPlayers: boolean;
@@ -13,8 +15,9 @@ const AssignmentsEmptyState: React.FC<AssignmentsEmptyStateProps> = ({
   isButtonShaking,
   onGenerate,
 }) => {
+  if (hasAssignments) return null;
+
   if (hasPlayers) {
-    if (hasAssignments) return null;
     return (
       <div className="no-assignments-hint">
         <p>
@@ -24,7 +27,7 @@ const AssignmentsEmptyState: React.FC<AssignmentsEmptyStateProps> = ({
         </p>
         <button
           onClick={onGenerate}
-          className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
+          className={cx('generate-button', isButtonShaking && 'button-shake')}
           data-testid="generate-assignments-button"
         >
           🎲 Generate Assignments
@@ -47,4 +50,4 @@ const AssignmentsEmptyState: React.FC<AssignmentsEmptyStateProps> = ({
   );
 };
 
-export default AssignmentsEmptyState;
+export default React.memo(AssignmentsEmptyState);

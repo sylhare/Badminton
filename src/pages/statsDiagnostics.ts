@@ -1,7 +1,7 @@
 import { countTier } from '../constants/graphColors';
 import type { CountTier } from '../constants/graphColors';
 import type { EngineSnapshot, Player } from '../types';
-import { sum } from '../utils/numberUtils';
+import { mean, sum } from '../utils/numberUtils';
 import { splitPairKey } from '../utils/playerUtils';
 
 /**
@@ -55,7 +55,11 @@ const CHIP_CLASS_BY_TIER: Record<CountTier, string> = {
 
 export const getChipClass = (count: number): string => CHIP_CLASS_BY_TIER[countTier(count)];
 
-export const hasEntries = (map: Record<string, number>): boolean => Object.keys(map).length > 0;
+export const hasEntries = (map?: Record<string, unknown> | null): boolean => {
+  if (!map) return false;
+  for (const _ in map) return true;
+  return false;
+};
 
 function formatRepeatedPairs(
   playerNameMap: Map<string, string>,
@@ -64,12 +68,12 @@ function formatRepeatedPairs(
 ): Array<{ pair: string; count: number }> {
   return Object.entries(map)
     .filter(([, count]) => count > 1)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
     .map(([pair, count]) => {
       const [id1, id2] = splitPairKey(pair);
       return { pair: `${playerNameMap.get(id1) || 'removed'} ${separator} ${playerNameMap.get(id2) || 'removed'}`, count };
-    })
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+    });
 }
 
 function addPairWarning(
@@ -91,14 +95,14 @@ export function computeDiagnostics(
 ): DiagnosticStats | null {
   if (!snapshot || players.length === 0) return null;
 
-  const hasAnyData = hasEntries(snapshot.benchCountMap) || hasEntries(snapshot.teammateCountMap) || 
-    hasEntries(snapshot.opponentCountMap) || hasEntries(snapshot.singleCountMap) || 
+  const hasAnyData = hasEntries(snapshot.benchCountMap) || hasEntries(snapshot.teammateCountMap) ||
+    hasEntries(snapshot.opponentCountMap) || hasEntries(snapshot.singleCountMap) ||
     hasEntries(snapshot.winCountMap) || hasEntries(snapshot.lossCountMap);
-  
+
   if (!hasAnyData) return null;
 
   const totalPlayers = players.length;
-  const totalRounds = snapshot.roundsPlayed ?? 1;
+  const totalRounds = snapshot.roundsPlayed || 1;
 
   const playerNameMap = new Map(players.map(p => [p.id, p.name]));
 
@@ -109,11 +113,9 @@ export function computeDiagnostics(
   const maxBenchCount = benchCounts.length > 0 ? Math.max(...benchCounts) : 0;
   const minBenchCount = benchCounts.length > 0 ? Math.min(...benchCounts) : 0;
 
-  const avgBench = benchCounts.length > 0
-    ? sum(benchCounts) / benchCounts.length
-    : 0;
+  const avgBench = mean(benchCounts);
   const benchVariance = benchCounts.length > 0
-    ? benchCounts.reduce((sum, c) => sum + Math.pow(c - avgBench, 2), 0) / benchCounts.length
+    ? mean(benchCounts.map(c => Math.pow(c - avgBench, 2)))
     : 0;
   const benchFairnessScore = Math.round(Math.sqrt(benchVariance) * 100) / 100;
 
