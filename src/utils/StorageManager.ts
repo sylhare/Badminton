@@ -2,6 +2,8 @@ import type { AppState, Court, CourtEngineState, EngineType, SetScore } from '..
 import { DEFAULT_TOURNAMENT_STATE } from '../tournament/types';
 import type { TournamentMatch, TournamentState } from '../tournament/types';
 
+import { pairKey, splitPairKey } from './playerUtils';
+
 interface StorageData {
   app: AppState;
   engine: CourtEngineState;
@@ -33,6 +35,9 @@ interface CompactEngineState {
   lh?: number[][];
   rp?: number;
 }
+
+/** The scalar per-player count maps, in the order they're packed into `ps`. */
+const SCALAR_FIELDS = ['benchCountMap', 'singleCountMap', 'winCountMap', 'lossCountMap'] as const;
 
 /** Tournament match: a saved single `score` becomes a one-entry `sets` array. */
 function migrateMatchSets(match: TournamentMatch): TournamentMatch {
@@ -262,43 +267,35 @@ class StorageManager {
   }
 
   private toCompact(state: CourtEngineState): CompactEngineState {
-    const allPlayerIds = new Set([
-      ...Object.keys(state.benchCountMap),
-      ...Object.keys(state.singleCountMap),
-      ...Object.keys(state.winCountMap),
-      ...Object.keys(state.lossCountMap),
-    ]);
+    const allPlayerIds = new Set(SCALAR_FIELDS.flatMap(field => Object.keys(state[field])));
 
     const pairKeys = [...new Set([...Object.keys(state.teammateCountMap), ...Object.keys(state.opponentCountMap)])];
     for (const key of pairKeys) {
-      const sep = key.indexOf('|');
-      if (sep !== -1) { allPlayerIds.add(key.slice(0, sep)); allPlayerIds.add(key.slice(sep + 1)); }
+      const [id1, id2] = splitPairKey(key);
+      allPlayerIds.add(id1);
+      allPlayerIds.add(id2);
     }
 
     const pi = [...allPlayerIds];
     const idToIndex = new Map(pi.map((id, i) => [id, i] as [string, number]));
 
-    const ps: Array<[number, number, number, number]> = pi.map(id => [
-      state.benchCountMap[id] ?? 0,
-      state.singleCountMap[id] ?? 0,
-      state.winCountMap[id] ?? 0,
-      state.lossCountMap[id] ?? 0,
-    ]);
+    const ps: Array<[number, number, number, number]> = pi.map(id =>
+      SCALAR_FIELDS.map(field => state[field][id] ?? 0) as [number, number, number, number],
+    );
 
     const pc: Record<string, [number, number]> = {};
     for (const key of pairKeys) {
-      const sep = key.indexOf('|');
-      if (sep === -1) continue;
-      const i = idToIndex.get(key.slice(0, sep))!;
-      const j = idToIndex.get(key.slice(sep + 1))!;
+      const [id1, id2] = splitPairKey(key);
+      const i = idToIndex.get(id1);
+      const j = idToIndex.get(id2);
+      if (i === undefined || j === undefined) continue;
       const newKey = i < j ? `${i}:${j}` : `${j}:${i}`;
       pc[newKey] = [state.teammateCountMap[key] ?? 0, state.opponentCountMap[key] ?? 0];
     }
 
-    let lh: number[][] | undefined;
-    if (state.levelHistory && Object.keys(state.levelHistory).length > 0) {
-      lh = pi.map(id => state.levelHistory![id] ?? []);
-    }
+    const lh = state.levelHistory && Object.keys(state.levelHistory).length > 0
+      ? pi.map(id => state.levelHistory?.[id] ?? [])
+      : undefined;
 
     return { v: 3, et: state.engineType, ts: state.savedAt, pi, ps, pc, lh, rp: state.roundsPlayed };
   }
@@ -333,7 +330,7 @@ class StorageManager {
       const id1 = pi[i];
       const id2 = pi[j];
       if (!id1 || !id2) continue;
-      const pKey = id1 < id2 ? `${id1}|${id2}` : `${id2}|${id1}`;
+      const pKey = pairKey(id1, id2);
       if (t) teammateCountMap[pKey] = t;
       if (o) opponentCountMap[pKey] = o;
     }
@@ -384,8 +381,9 @@ class StorageManager {
     const rebuild = (e: CompactEngineState): StorageData => ({ ...data, engine: e as unknown as CourtEngineState });
     const fits = (d: StorageData) => JSON.stringify(d).length <= StorageManager.MAX_SIZE;
 
-    if (engine.lh?.some(h => h.length > MAX_LEVEL_HISTORY_ENTRIES)) {
-      const pruned = rebuild({ ...engine, lh: engine.lh!.map(h => h.slice(-MAX_LEVEL_HISTORY_ENTRIES)) });
+    const { lh } = engine;
+    if (lh?.some(h => h.length > MAX_LEVEL_HISTORY_ENTRIES)) {
+      const pruned = rebuild({ ...engine, lh: lh.map(h => h.slice(-MAX_LEVEL_HISTORY_ENTRIES)) });
       if (fits(pruned)) return pruned;
     }
 

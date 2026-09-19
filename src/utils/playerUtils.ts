@@ -12,6 +12,9 @@ export function shuffleArray<T>(array: T[]): T[] {
 
 export const pairKey = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
+/** Inverse of {@link pairKey}: splits a pair key back into its two ids. */
+export const splitPairKey = (key: string): [string, string] => key.split('|') as [string, string];
+
 /** True when two player lists contain the same members (order ignored). */
 export function samePlayers(a: Player[], b: Player[]): boolean {
   if (a.length !== b.length) return false;
