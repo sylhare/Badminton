@@ -4,20 +4,14 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import ManualPlayerEntry from '../../../src/components/players/ManualPlayerEntry';
+import { useImageOcr } from '../../../src/hooks/useImageOcr';
 
-vi.mock('../../../src/components/modals/ImageUploadModal', () => ({
-  default: ({ isOpen, onClose, onPlayersAdded }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onPlayersAdded: (players: string[]) => void
-  }) => (
-    isOpen ? (
-      <div data-testid="mock-image-upload-modal">
-        <button onClick={onClose} data-testid="close-modal">Close</button>
-        <button onClick={() => onPlayersAdded(['Player1', 'Player2'])} data-testid="add-from-modal">Add Players</button>
-      </div>
-    ) : null
-  ),
+vi.mock('../../../src/hooks/useImageOcr', () => ({
+  useImageOcr: vi.fn(() => ({
+    isProcessing: false,
+    progress: 0,
+    processImage: vi.fn(),
+  })),
 }));
 
 describe('ManualPlayerEntry Component', () => {
@@ -129,43 +123,46 @@ describe('ManualPlayerEntry Component', () => {
   it('opens image upload modal when camera button is clicked', async () => {
     const { user } = setup();
 
-    expect(screen.queryByTestId('mock-image-upload-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('image-upload-modal')).not.toBeInTheDocument();
 
-    await act(async () => {
-      await user.click(screen.getByTestId('open-image-modal-button'));
-    });
+    await user.click(screen.getByTestId('open-image-modal-button'));
 
-    expect(screen.getByTestId('mock-image-upload-modal')).toBeInTheDocument();
+    expect(await screen.findByTestId('image-upload-modal')).toBeInTheDocument();
+    expect(screen.getByText('📸 Import Players from Image')).toBeInTheDocument();
   });
 
   it('closes image upload modal', async () => {
     const { user } = setup();
 
-    await act(async () => {
-      await user.click(screen.getByTestId('open-image-modal-button'));
-    });
+    await user.click(screen.getByTestId('open-image-modal-button'));
 
-    expect(screen.getByTestId('mock-image-upload-modal')).toBeInTheDocument();
+    expect(await screen.findByTestId('image-upload-modal')).toBeInTheDocument();
 
-    await act(async () => {
-      await user.click(screen.getByTestId('close-modal'));
-    });
+    await user.click(screen.getByRole('button', { name: 'Close' }));
 
-    expect(screen.queryByTestId('mock-image-upload-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('image-upload-modal')).not.toBeInTheDocument();
   });
 
   it('adds players from image upload modal', async () => {
+    let onPlayersExtracted: ((players: string[]) => void) | undefined;
+    vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted: callback }) => {
+      onPlayersExtracted = callback;
+      return { isProcessing: false, progress: 0, processImage: vi.fn() };
+    });
     const { user } = setup();
 
-    await act(async () => {
-      await user.click(screen.getByTestId('open-image-modal-button'));
-    });
+    await user.click(screen.getByTestId('open-image-modal-button'));
+    await screen.findByTestId('image-upload-modal');
 
-    await act(async () => {
-      await user.click(screen.getByTestId('add-from-modal'));
-    });
+    await act(async () => onPlayersExtracted!(['Player1', 'Player2']));
+
+    expect(screen.getByTestId('extracted-player-0')).toBeChecked();
+    expect(screen.getByTestId('extracted-player-1')).toBeChecked();
+
+    await user.click(screen.getByTestId('add-extracted-players-button'));
 
     expect(mockOnPlayersAdded).toHaveBeenCalledWith(['Player1', 'Player2']);
+    expect(screen.queryByTestId('image-upload-modal')).not.toBeInTheDocument();
   });
 
   it('updates button text based on player count', async () => {

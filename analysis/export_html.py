@@ -75,7 +75,7 @@ def main():
         sys.exit(1)
 
     print(f"\n✓ All notebooks exported to {html_dir}/")
-    print("\nNext step: run 'npm run prerender-notebooks' from the project root.")
+    print("\nStatic notebook exports are available in analysis/html/.")
 
 
 if __name__ == "__main__":

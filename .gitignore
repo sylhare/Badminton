@@ -84,6 +84,7 @@ eng.traineddata
 
 # Tesseract assets vendored from node_modules (regenerated on predev/prebuild)
 /public/tesseract/
+/public/analysis/
 
 # Playwright
 /test-results/

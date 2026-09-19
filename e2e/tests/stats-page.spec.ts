@@ -54,31 +54,14 @@ test.describe('Stats Page', () => {
       await expect(page.getByText('Start a Game →')).toBeVisible();
     });
 
-    await test.step('algorithm documentation link visible and navigates', async () => {
-      const algorithmLink = page.getByTestId('algorithm-link');
-      await expect(algorithmLink).toBeVisible();
-      await expect(algorithmLink).toContainText('Algorithm Documentation');
-      await algorithmLink.click();
-      await expect(page).toHaveURL(/\/algorithm/);
-      await expect(page.locator('h1')).toContainText('Algorithm Documentation');
-      await statsPage.goto();
-    });
-
-    await test.step('engine comparison link visible and navigates', async () => {
-      const engineLink = page.getByTestId('engine-link');
-      await expect(engineLink).toBeVisible();
-      await expect(engineLink).toContainText('Engine Comparison');
-      await engineLink.click();
-      await expect(page).toHaveURL(/\/engine/);
-      await expect(page.locator('h1')).toContainText('Engine Comparison');
-      await statsPage.goto();
-    });
-
-    await test.step('level tracker link navigates', async () => {
-      await page.getByTestId('level-tracker-link').click();
-      await expect(page).toHaveURL(/\/level-tracker/);
-      await expect(page.locator('h1')).toContainText('Level Tracker Analysis');
-      await statsPage.goto();
+    await test.step('single analysis link points to GitHub', async () => {
+      const analysisLink = page.getByTestId('analysis-link');
+      await expect(analysisLink).toBeVisible();
+      await expect(analysisLink).toContainText('Explore the Analysis');
+      await expect(page.locator('a[href="https://github.com/sylhare/Badminton/tree/main/analysis"]')).toHaveCount(1);
+      await expect(analysisLink).toHaveAttribute('href', 'https://github.com/sylhare/Badminton/tree/main/analysis');
+      await expect(analysisLink).toHaveAttribute('target', '_blank');
+      await expect(analysisLink).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
     await test.step('GitHub feedback link in footer', async () => {

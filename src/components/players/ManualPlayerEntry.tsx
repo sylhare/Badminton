@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { Camera, UserPlus } from '@phosphor-icons/react';
 
 import { parsePlayerInput } from '../../utils/playerUtils';
 import { useAnalytics } from '../../hooks/useAnalytics';
-import ImageUploadModal from '../modals/ImageUploadModal';
+
+const ImageUploadModal = lazy(() => import('../modals/ImageUploadModal'));
 
 interface ManualPlayerEntryProps {
   onPlayersAdded: (players: string[]) => void;
@@ -79,11 +80,15 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
         </p>
       )}
 
-      <ImageUploadModal
-        isOpen={isImageModalOpen}
-        onClose={() => setIsImageModalOpen(false)}
-        onPlayersAdded={handleImagePlayersAdded}
-      />
+      {isImageModalOpen && (
+        <Suspense fallback={null}>
+          <ImageUploadModal
+            isOpen
+            onClose={() => setIsImageModalOpen(false)}
+            onPlayersAdded={handleImagePlayersAdded}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

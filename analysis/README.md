@@ -163,10 +163,4 @@ cd analysis
 uv run export-html
 ```
 
-Then prerender for the main app (from project root):
-
-```bash
-npx tsx script/prerender-notebooks.ts
-```
-
-This generates static HTML files in `public/analysis/` that render without JavaScript execution.
+Generated analysis HTML is not checked in. Analysis notebooks, source data, and generated artifacts are available in this repository's `analysis/` directory and on GitHub.

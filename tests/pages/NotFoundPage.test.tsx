@@ -38,4 +38,10 @@ describe('NotFoundPage', () => {
     renderNotFound('/tournaments-extra');
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('404');
   });
+
+  it.each(['/algorithm', '/engine', '/level-tracker'])('renders 404 for removed notebook path %s', path => {
+    renderNotFound(path);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('404');
+    expect(screen.queryByTestId('tournament-page')).not.toBeInTheDocument();
+  });
 });
