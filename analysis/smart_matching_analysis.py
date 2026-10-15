@@ -14,7 +14,43 @@ def _():
     import polars as pl
     from plotly.subplots import make_subplots
 
-    return Path, go, json, make_subplots, mo, pl
+    from utils.plotting import add_jitter
+    from utils.analysis import (
+        build_level_heat_matrix,
+        build_repeat_matrix,
+        compute_danger_zone_pct,
+        compute_differential_buckets,
+        compute_gender_matchup_distribution,
+        compute_partnership_rate_buckets,
+        compute_repeat_counts,
+        compute_team_stats,
+        compute_variety_distribution,
+        compute_zero_repeat_pct,
+        extract_max_player_count,
+        player_labels,
+    )
+
+    return (
+        Path,
+        add_jitter,
+        build_level_heat_matrix,
+        build_repeat_matrix,
+        compute_danger_zone_pct,
+        compute_differential_buckets,
+        compute_gender_matchup_distribution,
+        compute_partnership_rate_buckets,
+        compute_repeat_counts,
+        compute_team_stats,
+        compute_variety_distribution,
+        compute_zero_repeat_pct,
+        extract_max_player_count,
+        go,
+        json,
+        make_subplots,
+        mo,
+        pl,
+        player_labels,
+    )
 
 
 @app.cell
@@ -111,13 +147,19 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, make_subplots, mo, pl, sa_summary, sl2_summary, sl_summary):
-    _n_sa = sa_summary.height
-    _n_sl = sl_summary.height
-    _n_sl2 = sl2_summary.height
-    _sa_zero_pct = sa_summary.filter(pl.col("repeatPairCount") == 0).height / _n_sa * 100
-    _sl_zero_pct = sl_summary.filter(pl.col("repeatPairCount") == 0).height / _n_sl * 100
-    _sl2_zero_pct = sl2_summary.filter(pl.col("repeatPairCount") == 0).height / _n_sl2 * 100
+def _(
+    compute_repeat_counts,
+    compute_zero_repeat_pct,
+    go,
+    make_subplots,
+    mo,
+    sa_summary,
+    sl2_summary,
+    sl_summary,
+):
+    _sa_zero_pct = compute_zero_repeat_pct(sa_summary)
+    _sl_zero_pct = compute_zero_repeat_pct(sl_summary)
+    _sl2_zero_pct = compute_zero_repeat_pct(sl2_summary)
 
     _fig = make_subplots(
         rows=1,
@@ -143,12 +185,9 @@ def _(go, make_subplots, mo, pl, sa_summary, sl2_summary, sl_summary):
         sl2_summary["repeatPairCount"].max(),
     )
     _buckets = list(range(0, _max_repeats + 1))
-    _sa_counts = sa_summary["repeatPairCount"].value_counts().sort("repeatPairCount")
-    _sl_counts = sl_summary["repeatPairCount"].value_counts().sort("repeatPairCount")
-    _sl2_counts = sl2_summary["repeatPairCount"].value_counts().sort("repeatPairCount")
-    _sa_map = dict(zip(_sa_counts["repeatPairCount"].to_list(), _sa_counts["count"].to_list()))
-    _sl_map = dict(zip(_sl_counts["repeatPairCount"].to_list(), _sl_counts["count"].to_list()))
-    _sl2_map = dict(zip(_sl2_counts["repeatPairCount"].to_list(), _sl2_counts["count"].to_list()))
+    _sa_map = compute_repeat_counts(sa_summary)
+    _sl_map = compute_repeat_counts(sl_summary)
+    _sl2_map = compute_repeat_counts(sl2_summary)
 
     _fig.add_trace(
         go.Bar(
@@ -427,7 +466,15 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, make_subplots, mo, sa_match, sl2_match, sl_match):
+def _(
+    compute_differential_buckets,
+    go,
+    make_subplots,
+    mo,
+    sa_match,
+    sl2_match,
+    sl_match,
+):
     _sa_diff = sa_match["strengthDifferential"].to_list()
     _sl_diff = sl_match["strengthDifferential"].to_list()
     _sl2_diff = sl2_match["strengthDifferential"].to_list()
@@ -435,19 +482,9 @@ def _(go, make_subplots, mo, sa_match, sl2_match, sl_match):
     _sl_mean = sl_match["strengthDifferential"].mean()
     _sl2_mean = sl2_match["strengthDifferential"].mean()
 
-    def _buckets(diff_list):
-        n = len(diff_list)
-        return [
-            diff_list.count(0) / n * 100,
-            diff_list.count(1) / n * 100,
-            diff_list.count(2) / n * 100,
-            sum(1 for x in diff_list if x >= 3) / n * 100,
-        ]
-
-    _labels = ["diff = 0", "diff = 1", "diff = 2", "diff ≥ 3"]
-    _sa_pct = _buckets(_sa_diff)
-    _sl_pct = _buckets(_sl_diff)
-    _sl2_pct = _buckets(_sl2_diff)
+    _labels, _sa_pct = compute_differential_buckets(_sa_diff)
+    _, _sl_pct = compute_differential_buckets(_sl_diff)
+    _, _sl2_pct = compute_differential_buckets(_sl2_diff)
 
     _fig = make_subplots(
         rows=1,
@@ -561,42 +598,18 @@ def _(mo):
 
 
 @app.cell
-def _(pl, sa_match, sl2_match, sl_match):
-    def _team_stats(match_df):
-        _t1 = match_df.select([
-            pl.col("team1IntraGap").alias("intra_gap"),
-            pl.col("team1AvgLevel").alias("team_avg"),
-            pl.col("team2AvgLevel").alias("opp_avg"),
-            (pl.col("team2AvgLevel") - pl.col("team1AvgLevel")).alias("opp_advantage"),
-        ])
-        _t2 = match_df.select([
-            pl.col("team2IntraGap").alias("intra_gap"),
-            pl.col("team2AvgLevel").alias("team_avg"),
-            pl.col("team1AvgLevel").alias("opp_avg"),
-            (pl.col("team1AvgLevel") - pl.col("team2AvgLevel")).alias("opp_advantage"),
-        ])
-        return pl.concat([_t1, _t2])
-
-    sa_teams = _team_stats(sa_match)
-    sl_teams = _team_stats(sl_match)
-    sl2_teams = _team_stats(sl2_match)
+def _(compute_team_stats, sa_match, sl2_match, sl_match):
+    sa_teams = compute_team_stats(sa_match)
+    sl_teams = compute_team_stats(sl_match)
+    sl2_teams = compute_team_stats(sl2_match)
     return sa_teams, sl2_teams, sl_teams
 
 
 @app.cell(hide_code=True)
-def _(go, make_subplots, mo, pl, sa_teams, sl2_teams, sl_teams):
-    _GAP = 40
-    _ADV = 20
-
-    def _danger_pct(teams):
-        _bad = teams.filter(
-            (pl.col("intra_gap") >= _GAP) | (pl.col("opp_advantage").abs() >= _ADV)
-        )
-        return _bad.height / teams.height * 100
-
-    _sa_d = _danger_pct(sa_teams)
-    _sl_d = _danger_pct(sl_teams)
-    _sl2_d = _danger_pct(sl2_teams)
+def _(compute_danger_zone_pct, go, make_subplots, mo, sa_teams, sl2_teams, sl_teams):
+    _sa_d = compute_danger_zone_pct(sa_teams)
+    _sl_d = compute_danger_zone_pct(sl_teams)
+    _sl2_d = compute_danger_zone_pct(sl2_teams)
 
     _fig = make_subplots(
         rows=1,
@@ -680,27 +693,21 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, make_subplots, mo, pl, sa_teams, sl2_teams, sl_teams):
+def _(
+    build_level_heat_matrix,
+    go,
+    make_subplots,
+    mo,
+    sa_teams,
+    sl2_teams,
+    sl_teams,
+):
     _avgs = [20, 30, 40, 50, 60, 70, 80, 90, 100]
     _labels = [str(a) for a in _avgs]
 
-    def _heat_matrix(teams):
-        _df = teams.with_columns([
-            pl.col("team_avg").cast(pl.Int32).alias("ta"),
-            pl.col("opp_avg").cast(pl.Int32).alias("oa"),
-        ])
-        _counts = _df.group_by(["ta", "oa"]).agg(pl.len().alias("n"))
-        _mat = [[0] * 9 for _ in range(9)]
-        for _row in _counts.iter_rows(named=True):
-            if _row["ta"] in _avgs and _row["oa"] in _avgs:
-                _xi = _avgs.index(_row["ta"])
-                _yi = _avgs.index(_row["oa"])
-                _mat[_yi][_xi] = _row["n"]
-        return _mat
-
-    _sa_mat = _heat_matrix(sa_teams)
-    _sl_mat = _heat_matrix(sl_teams)
-    _sl2_mat = _heat_matrix(sl2_teams)
+    _sa_mat = build_level_heat_matrix(sa_teams, _avgs)
+    _sl_mat = build_level_heat_matrix(sl_teams, _avgs)
+    _sl2_mat = build_level_heat_matrix(sl2_teams, _avgs)
 
     _fig = make_subplots(
         rows=1,
@@ -778,15 +785,10 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, mo, sa_teams, sl2_teams, sl_teams):
-    import random as _rnd
-
+def _(add_jitter, go, mo, sa_teams, sl2_teams, sl_teams):
     _sa_s = sa_teams.sample(min(3000, sa_teams.height), seed=42)
     _sl_s = sl_teams.sample(min(3000, sl_teams.height), seed=99)
     _sl2_s = sl2_teams.sample(min(3000, sl2_teams.height), seed=123)
-
-    _rnd.seed(42)
-    _jitter = lambda vals, s=1.2: [v + _rnd.gauss(0, s) for v in vals]
 
     _fig = go.Figure()
 
@@ -804,22 +806,22 @@ def _(go, mo, sa_teams, sl2_teams, sl_teams):
                         bgcolor="rgba(255,255,255,0.75)", borderpad=3)
 
     _fig.add_trace(go.Scatter(
-        x=_jitter(_sa_s["intra_gap"].to_list()),
-        y=_jitter(_sa_s["opp_advantage"].to_list()),
+        x=add_jitter(_sa_s["intra_gap"].to_list(), seed=42),
+        y=add_jitter(_sa_s["opp_advantage"].to_list(), seed=43),
         mode="markers",
         name="SA",
         marker=dict(color="#54A24B", opacity=0.25, size=4, symbol="circle"),
     ))
     _fig.add_trace(go.Scatter(
-        x=_jitter(_sl_s["intra_gap"].to_list()),
-        y=_jitter(_sl_s["opp_advantage"].to_list()),
+        x=add_jitter(_sl_s["intra_gap"].to_list(), seed=44),
+        y=add_jitter(_sl_s["opp_advantage"].to_list(), seed=45),
         mode="markers",
         name="SL",
         marker=dict(color="#4C78A8", opacity=0.25, size=5, symbol="diamond"),
     ))
     _fig.add_trace(go.Scatter(
-        x=_jitter(_sl2_s["intra_gap"].to_list()),
-        y=_jitter(_sl2_s["opp_advantage"].to_list()),
+        x=add_jitter(_sl2_s["intra_gap"].to_list(), seed=46),
+        y=add_jitter(_sl2_s["opp_advantage"].to_list(), seed=47),
         mode="markers",
         name="SL2",
         marker=dict(color="#F58518", opacity=0.25, size=5, symbol="triangle-up"),
@@ -865,48 +867,10 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, mo, sa_match, sl2_match, sl_match):
-    _SEX = ['M', 'M', 'F', 'M', 'F']
-
-    def _player_sex(pid: str) -> str:
-        idx = int(pid[1:]) - 1
-        return _SEX[idx % len(_SEX)]
-
-    def _team_type(ids: list[str]) -> str:
-        sexes = [_player_sex(p) for p in ids]
-        known = [s for s in sexes if s in ('M', 'F')]
-        if len(known) < 2:
-            return 'U'
-        if all(s == 'M' for s in known):
-            return 'MM'
-        if all(s == 'F' for s in known):
-            return 'FF'
-        return 'MF'
-
-    def _matchup_stats(match_df):
-        counts = {'MM vs FF': 0, 'MF vs MF': 0, 'MF vs MM': 0, 'MF vs FF': 0, 'MM vs MM': 0, 'FF vs FF': 0}
-        for row in match_df.iter_rows(named=True):
-            t1 = _team_type(row['team1Players'].split('|'))
-            t2 = _team_type(row['team2Players'].split('|'))
-            pair = tuple(sorted([t1, t2]))
-            if pair == ('FF', 'MM'):
-                counts['MM vs FF'] += 1
-            elif pair == ('MF', 'MF'):
-                counts['MF vs MF'] += 1
-            elif pair == ('MF', 'MM'):
-                counts['MF vs MM'] += 1
-            elif pair == ('FF', 'MF'):
-                counts['MF vs FF'] += 1
-            elif pair == ('MM', 'MM'):
-                counts['MM vs MM'] += 1
-            elif pair == ('FF', 'FF'):
-                counts['FF vs FF'] += 1
-        total = sum(counts.values())
-        return {k: v / total * 100 for k, v in counts.items()}
-
-    _sa_pct = _matchup_stats(sa_match)
-    _sl_pct = _matchup_stats(sl_match)
-    _sl2_pct = _matchup_stats(sl2_match)
+def _(compute_gender_matchup_distribution, go, mo, sa_match, sl2_match, sl_match):
+    _sa_pct = compute_gender_matchup_distribution(sa_match)
+    _sl_pct = compute_gender_matchup_distribution(sl_match)
+    _sl2_pct = compute_gender_matchup_distribution(sl2_match)
 
     _labels = ['MF vs MF', 'MF vs MM', 'MF vs FF', 'MM vs MM', 'FF vs FF', 'MM vs FF']
     _colors = ['#54A24B', '#7fb3d3', '#b3d9b3', '#aaaacc', '#f5c1a5', '#e45756']
@@ -955,32 +919,23 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, make_subplots, mo, sa_pairs, sl2_pairs, sl_pairs):
-    def _pidx(pid: str) -> int:
-        return int(pid[1:]) - 1
+def _(
+    build_repeat_matrix,
+    extract_max_player_count,
+    go,
+    make_subplots,
+    mo,
+    player_labels,
+    sa_pairs,
+    sl2_pairs,
+    sl_pairs,
+):
+    _n = extract_max_player_count([sa_pairs, sl2_pairs])
+    _lbls = player_labels(_n)
 
-    _pids: set = set()
-    for _r in sa_pairs.iter_rows(named=True):
-        _pids.update(_r["pairId"].split("|"))
-    for _r in sl2_pairs.iter_rows(named=True):
-        _pids.update(_r["pairId"].split("|"))
-    _n = max(_pidx(p) for p in _pids) + 1
-    _lbls = [f"P{i + 1}" for i in range(_n)]
-
-    def _pmat(pairs_df, n):
-        mat = [[0] * n for _ in range(n)]
-        for row in pairs_df.iter_rows(named=True):
-            ps = row["pairId"].split("|")
-            if len(ps) == 2:
-                i, j = _pidx(ps[0]), _pidx(ps[1])
-                if i < n and j < n:
-                    mat[i][j] = row["asTeammate"]
-                    mat[j][i] = row["asTeammate"]
-        return mat
-
-    _sa_mat = _pmat(sa_pairs, _n)
-    _sl_mat = _pmat(sl_pairs, _n)
-    _sl2_mat = _pmat(sl2_pairs, _n)
+    _sa_mat = build_repeat_matrix(sa_pairs, _n)
+    _sl_mat = build_repeat_matrix(sl_pairs, _n)
+    _sl2_mat = build_repeat_matrix(sl2_pairs, _n)
 
     _fig = make_subplots(
         rows=1,
@@ -1062,27 +1017,22 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(go, mo, sa_config, sa_pairs, sl2_pairs, sl_pairs):
+def _(
+    compute_partnership_rate_buckets,
+    go,
+    mo,
+    sa_config,
+    sa_pairs,
+    sl2_pairs,
+    sl_pairs,
+):
     _runs = sa_config.get("runs", 50)
     _n_counts = len(sa_config.get("playerCounts", [20]))
     _total_sims = _runs * _n_counts
 
-    def _rate_buckets(pairs_df):
-        rates = [v / _total_sims for v in pairs_df["asTeammate"].to_list()]
-        n = len(rates)
-        labels = ["< 0.25×", "0.25–0.50×", "0.50–0.75× (optimal)", "0.75–1.00×", "≥ 1.00×"]
-        pcts = [
-            sum(1 for r in rates if r < 0.25) / n * 100,
-            sum(1 for r in rates if 0.25 <= r < 0.50) / n * 100,
-            sum(1 for r in rates if 0.50 <= r < 0.75) / n * 100,
-            sum(1 for r in rates if 0.75 <= r < 1.00) / n * 100,
-            sum(1 for r in rates if r >= 1.00) / n * 100,
-        ]
-        return labels, pcts
-
-    _labels, _sa_pcts = _rate_buckets(sa_pairs)
-    _, _sl_pcts = _rate_buckets(sl_pairs)
-    _, _sl2_pcts = _rate_buckets(sl2_pairs)
+    _labels, _sa_pcts = compute_partnership_rate_buckets(sa_pairs, _total_sims)
+    _, _sl_pcts = compute_partnership_rate_buckets(sl_pairs, _total_sims)
+    _, _sl2_pcts = compute_partnership_rate_buckets(sl2_pairs, _total_sims)
 
     _fig = go.Figure()
     _fig.add_trace(go.Bar(x=_labels, y=_sa_pcts, name="SA", marker_color="#54A24B", opacity=0.85))
@@ -1137,31 +1087,10 @@ A good engine keeps the distribution concentrated at 2–3 so every round feels 
 
 
 @app.cell(hide_code=True)
-def _(go, mo, pl, sa_match, sl2_match, sl_match):
-    def _variety_dist(match_df):
-        from collections import Counter
-        scores = []
-        for sid in match_df["simulationId"].unique().sort().to_list():
-            sim = match_df.filter(pl.col("simulationId") == sid)
-            hist: dict = {}
-            for row in sim.iter_rows(named=True):
-                court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
-                for p in court:
-                    hist.setdefault(p, []).append((row["roundIndex"], frozenset(court - {p})))
-            for rounds in hist.values():
-                rounds.sort()
-                for i in range(1, len(rounds)):
-                    scores.append(len(rounds[i][1] - rounds[i - 1][1]))
-        n = len(scores)
-        cnt = Counter(scores)
-        mk = max(cnt) if cnt else 0
-        pcts = [cnt.get(k, 0) / n * 100 for k in range(mk + 1)]
-        avg = sum(k * cnt.get(k, 0) for k in range(mk + 1)) / n if n else 0.0
-        return pcts, avg
-
-    _sa_p, _sa_avg = _variety_dist(sa_match)
-    _sl_p, _sl_avg = _variety_dist(sl_match)
-    _sl2_p, _sl2_avg = _variety_dist(sl2_match)
+def _(compute_variety_distribution, go, mo, sa_match, sl2_match, sl_match):
+    _sa_p, _sa_avg = compute_variety_distribution(sa_match)
+    _sl_p, _sl_avg = compute_variety_distribution(sl_match)
+    _sl2_p, _sl2_avg = compute_variety_distribution(sl2_match)
 
     _mb = max(len(_sa_p), len(_sl_p), len(_sl2_p)) - 1
     _sa_p += [0.0] * (_mb + 1 - len(_sa_p))

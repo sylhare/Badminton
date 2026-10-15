@@ -12,7 +12,7 @@ def _():
     import marimo as mo
     import polars as pl
 
-    from utils.plotting import setup_matplotlib, fig_to_image
+    from utils.plotting import setup_matplotlib, fig_to_image, create_radar_chart
     from utils.config_metrics import (
         ALGO_NAMES,
         ALGO_COLORS,
@@ -32,9 +32,11 @@ def _():
         aggregate_bench_stats,
         aggregate_by_player_count,
         compute_balance_metrics,
+        compute_court_freshness_scores,
+        compute_court_cooccurrences,
     )
     return (
-        Path, fig_to_image, json, math, mo, pl, setup_matplotlib,
+        Path, fig_to_image, create_radar_chart, json, math, mo, pl, setup_matplotlib,
         ALGO_NAMES, ALGO_COLORS,
         get_time_per_round, get_balance_pct, get_bench_fairness,
         get_singles_fairness, get_bias_score, build_configs_by_label,
@@ -42,6 +44,7 @@ def _():
         compute_match_session_frequency,
         build_repeat_matrix, aggregate_bench_stats, aggregate_by_player_count,
         compute_balance_metrics,
+        compute_court_freshness_scores, compute_court_cooccurrences,
     )
 
 @app.cell
@@ -261,8 +264,7 @@ def _(algo_metrics, mo, pl):
     return
 
 @app.cell
-def _(ALGO_COLORS, algo_metrics, fig_to_image, mo, np, plt):
-    # Relative metrics: normalised across algorithms
+def _(ALGO_COLORS, algo_metrics, create_radar_chart, fig_to_image, mo):
     _avg_repeats = [m["avg_repeat_pairs"] for m in algo_metrics]
     _max_repeats = max(_avg_repeats) if max(_avg_repeats) > 0 else 1
     _repeat_score = [100 * (1 - r / _max_repeats) for r in _avg_repeats]
@@ -271,38 +273,23 @@ def _(ALGO_COLORS, algo_metrics, fig_to_image, mo, np, plt):
     _max_time = max(_times)
     _speed = [100 * (1 - t / _max_time) if _max_time > 0 else 100 for t in _times]
     _random_idx = next(i for i, m in enumerate(algo_metrics) if m["label"] == "Random Baseline")
-    _speed[_random_idx] = 100  # Random is instant
+    _speed[_random_idx] = 100
 
     _has_singles = any(m["singles_fairness"] is not None for m in algo_metrics)
     if _has_singles:
         _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Win\nParity", "Singles\nFairness", "Diversity"]
     else:
         _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Win\nParity", "Diversity"]
-    _n_cats = len(_categories)
-    _angles = [n / float(_n_cats) * 2 * np.pi for n in range(_n_cats)]
-    _angles += _angles[:1]
 
-    _fig, _ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(projection='polar'))
-
+    _series_data = []
     for _i, (_m, _color) in enumerate(zip(algo_metrics, ALGO_COLORS)):
         if _has_singles:
             _values = [_repeat_score[_i], _speed[_i], _m["bench_fairness"], _m["balance_pct"], _m["singles_fairness"] or 0, _m["diversity_score"]]
         else:
             _values = [_repeat_score[_i], _speed[_i], _m["bench_fairness"], _m["balance_pct"], _m["diversity_score"]]
-        _values += _values[:1]
+        _series_data.append((_m["label"], _values, _color))
 
-        _ax.plot(_angles, _values, '-', linewidth=1.5, label=_m["label"], color=_color)
-        _ax.fill(_angles, _values, alpha=0.15, color=_color)
-
-    _ax.set_xticks(_angles[:-1])
-    _ax.set_xticklabels(_categories, fontsize=8)
-    _ax.set_ylim(0, 105)
-    _ax.set_yticks([20, 40, 60, 80, 100])
-    _ax.set_yticklabels(["20", "40", "60", "80", "100"], fontsize=6)
-    _ax.spines['polar'].set_visible(False)
-    _ax.set_title("Algorithm Comparison", fontsize=10, fontweight="bold", y=1.05)
-    _ax.legend(loc='upper left', bbox_to_anchor=(-0.3, 1.15), fontsize=7, frameon=False)
-
+    _fig, _ = create_radar_chart(_categories, _series_data)
     _fig.tight_layout()
     mo.vstack([
         mo.hstack([mo.image(fig_to_image(_fig))], justify="center"),
@@ -680,53 +667,28 @@ def _(compute_teammate_diversity, data_dir, pl):
     )
 
 @app.cell
-def _(cg_match_events_div, mc_match_events_div, pl, random_match_events_div, sa_match_events_div, sl_match_events_div):
-    """Shared computation of court-group freshness and co-occurrence distributions.
-    Results are consumed by both the chart cells and algo_metrics to avoid duplication."""
-    def _court_freshness_fn(match_df):
-        scores = []
-        sim_ids = match_df.get_column("simulationId").unique().sort().to_list()
-        for sid in sim_ids:
-            sim = match_df.filter(pl.col("simulationId") == sid)
-            hist: dict = {}
-            for row in sim.iter_rows(named=True):
-                court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
-                for p in court:
-                    hist.setdefault(p, []).append((row["roundIndex"], frozenset(court - {p})))
-            for rounds in hist.values():
-                rounds.sort(key=lambda x: x[0])
-                for i in range(1, len(rounds)):
-                    scores.append(len(rounds[i][1] - rounds[i - 1][1]))
-        return scores
-
-    def _cooccurrence_fn(match_df):
-        all_counts = []
-        sim_ids = match_df.get_column("simulationId").unique().sort().to_list()
-        for sid in sim_ids:
-            sim = match_df.filter(pl.col("simulationId") == sid)
-            pair_counts: dict = {}
-            for row in sim.iter_rows(named=True):
-                court = sorted(set(row["team1Players"].split("|") + row["team2Players"].split("|")))
-                for i in range(len(court)):
-                    for j in range(i + 1, len(court)):
-                        key = f"{court[i]}|{court[j]}"
-                        pair_counts[key] = pair_counts.get(key, 0) + 1
-            all_counts.extend(pair_counts.values())
-        return all_counts
-
+def _(
+    cg_match_events_div,
+    compute_court_cooccurrences,
+    compute_court_freshness_scores,
+    mc_match_events_div,
+    random_match_events_div,
+    sa_match_events_div,
+    sl_match_events_div,
+):
     freshness_by_algo = {
-        "Random Baseline": _court_freshness_fn(random_match_events_div),
-        "Monte Carlo": _court_freshness_fn(mc_match_events_div),
-        "Simulated Annealing": _court_freshness_fn(sa_match_events_div),
-        "Conflict Graph": _court_freshness_fn(cg_match_events_div),
-        "Smart Matching": _court_freshness_fn(sl_match_events_div),
+        "Random Baseline": compute_court_freshness_scores(random_match_events_div),
+        "Monte Carlo": compute_court_freshness_scores(mc_match_events_div),
+        "Simulated Annealing": compute_court_freshness_scores(sa_match_events_div),
+        "Conflict Graph": compute_court_freshness_scores(cg_match_events_div),
+        "Smart Matching": compute_court_freshness_scores(sl_match_events_div),
     }
     cooc_by_algo = {
-        "Random Baseline": _cooccurrence_fn(random_match_events_div),
-        "Monte Carlo": _cooccurrence_fn(mc_match_events_div),
-        "Simulated Annealing": _cooccurrence_fn(sa_match_events_div),
-        "Conflict Graph": _cooccurrence_fn(cg_match_events_div),
-        "Smart Matching": _cooccurrence_fn(sl_match_events_div),
+        "Random Baseline": compute_court_cooccurrences(random_match_events_div),
+        "Monte Carlo": compute_court_cooccurrences(mc_match_events_div),
+        "Simulated Annealing": compute_court_cooccurrences(sa_match_events_div),
+        "Conflict Graph": compute_court_cooccurrences(cg_match_events_div),
+        "Smart Matching": compute_court_cooccurrences(sl_match_events_div),
     }
     return freshness_by_algo, cooc_by_algo
 
