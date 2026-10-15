@@ -39,7 +39,7 @@ export interface Court {
 
 export type TeamNumber = 1 | 2;
 export type WinnerSelection = TeamNumber | undefined;
-export type EngineType = 'sa' | 'sl';
+export type EngineType = 'sa' | 'sl' | 'sl2';
 
 /** A decided game the level tracker should replay: the court result plus its Elo weighting. */
 export interface ScoredGame {

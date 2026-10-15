@@ -25,6 +25,7 @@ import type { EngineType, ICourtAssignmentEngine } from '../types';
 
 import { engineSL } from './SmartEngine';
 import { engineSA } from './SimulatedAnnealingEngine';
+import { engineSL2 } from './Smart2Engine';
 
 export type { EngineType };
 
@@ -38,6 +39,8 @@ const getEngineInstance = (type: EngineType): ICourtAssignmentEngine => {
   switch (type) {
     case 'sl':
       return engineSL;
+    case 'sl2':
+      return engineSL2;
     case 'sa':
     default:
       return engineSA;
