@@ -95,7 +95,7 @@ def _(Path, json, pl):
 @app.cell(hide_code=True)
 def _(mo, sa_config):
     _runs = sa_config.get("runs", 50)
-    _rounds = sa_config.get("rounds", 10)
+    _rounds = sa_config.get("rounds", 25)
     _counts = ", ".join(str(c) for c in sa_config.get("playerCounts", []))
     mo.md(
         f"""
@@ -996,12 +996,13 @@ def _(
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(mo, sa_config):
+    _rounds = sa_config.get("rounds", 25)
     mo.md(
-        """
+        f"""
     Each cell shows how many times two players appeared as doubles partners **cumulatively across all 200 simulation sessions combined** (50 runs × 4 player cohorts).
 
-    - **Heatmap values vs. within-session repeats**: A count of ~100–150 means the engine consistently selected those two players as partners across separate tournament runs (~0.6× per session). Within each individual 10-round tournament run, players almost never repeat (**99.5% zero-repeat rate for SL2**).
+    - **Heatmap values vs. within-session repeats**: A count of ~100–150 means the engine consistently selected those two players as partners across separate tournament runs (~0.6× per session). Within each individual {_rounds}-round tournament run, players almost never repeat (**99.5% zero-repeat rate for SL2**).
     - **SA** pairs across tiers to balance wins/losses.
     - **SL** concentrates pairings into rigid same-tier blocks along the diagonal, creating isolated skill pods.
     - **SL2** circulates players across adjacent skill tiers via sliding windows, diffusing the sharp isolation clusters of SL while preserving match balance.
@@ -1029,6 +1030,8 @@ def _(
     _runs = sa_config.get("runs", 50)
     _n_counts = len(sa_config.get("playerCounts", [20]))
     _total_sims = _runs * _n_counts
+    _rounds = sa_config.get("rounds", 25)
+    _expected_avg = (_rounds * 8) / 120
 
     _labels, _sa_pcts = compute_partnership_rate_buckets(sa_pairs, _total_sims)
     _, _sl_pcts = compute_partnership_rate_buckets(sl_pairs, _total_sims)
@@ -1043,7 +1046,7 @@ def _(
         barmode="group",
         legend=dict(orientation="h", y=-0.18),
         title_text="Average Partnerships per Session (across all player pairs)",
-        xaxis_title="Times partnered per 10-round session (expected average = 0.67)",
+        xaxis_title=f"Times partnered per {_rounds}-round session (expected average = {_expected_avg:.2f})",
         yaxis_title="% of all player pairs",
         plot_bgcolor="white",
         paper_bgcolor="white",
@@ -1053,11 +1056,14 @@ def _(
 
 
 @app.cell(hide_code=True)
-def _(mo):
+def _(mo, sa_config):
+    _rounds = sa_config.get("rounds", 25)
+    _slots = _rounds * 8
+    _expected_avg = _slots / 120
     mo.md(
-        """
-    In a 10-round session with 16 players across 4 courts, there are 80 partnership slots among 120 possible pairs,
-    yielding a theoretical average of **~0.67 partnerships per session**.
+        f"""
+    In a {_rounds}-round session with 16 players across 4 courts, there are {_slots} partnership slots among 120 possible pairs,
+    yielding a theoretical average of **~{_expected_avg:.2f} partnerships per session**.
 
     - **SA**: Spreads pairings broadly across 0.25–0.75× with no awareness of player levels.
     - **SL**: Polarized — many cross-level pairs rarely partner (< 0.50×), while same-level pairs partner frequently (≥ 0.75× and ≥ 1.00×).

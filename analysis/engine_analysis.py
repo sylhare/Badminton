@@ -99,7 +99,7 @@ def _(mo, random_config, shared_config):
 
     **Configuration**
     - Runs: {shared_config.get('runs', 2000)} per batch (5 batches each)
-    - Rounds: {shared_config.get('rounds', 10)} (consecutive assignments per run)
+    - Rounds: {shared_config.get('rounds', 25)} (consecutive assignments per run)
     - Players: {', '.join(map(str, shared_config.get('playerCounts', [20])))} per batch (variable)
     - Courts: {_num_courts} (Available courts for the players)
 
@@ -190,7 +190,7 @@ def _(
     }
     _base = {m["label"]: m for m in all_metrics.to_dicts()}
 
-    _rounds = shared_config.get("rounds", 10)
+    _rounds = shared_config.get("rounds", 25)
     _player_counts = shared_config.get("playerCounts", [10])
     # Theoretical max: at most 1 new partner per round, capped by number of other players
     _theoretical_max = np.mean([min(_rounds, p - 1) for p in _player_counts])
@@ -363,9 +363,10 @@ def _(ALGO_COLORS, all_metrics, fig_to_image, mo, np, plt):
     return
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    - **Any-Repeat Rate**: The probability that a 10-round session has at least one repeated pair. 
+def _(mo, shared_config):
+    _rounds = shared_config.get("rounds", 25)
+    mo.md(f"""
+    - **Any-Repeat Rate**: The probability that a {_rounds}-round session has at least one repeated pair. 
       A repeated pair means two players who were teammates more than once in the same session.
     - **Repeat Severity**: When repeats do occur, how many on average? This measures the "damage" — 
       even if repeats happen, fewer is better. SA scores 0 on both metrics.
@@ -386,12 +387,13 @@ def _(all_metrics, mo):
     return
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
+def _(mo, shared_config):
+    _rounds = shared_config.get("rounds", 25)
+    mo.md(f"""
     ### Repeat-Count Distribution
     
     Investigating repetiton within pairs during a simulation run.
-    We consider repeats, when a same pair played more than one time in a 10 games session.
+    We consider repeats, when a same pair played more than one time in a {_rounds} games session.
 
     > A pair is two players who are teammates in a match. Order doesn't matter (P1|P2 is the same as P2|P1).
     """)
@@ -540,15 +542,16 @@ def _(
     return
 
 @app.cell(hide_code=True)
-def _(mo, sa_pair_events):
+def _(mo, sa_pair_events, shared_config):
+    _rounds = shared_config.get("rounds", 25)
     _sa_total = sa_pair_events.height
     _sa_note = ""
     if _sa_total == 0:
-        _sa_note = """- **0** consecutive repeats for **Simulated Annealing** means that in every single session of 10 rounds, 
+        _sa_note = f"""- **0** consecutive repeats for **Simulated Annealing** means that in every single session of {_rounds} rounds, 
 no player ever has the same partner twice in a row."""
     
     mo.md(f"""
-    Each heatmap shows a the repeat event counts, we a pair played more than one time in a 10 games session.
+    Each heatmap shows a the repeat event counts, we a pair played more than one time in a {_rounds} games session.
     {_sa_note}
 
     We limit the hotspot effects for the algorithms with a better shuffling mechanism before the engine makes the final assignment.
@@ -638,11 +641,12 @@ def _(adjacency_bias_data, mo):
     return
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
+def _(mo, shared_config):
+    _rounds = shared_config.get("rounds", 25)
+    mo.md(f"""
     ### Teammate Diversity
     
-    How many **different** teammates does each player get to play with in a single 10-round session?
+    How many **different** teammates does each player get to play with in a single {_rounds}-round session?
     More unique teammates = more variety and social mixing. This metric captures the diversity of 
     partner assignments within a single session.
     """)
@@ -693,7 +697,8 @@ def _(
     return freshness_by_algo, cooc_by_algo
 
 @app.cell
-def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random_diversity, sa_diversity, sl_diversity):
+def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random_diversity, sa_diversity, shared_config, sl_diversity):
+    _rounds = shared_config.get("rounds", 25)
     _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
     _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
     _diversities = [random_diversity, mc_diversity, sa_diversity, cg_diversity, sl_diversity]
@@ -728,7 +733,7 @@ def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random
         _ax2.scatter(_i, _mean, color='red', s=50, zorder=5, marker='D', label='Mean' if _i == 1 else '')
     _ax2.legend(loc='lower right')
     
-    _fig.suptitle("Teammate Diversity: Unique Partners per 10-Round Session", fontsize=13, fontweight="bold", y=1.02)
+    _fig.suptitle(f"Teammate Diversity: Unique Partners per {_rounds}-Round Session", fontsize=13, fontweight="bold", y=1.02)
     plt.tight_layout()
     
     mo.vstack([
@@ -1221,7 +1226,7 @@ def _(math, mc_config, mo, sa_config, shared_config, sl_config):
     _player_counts = shared_config.get("playerCounts", [20])
     _n = max(_player_counts)
     _c = shared_config.get("numCourts", 4)
-    _r = shared_config.get("rounds", 10)
+    _r = shared_config.get("rounds", 25)
     _playing_per_round = _c * 4
     _mc_samples = mc_config.get("algorithmParams", {}).get("samplesPerRound", 300)
     _sa_iterations = sa_config.get("algorithmParams", {}).get("iterations", 500)

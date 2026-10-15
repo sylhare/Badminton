@@ -19,7 +19,7 @@ def get_time_per_round(cfg: dict[str, Any]) -> float:
     """
     total_ms = cfg.get("timing", {}).get("totalMs", 0)
     total_sims = cfg.get("totalSimulations", 1)
-    rounds = cfg.get("rounds", 10)
+    rounds = cfg.get("rounds", 25)
     if total_ms == 0:
         return 0.01
     return total_ms / (total_sims * rounds)
