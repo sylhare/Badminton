@@ -12,36 +12,36 @@
   "algorithmParams": {
     "iterations": 500,
     "initialTemperature": 2000,
-    "coolingRate": 0.9995
+    "coolingRate": 0.985
   },
   "aggregateStats": {
-    "repeatRate": 58.5,
-    "avgRepeatsPerRun": 0.88,
-    "zeroRepeatRate": 41.5
+    "repeatRate": 0,
+    "avgRepeatsPerRun": 0,
+    "zeroRepeatRate": 100
   },
   "levelBasedBalance": {
     "totalMatches": 7500,
-    "strongerTeamWinRate": 91.06666666666666,
-    "avgStrengthDifferential": 34.93866666666667,
-    "perfectlyBalancedMatches": 1382,
-    "perfectlyBalancedRate": 18.426666666666666
+    "strongerTeamWinRate": 91.45333333333333,
+    "avgStrengthDifferential": 35.090666666666664,
+    "perfectlyBalancedMatches": 1323,
+    "perfectlyBalancedRate": 17.64
   },
   "engineTrackedBalance": {
     "totalMatches": 7500,
-    "engineBalancedWinRate": 50.093333333333334,
+    "engineBalancedWinRate": 50.480000000000004,
     "avgEngineWinDifferential": 0,
     "perfectlyBalancedMatches": 7500,
     "perfectlyBalancedRate": 100
   },
   "benchFairness": {
     "avgBenchRange": 0.75,
-    "avgMeanGap": 0.95,
-    "doubleBenchRate": 11,
+    "avgMeanGap": 0.9075,
+    "doubleBenchRate": 17,
     "totalSessions": 200,
     "totalGapEvents": 100
   },
   "timing": {
-    "totalMs": 3424
+    "totalMs": 3799
   },
-  "timestamp": "2026-10-15T16:40:58.805Z"
+  "timestamp": "2026-10-15T18:43:10.838Z"
 }
