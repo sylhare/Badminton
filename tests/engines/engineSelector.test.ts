@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { engine, getEngineType, setEngine, EnginePersistence } from '../../src/engines/engineSelector';
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import { engineSL } from '../../src/engines/SmartEngine';
+import { engineSL2 } from '../../src/engines/Smart2Engine';
 import type { Player } from '../../src/types';
 import { storageManager } from '../../src/utils/StorageManager';
 import { benchedPlayers } from '../../src/utils/playerUtils';
@@ -13,6 +14,7 @@ describe('Engine Selector', () => {
     setEngine('sa');
     engineSA.resetHistory();
     engineSL.resetHistory();
+    engineSL2.resetHistory();
   });
 
   describe('Engine Selection', () => {
@@ -27,6 +29,12 @@ describe('Engine Selector', () => {
       expect(engine()).toBe(engineSL);
     });
 
+    it('should switch to Smart2 engine', () => {
+      setEngine('sl2');
+      expect(getEngineType()).toBe('sl2');
+      expect(engine()).toBe(engineSL2);
+    });
+
     it('should switch back to Simulated Annealing engine', () => {
       setEngine('sl');
       setEngine('sa');
@@ -39,6 +47,7 @@ describe('Engine Selector', () => {
     it.each([
       ['sa', 'Simulated Annealing'],
       ['sl', 'Smart Matching'],
+      ['sl2', 'Smart Matching v2'],
     ] as const)('%s has correct name and description', (type, expectedName) => {
       setEngine(type);
       expect(engine().name).toBe(expectedName);
@@ -94,6 +103,30 @@ describe('Engine Selector', () => {
     });
   });
 
+  describe('Unified API - Smart2 Engine', () => {
+    beforeEach(() => {
+      setEngine('sl2');
+      engine().resetHistory();
+    });
+
+    it('should generate court assignments', () => {
+      const players = mockPlayers(8);
+      const { courts: assignments } = engine().generate(players, 2);
+
+      expect(assignments).toHaveLength(2);
+      expect(assignments[0].players).toHaveLength(4);
+      expect(assignments[1].players).toHaveLength(4);
+    });
+
+    it('should get benched players', () => {
+      const players = mockPlayers(10);
+      const { courts: assignments } = engine().generate(players, 2);
+      const benched = benchedPlayers(assignments, players);
+
+      expect(benched).toHaveLength(2);
+    });
+  });
+
   describe('Engine Compatibility', () => {
     it('all engines should produce valid court assignments', () => {
       const players = mockPlayers(12);
@@ -113,6 +146,14 @@ describe('Engine Selector', () => {
       expect(slAssignments).toHaveLength(3);
       expect(slAssignments.every(c => c.teams !== undefined)).toBe(true);
       expect(slAssignments.every(c => c.players.length === 4)).toBe(true);
+
+      setEngine('sl2');
+      engineSL2.resetHistory();
+      const { courts: sl2Assignments } = engine().generate(players, 3);
+
+      expect(sl2Assignments).toHaveLength(3);
+      expect(sl2Assignments.every(c => c.teams !== undefined)).toBe(true);
+      expect(sl2Assignments.every(c => c.players.length === 4)).toBe(true);
     });
 
     it('all engines should handle edge cases the same way', () => {
@@ -128,8 +169,14 @@ describe('Engine Selector', () => {
       const { courts: slAssignments } = engine().generate(players, 2);
       const slBenched = benchedPlayers(slAssignments, players);
 
+      setEngine('sl2');
+      engineSL2.resetHistory();
+      const { courts: sl2Assignments } = engine().generate(players, 2);
+      const sl2Benched = benchedPlayers(sl2Assignments, players);
+
       expect(saBenched.length).toBe(1);
       expect(slBenched.length).toBe(1);
+      expect(sl2Benched.length).toBe(1);
     });
 
     it('all engines should handle empty player list', () => {
@@ -139,6 +186,9 @@ describe('Engine Selector', () => {
       expect(engine().generate(players, 2).courts).toHaveLength(0);
 
       setEngine('sl');
+      expect(engine().generate(players, 2).courts).toHaveLength(0);
+
+      setEngine('sl2');
       expect(engine().generate(players, 2).courts).toHaveLength(0);
     });
   });

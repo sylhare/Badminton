@@ -1,0 +1,53 @@
+{
+  "runs": 50,
+  "rounds": 10,
+  "playerCounts": [
+    15,
+    16,
+    17,
+    18
+  ],
+  "maxCourts": 4,
+  "totalSimulations": 200,
+  "algorithmParams": {
+    "levelWeight": 150,
+    "varietyWeight": 800,
+    "mixedDoublesWeight": 200,
+    "winStreakWeight": 300,
+    "windowTolerance": 25,
+    "podRepeatThreshold": 3,
+    "iterations": 500,
+    "initialTemperature": 2000,
+    "coolingRate": 0.9985
+  },
+  "aggregateStats": {
+    "repeatRate": 1,
+    "avgRepeatsPerRun": 0.01,
+    "zeroRepeatRate": 99
+  },
+  "levelBasedBalance": {
+    "totalMatches": 7500,
+    "strongerTeamWinRate": 74.96000000000001,
+    "avgStrengthDifferential": 13.066666666666666,
+    "perfectlyBalancedMatches": 3736,
+    "perfectlyBalancedRate": 49.81333333333333
+  },
+  "engineTrackedBalance": {
+    "totalMatches": 7500,
+    "engineBalancedWinRate": 49.586666666666666,
+    "avgEngineWinDifferential": 0,
+    "perfectlyBalancedMatches": 7500,
+    "perfectlyBalancedRate": 100
+  },
+  "benchFairness": {
+    "avgBenchRange": 0.75,
+    "avgMeanGap": 1.0075,
+    "doubleBenchRate": 8,
+    "totalSessions": 200,
+    "totalGapEvents": 100
+  },
+  "timing": {
+    "totalMs": 10842
+  },
+  "timestamp": "2026-10-15T15:46:48.650Z"
+}

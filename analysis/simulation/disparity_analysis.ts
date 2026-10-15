@@ -115,7 +115,8 @@ const parseCliArgs = (): CliOptions => {
   const sweep = args.includes('--sweep');
 
   const runsIdx = args.indexOf('--runs');
-  const runs = runsIdx !== -1 && args[runsIdx + 1] ? parseInt(args[runsIdx + 1], 10) : quick ? 10 : 30;
+  const defaultRuns = quick ? 10 : 30;
+  const runs = runsIdx !== -1 && args[runsIdx + 1] ? parseInt(args[runsIdx + 1], 10) : defaultRuns;
 
   const roundsIdx = args.indexOf('--rounds');
   const rounds = roundsIdx !== -1 && args[roundsIdx + 1] ? parseInt(args[roundsIdx + 1], 10) : 12;
