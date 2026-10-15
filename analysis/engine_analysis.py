@@ -27,6 +27,7 @@ def _():
         compute_summary_metrics,
         analyze_adjacency_bias,
         compute_teammate_diversity,
+        compute_court_rematches_per_session,
         compute_match_session_frequency,
         build_repeat_matrix,
         aggregate_bench_stats,
@@ -41,6 +42,7 @@ def _():
         get_time_per_round, get_balance_pct, get_bench_fairness,
         get_singles_fairness, get_bias_score, build_configs_by_label,
         compute_summary_metrics, analyze_adjacency_bias, compute_teammate_diversity,
+        compute_court_rematches_per_session,
         compute_match_session_frequency,
         build_repeat_matrix, aggregate_bench_stats, aggregate_by_player_count,
         compute_balance_metrics,
@@ -757,6 +759,82 @@ Players assigned to singles courts have no teammate that round, which slightly r
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
+    #### Court Rematch Distribution
+
+    Measuring how many times the same 4 players meet on a court per session (court group recycling / rematch distribution).
+    While partner combinations can rotate among the four, repeatedly gathering the exact same group of 4 players on a court diminishes overall session-level variety.
+    """)
+    return
+
+@app.cell
+def _(
+    ALGO_COLORS,
+    ALGO_NAMES,
+    cg_match_events_div,
+    compute_court_rematches_per_session,
+    fig_to_image,
+    mc_match_events_div,
+    mo,
+    np,
+    plt,
+    random_match_events_div,
+    sa_match_events_div,
+    sl_match_events_div,
+):
+    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
+    _axes = _axes.flatten()
+    _axes[-1].set_visible(False)
+
+    _datasets = list(zip(
+        [mc_match_events_div, sa_match_events_div, cg_match_events_div, sl_match_events_div, random_match_events_div],
+        ALGO_NAMES,
+        ALGO_COLORS,
+    ))
+
+    _all_rematches = [
+        compute_court_rematches_per_session(_df)
+        for _df, _, _ in _datasets
+    ]
+
+    _max_x = max(
+        max(_r) if _r else 0
+        for _r in _all_rematches
+    )
+
+    for _ax, (_r, (_, _name, _color)) in zip(_axes, zip(_all_rematches, _datasets)):
+        _counts_arr = np.array(_r)
+        _values, _freqs = np.unique(_counts_arr, return_counts=True)
+        _pcts = _freqs / _freqs.sum() * 100
+
+        _ax.bar(_values, _pcts, color=_color, alpha=0.8, width=0.8)
+        _ax.set_xlabel("Court rematches per run")
+        _ax.set_ylabel("Percentage of runs (%)")
+        _ax.set_title(_name, fontweight="bold")
+        _ax.set_xlim(-0.5, _max_x + 0.5)
+
+        _mean = float(np.mean(_counts_arr)) if len(_counts_arr) > 0 else 0.0
+        _min = int(np.min(_counts_arr)) if len(_counts_arr) > 0 else 0
+        _max = int(np.max(_counts_arr)) if len(_counts_arr) > 0 else 0
+        _ax.annotate(
+            f"Avg rematches: {_mean:.1f}\nMin: {_min}, Max: {_max}",
+            xy=(0.95, 0.95),
+            xycoords="axes fraction",
+            ha="right",
+            va="top",
+            fontsize=10,
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+        )
+
+    _fig.tight_layout()
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 7: Distribution of 4-player court rematches per session. Each histogram shows what percentage of simulation runs had 0, 1, 2, etc. duplicate 4-player court groups. Lower rematch counts indicate better court group variety.</i></center>"),
+    ])
+    return
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
     ### Match Repeat Likelihood
 
     Given a specific match from one session (e.g., A+B vs C+D), how likely is the **exact same matchup**
@@ -1014,7 +1092,7 @@ def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_confi
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 7: Percentage of win parity matches where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between win parity (equal wins) and uneven (lopsided) team compositions.</i></center>"),
+        mo.md("<center><i>Figure 8: Percentage of win parity matches where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between win parity (equal wins) and uneven (lopsided) team compositions.</i></center>"),
         mo.md("> **Note — Smart Matching goes beyond wins:** Unlike other algorithms that rely solely on cumulative wins to balance teams, Smart Matching also factors in player **skill level** and **gender** when forming match-ups. This allows it to create more intense, competitive games from the start of a session — before wins have accumulated — by pairing players of similar ability across teams regardless of their current win count."),
     ])
     return
@@ -1200,7 +1278,7 @@ def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stat
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 8: Bench fairness metrics. Left: average games played between bench periods for different player counts. Right: distribution of bench count differences within sessions.</i></center>"),
+        mo.md("<center><i>Figure 9: Bench fairness metrics. Left: average games played between bench periods for different player counts. Right: distribution of bench count differences within sessions.</i></center>"),
         mo.md(f"""
 - **Average Gap (Left):** Mean games between bench periods per player count. Green line = theoretical maximum ($N/B - 1$).
 Optimized algorithms achieve close to theoretical max; Random baseline falls significantly short.

@@ -17,6 +17,7 @@ from utils.analysis import (
     compute_balance_metrics,
     compute_court_cooccurrences,
     compute_court_freshness_scores,
+    compute_court_rematches_per_session,
     compute_danger_zone_pct,
     compute_differential_buckets,
     compute_gender_matchup_distribution,
@@ -291,6 +292,24 @@ class TestAdjacencyAndBenchAnalysis(unittest.TestCase):
         self.assertEqual(div["avg"], 1.0)
         self.assertEqual(div["min"], 1.0)
         self.assertEqual(div["max"], 1.0)
+
+    def test_compute_court_rematches_per_session(self):
+        match_df = pl.DataFrame({
+            "simulationId": ["sim1", "sim1", "sim1", "sim1", "sim2", "sim2"],
+            "team1Players": ["P1|P2", "P1|P3", "P1|P4", "P5|P6", "P1|P2", "P5|P6"],
+            "team2Players": ["P3|P4", "P2|P4", "P2|P3", "P7|P8", "P3|P4", "P7|P8"],
+        })
+        rematches = compute_court_rematches_per_session(match_df)
+        self.assertEqual(rematches, [2, 0])
+
+    def test_compute_court_rematches_per_session_empty_and_singles(self):
+        self.assertEqual(compute_court_rematches_per_session(pl.DataFrame()), [])
+        singles_df = pl.DataFrame({
+            "simulationId": ["s1", "s1"],
+            "team1Players": ["P1", "P1"],
+            "team2Players": ["P2", "P2"],
+        })
+        self.assertEqual(compute_court_rematches_per_session(singles_df), [0])
 
     def test_compute_match_session_frequency(self):
         match_df = pl.DataFrame({

@@ -440,6 +440,42 @@ def compute_court_cooccurrences(match_df: "pl.DataFrame") -> list[int]:
     return all_counts
 
 
+def compute_court_rematches_per_session(match_events_df: "pl.DataFrame") -> list[int]:
+    """Compute count of duplicate 4-player court matchups per session.
+
+    For each simulationId session in match_events_df, identifies all 4-player
+    court groups, counts duplicate occurrences of the same 4 players on a court,
+    and returns the list of rematch counts (one per session).
+
+    Args:
+        match_events_df: DataFrame with simulationId, team1Players, team2Players columns
+
+    Returns:
+        List of duplicate court rematch counts per session
+    """
+    if match_events_df is None or match_events_df.height == 0:
+        return []
+
+    session_counts: dict[Any, dict[tuple[str, ...], int]] = {}
+    for row in match_events_df.iter_rows(named=True):
+        session_key = row["simulationId"]
+        if session_key not in session_counts:
+            session_counts[session_key] = {}
+        team1 = row["team1Players"].split("|") if row["team1Players"] else []
+        team2 = row["team2Players"].split("|") if row["team2Players"] else []
+        players = team1 + team2
+        if len(players) == 4:
+            court_group = tuple(sorted(players))
+            session_counts[session_key][court_group] = (
+                session_counts[session_key].get(court_group, 0) + 1
+            )
+
+    return [
+        sum(cnt - 1 for cnt in counts.values() if cnt > 1)
+        for counts in session_counts.values()
+    ]
+
+
 def compute_partnership_rate_buckets(
     pairs_df: "pl.DataFrame",
     total_sims: int,
