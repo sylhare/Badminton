@@ -1,6 +1,6 @@
 {
   "runs": 50,
-  "rounds": 25,
+  "rounds": 18,
   "playerCounts": [15, 16, 17, 18],
   "numCourts": 4,
   "ui": {
