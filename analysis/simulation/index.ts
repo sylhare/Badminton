@@ -239,7 +239,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
 
   const totalRepeats = summaries.filter(s => s.repeatAnyPair).length;
   const totalRepeatRate = (totalRepeats / summaries.length) * 100;
-  const avgRepeats = summaries.reduce((acc, s) => acc + s.repeatPairDifferentOpponentsCount, 0) / summaries.length;
+  const avgRepeats = summaries.reduce((acc, s) => acc + s.repeatPairCount, 0) / summaries.length;
 
   const totalMatches = matchEvents.length;
   const strongerTeamWins = matchEvents.filter(m => m.strongerTeamWon).length;
@@ -299,7 +299,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
     aggregateStats: {
       repeatRate: totalRepeatRate,
       avgRepeatsPerRun: avgRepeats,
-      zeroRepeatRate: (summaries.filter(s => s.repeatPairDifferentOpponentsCount === 0).length / summaries.length) * 100,
+      zeroRepeatRate: (summaries.filter(s => s.repeatPairCount === 0).length / summaries.length) * 100,
     },
     levelBasedBalance: {
       totalMatches,

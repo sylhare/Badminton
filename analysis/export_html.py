@@ -12,6 +12,7 @@ from pathlib import Path
 NOTEBOOKS = [
     "algorithm_docs.py",
     "engine_analysis.py",
+    "smart_matching_analysis.py",
     "level_tracker_analysis.py",
     "ui_load_analysis.py",
     "smart2_disparity_analysis.py",

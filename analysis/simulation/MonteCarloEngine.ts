@@ -1,5 +1,6 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
+import { shuffleArray } from '../../src/utils/playerUtils';
 
 /**
  * Monte Carlo Greedy Search Implementation
@@ -87,7 +88,7 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
 
   private generateCandidate(onCourtPlayers: Player[], numberOfCourts: number, startCourtNum: number) {
     const courts: Court[] = [];
-    const playersCopy = this.shuffleArray([...onCourtPlayers]);
+    const playersCopy = shuffleArray([...onCourtPlayers]);
     let idx = 0;
     let totalCost = 0;
 

@@ -27,7 +27,7 @@ def compute_summary_metrics(df: "pl.DataFrame", label: str) -> dict[str, Any]:
         return {"label": label, "runs": 0}
     
     any_repeat = df.get_column("repeatAnyPair").cast(pl.Int8)
-    diff_count = df.get_column("repeatPairDifferentOpponentsCount")
+    repeat_count = df.get_column("repeatPairCount") if "repeatPairCount" in df.columns else df.get_column("repeatPairDifferentOpponentsCount")
     
     p_any = any_repeat.mean()
     se_any = math.sqrt(p_any * (1 - p_any) / n) if p_any > 0 else 0
@@ -38,8 +38,8 @@ def compute_summary_metrics(df: "pl.DataFrame", label: str) -> dict[str, Any]:
         "p_any_repeat": p_any,
         "ci_any_low": max(0, p_any - 1.96 * se_any),
         "ci_any_high": min(1, p_any + 1.96 * se_any),
-        "avg_repeat_pairs": diff_count.mean(),
-        "zero_repeat_pct": (diff_count == 0).sum() / n,
+        "avg_repeat_pairs": repeat_count.mean(),
+        "zero_repeat_pct": (repeat_count == 0).sum() / n,
     }
 
 

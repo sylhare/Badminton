@@ -232,14 +232,14 @@ def _(SA_BALANCE_PENALTY, SA_OPPONENT_PENALTY, SA_SINGLES_PENALTY, SA_SKILL_PAIR
     The total cost of an assignment $A$ is defined as:
 
     $$
-    \mathcal{{C}}(A) = \sum_{{c \in \\text{{Courts}}}} \mathcal{{C}}_{{\\text{{court}}}}(c)
+    \\mathcal{{C}}(A) = \\sum_{{c \\in \\text{{Courts}}}} \\mathcal{{C}}_{{\\text{{court}}}}(c)
     $$
 
     **Variable definitions**:
-    - $\mathcal{{C}}(A)$ = total cost of assignment $A$ (lower is better)
+    - $\\mathcal{{C}}(A)$ = total cost of assignment $A$ (lower is better)
     - $A$ = a complete court assignment (who plays where, on which team)
     - $c$ = a single court
-    - $\sum_{{c \in \\text{{Courts}}}}$ = sum over all courts being used
+    - $\\sum_{{c \\in \\text{{Courts}}}}$ = sum over all courts being used
 
     **What this calculates**: The total "badness" of an assignment by adding up the costs from each individual court.
 
@@ -247,23 +247,23 @@ def _(SA_BALANCE_PENALTY, SA_OPPONENT_PENALTY, SA_SINGLES_PENALTY, SA_SKILL_PAIR
 
     $$
     \\begin{{aligned}}
-    \mathcal{{C}}_{{\\text{{court}}}}(c) = \\; & \mathcal{{C}}_{{\\text{{singles}}}}(c) \\\\
-    & + \mathcal{{C}}_{{\\text{{teammate}}}}(c) \\\\
-    & + \mathcal{{C}}_{{\\text{{opponent}}}}(c) \\\\
-    & + \mathcal{{C}}_{{\\text{{skill-pair}}}}(c) \\\\
-    & + \mathcal{{C}}_{{\\text{{win-balance}}}}(c) \\\\
-    & + \mathcal{{C}}_{{\\text{{loss-balance}}}}(c)
+    \\mathcal{{C}}_{{\\text{{court}}}}(c) = \\; & \\mathcal{{C}}_{{\\text{{singles}}}}(c) \\\\
+    & + \\mathcal{{C}}_{{\\text{{teammate}}}}(c) \\\\
+    & + \\mathcal{{C}}_{{\\text{{opponent}}}}(c) \\\\
+    & + \\mathcal{{C}}_{{\\text{{skill-pair}}}}(c) \\\\
+    & + \\mathcal{{C}}_{{\\text{{win-balance}}}}(c) \\\\
+    & + \\mathcal{{C}}_{{\\text{{loss-balance}}}}(c)
     \\end{{aligned}}
     $$
 
     **Variable definitions**:
-    - $\mathcal{{C}}_{{\\text{{court}}}}(c)$ = cost for a single court $c$
-    - $\mathcal{{C}}_{{\\text{{singles}}}}(c)$ = penalty for repeated singles pairings (1v1 courts only)
-    - $\mathcal{{C}}_{{\\text{{teammate}}}}(c)$ = penalty for repeated teammate pairings on court $c$
-    - $\mathcal{{C}}_{{\\text{{opponent}}}}(c)$ = penalty for repeated opponent matchups on court $c$
-    - $\mathcal{{C}}_{{\\text{{skill-pair}}}}(c)$ = penalty for similar-skill players on same team
-    - $\mathcal{{C}}_{{\\text{{win-balance}}}}(c)$ = penalty for unbalanced win records between teams
-    - $\mathcal{{C}}_{{\\text{{loss-balance}}}}(c)$ = penalty for unbalanced loss records between teams
+    - $\\mathcal{{C}}_{{\\text{{court}}}}(c)$ = cost for a single court $c$
+    - $\\mathcal{{C}}_{{\\text{{singles}}}}(c)$ = penalty for repeated singles pairings (1v1 courts only)
+    - $\\mathcal{{C}}_{{\\text{{teammate}}}}(c)$ = penalty for repeated teammate pairings on court $c$
+    - $\\mathcal{{C}}_{{\\text{{opponent}}}}(c)$ = penalty for repeated opponent matchups on court $c$
+    - $\\mathcal{{C}}_{{\\text{{skill-pair}}}}(c)$ = penalty for similar-skill players on same team
+    - $\\mathcal{{C}}_{{\\text{{win-balance}}}}(c)$ = penalty for unbalanced win records between teams
+    - $\\mathcal{{C}}_{{\\text{{loss-balance}}}}(c)$ = penalty for unbalanced loss records between teams
 
     **SA penalty weights**: teammate = {SA_TEAMMATE_PENALTY:,}, skill-pair = {SA_SKILL_PAIR_PENALTY:,}, balance = {SA_BALANCE_PENALTY:,}, singles = {SA_SINGLES_PENALTY}, opponent = {SA_OPPONENT_PENALTY}. Lower cost = better assignment.
 
