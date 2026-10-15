@@ -1,4 +1,4 @@
-import type { Court, ICourtAssignmentEngine } from '../types';
+import type { Court, ICourtAssignmentEngine, Player } from '../types';
 
 import { SimulatedAnnealingBase } from './SimulatedAnnealingBase';
 
@@ -21,6 +21,13 @@ export class CourtAssignmentEngineSA extends SimulatedAnnealingBase implements I
     return this.calculateSkillPairPenalty(court.teams.team1, this.SKILL_PAIR_PENALTY)
       + this.calculateSkillPairPenalty(court.teams.team2, this.SKILL_PAIR_PENALTY)
       + this.calculateLossBalanceCost(court.teams.team1, court.teams.team2, this.BALANCE_PENALTY);
+  }
+
+  protected override evaluateTeamSplitCost(team1: Player[], team2: Player[]): number {
+    return super.evaluateTeamSplitCost(team1, team2)
+      + this.calculateSkillPairPenalty(team1, this.SKILL_PAIR_PENALTY)
+      + this.calculateSkillPairPenalty(team2, this.SKILL_PAIR_PENALTY)
+      + this.calculateLossBalanceCost(team1, team2, this.BALANCE_PENALTY);
   }
 }
 
