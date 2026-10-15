@@ -1,11 +1,44 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CourtAssignmentTracker } from '../../src/engines/CourtAssignmentTracker';
-import { engineSA } from '../../src/engines/SimulatedAnnealingEngine';
+import { CourtAssignmentEngineSA, engineSA } from '../../src/engines/SimulatedAnnealingEngine';
 import * as selector from '../../src/engines/engineSelector';
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { benchedPlayers } from '../../src/utils/playerUtils';
 import { createMockCourt, createSequentialPlayers as mockPlayers } from '../data/testFactories';
+
+/**
+ * Test subclass exposing protected methods of CourtAssignmentEngineSA.
+ */
+class TestCourtAssignmentEngineSA extends CourtAssignmentEngineSA {
+  public testEvaluateTeamSplitCost(team1: Player[], team2: Player[]): number {
+    return this.evaluateTeamSplitCost(team1, team2);
+  }
+
+  public testSharedTeamCost(team1: Player[], team2: Player[]): number {
+    return this.sharedTeamCost(team1, team2);
+  }
+
+  public testCalculateSkillPairPenalty(team: Player[], penaltyMultiplier: number): number {
+    return this.calculateSkillPairPenalty(team, penaltyMultiplier);
+  }
+
+  public testCalculateLossBalanceCost(team1: Player[], team2: Player[], penaltyMultiplier: number): number {
+    return this.calculateLossBalanceCost(team1, team2, penaltyMultiplier);
+  }
+
+  public get defaultCoolingRate(): number {
+    return this.COOLING_RATE;
+  }
+
+  public get teammateRepeatPenalty(): number {
+    return this.TEAMMATE_REPEAT_PENALTY;
+  }
+
+  public get balancePenalty(): number {
+    return this.BALANCE_PENALTY;
+  }
+}
 
 const engines: Array<{ name: string; engine: ICourtAssignmentEngine; type: selector.EngineType }> = [
   { name: 'Simulated Annealing (SA)', engine: engineSA, type: 'sa' },
@@ -832,6 +865,111 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
         expect(entries.length).toBeLessThanOrEqual(50);
       }
     });
+  });
 
+  describe('Simulated Annealing Improvements', () => {
+    it('uses expected default cooling rate and teammate repeat penalty parameters', () => {
+      const saEngine = new TestCourtAssignmentEngineSA();
+      expect(saEngine.defaultCoolingRate).toBe(0.985);
+      expect(saEngine.teammateRepeatPenalty).toBe(100000);
+      expect(engineSA.COOLING_RATE).toBe(0.985);
+      expect((engineSA as unknown as { TEAMMATE_REPEAT_PENALTY: number }).TEAMMATE_REPEAT_PENALTY).toBe(100000);
+    });
+
+    it('incorporates calculateSkillPairPenalty and calculateLossBalanceCost in evaluateTeamSplitCost', () => {
+      const saEngine = new TestCourtAssignmentEngineSA();
+      saEngine.resetHistory();
+
+      const players = mockPlayers(4);
+      const [p0, p1, p2, p3] = players;
+      const team1 = [p0, p1];
+      const team2 = [p2, p3];
+
+      const initialShared = saEngine.testSharedTeamCost(team1, team2);
+      const initialCost = saEngine.testEvaluateTeamSplitCost(team1, team2);
+      expect(initialCost).toBe(initialShared);
+
+      const dummyPlayers = [
+        { id: 'D0', name: 'Dummy 0', isPresent: true },
+        { id: 'D1', name: 'Dummy 1', isPresent: true },
+      ];
+
+      saEngine.recordWins([
+        createMockCourt(1, [p0, p1, dummyPlayers[0], dummyPlayers[1]], 1),
+      ]);
+      saEngine.clearCurrentSession();
+
+      const skillPenaltyTeam1 = saEngine.testCalculateSkillPairPenalty(team1, 1000);
+      expect(skillPenaltyTeam1).toBe(1000);
+      expect(saEngine.testCalculateSkillPairPenalty(team2, 1000)).toBe(0);
+
+      const costWithSkillPair = saEngine.testEvaluateTeamSplitCost(team1, team2);
+      const sharedWithSkillPair = saEngine.testSharedTeamCost(team1, team2);
+      expect(costWithSkillPair).toBe(sharedWithSkillPair + skillPenaltyTeam1);
+
+      saEngine.recordWins([
+        createMockCourt(2, [dummyPlayers[0], dummyPlayers[1], p2, dummyPlayers[0]], 1),
+      ]);
+      saEngine.clearCurrentSession();
+
+      const lossBalanceCost = saEngine.testCalculateLossBalanceCost(team1, team2, saEngine.balancePenalty);
+      expect(lossBalanceCost).toBe(2000);
+
+      const totalSplitCost = saEngine.testEvaluateTeamSplitCost(team1, team2);
+      const expectedTotalCost = saEngine.testSharedTeamCost(team1, team2)
+        + saEngine.testCalculateSkillPairPenalty(team1, 1000)
+        + saEngine.testCalculateSkillPairPenalty(team2, 1000)
+        + lossBalanceCost;
+
+      expect(totalSplitCost).toBe(expectedTotalCost);
+      expect(totalSplitCost).toBeGreaterThan(saEngine.testSharedTeamCost(team1, team2));
+    });
+
+    it('chooses assignments avoiding teammate repeats over skill-pair balancing when players have high win/loss history', () => {
+      const players = mockPlayers(4);
+      const [p0, p1, p2, p3] = players;
+
+      engine.applyRoundStats([
+        { courtNumber: 1, players, teams: { team1: [p0, p1], team2: [p2, p3] } },
+      ], players);
+      engine.applyRoundStats([
+        { courtNumber: 1, players, teams: { team1: [p0, p3], team2: [p1, p2] } },
+      ], players);
+
+      const dummyPlayers = [
+        { id: 'D0', name: 'Dummy 0', isPresent: true },
+        { id: 'D1', name: 'Dummy 1', isPresent: true },
+      ];
+
+      for (let i = 0; i < 4; i++) {
+        engine.recordWins([
+          createMockCourt(i + 10, [p0, p2, dummyPlayers[0], dummyPlayers[1]], 1),
+        ]);
+        engine.clearCurrentSession();
+      }
+      for (let i = 0; i < 4; i++) {
+        engine.recordWins([
+          createMockCourt(i + 20, [dummyPlayers[0], dummyPlayers[1], p0, p2], 1),
+        ]);
+        engine.clearCurrentSession();
+      }
+
+      const saEngine = new TestCourtAssignmentEngineSA();
+      const splitRepeatingTeammatesCost = saEngine.testEvaluateTeamSplitCost([p0, p1], [p2, p3]);
+      const splitAvoidingRepeatsCost = saEngine.testEvaluateTeamSplitCost([p0, p2], [p1, p3]);
+      expect(splitAvoidingRepeatsCost).toBeLessThan(splitRepeatingTeammatesCost);
+
+      const { courts: assignments } = engine.generate(players, 1);
+      expect(assignments).toHaveLength(1);
+
+      const assignedCourt = assignments[0];
+      expect(assignedCourt.teams).toBeDefined();
+
+      const team1Ids = assignedCourt.teams!.team1.map(p => p.id).sort();
+      const team2Ids = assignedCourt.teams!.team2.map(p => p.id).sort();
+
+      expect([team1Ids, team2Ids]).toContainEqual(['P0', 'P2']);
+      expect([team1Ids, team2Ids]).toContainEqual(['P1', 'P3']);
+    });
   });
 });
