@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Export marimo notebooks to static HTML without code cells."""
 
+from __future__ import annotations
+
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -12,6 +14,7 @@ NOTEBOOKS = [
     "engine_analysis.py",
     "level_tracker_analysis.py",
     "ui_load_analysis.py",
+    "smart2_disparity_analysis.py",
 ]
 
 
@@ -50,15 +53,16 @@ def export_notebook(notebook: str, script_dir: Path, html_dir: Path) -> str | No
 
 
 def main():
-    """Export notebooks to HTML with --no-include-code flag."""
+    """Export notebooks to HTML concurrently with --no-include-code flag.
+
+    Exports are independent and run concurrently across notebooks.
+    """
     script_dir = Path(__file__).parent
     html_dir = script_dir / "html"
     html_dir.mkdir(exist_ok=True)
 
     print("Exporting marimo notebooks to HTML (without code)...\n")
 
-    # The exports are independent and each blocks on a slow marimo subprocess, so
-    # run them concurrently — wall time becomes the slowest export, not their sum.
     with ThreadPoolExecutor(max_workers=len(NOTEBOOKS)) as pool:
         errors = [
             error
