@@ -42,6 +42,74 @@ export const simulateMatchOutcome = (team1Strength: number, team2Strength: numbe
   return Math.random() < pTeam1Wins ? 1 : 2;
 };
 
+/** Simulates 50/50 random match outcome. */
+export const simulateRandomMatchOutcome = (): 1 | 2 => (Math.random() < 0.5 ? 1 : 2);
+
+/** Available disparity benchmark profile names. */
+export type DisparityProfile =
+  | 'lot_strong_lot_weak'
+  | 'few_strong_few_weak'
+  | 'lot_strong'
+  | 'few_weak'
+  | 'lot_weak_few_strong';
+
+/** List of all supported disparity benchmark profiles. */
+export const DISPARITY_PROFILES: DisparityProfile[] = [
+  'lot_strong_lot_weak',
+  'few_strong_few_weak',
+  'lot_strong',
+  'few_weak',
+  'lot_weak_few_strong',
+];
+
+/** Count configuration for disparity profiles. */
+export const DISPARITY_CONFIGS: Record<DisparityProfile, { strong: number; weak: number }> = {
+  lot_strong_lot_weak: { strong: 6, weak: 6 },
+  few_strong_few_weak: { strong: 2, weak: 2 },
+  lot_strong: { strong: 8, weak: 0 },
+  few_weak: { strong: 0, weak: 2 },
+  lot_weak_few_strong: { strong: 2, weak: 6 },
+};
+
+/** Generates player skill level map for a disparity profile and player count. */
+export const generateDisparityPlayerLevels = (
+  profile: DisparityProfile,
+  count: number,
+): Map<string, number> => {
+  const cfg = DISPARITY_CONFIGS[profile];
+  const levels = new Map<string, number>();
+  const strongCount = cfg.strong;
+  const weakCount = cfg.weak;
+  const mediumCount = Math.max(0, count - strongCount - weakCount);
+
+  const levelList: number[] = [
+    ...Array(strongCount).fill(75),
+    ...Array(weakCount).fill(25),
+    ...Array(mediumCount).fill(50),
+  ];
+
+  for (let i = 0; i < count; i++) {
+    levels.set(`P${i + 1}`, levelList[i] ?? 50);
+  }
+  return levels;
+};
+
+/** Generates players with levels and gender matching a disparity profile. */
+export const generateDisparityPlayers = (
+  profile: DisparityProfile,
+  count: number,
+): Player[] => {
+  const levels = generateDisparityPlayerLevels(profile, count);
+  return toPlayerList(count, levels);
+};
+
+/** Returns skill tier for a player level. */
+export const getPlayerTier = (level: number): 'strong' | 'medium' | 'weak' => {
+  if (level >= 70) return 'strong';
+  if (level <= 30) return 'weak';
+  return 'medium';
+};
+
 const GENDER_PATTERN: Array<'M' | 'F'> = ['M', 'M', 'F', 'M', 'F'];
 
 /**
@@ -93,6 +161,7 @@ export const extractRoundPairs = (
   numPlayers: number,
   Engine: SimEngine,
   playerLevels: Map<string, number>,
+  randomMatchOutcome = false,
 ): RoundResult => {
   const pairToOpponent = new Map<string, string>();
   const matchEvents: MatchEvent[] = [];
@@ -106,7 +175,7 @@ export const extractRoundPairs = (
 
     const [a1, a2] = court.teams.team1;
     const [b1, b2] = court.teams.team2;
-    if (!a1 || !a2 || !b1 || !b2) continue; // skip singles or under-populated courts
+    if (!a1 || !a2 || !b1 || !b2) continue;
 
     const team1Key = pairKey(a1.id, a2.id);
     const team2Key = pairKey(b1.id, b2.id);
@@ -139,7 +208,9 @@ export const extractRoundPairs = (
     const team2AvgLevel = (tb1 + tb2) / 2;
     const team1IntraGap = Math.abs(ta1 - ta2);
     const team2IntraGap = Math.abs(tb1 - tb2);
-    const winner = simulateMatchOutcome(team1Strength, team2Strength);
+    const winner = randomMatchOutcome
+      ? simulateRandomMatchOutcome()
+      : simulateMatchOutcome(team1Strength, team2Strength);
     const strongerTeam = team1Strength >= team2Strength ? 1 : 2;
 
     const team1EngineWins = (engineWinCounts.get(a1.id) ?? 0) + (engineWinCounts.get(a2.id) ?? 0);

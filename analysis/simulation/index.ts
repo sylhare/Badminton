@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
 import { engineSL as SmartEngine } from '../../src/engines/SmartEngine.ts';
+import { engineSL2 as Smart2Engine } from '../../src/engines/Smart2Engine.ts';
 
 import { engineMC as CourtAssignmentEngine } from './MonteCarloEngine.ts';
 import { engineCG as ConflictGraphEngine } from './ConflictGraphEngine.ts';
@@ -14,6 +15,7 @@ import type {
   PlayerStats,
   RoundResult,
   SessionBenchStats,
+  SimEngine,
   SimulationSummary,
 } from './types';
 import { evaluateRepeats, extractRoundPairs, generatePlayerLevels, loadConfig, toCsv, toPlayerList } from './utils';
@@ -39,11 +41,23 @@ const ENGINE_PARAMS: Record<string, Record<string, unknown>> = config.engines ??
   sa: { iterations: 500, initialTemperature: 2000, coolingRate: 0.9995 },
   cg: { iterationsPerRound: 1 },
   sl: { iterations: 500, initialTemperature: 2000, coolingRate: 0.9985 },
+  sl2: {
+    levelWeight: 150,
+    varietyWeight: 800,
+    mixedDoublesWeight: 200,
+    winStreakWeight: 300,
+    windowTolerance: 25,
+    podRepeatThreshold: 3,
+    iterations: 500,
+    initialTemperature: 2000,
+    coolingRate: 0.9985,
+  },
 };
 
 CourtAssignmentEngine.configure(ENGINE_PARAMS.mc ?? {});
 CourtAssignmentEngineSA.configure(ENGINE_PARAMS.sa ?? {});
 SmartEngine.configure(ENGINE_PARAMS.sl ?? {});
+Smart2Engine.configure(ENGINE_PARAMS.sl2 ?? {});
 
 const ALL_ENGINES = [
   { id: 'random', name: 'Random Baseline', engine: RandomBaselineEngine, dir: 'random_baseline' },
@@ -51,11 +65,10 @@ const ALL_ENGINES = [
   { id: 'sa', name: 'Simulated Annealing (SA)', engine: CourtAssignmentEngineSA, dir: 'sa_algo' },
   { id: 'cg', name: 'Conflict Graph (CG)', engine: ConflictGraphEngine, dir: 'cg_algo' },
   { id: 'sl', name: 'Smart Matching (SL)', engine: SmartEngine, dir: 'sl_algo' },
+  { id: 'sl2', name: 'Smart2 Matching (SL2)', engine: Smart2Engine, dir: 'sl2_algo' },
 ] as const;
 
-// CLI: npx tsx ./simulation/index.ts --engine sl
-//      npx tsx ./simulation/index.ts --engine sl,sa
-//      npx tsx ./simulation/index.ts          (runs all)
+/** Filter engines based on CLI arguments. */
 const engineArgIdx = process.argv.indexOf('--engine');
 const engineFilter = engineArgIdx !== -1 ? process.argv[engineArgIdx + 1]?.split(',') : null;
 const enginesToRun = engineFilter
@@ -92,9 +105,17 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
     const rounds: RoundResult[] = [];
 
     for (let round = 0; round < ROUNDS; round++) {
-      const courts = Engine.generate(players, MAX_COURTS);
+      const generated = Engine.generate(players, MAX_COURTS);
+      const courts = Array.isArray(generated) ? generated : generated.courts;
 
-      const roundResult = extractRoundPairs(round + 1, courts, simId, numPlayers, Engine, PLAYER_LEVELS);
+      const roundResult = extractRoundPairs(
+        round + 1,
+        courts,
+        simId,
+        numPlayers,
+        Engine as unknown as SimEngine,
+        PLAYER_LEVELS,
+      );
       rounds.push(roundResult);
       for (const m of roundResult.matchEvents) matchEvents.push(m);
       for (const mp of roundResult.matchPairEvents) matchPairEvents.push(mp);
