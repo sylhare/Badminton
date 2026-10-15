@@ -21,33 +21,33 @@
     "coolingRate": 0.9985
   },
   "aggregateStats": {
-    "repeatRate": 1,
-    "avgRepeatsPerRun": 0.01,
-    "zeroRepeatRate": 99
+    "repeatRate": 0.5,
+    "avgRepeatsPerRun": 0.005,
+    "zeroRepeatRate": 99.5
   },
   "levelBasedBalance": {
     "totalMatches": 7500,
-    "strongerTeamWinRate": 74.96000000000001,
-    "avgStrengthDifferential": 13.066666666666666,
-    "perfectlyBalancedMatches": 3736,
-    "perfectlyBalancedRate": 49.81333333333333
+    "strongerTeamWinRate": 74.98666666666666,
+    "avgStrengthDifferential": 13.138666666666667,
+    "perfectlyBalancedMatches": 3743,
+    "perfectlyBalancedRate": 49.906666666666666
   },
   "engineTrackedBalance": {
     "totalMatches": 7500,
-    "engineBalancedWinRate": 49.586666666666666,
+    "engineBalancedWinRate": 49.28,
     "avgEngineWinDifferential": 0,
     "perfectlyBalancedMatches": 7500,
     "perfectlyBalancedRate": 100
   },
   "benchFairness": {
     "avgBenchRange": 0.75,
-    "avgMeanGap": 1.0075,
-    "doubleBenchRate": 8,
+    "avgMeanGap": 1.0225,
+    "doubleBenchRate": 9,
     "totalSessions": 200,
     "totalGapEvents": 100
   },
   "timing": {
-    "totalMs": 10842
+    "totalMs": 10573
   },
-  "timestamp": "2026-10-15T15:46:48.650Z"
+  "timestamp": "2026-10-15T16:41:13.002Z"
 }
