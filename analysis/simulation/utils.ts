@@ -154,6 +154,24 @@ export const toCsv = (rows: Array<Record<string, string | number | boolean>>, de
   return lines.join('\n');
 };
 
+/** Resolves current player win counts across simulation engine implementations. */
+export const getEngineWinCounts = (engine: SimEngine): Map<string, number> => {
+  if (typeof engine.getWinCounts === 'function') {
+    return engine.getWinCounts();
+  }
+  if (typeof engine.snapshot === 'function') {
+    const snap = engine.snapshot();
+    return new Map(Object.entries(snap.winCountMap));
+  }
+  if (typeof engine.stats === 'function') {
+    const stats = engine.stats();
+    return stats.winCountMap instanceof Map
+      ? stats.winCountMap
+      : new Map(Object.entries(stats.winCountMap));
+  }
+  return new Map();
+};
+
 export const extractRoundPairs = (
   roundIndex: number,
   courts: Court[],
@@ -167,7 +185,7 @@ export const extractRoundPairs = (
   const matchEvents: MatchEvent[] = [];
   const matchPairEvents: MatchPairEvent[] = [];
   const courtsWithWinners: Court[] = [];
-  const engineWinCounts = Engine.stats ? Engine.stats().winCountMap : new Map<string, number>();
+  const engineWinCounts = getEngineWinCounts(Engine);
 
   for (let courtIdx = 0; courtIdx < courts.length; courtIdx++) {
     const court = courts[courtIdx];
