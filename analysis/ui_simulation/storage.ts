@@ -1,5 +1,5 @@
-import { DEFAULT_LEVEL } from '../../src/types';
-import { decompress } from '../../src/utils/StorageManager';
+import { type CourtEngineState, DEFAULT_LEVEL } from '../../src/types';
+import { decodeEngineState } from '../../src/utils/StorageManager';
 import { toPlayerList } from '../simulation/utils.ts';
 
 import type { SessionResult, UiEngine, UiPlayerStat } from './types';
@@ -46,16 +46,8 @@ export function buildSeedState(players: SeededPlayer[], numberOfCourts: number, 
   });
 }
 
-interface CompactEngineState {
-  v?: number;
-  pi?: string[];
-  ps?: Array<[number, number, number, number]>;
-  pc?: Record<string, [number, number]>;
-  rp?: number;
-}
-
 export interface DecodedState {
-  engine?: CompactEngineState;
+  engine?: Partial<CourtEngineState>;
 }
 
 /** Map seeded player display names to their skill level (DOM shows names, not ids). */
@@ -66,23 +58,23 @@ export function levelByName(players: SeededPlayer[]): Record<string, number> {
 }
 
 /**
- * Decode the saved localStorage value using the app's own codec (gzip+base64,
- * with a plain-JSON fallback baked into `decompress`). Decode once per session
- * and hand the result to both `deriveSessionResult` and `decodePlayerStats`.
+ * Decode the saved localStorage value using the app's own codec.
+ * Decode once per session and hand the result to both `deriveSessionResult`
+ * and `decodePlayerStats`.
  */
 export async function decodeState(raw: string): Promise<DecodedState> {
   try {
-    return JSON.parse(await decompress(raw));
+    const engine = await decodeEngineState(raw);
+    return { engine };
   } catch {
     return {};
   }
 }
 
 /**
- * Derive per-session metrics from the compact engine state the app saved
- * (`ps[i]` = [bench, single, win, loss]). Teammate-repeat counts are supplied
- * separately by the caller from the rounds observed in the DOM, so they are not
- * computed here.
+ * Derive per-session metrics from the compact engine state the app saved.
+ * Teammate-repeat counts are supplied separately by the caller from the rounds
+ * observed in the DOM, so they are not computed here.
  */
 export function deriveSessionResult(
   state: DecodedState,
@@ -90,10 +82,8 @@ export function deriveSessionResult(
   generateMs: number[],
 ): Omit<SessionResult, 'teammatePairs' | 'repeatTeammateEvents' | 'repeatTeammatePairs'> {
   const engine = state.engine ?? {};
-  const ps = engine.ps ?? [];
-
-  const benchCounts = ps.map(e => e?.[0] ?? 0);
-  const winCounts = ps.map(e => e?.[2] ?? 0);
+  const benchCounts = Object.values(engine.benchCountMap ?? {});
+  const winCounts = Object.values(engine.winCountMap ?? {});
   const benchRange = benchCounts.length ? Math.max(...benchCounts) - Math.min(...benchCounts) : 0;
   const winSpread = winCounts.length ? Math.max(...winCounts) - Math.min(...winCounts) : 0;
   const totalWins = winCounts.reduce((a, b) => a + b, 0);
@@ -103,7 +93,7 @@ export function deriveSessionResult(
 
   return {
     ...base,
-    roundsPlayed: engine.rp ?? 0,
+    roundsPlayed: engine.roundsPlayed ?? 0,
     avgGenerateMs,
     maxGenerateMs,
     benchRange,
@@ -119,12 +109,25 @@ export function decodePlayerStats(
   players: SeededPlayer[],
 ): UiPlayerStat[] {
   const engine = state.engine ?? {};
-  const pi = engine.pi ?? [];
-  const ps = engine.ps ?? [];
-  const levelById = new Map(players.map(p => [p.id, p.level] as const));
+  const benchMap = engine.benchCountMap ?? {};
+  const singleMap = engine.singleCountMap ?? {};
+  const winMap = engine.winCountMap ?? {};
+  const lossMap = engine.lossCountMap ?? {};
 
-  return pi.map((id, i) => {
-    const [bench = 0, single = 0, win = 0, loss = 0] = ps[i] ?? [0, 0, 0, 0];
-    return { ...base, playerId: id, level: levelById.get(id) ?? DEFAULT_LEVEL, bench, single, win, loss, games: win + loss };
+  return players.map(p => {
+    const bench = benchMap[p.id] ?? 0;
+    const single = singleMap[p.id] ?? 0;
+    const win = winMap[p.id] ?? 0;
+    const loss = lossMap[p.id] ?? 0;
+    return {
+      ...base,
+      playerId: p.id,
+      level: p.level ?? DEFAULT_LEVEL,
+      bench,
+      single,
+      win,
+      loss,
+      games: win + loss,
+    };
   });
 }
