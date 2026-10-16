@@ -9,12 +9,6 @@ import { calculateTeamStrength, loadConfig, simulateMatchOutcome } from '../simu
 import { buildPlayers } from './storage.ts';
 import type { RawConfigFile, UiEngine } from './types.ts';
 
-declare module '../../src/types' {
-  interface ICourtAssignmentTracker {
-    recordWins(courts: Court[]): void;
-  }
-}
-
 /**
  * Direct-engine baseline for the UI comparison: same shipped engines (default
  * config), players, courts, rounds and teammate-repeat metric as the harness,

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
 import { engineSL as SmartEngine } from '../../src/engines/SmartEngine.ts';
 import { engineSL2 as Smart2Engine } from '../../src/engines/Smart2Engine.ts';
+import { mean } from '../../src/utils/numberUtils';
 import { benchedPlayers, splitPairKey } from '../../src/utils/playerUtils';
 
 import { engineCG as ConflictGraphEngine } from './ConflictGraphEngine.ts';
@@ -149,8 +150,8 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
     const benchCounts = Array.from(sessionBenchCounts.values());
     const maxBench = Math.max(...benchCounts);
     const minBench = Math.min(...benchCounts);
-    const avgBench = benchCounts.reduce((a, b) => a + b, 0) / benchCounts.length;
-    const meanGap = sessionGaps.length > 0 ? sessionGaps.reduce((a, b) => a + b, 0) / sessionGaps.length : 0;
+    const avgBench = mean(benchCounts);
+    const meanGap = sessionGaps.length > 0 ? mean(sessionGaps) : 0;
     const doubleBenchCount = sessionGaps.filter(g => g === 0).length;
 
     benchStats.push({

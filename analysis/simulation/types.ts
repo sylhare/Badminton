@@ -1,9 +1,6 @@
-import type { Court, ICourtAssignmentEngine as BaseCourtAssignmentEngine } from '../../src/types';
+import type { ICourtAssignmentEngine } from '../../src/types';
 
-export interface ICourtAssignmentEngine extends BaseCourtAssignmentEngine {
-  recordWins(courts: Court[]): void;
-}
-
+export type { ICourtAssignmentEngine };
 export type SimEngine = ICourtAssignmentEngine;
 
 /** Records a single match with team compositions, strengths, and outcome. */

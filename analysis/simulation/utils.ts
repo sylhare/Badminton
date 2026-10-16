@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 import type { Court, Player } from '../../src/types';
-import { pairKey } from '../../src/utils/playerUtils';
+import { opponentPairs, pairKey, teamPairs } from '../../src/utils/playerUtils';
 
 import type { ICourtAssignmentEngine, MatchEvent, MatchPairEvent, PairEvent, RoundResult, SimulationConfig } from './types';
 
@@ -183,19 +183,29 @@ export const extractRoundPairs = (
     pairToOpponent.set(team1Key, team2Key);
     pairToOpponent.set(team2Key, team1Key);
 
-    const allPlayers = [a1, a2, b1, b2];
-    for (let i = 0; i < allPlayers.length; i++) {
-      for (let j = i + 1; j < allPlayers.length; j++) {
-        const p1 = allPlayers[i];
-        const p2 = allPlayers[j];
-        const wasTeammate = (i < 2 && j < 2) || (i >= 2 && j >= 2);
-        matchPairEvents.push({
-          simulationId,
-          roundIndex,
-          pairId: pairKey(p1.id, p2.id),
-          wasTeammate,
-        });
-      }
+    for (const pairId of teamPairs(court.teams.team1)) {
+      matchPairEvents.push({
+        simulationId,
+        roundIndex,
+        pairId,
+        wasTeammate: true,
+      });
+    }
+    for (const pairId of teamPairs(court.teams.team2)) {
+      matchPairEvents.push({
+        simulationId,
+        roundIndex,
+        pairId,
+        wasTeammate: true,
+      });
+    }
+    for (const pairId of opponentPairs(court.teams.team1, court.teams.team2)) {
+      matchPairEvents.push({
+        simulationId,
+        roundIndex,
+        pairId,
+        wasTeammate: false,
+      });
     }
 
     const team1Strength = calculateTeamStrength(court.teams.team1, playerLevels);

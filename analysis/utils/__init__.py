@@ -2,7 +2,6 @@
 
 from .plotting import add_jitter, create_radar_chart, fig_to_image, setup_matplotlib
 from .stats import gini_coefficient, proportion_ci
-from .bench import calc_theoretical_max, simulate_random_baseline, simulate_baseline_double_bench
 from .config_metrics import (
     ALGO_NAMES,
     ALGO_NAMES_SHORT,
@@ -49,9 +48,6 @@ __all__ = [
     "create_radar_chart",
     "proportion_ci",
     "gini_coefficient",
-    "calc_theoretical_max",
-    "simulate_random_baseline",
-    "simulate_baseline_double_bench",
     "ALGO_NAMES",
     "ALGO_NAMES_SHORT",
     "ALGO_COLORS",

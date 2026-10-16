@@ -110,6 +110,7 @@ export interface ICourtAssignmentTracker {
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;
   recordLevelSnapshot(players: Player[]): void;
+  recordWins(courts: Court[]): void;
   updateWinner(params: UpdateWinnerParams): Court[];
   applyManualEdit(previous: Court[], next: Court[], players: Player[]): Court[];
   levelTrend(playerId: string): 'up' | 'down' | null;
