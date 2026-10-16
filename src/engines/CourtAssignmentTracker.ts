@@ -558,17 +558,19 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /**
-   * Selects which players should be benched.
+   * Selects which players should be benched: fewest benches first, and among ties,
+   * players benched in the previous round go last so back-to-back benches only happen when unavoidable.
    */
   protected selectBenchedPlayers(players: Player[], benchSpots: number): Player[] {
     if (benchSpots <= 0) return [];
 
-    const shuffled = shuffleArray(players);
-    return shuffled.sort((a, b) => {
-      const countA = CourtAssignmentTracker.benchCountMap.get(a.id) ?? 0;
-      const countB = CourtAssignmentTracker.benchCountMap.get(b.id) ?? 0;
-      return countA - countB;
-    }).slice(0, benchSpots);
+    const lastBenched = new Set(CourtAssignmentTracker.lastRoundDelta?.bench);
+    const benchCount = (p: Player) => CourtAssignmentTracker.benchCountMap.get(p.id) ?? 0;
+    const benchedLastRound = (p: Player) => (lastBenched.has(p.id) ? 1 : 0);
+
+    return shuffleArray(players)
+      .sort((a, b) => benchCount(a) - benchCount(b) || benchedLastRound(a) - benchedLastRound(b))
+      .slice(0, benchSpots);
   }
 
   /** Prunes historical pairings and counts based on recency. */
