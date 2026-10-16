@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { engineSL as SmartEngine } from '../../src/engines/SmartEngine.ts';
 import { engineSL2 as Smart2Engine, Smart2Engine as Smart2EngineClass } from '../../src/engines/Smart2Engine.ts';
 import type { Court } from '../../src/types';
+import { mean } from '../../src/utils/numberUtils';
 import { pairKey } from '../../src/utils/playerUtils';
 
 import type { DisparityProfile } from './utils';
@@ -277,7 +278,6 @@ const runDisparityScenario = (
   }
 
   const durationMs = Date.now() - startTime;
-  const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 
   return {
     engine: engineId,
@@ -287,18 +287,18 @@ const runDisparityScenario = (
     numPlayers,
     runs,
     rounds,
-    podLockInCount: Number(avg(sessionPodRepeats).toFixed(2)),
+    podLockInCount: Number(mean(sessionPodRepeats).toFixed(2)),
     earlyLockInPercentage: Number((totalEarlyCourts > 0 ? (totalEarlyLockInCourts / totalEarlyCourts) * 100 : 0).toFixed(1)),
-    oppDiversityStrong: Number(avg(sessionStrongOppCounts).toFixed(2)),
-    oppDiversityMedium: Number(avg(sessionMediumOppCounts).toFixed(2)),
-    oppDiversityWeak: Number(avg(sessionWeakOppCounts).toFixed(2)),
-    oppDiversityOverall: Number(avg(sessionOverallOppCounts).toFixed(2)),
-    maxOpponentFacing: Number(avg(sessionMaxOpponents).toFixed(2)),
-    mixedDoublesCount: Number(avg(sessionMixedDoublesCounts).toFixed(2)),
+    oppDiversityStrong: Number(mean(sessionStrongOppCounts).toFixed(2)),
+    oppDiversityMedium: Number(mean(sessionMediumOppCounts).toFixed(2)),
+    oppDiversityWeak: Number(mean(sessionWeakOppCounts).toFixed(2)),
+    oppDiversityOverall: Number(mean(sessionOverallOppCounts).toFixed(2)),
+    maxOpponentFacing: Number(mean(sessionMaxOpponents).toFixed(2)),
+    mixedDoublesCount: Number(mean(sessionMixedDoublesCounts).toFixed(2)),
     mixedDoublesRate: Number((totalMatches > 0 ? (totalMixedDoubles / totalMatches) * 100 : 0).toFixed(1)),
-    avgStrengthDiff: Number(avg(allStrengthDiffs).toFixed(2)),
-    avgIntraGap: Number(avg(allIntraGaps).toFixed(2)),
-    avgCourtSpread: Number(avg(allCourtSpreads).toFixed(2)),
+    avgStrengthDiff: Number(mean(allStrengthDiffs).toFixed(2)),
+    avgIntraGap: Number(mean(allIntraGaps).toFixed(2)),
+    avgCourtSpread: Number(mean(allCourtSpreads).toFixed(2)),
     perfectBalanceRate: Number((totalMatches > 0 ? (totalPerfectBalanced / totalMatches) * 100 : 0).toFixed(1)),
     durationMs,
   };

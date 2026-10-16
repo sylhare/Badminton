@@ -3,7 +3,9 @@ import { resolve } from 'node:path';
 
 import { chromium, type Browser } from 'playwright';
 
-import { pairKey } from '../../src/utils/playerUtils';
+import type { Player } from '../../src/types';
+import { mean } from '../../src/utils/numberUtils';
+import { teamPairs as getTeamPairs } from '../../src/utils/playerUtils';
 import { loadConfig, toCsv } from '../simulation/utils.ts';
 
 import { ensureDevServer } from './devServer.ts';
@@ -46,15 +48,9 @@ const percentile = (sorted: number[], p: number): number => {
   return sorted[idx];
 };
 
-const mean = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-
 /** Pairwise teammate keys within one team roster ("A|B" -> ["A|B"]). */
-const teamPairs = (roster: string): string[] => {
-  const p = roster.split('|').filter(Boolean);
-  const out: string[] = [];
-  for (let i = 0; i < p.length; i++) for (let j = i + 1; j < p.length; j++) out.push(pairKey(p[i], p[j]));
-  return out;
-};
+const teamPairs = (roster: string): string[] =>
+  getTeamPairs(roster.split('|').filter(Boolean).map(id => ({ id } as Player)));
 
 /** Teammate-repeat stats from the rounds observed in the DOM; matches the engine baseline's definition. */
 function observedRepeats(events: Array<{ team1: string; team2: string }>): {
