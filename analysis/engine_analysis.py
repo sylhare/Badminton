@@ -53,34 +53,97 @@ def _():
 def _(Path, json, pl):
     data_dir = Path(__file__).parent / "data"
 
-    mc_dir = data_dir / "mc_algo"
-    mc_summary = pl.read_csv(mc_dir / "summary.csv")
-    mc_pair_events = pl.read_csv(mc_dir / "pair_events.csv")
-    mc_config = json.loads((mc_dir / "config.json").read_text())
+    algo_dirs = {
+        "mc": data_dir / "mc_algo",
+        "sa": data_dir / "sa_algo",
+        "cg": data_dir / "cg_algo",
+        "sl": data_dir / "sl2_algo",
+        "random": data_dir / "random_baseline",
+    }
 
-    sa_dir = data_dir / "sa_algo"
-    sa_summary = pl.read_csv(sa_dir / "summary.csv")
-    sa_pair_events = pl.read_csv(sa_dir / "pair_events.csv")
-    sa_config = json.loads((sa_dir / "config.json").read_text())
+    def _load_algo(d):
+        return {
+            "summary": pl.read_csv(d / "summary.csv"),
+            "pair_events": pl.read_csv(d / "pair_events.csv"),
+            "config": json.loads((d / "config.json").read_text()),
+            "match_events": pl.read_csv(d / "match_events.csv"),
+            "player_stats": pl.read_csv(d / "player_stats.csv"),
+            "bench_stats": pl.read_csv(d / "bench_stats.csv", infer_schema_length=10000),
+        }
 
-    cg_dir = data_dir / "cg_algo"
-    cg_summary = pl.read_csv(cg_dir / "summary.csv")
-    cg_pair_events = pl.read_csv(cg_dir / "pair_events.csv")
-    cg_config = json.loads((cg_dir / "config.json").read_text())
+    mc_data = _load_algo(algo_dirs["mc"])
+    sa_data = _load_algo(algo_dirs["sa"])
+    cg_data = _load_algo(algo_dirs["cg"])
+    sl_data = _load_algo(algo_dirs["sl"])
+    random_data = _load_algo(algo_dirs["random"])
 
-    sl_dir = data_dir / "sl_algo"
-    sl_summary = pl.read_csv(sl_dir / "summary.csv")
-    sl_pair_events = pl.read_csv(sl_dir / "pair_events.csv")
-    sl_config = json.loads((sl_dir / "config.json").read_text())
+    mc_summary, mc_pair_events, mc_config, mc_match_events, mc_player_stats, mc_bench_stats = (
+        mc_data["summary"], mc_data["pair_events"], mc_data["config"],
+        mc_data["match_events"], mc_data["player_stats"], mc_data["bench_stats"],
+    )
+    sa_summary, sa_pair_events, sa_config, sa_match_events, sa_player_stats, sa_bench_stats = (
+        sa_data["summary"], sa_data["pair_events"], sa_data["config"],
+        sa_data["match_events"], sa_data["player_stats"], sa_data["bench_stats"],
+    )
+    cg_summary, cg_pair_events, cg_config, cg_match_events, cg_player_stats, cg_bench_stats = (
+        cg_data["summary"], cg_data["pair_events"], cg_data["config"],
+        cg_data["match_events"], cg_data["player_stats"], cg_data["bench_stats"],
+    )
+    sl_summary, sl_pair_events, sl_config, sl_match_events, sl_player_stats, sl_bench_stats = (
+        sl_data["summary"], sl_data["pair_events"], sl_data["config"],
+        sl_data["match_events"], sl_data["player_stats"], sl_data["bench_stats"],
+    )
+    baseline_summary, baseline_pair_events, random_config, random_match_events, random_player_stats, random_bench_stats = (
+        random_data["summary"], random_data["pair_events"], random_data["config"],
+        random_data["match_events"], random_data["player_stats"], random_data["bench_stats"],
+    )
+
+    mc_dir = algo_dirs["mc"]
+    sa_dir = algo_dirs["sa"]
+    cg_dir = algo_dirs["cg"]
+    sl_dir = algo_dirs["sl"]
+    baseline_dir = algo_dirs["random"]
 
     shared_config = json.loads((data_dir / "config.json").read_text())
     return (
-        cg_config, cg_dir, cg_pair_events, cg_summary,
+        algo_dirs,
+        baseline_dir,
+        baseline_pair_events,
+        baseline_summary,
+        cg_bench_stats,
+        cg_config,
+        cg_dir,
+        cg_match_events,
+        cg_pair_events,
+        cg_player_stats,
+        cg_summary,
         data_dir,
-        mc_config, mc_dir, mc_pair_events, mc_summary,
-        sa_config, sa_dir, sa_pair_events, sa_summary,
+        mc_bench_stats,
+        mc_config,
+        mc_dir,
+        mc_match_events,
+        mc_pair_events,
+        mc_player_stats,
+        mc_summary,
+        random_bench_stats,
+        random_config,
+        random_match_events,
+        random_player_stats,
+        sa_bench_stats,
+        sa_config,
+        sa_dir,
+        sa_match_events,
+        sa_pair_events,
+        sa_player_stats,
+        sa_summary,
         shared_config,
-        sl_config, sl_dir, sl_pair_events, sl_summary,
+        sl_bench_stats,
+        sl_config,
+        sl_dir,
+        sl_match_events,
+        sl_pair_events,
+        sl_player_stats,
+        sl_summary,
     )
 
 @app.cell(hide_code=True)
@@ -132,16 +195,11 @@ def _():
     return np, plt
 
 @app.cell
-def _(data_dir, json, pl):
-    baseline_dir = data_dir / "random_baseline"
-    baseline_summary = pl.read_csv(baseline_dir / "summary.csv")
-    baseline_pair_events = pl.read_csv(baseline_dir / "pair_events.csv")
-    random_config = json.loads((baseline_dir / "config.json").read_text())
-    
+def _():
     def pair_key(a: str, b: str) -> str:
         return f"{a}|{b}" if a < b else f"{b}|{a}"
-    
-    return baseline_pair_events, baseline_summary, pair_key, random_config
+
+    return (pair_key,)
 
 @app.cell
 def _(baseline_summary, cg_summary, compute_summary_metrics, mc_summary, pl, sa_summary, sl_summary):
@@ -655,46 +713,50 @@ def _(mo, shared_config):
     return
 
 @app.cell
-def _(compute_teammate_diversity, data_dir, pl):
-    random_match_events_div = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
-    mc_match_events_div = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
-    sa_match_events_div = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
-    cg_match_events_div = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
-    sl_match_events_div = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
-
-    random_diversity = compute_teammate_diversity(random_match_events_div)
-    mc_diversity = compute_teammate_diversity(mc_match_events_div)
-    sa_diversity = compute_teammate_diversity(sa_match_events_div)
-    cg_diversity = compute_teammate_diversity(cg_match_events_div)
-    sl_diversity = compute_teammate_diversity(sl_match_events_div)
+def _(
+    cg_match_events,
+    compute_teammate_diversity,
+    mc_match_events,
+    random_match_events,
+    sa_match_events,
+    sl_match_events,
+):
+    random_diversity = compute_teammate_diversity(random_match_events)
+    mc_diversity = compute_teammate_diversity(mc_match_events)
+    sa_diversity = compute_teammate_diversity(sa_match_events)
+    cg_diversity = compute_teammate_diversity(cg_match_events)
+    sl_diversity = compute_teammate_diversity(sl_match_events)
     return (
-        random_match_events_div, mc_match_events_div, sa_match_events_div, cg_match_events_div, sl_match_events_div,
-        random_diversity, mc_diversity, sa_diversity, cg_diversity, sl_diversity,
+        cg_diversity,
+        mc_diversity,
+        random_diversity,
+        sa_diversity,
+        sl_diversity,
     )
 
 @app.cell
 def _(
-    cg_match_events_div,
+    cg_match_events,
     compute_court_cooccurrences,
     compute_court_freshness_scores,
-    mc_match_events_div,
-    random_match_events_div,
-    sa_match_events_div,
-    sl_match_events_div,
+    mc_match_events,
+    random_match_events,
+    sa_match_events,
+    sl_match_events,
 ):
     freshness_by_algo = {
-        "Random Baseline": compute_court_freshness_scores(random_match_events_div),
-        "Monte Carlo": compute_court_freshness_scores(mc_match_events_div),
-        "Simulated Annealing": compute_court_freshness_scores(sa_match_events_div),
-        "Conflict Graph": compute_court_freshness_scores(cg_match_events_div),
-        "Smart Matching": compute_court_freshness_scores(sl_match_events_div),
+        "Random Baseline": compute_court_freshness_scores(random_match_events),
+        "Monte Carlo": compute_court_freshness_scores(mc_match_events),
+        "Simulated Annealing": compute_court_freshness_scores(sa_match_events),
+        "Conflict Graph": compute_court_freshness_scores(cg_match_events),
+        "Smart Matching": compute_court_freshness_scores(sl_match_events),
     }
     cooc_by_algo = {
-        "Random Baseline": compute_court_cooccurrences(random_match_events_div),
-        "Monte Carlo": compute_court_cooccurrences(mc_match_events_div),
-        "Simulated Annealing": compute_court_cooccurrences(sa_match_events_div),
-        "Conflict Graph": compute_court_cooccurrences(cg_match_events_div),
-        "Smart Matching": compute_court_cooccurrences(sl_match_events_div),
+        "Random Baseline": compute_court_cooccurrences(random_match_events),
+        "Monte Carlo": compute_court_cooccurrences(mc_match_events),
+        "Simulated Annealing": compute_court_cooccurrences(sa_match_events),
+        "Conflict Graph": compute_court_cooccurrences(cg_match_events),
+        "Smart Matching": compute_court_cooccurrences(sl_match_events),
     }
     return freshness_by_algo, cooc_by_algo
 
@@ -770,23 +832,23 @@ def _(mo):
 def _(
     ALGO_COLORS,
     ALGO_NAMES,
-    cg_match_events_div,
+    cg_match_events,
     compute_court_rematches_per_session,
     fig_to_image,
-    mc_match_events_div,
+    mc_match_events,
     mo,
     np,
     plt,
-    random_match_events_div,
-    sa_match_events_div,
-    sl_match_events_div,
+    random_match_events,
+    sa_match_events,
+    sl_match_events,
 ):
     _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
     _axes = _axes.flatten()
     _axes[-1].set_visible(False)
 
     _datasets = list(zip(
-        [mc_match_events_div, sa_match_events_div, cg_match_events_div, sl_match_events_div, random_match_events_div],
+        [mc_match_events, sa_match_events, cg_match_events, sl_match_events, random_match_events],
         ALGO_NAMES,
         ALGO_COLORS,
     ))
@@ -847,22 +909,25 @@ def _(mo):
     return
 
 @app.cell
-def _(compute_match_session_frequency, data_dir, pl):
-    random_match_events_mrf = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
-    mc_match_events_mrf = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
-    sa_match_events_mrf = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
-    cg_match_events_mrf = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
-    sl_match_events_mrf = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
-
-    random_mrf = compute_match_session_frequency(random_match_events_mrf)
-    mc_mrf = compute_match_session_frequency(mc_match_events_mrf)
-    sa_mrf = compute_match_session_frequency(sa_match_events_mrf)
-    cg_mrf = compute_match_session_frequency(cg_match_events_mrf)
-    sl_mrf = compute_match_session_frequency(sl_match_events_mrf)
+def _(
+    cg_match_events,
+    compute_match_session_frequency,
+    mc_match_events,
+    random_match_events,
+    sa_match_events,
+    sl_match_events,
+):
+    random_mrf = compute_match_session_frequency(random_match_events)
+    mc_mrf = compute_match_session_frequency(mc_match_events)
+    sa_mrf = compute_match_session_frequency(sa_match_events)
+    cg_mrf = compute_match_session_frequency(cg_match_events)
+    sl_mrf = compute_match_session_frequency(sl_match_events)
     return (
-        random_match_events_mrf, mc_match_events_mrf, sa_match_events_mrf,
-        cg_match_events_mrf, sl_match_events_mrf,
-        random_mrf, mc_mrf, sa_mrf, cg_mrf, sl_mrf,
+        cg_mrf,
+        mc_mrf,
+        random_mrf,
+        sa_mrf,
+        sl_mrf,
     )
 
 @app.cell
@@ -1098,19 +1163,26 @@ def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_confi
     return
 
 @app.cell
-def _(compute_balance_metrics, data_dir, mc_config, np, pl, random_config, sa_config, cg_config, sl_config, shared_config):
-    random_match_events = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
-    mc_match_events = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
-    sa_match_events = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
-    cg_match_events = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
-    sl_match_events = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
-
-    random_player_stats = pl.read_csv(data_dir / "random_baseline" / "player_stats.csv")
-    mc_player_stats = pl.read_csv(data_dir / "mc_algo" / "player_stats.csv")
-    sa_player_stats = pl.read_csv(data_dir / "sa_algo" / "player_stats.csv")
-    cg_player_stats = pl.read_csv(data_dir / "cg_algo" / "player_stats.csv")
-    sl_player_stats = pl.read_csv(data_dir / "sl_algo" / "player_stats.csv")
-
+def _(
+    cg_config,
+    cg_match_events,
+    cg_player_stats,
+    compute_balance_metrics,
+    mc_config,
+    mc_match_events,
+    mc_player_stats,
+    pl,
+    random_config,
+    random_match_events,
+    random_player_stats,
+    sa_config,
+    sa_match_events,
+    sa_player_stats,
+    shared_config,
+    sl_config,
+    sl_match_events,
+    sl_player_stats,
+):
     player_profiles = shared_config.get("playerProfiles", {})
 
     balance_results = {
@@ -1136,17 +1208,7 @@ def _(compute_balance_metrics, data_dir, mc_config, np, pl, random_config, sa_co
     return (
         balance_results,
         balance_summary,
-        cg_match_events,
-        cg_player_stats,
-        mc_match_events,
-        mc_player_stats,
         player_profiles,
-        random_match_events,
-        random_player_stats,
-        sa_match_events,
-        sa_player_stats,
-        sl_match_events,
-        sl_player_stats,
     )
 
 @app.cell
@@ -1168,13 +1230,15 @@ def _(mo):
     return
 
 @app.cell
-def _(aggregate_bench_stats, aggregate_by_player_count, data_dir, pl):
-    random_bench_stats = pl.read_csv(data_dir / "random_baseline" / "bench_stats.csv", infer_schema_length=10000)
-    mc_bench_stats = pl.read_csv(data_dir / "mc_algo" / "bench_stats.csv", infer_schema_length=10000)
-    sa_bench_stats = pl.read_csv(data_dir / "sa_algo" / "bench_stats.csv", infer_schema_length=10000)
-    cg_bench_stats = pl.read_csv(data_dir / "cg_algo" / "bench_stats.csv", infer_schema_length=10000)
-    sl_bench_stats = pl.read_csv(data_dir / "sl_algo" / "bench_stats.csv", infer_schema_length=10000)
-
+def _(
+    aggregate_bench_stats,
+    aggregate_by_player_count,
+    cg_bench_stats,
+    mc_bench_stats,
+    random_bench_stats,
+    sa_bench_stats,
+    sl_bench_stats,
+):
     bench_gap_stats = {
         "Random": aggregate_bench_stats(random_bench_stats),
         "MC": aggregate_bench_stats(mc_bench_stats),
@@ -1191,8 +1255,8 @@ def _(aggregate_bench_stats, aggregate_by_player_count, data_dir, pl):
         "SL": aggregate_by_player_count(sl_bench_stats),
     }
     return (
-        bench_gap_stats, bench_by_players,
-        random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats, sl_bench_stats,
+        bench_by_players,
+        bench_gap_stats,
     )
 
 @app.cell
