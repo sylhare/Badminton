@@ -951,6 +951,7 @@ def _(
     cg_match_events,
     compute_match_session_frequency,
     mc_match_events,
+    pl,
     random_match_events,
     sa_match_events,
     sl_match_events,
@@ -960,8 +961,23 @@ def _(
     sa_mrf = compute_match_session_frequency(sa_match_events)
     cg_mrf = compute_match_session_frequency(cg_match_events)
     sl_mrf = compute_match_session_frequency(sl_match_events)
+    distinct_per_1000 = {
+        _name: {
+            _n: compute_match_session_frequency(_sub)["total_unique_matches"] / _sub.height * 1000
+            for _n in sorted(_df.get_column("numPlayers").unique().to_list())
+            for _sub in [_df.filter(pl.col("numPlayers") == _n)]
+        }
+        for _name, _df in [
+            ("Random Baseline", random_match_events),
+            ("Monte Carlo", mc_match_events),
+            ("Simulated Annealing", sa_match_events),
+            ("Conflict Graph", cg_match_events),
+            ("Smart Matching", sl_match_events),
+        ]
+    }
     return (
         cg_mrf,
+        distinct_per_1000,
         mc_mrf,
         random_mrf,
         sa_mrf,
@@ -969,7 +985,7 @@ def _(
     )
 
 @app.cell
-def _(ALGO_COLORS, cg_mrf, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf, sl_mrf):
+def _(ALGO_COLORS, cg_mrf, distinct_per_1000, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf, sl_mrf):
     _display_order_mrf = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
     _algo_names_mrf = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
     _colors_mrf = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
@@ -977,20 +993,23 @@ def _(ALGO_COLORS, cg_mrf, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf
 
     _fig_mrf, (_ax_mrf1, _ax_mrf2) = plt.subplots(1, 2, figsize=(14, 5))
 
-    # Left: % of match configurations that appear in exactly 1 session
-    _unique_pcts = [m["unique_only_pct"] for m in _mrfs]
-    _x_mrf = np.arange(len(_algo_names_mrf))
-    _bars_mrf = _ax_mrf1.bar(_x_mrf, _unique_pcts, color=_colors_mrf, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _player_counts = sorted(distinct_per_1000["Random Baseline"].keys())
+    _x_mrf = np.arange(len(_player_counts))
+    _bw = 0.8 / len(_display_order_mrf)
+    for _i, (_algo, _name, _col) in enumerate(zip(_display_order_mrf, _algo_names_mrf, _colors_mrf)):
+        _vals = [distinct_per_1000[_algo][_n] for _n in _player_counts]
+        _bars_mrf = _ax_mrf1.bar(_x_mrf + (_i - (len(_display_order_mrf) - 1) / 2) * _bw, _vals, width=_bw,
+                                 color=_col, alpha=0.85, label=_name.replace("\n", " "))
+        for _bar in _bars_mrf:
+            _ax_mrf1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 5, f"{_bar.get_height():.0f}",
+                          ha="center", va="bottom", fontsize=7, rotation=90)
     _ax_mrf1.set_xticks(_x_mrf)
-    _ax_mrf1.set_xticklabels(_algo_names_mrf, fontsize=10)
-    _ax_mrf1.set_ylabel("% of unique match configurations", fontsize=11)
-    _ax_mrf1.set_title("Matches Seen in Exactly 1 Session\n(Higher = More Session-Unique Matchups)", fontsize=12, fontweight="bold")
-    _ax_mrf1.set_ylim(0, 105)
+    _ax_mrf1.set_xticklabels([f"{_n} players" for _n in _player_counts], fontsize=10)
+    _ax_mrf1.set_ylabel("Distinct matchups per 1,000 matches", fontsize=11)
+    _ax_mrf1.set_title("Matchup Variety by Player Count\n(Higher = wider range of matchups across sessions)", fontsize=12, fontweight="bold")
+    _ax_mrf1.set_ylim(0, 1100)
     _ax_mrf1.grid(True, alpha=0.3, axis='y')
-    for _bar in _bars_mrf:
-        _h = _bar.get_height()
-        _ax_mrf1.text(_bar.get_x() + _bar.get_width() / 2, _h + 1, f"{_h:.1f}%",
-                      ha="center", va="bottom", fontsize=11, fontweight="bold")
+    _ax_mrf1.legend(fontsize=8, loc="lower right")
 
     # Right: distribution line chart — X = # sessions a match appears in, Y = % of unique matches
     _max_s = max(m["max_sessions"] for m in _mrfs)
@@ -1015,16 +1034,17 @@ def _(ALGO_COLORS, cg_mrf, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf
 
     mo.vstack([
         mo.image(fig_to_image(_fig_mrf)),
-        mo.md("<center><i>Figure 8: Left: % of match configurations seen in only 1 session. Right: distribution of how many sessions each unique matchup appears in.</i></center>"),
+        mo.md("<center><i>Figure 8: Left: distinct matchups (A+B vs C+D) produced per 1,000 matches, split by player count; 1,000 would mean no matchup ever recurs across sessions. Engines that keep picking from a narrow set of balanced matchups score lower. Right: distribution of how many sessions each unique matchup appears in.</i></center>"),
     ])
     return
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-A higher percentage of session-unique match configurations (e.g. A+B vs C+D) is better — it means the algorithm
-rarely produces the same matchup twice. Ideally, the distribution peaks at 1 session with as few repeats as possible,
-showing that most matchups are one-off occurrences across all runs.
+Each session starts with a fresh history, so cross-session repeats are partly unavoidable: there are only
+C(n, 4) × 3 possible matchups (4,095 for 15 players up to 9,180 for 18), against 2,550 matches (15 players, 3 courts) or 3,400 matches (16–18 players) per engine.
+The left panel shows how much of that space each engine actually uses. A lower value means the engine
+narrows its choices (e.g. strong level balancing keeps picking the same "balanced" matchups), so the same matches recur more often.
     """)
     return
 
@@ -1294,131 +1314,88 @@ def _(mo):
     When there are more players than court spots, some must sit out ("bench") each round.
     **Bench fairness** measures how many games a player gets to play between bench periods.
     
-    The algorithms (MC, SA, CG) **prioritize preventing double benches** over avoiding teammate repeats.
-    When forced to choose, they allow a repeat rather than bench someone twice in a row.
+    Players per round depend on the player count: 16 fills all 4 courts, 15 and 17 bench one player
+    (15 uses a singles court), and 18 benches two. Results are therefore shown per player count.
     """)
     return
 
 @app.cell
-def _(
-    aggregate_bench_stats,
-    aggregate_by_player_count,
-    cg_bench_stats,
-    mc_bench_stats,
-    random_bench_stats,
-    sa_bench_stats,
-    sl_bench_stats,
-):
-    bench_gap_stats = {
-        "Random": aggregate_bench_stats(random_bench_stats),
-        "MC": aggregate_bench_stats(mc_bench_stats),
-        "SA": aggregate_bench_stats(sa_bench_stats),
-        "CG": aggregate_bench_stats(cg_bench_stats),
-        "SL": aggregate_bench_stats(sl_bench_stats),
+def _(ALGO_COLORS, ALGO_NAMES, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, pl, plt, random_bench_stats, sa_bench_stats, shared_config, sl_bench_stats):
+    _rounds = shared_config.get("rounds", 17)
+    _order = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
+    _algo_colors = dict(zip(ALGO_NAMES, ALGO_COLORS))
+    _bench = {
+        "Random Baseline": random_bench_stats,
+        "Monte Carlo": mc_bench_stats,
+        "Simulated Annealing": sa_bench_stats,
+        "Conflict Graph": cg_bench_stats,
+        "Smart Matching": sl_bench_stats,
     }
-
-    bench_by_players = {
-        "Random": aggregate_by_player_count(random_bench_stats),
-        "MC": aggregate_by_player_count(mc_bench_stats),
-        "SA": aggregate_by_player_count(sa_bench_stats),
-        "CG": aggregate_by_player_count(cg_bench_stats),
-        "SL": aggregate_by_player_count(sl_bench_stats),
+    _by_n = {
+        _name: _df.group_by("numPlayers").agg(
+            (pl.col("avgBenchCount").mean() * pl.col("numPlayers").first() / _rounds).round().cast(pl.Int64).alias("benched"),
+            pl.col("benchRange").mean().alias("range"),
+            pl.col("doubleBenchCount").sum().alias("doubles"),
+            pl.col("totalGapEvents").sum().alias("gaps"),
+        ).sort("numPlayers")
+        for _name, _df in _bench.items()
     }
-    return (
-        bench_by_players,
-        bench_gap_stats,
-    )
+    _ref = _by_n["Random Baseline"]
+    _player_counts = _ref.get_column("numPlayers").to_list()
+    _benched = dict(zip(_player_counts, _ref.get_column("benched").to_list()))
+    _slots = {_n: _benched[_n] * _rounds for _n in _player_counts}
+    _min_range = {_n: 0 if _slots[_n] % _n == 0 else 1 for _n in _player_counts}
 
-@app.cell
-def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats, shared_config, sl_bench_stats):
-    _algo_names = ["Random", "MC", "SA", "CG", "SL"]
-    _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
-    _bench_dfs = [random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats, sl_bench_stats]
-    _max_courts = shared_config.get("numCourts", 4)
-
-    _all_player_counts = set()
-    for _algo in _algo_names:
-        _all_player_counts.update(bench_by_players[_algo].keys())
-    _player_counts = sorted(_all_player_counts) if _all_player_counts else [20]
-
-    def get_court_spots(num_players):
-        num_courts = min(_max_courts, num_players // 4)
-        return num_courts * 4
-    
-    _theoretical_max = []
-    _benched_per_round_list = []
-    for _pc in _player_counts:
-        _court_spots = get_court_spots(_pc)
-        _benched_per_round = _pc - _court_spots
-        _benched_per_round_list.append(_benched_per_round)
-        if _benched_per_round > 0:
-            _theoretical_max.append(_pc / _benched_per_round - 1)
-        else:
-            _theoretical_max.append(0)
-    
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(15, 5))
-    
-    _x1 = np.arange(len(_player_counts))
-    _width1 = 0.12
-    _offsets1 = [-2, -1, 0, 1, 2]
-    
-    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
-        _gaps = []
-        for _j, _pc in enumerate(_player_counts):
-            _data = bench_by_players[_algo].get(_pc, {})
-            _mean_gap = _data.get("mean_gap", 0)
-            _total_events = _data.get("total_events", 0)
-            
-            if _mean_gap == 0 and _total_events == 0 and _theoretical_max[_j] > 0:
-                _gaps.append(_theoretical_max[_j])
-            else:
-                _gaps.append(_mean_gap)
-        _ax1.bar(_x1 + _offsets1[_i] * _width1, _gaps, _width1, label=_algo, color=_color, alpha=0.85)
-    
-    _ax1.plot(_x1, _theoretical_max, color='green', linestyle='--', linewidth=2, marker='o', 
-              markersize=8, label='Theoretical Max', zorder=5)
-    
-    _ax1.set_xticks(_x1)
-    _ax1.set_xticklabels([f"{pc}p\n({b}b)" for pc, b in zip(_player_counts, _benched_per_round_list)], fontsize=9)
-    _ax1.set_xlabel("Player Count (benched per round)", fontsize=10)
-    _ax1.set_ylabel("Mean Gap (games between benches)", fontsize=10)
-    _ax1.set_title("Average Gap Between Benches\n(Higher = Better)", fontsize=11, fontweight="bold")
-    _ax1.legend(loc="upper right", fontsize=8)
-    _ax1.set_ylim(0, max(_theoretical_max) + 1)
-    
-    _range_counts = {}
-    for _algo, _df in zip(_algo_names, _bench_dfs):
-        if "benchRange" in _df.columns:
-            _ranges = _df.get_column("benchRange").to_numpy()
-            _unique, _counts = np.unique(_ranges, return_counts=True)
-            _range_counts[_algo] = dict(zip(_unique, _counts / len(_ranges) * 100))
-    
-    _all_ranges = sorted(set(r for d in _range_counts.values() for r in d.keys()))
-    _width2 = 0.15
-    _offsets2 = [-2, -1, 0, 1, 2]
-    _x2 = np.arange(len(_all_ranges))
-    
-    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
-        _pcts = [_range_counts.get(_algo, {}).get(r, 0) for r in _all_ranges]
-        _ax2.bar(_x2 + _offsets2[_i] * _width2, _pcts, _width2, label=_algo, color=_color, alpha=0.85)
-    
-    _ax2.set_xticks(_x2)
-    _ax2.set_xticklabels([str(int(r)) for r in _all_ranges], fontsize=10)
-    _ax2.set_xlabel("Bench Range (max - min benches per session)", fontsize=10)
-    _ax2.set_ylabel("% of Sessions", fontsize=10)
-    _ax2.set_title("Bench Range Distribution\n(Higher % at 0-1 = Better)", fontsize=11, fontweight="bold")
-    _ax2.legend(loc="upper right", fontsize=8)
-    
+    _fig, _ax = plt.subplots(figsize=(11, 5))
+    _x = np.arange(len(_player_counts))
+    _bw = 0.8 / len(_order)
+    for _i, _name in enumerate(_order):
+        _d = _by_n[_name]
+        _rates = [
+            (_dbl / _g * 100) if _g else 0.0
+            for _dbl, _g in zip(_d.get_column("doubles").to_list(), _d.get_column("gaps").to_list())
+        ]
+        _bars = _ax.bar(_x + (_i - (len(_order) - 1) / 2) * _bw, _rates, width=_bw,
+                        color=_algo_colors[_name], alpha=0.85, label=_name)
+        for _bar, _r in zip(_bars, _rates):
+            _ax.text(_bar.get_x() + _bar.get_width() / 2, _r + 0.1, f"{_r:.1f}", ha="center", va="bottom", fontsize=7)
+    _ax.set_xticks(_x)
+    _ax.set_xticklabels([f"{_n} players\n({_benched[_n]} benched/round)" for _n in _player_counts])
+    _ax.set_ylabel("Back-to-back benches (% of bench gaps)")
+    _ax.set_title("Double-Bench Rate by Player Count (Lower = Better)", fontweight="bold")
+    _ax.legend(fontsize=8, loc="upper left")
+    _ax.grid(True, alpha=0.3, axis="y")
     _fig.tight_layout()
+
+    _rows = [
+        {"Players": _n, "Benched/round": _benched[_n], "Bench slots": _slots[_n], "Min range": _min_range[_n],
+         **{_name: round(float(_by_n[_name].filter(pl.col("numPlayers") == _n)["range"][0]), 2) for _name in _order}}
+        for _n in _player_counts
+    ]
+
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 12: Bench fairness metrics. Left: average games played between bench periods for different player counts. Right: distribution of bench count differences within sessions.</i></center>"),
-        mo.md(f"""
-- **Average Gap (Left):** Mean games between bench periods per player count. Green line = theoretical maximum ($N/B - 1$).
-Optimized algorithms achieve close to theoretical max; Random baseline falls significantly short.
-- **Bench Range (Right):** Distribution of max-min bench count difference per session. Range 0 = perfectly fair (everyone benched equally).
-Optimized algorithms concentrate at 0-1; Random spreads across higher ranges.
-        """)
+        mo.md(
+            "<center><i>Figure 12: Share of bench gaps where a player sat out two rounds in a row, split by player count. "
+            "16 players fill all courts (nobody benched) and 17 players bench exactly one per round, so each player sits out once "
+            "and no gap exists; those groups are empty by construction.</i></center>"
+        ),
+        mo.md(
+            f"**Bench range per session** (max − min times benched). With {_rounds} rounds, bench slots = benched/round × rounds; "
+            "if they don't divide evenly among players, a range of 1 is unavoidable."
+        ),
+        mo.ui.table(
+            pl.DataFrame(_rows),
+            selection=None,
+            style_cell=lambda _row, _col, _val: (
+                {"color": _algo_colors[_col], "fontWeight": "bold"} if _col in _algo_colors else {}
+            ),
+        ),
+        mo.md(
+            "Every engine hits the minimum range at every player count: the bench rotation lives in the shared base engine "
+            "(players with the fewest benches sit out next), so bench fairness does not differentiate the algorithms. "
+            "The only difference is the double-bench rate, which stays within a few percent."
+        ),
     ])
     return
 
