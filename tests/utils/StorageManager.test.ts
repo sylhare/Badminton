@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { decompress, storageManager } from '../../src/utils/StorageManager';
+import { decodeEngineState, decompress, storageManager } from '../../src/utils/StorageManager';
 import type { Court, CourtEngineState, Player } from '../../src/types';
 
 const STORAGE_KEY = 'badminton-state';
@@ -533,6 +533,44 @@ describe('StorageManager', () => {
       await storageManager.saveApp({ numberOfCourts: 3 });
       const raw = localStorage.getItem(STORAGE_KEY)!;
       expect(() => JSON.parse(raw)).toThrow();
+    });
+  });
+
+  describe('decodeEngineState', () => {
+    it('decodes a valid raw compressed state containing compact engine state', async () => {
+      const mockEngineState = {
+        benchCountMap: { 'player-1': 2, 'player-2': 1 },
+        singleCountMap: {},
+        teammateCountMap: { 'player-1|player-2': 3 },
+        opponentCountMap: { 'player-1|player-3': 2 },
+        winCountMap: { 'player-1': 5, 'player-2': 3 },
+        lossCountMap: { 'player-1': 2, 'player-2': 4 },
+      };
+      await storageManager.saveEngine(mockEngineState);
+      const raw = storageManager.getRawState()!;
+      const decoded = await decodeEngineState(raw);
+
+      expect(decoded.benchCountMap).toEqual({ 'player-1': 2, 'player-2': 1 });
+      expect(decoded.winCountMap).toEqual({ 'player-1': 5, 'player-2': 3 });
+      expect(decoded.lossCountMap).toEqual({ 'player-1': 2, 'player-2': 4 });
+      expect(decoded.teammateCountMap).toEqual({ 'player-1|player-2': 3 });
+      expect(decoded.opponentCountMap).toEqual({ 'player-1|player-3': 2 });
+    });
+
+    it('returns empty object without throwing when decoding invalid or corrupted data', async () => {
+      const decoded = await decodeEngineState('invalid-corrupted-data!!!');
+      expect(decoded).toEqual({});
+    });
+
+    it('returns empty object without throwing when decoding an empty string', async () => {
+      const decoded = await decodeEngineState('');
+      expect(decoded).toEqual({});
+    });
+
+    it('returns empty object when decoding JSON without an engine property', async () => {
+      const jsonWithoutEngine = JSON.stringify({ app: { players: [] } });
+      const decoded = await decodeEngineState(jsonWithoutEngine);
+      expect(decoded).toEqual({});
     });
   });
 });
