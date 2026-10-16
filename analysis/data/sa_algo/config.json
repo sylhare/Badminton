@@ -15,33 +15,33 @@
     "coolingRate": 0.985
   },
   "aggregateStats": {
-    "repeatRate": 59,
-    "avgRepeatsPerRun": 4.5,
-    "zeroRepeatRate": 41
+    "repeatRate": 56.00000000000001,
+    "avgRepeatsPerRun": 4.515,
+    "zeroRepeatRate": 44
   },
   "levelBasedBalance": {
     "totalMatches": 12750,
-    "strongerTeamWinRate": 93.70196078431373,
-    "avgStrengthDifferential": 47.03843137254902,
-    "perfectlyBalancedMatches": 1602,
-    "perfectlyBalancedRate": 12.564705882352941
+    "strongerTeamWinRate": 93.46666666666667,
+    "avgStrengthDifferential": 47.06980392156863,
+    "perfectlyBalancedMatches": 1637,
+    "perfectlyBalancedRate": 12.83921568627451
   },
   "engineTrackedBalance": {
     "totalMatches": 12750,
-    "engineBalancedWinRate": 75.07450980392157,
-    "avgEngineWinDifferential": 2.572,
-    "perfectlyBalancedMatches": 2728,
-    "perfectlyBalancedRate": 21.396078431372548
+    "engineBalancedWinRate": 75.94509803921568,
+    "avgEngineWinDifferential": 2.5566274509803923,
+    "perfectlyBalancedMatches": 2759,
+    "perfectlyBalancedRate": 21.63921568627451
   },
   "benchFairness": {
     "avgBenchRange": 0.5,
-    "avgMeanGap": 3.6653125,
-    "doubleBenchRate": 2,
+    "avgMeanGap": 3.7009375,
+    "doubleBenchRate": 0,
     "totalSessions": 200,
     "totalGapEvents": 900
   },
   "timing": {
-    "totalMs": 5018
+    "totalMs": 5894
   },
-  "timestamp": "2026-10-16T20:06:25.216Z"
+  "timestamp": "2026-10-16T20:42:54.835Z"
 }

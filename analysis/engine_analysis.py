@@ -1313,9 +1313,6 @@ def _(mo):
     
     When there are more players than court spots, some must sit out ("bench") each round.
     **Bench fairness** measures how many games a player gets to play between bench periods.
-    
-    Players per round depend on the player count: 16 fills all 4 courts, 15 and 17 bench one player
-    (15 uses a singles court), and 18 benches two. Results are therefore shown per player count.
     """)
     return
 
@@ -1363,6 +1360,7 @@ def _(ALGO_COLORS, ALGO_NAMES, cg_bench_stats, fig_to_image, mc_bench_stats, mo,
     _ax.set_xticklabels([f"{_n} players\n({_benched[_n]} benched/round)" for _n in _player_counts])
     _ax.set_ylabel("Back-to-back benches (% of bench gaps)")
     _ax.set_title("Double-Bench Rate by Player Count (Lower = Better)", fontweight="bold")
+    _ax.set_ylim(0, max(1.0, _ax.get_ylim()[1]))
     _ax.legend(fontsize=8, loc="upper left")
     _ax.grid(True, alpha=0.3, axis="y")
     _fig.tight_layout()
@@ -1392,9 +1390,9 @@ def _(ALGO_COLORS, ALGO_NAMES, cg_bench_stats, fig_to_image, mc_bench_stats, mo,
             ),
         ),
         mo.md(
-            "Every engine hits the minimum range at every player count: the bench rotation lives in the shared base engine "
-            "(players with the fewest benches sit out next), so bench fairness does not differentiate the algorithms. "
-            "The only difference is the double-bench rate, which stays within a few percent."
+            "Every engine hits the minimum range and a 0% double-bench rate at every player count. Both come from the shared "
+            "bench rotation, so this section validates that rotation rather than comparing algorithms. A double bench can still "
+            "occur when it is unavoidable, e.g. manually forced benches or more than half the players sitting out each round."
         ),
     ])
     return
