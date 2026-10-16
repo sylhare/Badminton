@@ -40,12 +40,11 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
     return totalCost;
   }
 
-  /** The four cost terms every SA engine shares: teammate repeats, opponent repeats, and win balance. */
+  /** Cost terms every SA engine shares: teammate repeats and opponent repeats. */
   protected sharedTeamCost(team1: Player[], team2: Player[]): number {
     return this.calculateTeammateCost(team1, this.TEAMMATE_REPEAT_PENALTY)
       + this.calculateTeammateCost(team2, this.TEAMMATE_REPEAT_PENALTY)
-      + this.calculateOpponentCost(team1, team2, this.OPPONENT_REPEAT_PENALTY)
-      + this.calculateWinBalanceCost(team1, team2, this.BALANCE_PENALTY);
+      + this.calculateOpponentCost(team1, team2, this.OPPONENT_REPEAT_PENALTY);
   }
 
   /** Split cost defaults to the shared terms; Smart adds gender/level on top. */
