@@ -22,32 +22,32 @@
   },
   "aggregateStats": {
     "repeatRate": 74.5,
-    "avgRepeatsPerRun": 4.98,
+    "avgRepeatsPerRun": 5.055,
     "zeroRepeatRate": 25.5
   },
   "levelBasedBalance": {
     "totalMatches": 12750,
-    "strongerTeamWinRate": 79.86666666666666,
-    "avgStrengthDifferential": 19.60156862745098,
-    "perfectlyBalancedMatches": 5020,
-    "perfectlyBalancedRate": 39.372549019607845
+    "strongerTeamWinRate": 80.87058823529412,
+    "avgStrengthDifferential": 19.629803921568627,
+    "perfectlyBalancedMatches": 5002,
+    "perfectlyBalancedRate": 39.2313725490196
   },
   "engineTrackedBalance": {
     "totalMatches": 12750,
-    "engineBalancedWinRate": 47.87450980392157,
-    "avgEngineWinDifferential": 0.8590588235294118,
-    "perfectlyBalancedMatches": 6938,
-    "perfectlyBalancedRate": 54.4156862745098
+    "engineBalancedWinRate": 48.53333333333333,
+    "avgEngineWinDifferential": 0.8325490196078431,
+    "perfectlyBalancedMatches": 6999,
+    "perfectlyBalancedRate": 54.89411764705883
   },
   "benchFairness": {
     "avgBenchRange": 0.5,
-    "avgMeanGap": 3.676875,
-    "doubleBenchRate": 2.111111111111111,
+    "avgMeanGap": 3.766875,
+    "doubleBenchRate": 2,
     "totalSessions": 200,
     "totalGapEvents": 900
   },
   "timing": {
-    "totalMs": 18052
+    "totalMs": 21209
   },
-  "timestamp": "2026-10-16T17:13:23.730Z"
+  "timestamp": "2026-10-16T20:06:52.997Z"
 }
