@@ -39,6 +39,8 @@ from .analysis import (
     is_adjacent_pair,
     player_id_to_index,
     player_labels,
+    theoretical_min_repeat_pairs,
+    expected_court_cooccurrence,
 )
 
 __all__ = [
@@ -78,6 +80,8 @@ __all__ = [
     "compute_team_stats",
     "compute_variety_distribution",
     "compute_zero_repeat_pct",
+    "theoretical_min_repeat_pairs",
+    "expected_court_cooccurrence",
     "extract_max_player_count",
     "is_adjacent_pair",
     "player_id_to_index",

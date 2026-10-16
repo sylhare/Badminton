@@ -262,6 +262,7 @@ export const extractRoundPairs = (
 export const evaluateRepeats = (
   rounds: RoundResult[],
   simulationId: number,
+  numPlayers: number,
 ): {
   repeatPairCount: number;
   repeatPairDifferentOpponentsCount: number;
@@ -301,6 +302,7 @@ export const evaluateRepeats = (
 
       events.push({
         simulationId,
+        numPlayers,
         fromRound: firstOccurrence.roundIndex,
         toRound: repeat.roundIndex,
         pairId,

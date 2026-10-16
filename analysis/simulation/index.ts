@@ -79,7 +79,7 @@ const enginesToRun = engineFilter
 
 type EngineType = typeof ALL_ENGINES[number]['engine'];
 
-const runSimulation = (Engine: EngineType, numPlayers: number): {
+const runSimulation = (Engine: EngineType, numPlayers: number, simIdOffset: number): {
   summaries: SimulationSummary[];
   pairEvents: PairEvent[];
   matchEvents: MatchEvent[];
@@ -97,7 +97,8 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
   const playerWins = new Map<string, number>();
   const playerLosses = new Map<string, number>();
 
-  for (let simId = 1; simId <= RUNS; simId++) {
+  for (let run = 1; run <= RUNS; run++) {
+    const simId = simIdOffset + run;
     Engine.resetHistory();
 
     const sessionBenchCounts = new Map<string, number>();
@@ -166,11 +167,12 @@ const runSimulation = (Engine: EngineType, numPlayers: number): {
       totalGapEvents: sessionGaps.length,
     });
 
-    const repeatStats = evaluateRepeats(rounds, simId);
+    const repeatStats = evaluateRepeats(rounds, simId, numPlayers);
     for (const e of repeatStats.events) pairEvents.push(e);
 
     summaries.push({
       simulationId: simId,
+      numPlayers,
       rounds: ROUNDS,
       repeatAnyPair: repeatStats.repeatPairCount > 0,
       repeatPairDifferentOpponents: repeatStats.repeatPairDifferentOpponentsCount > 0,
@@ -202,7 +204,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
   const playerWins = new Map<string, number>();
   const playerLosses = new Map<string, number>();
 
-  for (const numPlayers of PLAYER_COUNTS) {
+  for (const [countIdx, numPlayers] of PLAYER_COUNTS.entries()) {
     const {
       summaries,
       pairEvents,
@@ -211,7 +213,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
       benchStats,
       playerWins: simPlayerWins,
       playerLosses: simPlayerLosses,
-    } = runSimulation(engine, numPlayers);
+    } = runSimulation(engine, numPlayers, countIdx * RUNS);
     allSummaries.push(...summaries);
     allPairEvents.push(...pairEvents);
     allMatchEvents.push(...matchEvents);
@@ -233,7 +235,7 @@ const runEngine = (engineConfig: typeof ALL_ENGINES[number]) => {
 
   const elapsed = Date.now() - startTime;
 
-  const pairEventHeaders = ['simulationId', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
+  const pairEventHeaders = ['simulationId', 'numPlayers', 'fromRound', 'toRound', 'pairId', 'opponentFrom', 'opponentTo', 'opponentChanged'];
   const matchEventHeaders = ['simulationId', 'numPlayers', 'roundIndex', 'courtIndex', 'team1Players', 'team2Players', 'team1Strength', 'team2Strength', 'strengthDifferential', 'matchAvgLevel', 'winner', 'strongerTeamWon', 'team1EngineWins', 'team2EngineWins', 'engineWinDifferential', 'engineBalancedTeamWon'];
   const benchStatsHeaders = ['simulationId', 'numPlayers', 'maxBenchCount', 'minBenchCount', 'benchRange', 'avgBenchCount', 'meanGap', 'doubleBenchCount', 'totalGapEvents'];
 

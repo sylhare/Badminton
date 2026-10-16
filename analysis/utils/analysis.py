@@ -206,6 +206,32 @@ def analyze_adjacency_bias(events_df: "pl.DataFrame", label: str) -> dict[str, A
     }
 
 
+def _session_key(row: dict[str, Any]) -> tuple[Any, Any]:
+    """Identify a session by (simulationId, numPlayers) so batches with reused IDs stay separate."""
+    return (row["simulationId"], row.get("numPlayers"))
+
+
+def _session_frames(match_df: "pl.DataFrame") -> list["pl.DataFrame"]:
+    """Split match events into one frame per (simulationId, numPlayers) session."""
+    keys = [c for c in ("simulationId", "numPlayers") if c in match_df.columns]
+    return match_df.partition_by(keys, maintain_order=True)
+
+
+def theoretical_min_repeat_pairs(num_players: int, max_courts: int, rounds: int) -> int:
+    """Lower bound on teammate-pair repeats: pairs needed over all rounds minus distinct pairs available."""
+    courts = min(max_courts, num_players // 4)
+    pairs_needed = 2 * courts * rounds
+    distinct_pairs = num_players * (num_players - 1) // 2
+    return max(0, pairs_needed - distinct_pairs)
+
+
+
+def expected_court_cooccurrence(num_players: int, max_courts: int, rounds: int) -> float:
+    """Average rounds a pair shares a court per session when court time is spread evenly across all pairs."""
+    courts = min(max_courts, num_players // 4)
+    rounds_played = rounds * 4 * courts / num_players
+    return rounds_played * 3 / (num_players - 1)
+
 def compute_teammate_diversity(match_events_df: "pl.DataFrame") -> dict[str, Any]:
     """Compute unique teammate counts per player per session.
     
@@ -218,7 +244,7 @@ def compute_teammate_diversity(match_events_df: "pl.DataFrame") -> dict[str, Any
     session_teammates: dict[Any, dict[str, set[str]]] = {}
 
     for row in match_events_df.iter_rows(named=True):
-        session_key = row["simulationId"]
+        session_key = _session_key(row)
         if session_key not in session_teammates:
             session_teammates[session_key] = {}
 
@@ -283,7 +309,7 @@ def compute_match_session_frequency(match_events_df: "pl.DataFrame") -> dict[str
     session_matches: dict[Any, set[str]] = {}
 
     for row in match_events_df.iter_rows(named=True):
-        session_key = row["simulationId"]
+        session_key = _session_key(row)
         key = _canonical_match_key(row["team1Players"], row["team2Players"])
         session_matches.setdefault(session_key, set()).add(key)
 
@@ -369,9 +395,7 @@ def compute_court_freshness_scores(match_df: "pl.DataFrame") -> list[int]:
     if match_df.height == 0:
         return scores
 
-    sim_ids = match_df.get_column("simulationId").unique().sort().to_list()
-    for sid in sim_ids:
-        sim = match_df.filter(pl.col("simulationId") == sid)
+    for sim in _session_frames(match_df):
         hist: dict[str, list[tuple[int, frozenset[str]]]] = {}
         for row in sim.iter_rows(named=True):
             court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
@@ -426,9 +450,7 @@ def compute_court_cooccurrences(match_df: "pl.DataFrame") -> list[int]:
     if match_df.height == 0:
         return all_counts
 
-    sim_ids = match_df.get_column("simulationId").unique().sort().to_list()
-    for sid in sim_ids:
-        sim = match_df.filter(pl.col("simulationId") == sid)
+    for sim in _session_frames(match_df):
         pair_counts: dict[str, int] = {}
         for row in sim.iter_rows(named=True):
             court = sorted(set(row["team1Players"].split("|") + row["team2Players"].split("|")))
@@ -458,7 +480,7 @@ def compute_court_rematches_per_session(match_events_df: "pl.DataFrame") -> list
 
     session_counts: dict[Any, dict[tuple[str, ...], int]] = {}
     for row in match_events_df.iter_rows(named=True):
-        session_key = row["simulationId"]
+        session_key = _session_key(row)
         if session_key not in session_counts:
             session_counts[session_key] = {}
         team1 = row["team1Players"].split("|") if row["team1Players"] else []

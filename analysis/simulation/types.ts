@@ -60,6 +60,7 @@ export type MatchPairEvent = {
 /** Summary of repeat pair statistics for a simulation. */
 export type SimulationSummary = {
   simulationId: number;
+  numPlayers: number;
   rounds: number;
   repeatAnyPair: boolean;
   repeatPairDifferentOpponents: boolean;
@@ -72,6 +73,7 @@ export type SimulationSummary = {
 /** Records when a team pairing was repeated across rounds. */
 export type PairEvent = {
   simulationId: number;
+  numPlayers: number;
   fromRound: number;
   toRound: number;
   pairId: string;

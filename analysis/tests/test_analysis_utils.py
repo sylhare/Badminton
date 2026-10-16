@@ -9,6 +9,7 @@ import numpy as np
 import polars as pl
 
 from utils.analysis import (
+    theoretical_min_repeat_pairs,
     aggregate_bench_stats,
     aggregate_by_player_count,
     analyze_adjacency_bias,
@@ -301,6 +302,30 @@ class TestAdjacencyAndBenchAnalysis(unittest.TestCase):
         })
         rematches = compute_court_rematches_per_session(match_df)
         self.assertEqual(rematches, [2, 0])
+
+    def test_compute_court_rematches_per_session_separates_player_counts(self):
+        match_df = pl.DataFrame({
+            "simulationId": [1, 1],
+            "numPlayers": [15, 16],
+            "team1Players": ["P1|P2", "P1|P2"],
+            "team2Players": ["P3|P4", "P3|P4"],
+        })
+        self.assertEqual(compute_court_rematches_per_session(match_df), [0, 0])
+
+    def test_compute_court_cooccurrences_separates_player_counts(self):
+        match_df = pl.DataFrame({
+            "simulationId": [1, 1],
+            "numPlayers": [15, 16],
+            "team1Players": ["P1|P2", "P1|P2"],
+            "team2Players": ["P3|P4", "P3|P4"],
+        })
+        self.assertEqual(compute_court_cooccurrences(match_df), [1] * 12)
+
+    def test_theoretical_min_repeat_pairs(self):
+        self.assertEqual(theoretical_min_repeat_pairs(16, 4, 17), 16)
+        self.assertEqual(theoretical_min_repeat_pairs(15, 4, 17), 0)
+        self.assertEqual(theoretical_min_repeat_pairs(17, 4, 17), 0)
+        self.assertEqual(theoretical_min_repeat_pairs(18, 4, 17), 0)
 
     def test_compute_court_rematches_per_session_empty_and_singles(self):
         self.assertEqual(compute_court_rematches_per_session(pl.DataFrame()), [])

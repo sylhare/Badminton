@@ -35,6 +35,8 @@ def _():
         compute_balance_metrics,
         compute_court_freshness_scores,
         compute_court_cooccurrences,
+        theoretical_min_repeat_pairs,
+        expected_court_cooccurrence,
     )
     return (
         Path, fig_to_image, create_radar_chart, json, math, mo, pl, setup_matplotlib,
@@ -47,6 +49,7 @@ def _():
         build_repeat_matrix, aggregate_bench_stats, aggregate_by_player_count,
         compute_balance_metrics,
         compute_court_freshness_scores, compute_court_cooccurrences,
+        theoretical_min_repeat_pairs, expected_court_cooccurrence,
     )
 
 @app.cell
@@ -460,44 +463,72 @@ def _(mo, shared_config):
     return
 
 @app.cell
-def _(ALGO_COLORS, ALGO_NAMES, baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, sa_summary, sl_summary):
-    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
-    _axes = _axes.flatten()
-    _axes[-1].set_visible(False)
+def _(ALGO_COLORS, ALGO_NAMES, baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, pl, plt, sa_summary, shared_config, sl_summary, theoretical_min_repeat_pairs):
+    _rounds = shared_config.get("rounds", 17)
+    _courts = shared_config.get("numCourts", 4)
+
+    def _with_excess(_df):
+        return _df.with_columns(
+            pl.col("numPlayers")
+            .map_elements(lambda _n: theoretical_min_repeat_pairs(_n, _courts, _rounds), return_dtype=pl.Int64)
+            .alias("minRepeats")
+        ).with_columns((pl.col("repeatPairCount") - pl.col("minRepeats")).alias("excessRepeats"))
 
     _datasets = list(zip(
-        [mc_summary, sa_summary, cg_summary, sl_summary, baseline_summary],
+        [_with_excess(_d) for _d in [mc_summary, sa_summary, cg_summary, sl_summary, baseline_summary]],
         ALGO_NAMES,
         ALGO_COLORS,
     ))
-    
-    _max_x = max(
-        _data_df.get_column("repeatPairDifferentOpponentsCount").max()
-        for _data_df, _, _ in _datasets
-    )
-    
+    _player_counts = sorted(_datasets[0][0].get_column("numPlayers").unique().to_list())
+    _mins = {_n: theoretical_min_repeat_pairs(_n, _courts, _rounds) for _n in _player_counts}
+    _max_x = max(_d.get_column("excessRepeats").max() for _d, _, _ in _datasets)
+
+    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
+    _axes = _axes.flatten()
+    _axes[-1].set_visible(False)
+    _step = 0.8 / len(_player_counts)
+    _width = _step * 3.2
+    _shades = np.linspace(0.3, 0.7, len(_player_counts))
+    _rows = []
+
     for _ax, (_df, _name, _color) in zip(_axes, _datasets):
-        _counts = _df.get_column("repeatPairDifferentOpponentsCount")
-        _counts_arr = _counts.to_numpy()
-        _values, _freqs = np.unique(_counts_arr, return_counts=True)
-        _pcts = _freqs / _freqs.sum() * 100
-        
-        _ax.bar(_values, _pcts, color=_color, alpha=0.8, width=0.8)
-        _ax.set_xlabel("Repeat pairs per run")
+        for _i, _n in enumerate(_player_counts):
+            _excess = _df.filter(pl.col("numPlayers") == _n).get_column("excessRepeats").to_numpy()
+            _values, _freqs = np.unique(_excess, return_counts=True)
+            _ax.bar(
+                _values + (_i - (len(_player_counts) - 1) / 2) * _step,
+                _freqs / _freqs.sum() * 100,
+                width=_width, color=_color, alpha=_shades[_i], edgecolor="none",
+                label=f"{_n} players (min {_mins[_n]})",
+            )
+            _rows.append({"Players": _n, "Algorithm": _name, "Avg repeats": round(float(_excess.mean()) + _mins[_n], 2)})
+        _ax.set_xlabel("Repeat pairs above theoretical minimum per run")
         _ax.set_ylabel("Percentage of runs (%)")
         _ax.set_title(_name, fontweight="bold")
-        _ax.set_xlim(-0.5, _max_x + 0.5)
-        
-        _zero_pct = (_counts == 0).sum() / len(_counts) * 100
-        _ax.annotate(f"Zero repeats: {_zero_pct:.1f}%", 
-                     xy=(0.95, 0.95), xycoords="axes fraction",
-                     ha="right", va="top", fontsize=10,
-                     bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
-    
+        _ax.set_xlim(-0.6, _max_x + 0.6)
+        _ax.legend(loc="upper right", fontsize=8)
+
+    _algo_colors = {_name: _color for _, _name, _color in _datasets}
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 3: Distribution of repeat pair counts per simulation run. Each histogram shows what percentage of runs had 0, 1, 2, etc. repeated pairs. Algorithms concentrated at 0 repeats are more effective.</i></center>"),
+        mo.md(
+            "<center><i>Figure 3: Teammate-pair repeats per run above the theoretical minimum, split by player count. "
+            "Minimum = max(0, 2 × courts × rounds − C(players, 2)); e.g. 16 players on 4 courts for "
+            f"{_rounds} rounds need {2 * _courts * _rounds} pairs but only 120 exist, so ≥ {_mins.get(16, 0)} repeats are unavoidable. "
+            "0 on the x-axis means the engine hit the best achievable result.</i></center>"
+        ),
+        mo.ui.table(
+            pl.DataFrame(_rows)
+            .pivot(on="Algorithm", index="Players", values="Avg repeats")
+            .with_columns(pl.col("Players").replace_strict(_mins, return_dtype=pl.Int64).alias("Theoretical min"))
+            .select(["Players", "Theoretical min", *[_name for _, _name, _ in _datasets]])
+            .sort("Players"),
+            selection=None,
+            style_cell=lambda _row, _col, _val: (
+                {"color": _algo_colors[_col], "fontWeight": "bold"} if _col in _algo_colors else {}
+            ),
+        ),
     ])
     return
 
@@ -740,6 +771,7 @@ def _(
     compute_court_cooccurrences,
     compute_court_freshness_scores,
     mc_match_events,
+    pl,
     random_match_events,
     sa_match_events,
     sl_match_events,
@@ -752,11 +784,17 @@ def _(
         "Smart Matching": compute_court_freshness_scores(sl_match_events),
     }
     cooc_by_algo = {
-        "Random Baseline": compute_court_cooccurrences(random_match_events),
-        "Monte Carlo": compute_court_cooccurrences(mc_match_events),
-        "Simulated Annealing": compute_court_cooccurrences(sa_match_events),
-        "Conflict Graph": compute_court_cooccurrences(cg_match_events),
-        "Smart Matching": compute_court_cooccurrences(sl_match_events),
+        _name: {
+            _n: compute_court_cooccurrences(_df.filter(pl.col("numPlayers") == _n))
+            for _n in sorted(_df.get_column("numPlayers").unique().to_list())
+        }
+        for _name, _df in [
+            ("Random Baseline", random_match_events),
+            ("Monte Carlo", mc_match_events),
+            ("Simulated Annealing", sa_match_events),
+            ("Conflict Graph", cg_match_events),
+            ("Smart Matching", sl_match_events),
+        ]
     }
     return freshness_by_algo, cooc_by_algo
 
@@ -977,7 +1015,7 @@ def _(ALGO_COLORS, cg_mrf, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf
 
     mo.vstack([
         mo.image(fig_to_image(_fig_mrf)),
-        mo.md("<center><i>Left: % of match configurations seen in only 1 session. Right: distribution of how many sessions each unique matchup appears in.</i></center>"),
+        mo.md("<center><i>Figure 8: Left: % of match configurations seen in only 1 session. Right: distribution of how many sessions each unique matchup appears in.</i></center>"),
     ])
     return
 
@@ -1043,7 +1081,7 @@ def _(ALGO_COLORS, fig_to_image, freshness_by_algo, mo, np, plt):
     plt.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig_v)),
-        mo.md("<center><i>Each bar = one algorithm. Colour bands show % of round-to-round transitions where the player gained 0 / 1 / 2 / 3 new court-mates. Ideal engine: tall green top, thin red bottom. Note that optimising for partner variety (who you team with) is a different objective from court-group freshness (who you share a court with at all) — an algorithm may do well on one metric while scoring lower on the other.</i></center>"),
+        mo.md("<center><i>Figure 9: Each bar = one algorithm. Colour bands show % of round-to-round transitions where the player gained 0 / 1 / 2 / 3 new court-mates. Ideal engine: tall green top, thin red bottom. Note that optimising for partner variety (who you team with) is a different objective from court-group freshness (who you share a court with at all) — an algorithm may do well on one metric while scoring lower on the other.</i></center>"),
     ])
     return
 
@@ -1054,8 +1092,12 @@ def _(mo):
 
     Within a single session, how many rounds does any player pair share a court (as teammates *or* opponents)?
 
-    - **1 shared round** — they met once and moved on (ideal variety)
-    - **3+ shared rounds** — they kept appearing on the same court each session (low variety)
+    Every player on court shares it with 3 others, so the average is fixed by the setup:
+    rounds played × 3 / (players − 1). With 17 rounds and 4 courts that is about 2.7 to 3.4 shared rounds per pair,
+    so "everyone meets once" is not achievable.
+
+    - **Narrow peak at the expected value** — court time is spread evenly across all pairs (ideal)
+    - **Wide spread / long tail** — some pairs barely meet while others keep landing on the same court (low variety)
 
     Even if two players are never on the same *team*, being opponents on the same court repeatedly
     still reduces the freshness of the experience.
@@ -1063,35 +1105,63 @@ def _(mo):
     return
 
 @app.cell
-def _(ALGO_COLORS, cooc_by_algo, fig_to_image, mo, plt):
-    _display_order_c = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
-    _algo_names_c = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
-    _colors_c = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
-    _cooc_data = [cooc_by_algo[name] for name in _display_order_c]
+def _(ALGO_COLORS, ALGO_NAMES, cooc_by_algo, expected_court_cooccurrence, fig_to_image, mo, np, pl, plt, shared_config):
+    _rounds = shared_config.get("rounds", 17)
+    _courts = shared_config.get("numCourts", 4)
+    _order = ["Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching", "Random Baseline"]
+    _algo_colors = dict(zip(ALGO_NAMES, ALGO_COLORS))
+    _player_counts = sorted(next(iter(cooc_by_algo.values())).keys())
+    _expected = {_n: expected_court_cooccurrence(_n, _courts, _rounds) for _n in _player_counts}
+    _max_x = max(max(_v) for _by_n in cooc_by_algo.values() for _v in _by_n.values() if _v)
+    _xs = np.arange(1, _max_x + 1)
 
-    # Overlapping line chart: X = rounds sharing a court (1, 2, 3 …), Y = % of pair-sessions
-    _max_rounds_c = max((max(d) for d in _cooc_data if d), default=10)
-    _xs_c = list(range(1, _max_rounds_c + 1))
+    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
+    _axes = _axes.flatten()
+    _axes[-1].set_visible(False)
+    _step = 0.8 / len(_player_counts)
+    _width = _step * 1.6
+    _shades = np.linspace(0.3, 0.7, len(_player_counts))
+    _rows = []
 
-    _fig_c, _ax_c = plt.subplots(figsize=(11, 6))
-    _line_styles = ["-o", "-s", "-^", "-D", "-v"]
-    for _i, (_d, _name, _col, _ls) in enumerate(zip(_cooc_data, _algo_names_c, _colors_c, _line_styles)):
-        _total = len(_d) or 1
-        _ys_c = [sum(1 for v in _d if v == k) / _total * 100 for k in _xs_c]
-        _ax_c.plot(_xs_c, _ys_c, _ls, color=_col, label=_name.replace("\n", " "),
-                   linewidth=2, markersize=7, alpha=0.9)
+    for _ax, _name in zip(_axes, _order):
+        _color = _algo_colors[_name]
+        for _i, _n in enumerate(_player_counts):
+            _vals = np.array(cooc_by_algo[_name][_n])
+            _pcts = np.array([(_vals == _k).mean() * 100 for _k in _xs])
+            _ax.bar(
+                _xs + (_i - (len(_player_counts) - 1) / 2) * _step, _pcts,
+                width=_width, color=_color, alpha=_shades[_i], edgecolor="none",
+                label=f"{_n} players (expected {_expected[_n]:.1f})",
+            )
+            _rows.append({"Players": _n, "Algorithm": _name, "Std dev": round(float(_vals.std()), 2)})
+        for _n in _player_counts:
+            _ax.axvline(_expected[_n], color="gray", linestyle="--", linewidth=1, alpha=0.5)
+        _ax.set_xlabel("Rounds sharing a court per pair per session")
+        _ax.set_ylabel("% of pair-sessions")
+        _ax.set_title(_name, fontweight="bold")
+        _ax.set_xticks(_xs)
+        _ax.legend(loc="upper right", fontsize=8)
 
-    _ax_c.set_xlabel("Rounds sharing a court per pair per session", fontsize=11)
-    _ax_c.set_ylabel("% of all pair-sessions", fontsize=11)
-    _ax_c.set_xticks(_xs_c)
-    _ax_c.set_title("Co-occurrence Distribution — How Often Do Pairs Share a Court?",
-                    fontsize=12, fontweight="bold")
-    _ax_c.legend(fontsize=10, title="Algorithm", title_fontsize=10)
-    _ax_c.axvline(x=1, color="gray", linestyle="--", linewidth=1, alpha=0.5, label="_ideal")
-    plt.tight_layout()
+    _fig.tight_layout()
     mo.vstack([
-        mo.image(fig_to_image(_fig_c)),
-        mo.md("<center><i>Each line = one algorithm. X = how many rounds two players share a court in a single session. Ideal: spike at 1, short tail. A flat or wide distribution means certain pairs keep meeting.</i></center>"),
+        mo.image(fig_to_image(_fig)),
+        mo.md(
+            "<center><i>Figure 10: Rounds each player pair shares a court within a session, split by player count. "
+            "Dashed lines mark the expected average for each player count (rounds played × 3 / (players − 1)). "
+            "A narrow peak around those lines means court time is shared evenly; the table gives the spread "
+            "(standard deviation, lower = fairer).</i></center>"
+        ),
+        mo.ui.table(
+            pl.DataFrame(_rows)
+            .pivot(on="Algorithm", index="Players", values="Std dev")
+            .with_columns(pl.col("Players").replace_strict({_n: round(_e, 2) for _n, _e in _expected.items()}, return_dtype=pl.Float64).alias("Expected avg"))
+            .select(["Players", "Expected avg", *_order])
+            .sort("Players"),
+            selection=None,
+            style_cell=lambda _row, _col, _val: (
+                {"color": _algo_colors[_col], "fontWeight": "bold"} if _col in _algo_colors else {}
+            ),
+        ),
     ])
     return
 
@@ -1157,7 +1227,7 @@ def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_confi
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 8: Percentage of win parity matches where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between win parity (equal wins) and uneven (lopsided) team compositions.</i></center>"),
+        mo.md("<center><i>Figure 11: Percentage of win parity matches where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between win parity (equal wins) and uneven (lopsided) team compositions.</i></center>"),
         mo.md("> **Note — Smart Matching goes beyond wins:** Unlike other algorithms that rely solely on cumulative wins to balance teams, Smart Matching also factors in player **skill level** and **gender** when forming match-ups. This allows it to create more intense, competitive games from the start of a session — before wins have accumulated — by pairing players of similar ability across teams regardless of their current win count."),
     ])
     return
@@ -1342,7 +1412,7 @@ def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stat
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 9: Bench fairness metrics. Left: average games played between bench periods for different player counts. Right: distribution of bench count differences within sessions.</i></center>"),
+        mo.md("<center><i>Figure 12: Bench fairness metrics. Left: average games played between bench periods for different player counts. Right: distribution of bench count differences within sessions.</i></center>"),
         mo.md(f"""
 - **Average Gap (Left):** Mean games between bench periods per player count. Green line = theoretical maximum ($N/B - 1$).
 Optimized algorithms achieve close to theoretical max; Random baseline falls significantly short.
