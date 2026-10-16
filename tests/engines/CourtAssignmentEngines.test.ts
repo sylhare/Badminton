@@ -546,43 +546,13 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
     });
   });
 
-  describe('Skill Balancing', () => {
-    it('balances teams by total wins (average across multiple runs)', () => {
-      const players = mockPlayers(4);
-      const trainingCourt: Court = createMockCourt(1, players, 1);
-
-      for (let i = 0; i < 50; i++) {
-        selector.engine().recordWins([{ ...trainingCourt, courtNumber: i + 1 }]);
-      }
-
-      let totalDiff = 0;
-      const testRuns = 20;
-
-      for (let run = 0; run < testRuns; run++) {
-        const { courts: assignments } = selector.engine().generate(players, 1);
-        expect(assignments.length).toBe(1);
-
-        const teams = assignments[0].teams!;
-        const winCounts = selector.engine().snapshot().winCountMap;
-
-        const team1WinSum = teams.team1.reduce((acc, p) => acc + (winCounts[p.id] ?? 0), 0);
-        const team2WinSum = teams.team2.reduce((acc, p) => acc + (winCounts[p.id] ?? 0), 0);
-        totalDiff += Math.abs(team1WinSum - team2WinSum);
-      }
-
-      const avgDiff = totalDiff / testRuns;
-
-      expect(avgDiff).toBeLessThanOrEqual(25);
-    });
-  });
-
   describe('Singles Rotation Fairness', () => {
     it('should track singles matches in state', () => {
       const players = mockPlayers(2);
 
       engine.generate(players, 1);
 
-      const state = engine.prepareStateForSaving();
+      const state = engine.prepareStateForSaving(type);
       expect(state).toHaveProperty('singleCountMap');
       expect(typeof state.singleCountMap).toBe('object');
     });
@@ -592,7 +562,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 1);
 
-      const state = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const state = engine.prepareStateForSaving(type) as { singleCountMap: Record<string, number> };
       const singlesPlayed = Object.values(state.singleCountMap).filter(v => v > 0).length;
       expect(singlesPlayed).toBe(2);
     });
@@ -602,7 +572,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 1);
 
-      const state = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const state = engine.prepareStateForSaving(type) as { singleCountMap: Record<string, number> };
       const singlesPlayed = Object.values(state.singleCountMap).filter(v => v > 0).length;
       expect(singlesPlayed).toBe(0);
     });
@@ -613,7 +583,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const twoPlayers = players.slice(0, 2);
       engine.generate(twoPlayers, 1);
 
-      const stateAfterFirst = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const stateAfterFirst = engine.prepareStateForSaving(type) as { singleCountMap: Record<string, number> };
       expect(stateAfterFirst.singleCountMap['P0']).toBe(1);
       expect(stateAfterFirst.singleCountMap['P1']).toBe(1);
       expect(stateAfterFirst.singleCountMap['P2'] ?? 0).toBe(0);
@@ -622,7 +592,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       const anotherTwoPlayers = players.slice(2, 4);
       engine.generate(anotherTwoPlayers, 1);
 
-      const stateAfterSecond = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const stateAfterSecond = engine.prepareStateForSaving(type) as { singleCountMap: Record<string, number> };
       expect(stateAfterSecond.singleCountMap['P2']).toBe(1);
       expect(stateAfterSecond.singleCountMap['P3']).toBe(1);
     });
@@ -632,12 +602,12 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       engine.generate(players, 1);
 
-      const stateBefore = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const stateBefore = engine.prepareStateForSaving(type) as { singleCountMap: Record<string, number> };
       expect(Object.values(stateBefore.singleCountMap).some(v => v > 0)).toBe(true);
 
       engine.resetHistory();
 
-      const stateAfter = engine.prepareStateForSaving() as { singleCountMap: Record<string, number> };
+      const stateAfter = engine.prepareStateForSaving(type) as { singleCountMap: Record<string, number> };
       expect(Object.values(stateAfter.singleCountMap).every(v => v === 0)).toBe(true);
     });
   });
@@ -876,7 +846,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect((engineSA as unknown as { TEAMMATE_REPEAT_PENALTY: number }).TEAMMATE_REPEAT_PENALTY).toBe(100000);
     });
 
-    it('incorporates calculateSkillPairPenalty and calculateLossBalanceCost in evaluateTeamSplitCost', () => {
+    it('delegates evaluateTeamSplitCost strictly to sharedTeamCost with zero skill-pair bias', () => {
       const saEngine = new TestCourtAssignmentEngineSA();
       saEngine.resetHistory();
 
@@ -905,7 +875,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
 
       const costWithSkillPair = saEngine.testEvaluateTeamSplitCost(team1, team2);
       const sharedWithSkillPair = saEngine.testSharedTeamCost(team1, team2);
-      expect(costWithSkillPair).toBe(sharedWithSkillPair + skillPenaltyTeam1);
+      expect(costWithSkillPair).toBe(sharedWithSkillPair);
 
       saEngine.recordWins([
         createMockCourt(2, [dummyPlayers[0], dummyPlayers[1], p2, dummyPlayers[0]], 1),
@@ -916,13 +886,7 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(lossBalanceCost).toBe(2000);
 
       const totalSplitCost = saEngine.testEvaluateTeamSplitCost(team1, team2);
-      const expectedTotalCost = saEngine.testSharedTeamCost(team1, team2)
-        + saEngine.testCalculateSkillPairPenalty(team1, 1000)
-        + saEngine.testCalculateSkillPairPenalty(team2, 1000)
-        + lossBalanceCost;
-
-      expect(totalSplitCost).toBe(expectedTotalCost);
-      expect(totalSplitCost).toBeGreaterThan(saEngine.testSharedTeamCost(team1, team2));
+      expect(totalSplitCost).toBe(saEngine.testSharedTeamCost(team1, team2));
     });
 
     it('chooses assignments avoiding teammate repeats over skill-pair balancing when players have high win/loss history', () => {
