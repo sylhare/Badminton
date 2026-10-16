@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import type { Court, Player } from '../../src/types';
 import { pairKey } from '../../src/utils/playerUtils';
 
-import type { MatchEvent, MatchPairEvent, PairEvent, RoundResult, SimEngine, SimulationConfig } from './types';
+import type { ICourtAssignmentEngine, MatchEvent, MatchPairEvent, PairEvent, RoundResult, SimulationConfig } from './types';
 
 export const loadConfig = (configPath: string): SimulationConfig => {
   if (!existsSync(configPath)) {
@@ -154,30 +154,12 @@ export const toCsv = (rows: Array<Record<string, string | number | boolean>>, de
   return lines.join('\n');
 };
 
-/** Resolves current player win counts across simulation engine implementations. */
-export const getEngineWinCounts = (engine: SimEngine): Map<string, number> => {
-  if (typeof engine.getWinCounts === 'function') {
-    return engine.getWinCounts();
-  }
-  if (typeof engine.snapshot === 'function') {
-    const snap = engine.snapshot();
-    return new Map(Object.entries(snap.winCountMap));
-  }
-  if (typeof engine.stats === 'function') {
-    const stats = engine.stats();
-    return stats.winCountMap instanceof Map
-      ? stats.winCountMap
-      : new Map(Object.entries(stats.winCountMap));
-  }
-  return new Map();
-};
-
 export const extractRoundPairs = (
   roundIndex: number,
   courts: Court[],
   simulationId: number,
   numPlayers: number,
-  Engine: SimEngine,
+  Engine: ICourtAssignmentEngine,
   playerLevels: Map<string, number>,
   randomMatchOutcome = false,
 ): RoundResult => {
@@ -185,7 +167,7 @@ export const extractRoundPairs = (
   const matchEvents: MatchEvent[] = [];
   const matchPairEvents: MatchPairEvent[] = [];
   const courtsWithWinners: Court[] = [];
-  const engineWinCounts = getEngineWinCounts(Engine);
+  const winCountRecord = Engine.snapshot().winCountMap;
 
   for (let courtIdx = 0; courtIdx < courts.length; courtIdx++) {
     const court = courts[courtIdx];
@@ -231,8 +213,8 @@ export const extractRoundPairs = (
       : simulateMatchOutcome(team1Strength, team2Strength);
     const strongerTeam = team1Strength >= team2Strength ? 1 : 2;
 
-    const team1EngineWins = (engineWinCounts.get(a1.id) ?? 0) + (engineWinCounts.get(a2.id) ?? 0);
-    const team2EngineWins = (engineWinCounts.get(b1.id) ?? 0) + (engineWinCounts.get(b2.id) ?? 0);
+    const team1EngineWins = (winCountRecord[a1.id] ?? 0) + (winCountRecord[a2.id] ?? 0);
+    const team2EngineWins = (winCountRecord[b1.id] ?? 0) + (winCountRecord[b2.id] ?? 0);
     const engineWinDiff = Math.abs(team1EngineWins - team2EngineWins);
     const engineStrongerTeam = team1EngineWins >= team2EngineWins ? 1 : 2;
 
@@ -262,9 +244,7 @@ export const extractRoundPairs = (
     });
   }
 
-  if (Engine.recordWins) {
-    Engine.recordWins(courtsWithWinners);
-  }
+  Engine.recordWins(courtsWithWinners);
 
   return { roundIndex, pairToOpponent, matchEvents, matchPairEvents };
 };
