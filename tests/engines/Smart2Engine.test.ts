@@ -377,17 +377,17 @@ describe('Smart2Engine', () => {
     });
   });
 
-  describe('EngineSelector Support for sl2', () => {
-    it('switches engine type to sl2 and returns singleton engineSL2 instance', () => {
-      setEngine('sl2');
-      expect(getEngineType()).toBe('sl2');
+  describe('EngineSelector Support for sl', () => {
+    it('switches engine type to sl and returns singleton engineSL2 instance', () => {
+      setEngine('sl');
+      expect(getEngineType()).toBe('sl');
       expect(engine()).toBe(engineSL2);
       expect(engine().name).toBe('Smart Matching v2');
       expect(engine().description).toBeTruthy();
     });
 
-    it('generates court assignments via selector when sl2 is active', () => {
-      setEngine('sl2');
+    it('generates court assignments via selector when sl is active', () => {
+      setEngine('sl');
       const players = [
         makePlayer('1', 'M', 50),
         makePlayer('2', 'F', 50),
