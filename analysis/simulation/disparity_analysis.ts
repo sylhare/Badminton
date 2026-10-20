@@ -1,12 +1,12 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { engineSL as SmartEngine } from '../../src/engines/SmartEngine.ts';
 import { engineSL2 as Smart2Engine, Smart2Engine as Smart2EngineClass } from '../../src/engines/Smart2Engine.ts';
 import type { Court } from '../../src/types';
 import { mean } from '../../src/utils/numberUtils';
 import { pairKey } from '../../src/utils/playerUtils';
 
+import { engineSL as SmartEngine } from './SmartEngine.ts';
 import type { DisparityProfile } from './utils';
 import {
   calculateTeamStrength,

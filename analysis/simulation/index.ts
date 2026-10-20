@@ -2,7 +2,6 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { engineSA as CourtAssignmentEngineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
-import { engineSL as SmartEngine } from '../../src/engines/SmartEngine.ts';
 import { engineSL2 as Smart2Engine } from '../../src/engines/Smart2Engine.ts';
 import { mean } from '../../src/utils/numberUtils';
 import { benchedPlayers, splitPairKey } from '../../src/utils/playerUtils';
@@ -10,6 +9,7 @@ import { benchedPlayers, splitPairKey } from '../../src/utils/playerUtils';
 import { engineCG as ConflictGraphEngine } from './ConflictGraphEngine.ts';
 import { engineMC as CourtAssignmentEngine } from './MonteCarloEngine.ts';
 import { engineRandom } from './RandomBaselineEngine.ts';
+import { engineSL as SmartEngine } from './SmartEngine.ts';
 import type {
   MatchEvent,
   MatchPairEvent,

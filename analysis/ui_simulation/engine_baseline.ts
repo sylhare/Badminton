@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
-import { engineSL } from '../../src/engines/SmartEngine.ts';
+import { engineSL } from '../simulation/SmartEngine.ts';
 import type { Court, ICourtAssignmentEngine } from '../../src/types';
 import { calculateTeamStrength, loadConfig, simulateMatchOutcome } from '../simulation/utils.ts';
 
