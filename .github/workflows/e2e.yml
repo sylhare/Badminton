@@ -64,7 +64,12 @@ jobs:
     - uses: actions/setup-node@v6
       with:
         node-version: 24
-        cache: 'npm'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        version: 12
+        cache: true
 
     - name: Cache Playwright browsers
       uses: actions/cache@v5
@@ -73,7 +78,7 @@ jobs:
         key: playwright-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
 
     - name: Install dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
 
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps ${{ matrix.browser }}
