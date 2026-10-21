@@ -50,7 +50,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: process.env.E2E_BASE_URL ? undefined : {
-    command: 'npm run dev',
+    command: 'pnpm dev',
     port: 5173,
     reuseExistingServer: !process.env.CI,
     stderr: 'pipe',
