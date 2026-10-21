@@ -1,5 +1,5 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
-import { pairKey } from '../../src/utils/playerUtils';
+import { pairKey, shuffleArray } from '../../src/utils/playerUtils';
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
 
 /**
@@ -55,7 +55,7 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
 
   private findConflictFreeGroup(players: Player[], size: number): Player[] | null {
     for (let attempt = 0; attempt < this.MAX_SEARCH_ATTEMPTS; attempt++) {
-      const shuffled = this.shuffleArray([...players]);
+      const shuffled = shuffleArray([...players]);
       const group: Player[] = [];
       for (const p of shuffled) {
         if (!group.some(e => this.hasTeammateConflict(p.id, e.id))) {
@@ -80,7 +80,7 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     let bestGroup: Player[] = [];
     let bestCount = Infinity;
     for (let i = 0; i < this.MAX_SEARCH_ATTEMPTS; i++) {
-      const group = this.shuffleArray([...players]).slice(0, size);
+      const group = shuffleArray([...players]).slice(0, size);
       const count = this.calculateTeammateCost(group, 1);
       if (count < bestCount) {
         bestCount = count;

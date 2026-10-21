@@ -7,7 +7,7 @@
  *
  * Available Engines:
  * - 'sa' (default): Simulated Annealing - iterative improvements, escapes local minima
- * - 'sl': Smart Matching - Simulated Annealing with gender/level-aware cost functions
+ * - 'sl': Smart Matching v2
  *
  * Usage:
  * ```typescript
@@ -23,8 +23,8 @@
 
 import type { EngineType, ICourtAssignmentEngine } from '../types';
 
-import { engineSL } from './SmartEngine';
 import { engineSA } from './SimulatedAnnealingEngine';
+import { engineSL2 } from './Smart2Engine';
 
 export type { EngineType };
 
@@ -37,7 +37,7 @@ let currentEngineType: EngineType = 'sa';
 const getEngineInstance = (type: EngineType): ICourtAssignmentEngine => {
   switch (type) {
     case 'sl':
-      return engineSL;
+      return engineSL2;
     case 'sa':
     default:
       return engineSA;
@@ -101,4 +101,3 @@ export class EnginePersistence {
 }
 
 export const enginePersistence = new EnginePersistence();
-

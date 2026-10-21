@@ -12,7 +12,7 @@ def _():
     import marimo as mo
     import polars as pl
 
-    from utils.plotting import setup_matplotlib, fig_to_image
+    from utils.plotting import setup_matplotlib, fig_to_image, create_radar_chart
     from utils.config_metrics import (
         ALGO_NAMES,
         ALGO_COLORS,
@@ -27,55 +27,126 @@ def _():
         compute_summary_metrics,
         analyze_adjacency_bias,
         compute_teammate_diversity,
+        compute_court_rematches_per_session,
         compute_match_session_frequency,
         build_repeat_matrix,
         aggregate_bench_stats,
         aggregate_by_player_count,
         compute_balance_metrics,
+        compute_court_freshness_scores,
+        compute_court_cooccurrences,
+        theoretical_min_repeat_pairs,
+        expected_court_cooccurrence,
     )
     return (
-        Path, fig_to_image, json, math, mo, pl, setup_matplotlib,
+        Path, fig_to_image, create_radar_chart, json, math, mo, pl, setup_matplotlib,
         ALGO_NAMES, ALGO_COLORS,
         get_time_per_round, get_balance_pct, get_bench_fairness,
         get_singles_fairness, get_bias_score, build_configs_by_label,
         compute_summary_metrics, analyze_adjacency_bias, compute_teammate_diversity,
+        compute_court_rematches_per_session,
         compute_match_session_frequency,
         build_repeat_matrix, aggregate_bench_stats, aggregate_by_player_count,
         compute_balance_metrics,
+        compute_court_freshness_scores, compute_court_cooccurrences,
+        theoretical_min_repeat_pairs, expected_court_cooccurrence,
     )
 
 @app.cell
 def _(Path, json, pl):
     data_dir = Path(__file__).parent / "data"
 
-    mc_dir = data_dir / "mc_algo"
-    mc_summary = pl.read_csv(mc_dir / "summary.csv")
-    mc_pair_events = pl.read_csv(mc_dir / "pair_events.csv")
-    mc_config = json.loads((mc_dir / "config.json").read_text())
+    algo_dirs = {
+        "mc": data_dir / "mc_algo",
+        "sa": data_dir / "sa_algo",
+        "cg": data_dir / "cg_algo",
+        "sl": data_dir / "sl2_algo",
+        "random": data_dir / "random_baseline",
+    }
 
-    sa_dir = data_dir / "sa_algo"
-    sa_summary = pl.read_csv(sa_dir / "summary.csv")
-    sa_pair_events = pl.read_csv(sa_dir / "pair_events.csv")
-    sa_config = json.loads((sa_dir / "config.json").read_text())
+    def _load_algo(d):
+        return {
+            "summary": pl.read_csv(d / "summary.csv"),
+            "pair_events": pl.read_csv(d / "pair_events.csv"),
+            "config": json.loads((d / "config.json").read_text()),
+            "match_events": pl.read_csv(d / "match_events.csv"),
+            "player_stats": pl.read_csv(d / "player_stats.csv"),
+            "bench_stats": pl.read_csv(d / "bench_stats.csv", infer_schema_length=10000),
+        }
 
-    cg_dir = data_dir / "cg_algo"
-    cg_summary = pl.read_csv(cg_dir / "summary.csv")
-    cg_pair_events = pl.read_csv(cg_dir / "pair_events.csv")
-    cg_config = json.loads((cg_dir / "config.json").read_text())
+    mc_data = _load_algo(algo_dirs["mc"])
+    sa_data = _load_algo(algo_dirs["sa"])
+    cg_data = _load_algo(algo_dirs["cg"])
+    sl_data = _load_algo(algo_dirs["sl"])
+    random_data = _load_algo(algo_dirs["random"])
 
-    sl_dir = data_dir / "sl_algo"
-    sl_summary = pl.read_csv(sl_dir / "summary.csv")
-    sl_pair_events = pl.read_csv(sl_dir / "pair_events.csv")
-    sl_config = json.loads((sl_dir / "config.json").read_text())
+    mc_summary, mc_pair_events, mc_config, mc_match_events, mc_player_stats, mc_bench_stats = (
+        mc_data["summary"], mc_data["pair_events"], mc_data["config"],
+        mc_data["match_events"], mc_data["player_stats"], mc_data["bench_stats"],
+    )
+    sa_summary, sa_pair_events, sa_config, sa_match_events, sa_player_stats, sa_bench_stats = (
+        sa_data["summary"], sa_data["pair_events"], sa_data["config"],
+        sa_data["match_events"], sa_data["player_stats"], sa_data["bench_stats"],
+    )
+    cg_summary, cg_pair_events, cg_config, cg_match_events, cg_player_stats, cg_bench_stats = (
+        cg_data["summary"], cg_data["pair_events"], cg_data["config"],
+        cg_data["match_events"], cg_data["player_stats"], cg_data["bench_stats"],
+    )
+    sl_summary, sl_pair_events, sl_config, sl_match_events, sl_player_stats, sl_bench_stats = (
+        sl_data["summary"], sl_data["pair_events"], sl_data["config"],
+        sl_data["match_events"], sl_data["player_stats"], sl_data["bench_stats"],
+    )
+    baseline_summary, baseline_pair_events, random_config, random_match_events, random_player_stats, random_bench_stats = (
+        random_data["summary"], random_data["pair_events"], random_data["config"],
+        random_data["match_events"], random_data["player_stats"], random_data["bench_stats"],
+    )
+
+    mc_dir = algo_dirs["mc"]
+    sa_dir = algo_dirs["sa"]
+    cg_dir = algo_dirs["cg"]
+    sl_dir = algo_dirs["sl"]
+    baseline_dir = algo_dirs["random"]
 
     shared_config = json.loads((data_dir / "config.json").read_text())
     return (
-        cg_config, cg_dir, cg_pair_events, cg_summary,
+        algo_dirs,
+        baseline_dir,
+        baseline_pair_events,
+        baseline_summary,
+        cg_bench_stats,
+        cg_config,
+        cg_dir,
+        cg_match_events,
+        cg_pair_events,
+        cg_player_stats,
+        cg_summary,
         data_dir,
-        mc_config, mc_dir, mc_pair_events, mc_summary,
-        sa_config, sa_dir, sa_pair_events, sa_summary,
+        mc_bench_stats,
+        mc_config,
+        mc_dir,
+        mc_match_events,
+        mc_pair_events,
+        mc_player_stats,
+        mc_summary,
+        random_bench_stats,
+        random_config,
+        random_match_events,
+        random_player_stats,
+        sa_bench_stats,
+        sa_config,
+        sa_dir,
+        sa_match_events,
+        sa_pair_events,
+        sa_player_stats,
+        sa_summary,
         shared_config,
-        sl_config, sl_dir, sl_pair_events, sl_summary,
+        sl_bench_stats,
+        sl_config,
+        sl_dir,
+        sl_match_events,
+        sl_pair_events,
+        sl_player_stats,
+        sl_summary,
     )
 
 @app.cell(hide_code=True)
@@ -96,7 +167,7 @@ def _(mo, random_config, shared_config):
 
     **Configuration**
     - Runs: {shared_config.get('runs', 2000)} per batch (5 batches each)
-    - Rounds: {shared_config.get('rounds', 10)} (consecutive assignments per run)
+    - Rounds: {shared_config.get('rounds', 25)} (consecutive assignments per run)
     - Players: {', '.join(map(str, shared_config.get('playerCounts', [20])))} per batch (variable)
     - Courts: {_num_courts} (Available courts for the players)
 
@@ -127,16 +198,11 @@ def _():
     return np, plt
 
 @app.cell
-def _(data_dir, json, pl):
-    baseline_dir = data_dir / "random_baseline"
-    baseline_summary = pl.read_csv(baseline_dir / "summary.csv")
-    baseline_pair_events = pl.read_csv(baseline_dir / "pair_events.csv")
-    random_config = json.loads((baseline_dir / "config.json").read_text())
-    
+def _():
     def pair_key(a: str, b: str) -> str:
         return f"{a}|{b}" if a < b else f"{b}|{a}"
-    
-    return baseline_pair_events, baseline_summary, pair_key, random_config
+
+    return (pair_key,)
 
 @app.cell
 def _(baseline_summary, cg_summary, compute_summary_metrics, mc_summary, pl, sa_summary, sl_summary):
@@ -187,7 +253,7 @@ def _(
     }
     _base = {m["label"]: m for m in all_metrics.to_dicts()}
 
-    _rounds = shared_config.get("rounds", 10)
+    _rounds = shared_config.get("rounds", 25)
     _player_counts = shared_config.get("playerCounts", [10])
     # Theoretical max: at most 1 new partner per round, capped by number of other players
     _theoretical_max = np.mean([min(_rounds, p - 1) for p in _player_counts])
@@ -261,8 +327,7 @@ def _(algo_metrics, mo, pl):
     return
 
 @app.cell
-def _(ALGO_COLORS, algo_metrics, fig_to_image, mo, np, plt):
-    # Relative metrics: normalised across algorithms
+def _(ALGO_COLORS, algo_metrics, create_radar_chart, fig_to_image, mo):
     _avg_repeats = [m["avg_repeat_pairs"] for m in algo_metrics]
     _max_repeats = max(_avg_repeats) if max(_avg_repeats) > 0 else 1
     _repeat_score = [100 * (1 - r / _max_repeats) for r in _avg_repeats]
@@ -271,38 +336,23 @@ def _(ALGO_COLORS, algo_metrics, fig_to_image, mo, np, plt):
     _max_time = max(_times)
     _speed = [100 * (1 - t / _max_time) if _max_time > 0 else 100 for t in _times]
     _random_idx = next(i for i, m in enumerate(algo_metrics) if m["label"] == "Random Baseline")
-    _speed[_random_idx] = 100  # Random is instant
+    _speed[_random_idx] = 100
 
     _has_singles = any(m["singles_fairness"] is not None for m in algo_metrics)
     if _has_singles:
         _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Win\nParity", "Singles\nFairness", "Diversity"]
     else:
         _categories = ["Low\nRepeats", "Speed", "Bench\nFairness", "Win\nParity", "Diversity"]
-    _n_cats = len(_categories)
-    _angles = [n / float(_n_cats) * 2 * np.pi for n in range(_n_cats)]
-    _angles += _angles[:1]
 
-    _fig, _ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(projection='polar'))
-
+    _series_data = []
     for _i, (_m, _color) in enumerate(zip(algo_metrics, ALGO_COLORS)):
         if _has_singles:
             _values = [_repeat_score[_i], _speed[_i], _m["bench_fairness"], _m["balance_pct"], _m["singles_fairness"] or 0, _m["diversity_score"]]
         else:
             _values = [_repeat_score[_i], _speed[_i], _m["bench_fairness"], _m["balance_pct"], _m["diversity_score"]]
-        _values += _values[:1]
+        _series_data.append((_m["label"], _values, _color))
 
-        _ax.plot(_angles, _values, '-', linewidth=1.5, label=_m["label"], color=_color)
-        _ax.fill(_angles, _values, alpha=0.15, color=_color)
-
-    _ax.set_xticks(_angles[:-1])
-    _ax.set_xticklabels(_categories, fontsize=8)
-    _ax.set_ylim(0, 105)
-    _ax.set_yticks([20, 40, 60, 80, 100])
-    _ax.set_yticklabels(["20", "40", "60", "80", "100"], fontsize=6)
-    _ax.spines['polar'].set_visible(False)
-    _ax.set_title("Algorithm Comparison", fontsize=10, fontweight="bold", y=1.05)
-    _ax.legend(loc='upper left', bbox_to_anchor=(-0.3, 1.15), fontsize=7, frameon=False)
-
+    _fig, _ = create_radar_chart(_categories, _series_data)
     _fig.tight_layout()
     mo.vstack([
         mo.hstack([mo.image(fig_to_image(_fig))], justify="center"),
@@ -376,9 +426,10 @@ def _(ALGO_COLORS, all_metrics, fig_to_image, mo, np, plt):
     return
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    - **Any-Repeat Rate**: The probability that a 10-round session has at least one repeated pair. 
+def _(mo, shared_config):
+    _rounds = shared_config.get("rounds", 25)
+    mo.md(f"""
+    - **Any-Repeat Rate**: The probability that a {_rounds}-round session has at least one repeated pair. 
       A repeated pair means two players who were teammates more than once in the same session.
     - **Repeat Severity**: When repeats do occur, how many on average? This measures the "damage" — 
       even if repeats happen, fewer is better. SA scores 0 on both metrics.
@@ -399,56 +450,85 @@ def _(all_metrics, mo):
     return
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
+def _(mo, shared_config):
+    _rounds = shared_config.get("rounds", 25)
+    mo.md(f"""
     ### Repeat-Count Distribution
     
     Investigating repetiton within pairs during a simulation run.
-    We consider repeats, when a same pair played more than one time in a 10 games session.
+    We consider repeats, when a same pair played more than one time in a {_rounds} games session.
 
     > A pair is two players who are teammates in a match. Order doesn't matter (P1|P2 is the same as P2|P1).
     """)
     return
 
 @app.cell
-def _(ALGO_COLORS, ALGO_NAMES, baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, plt, sa_summary, sl_summary):
-    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
-    _axes = _axes.flatten()
-    _axes[-1].set_visible(False)
+def _(ALGO_COLORS, ALGO_NAMES, baseline_summary, cg_summary, fig_to_image, mc_summary, mo, np, pl, plt, sa_summary, shared_config, sl_summary, theoretical_min_repeat_pairs):
+    _rounds = shared_config.get("rounds", 17)
+    _courts = shared_config.get("numCourts", 4)
+
+    def _with_excess(_df):
+        return _df.with_columns(
+            pl.col("numPlayers")
+            .map_elements(lambda _n: theoretical_min_repeat_pairs(_n, _courts, _rounds), return_dtype=pl.Int64)
+            .alias("minRepeats")
+        ).with_columns((pl.col("repeatPairCount") - pl.col("minRepeats")).alias("excessRepeats"))
 
     _datasets = list(zip(
-        [mc_summary, sa_summary, cg_summary, sl_summary, baseline_summary],
+        [_with_excess(_d) for _d in [mc_summary, sa_summary, cg_summary, sl_summary, baseline_summary]],
         ALGO_NAMES,
         ALGO_COLORS,
     ))
-    
-    _max_x = max(
-        _data_df.get_column("repeatPairDifferentOpponentsCount").max()
-        for _data_df, _, _ in _datasets
-    )
-    
+    _player_counts = sorted(_datasets[0][0].get_column("numPlayers").unique().to_list())
+    _mins = {_n: theoretical_min_repeat_pairs(_n, _courts, _rounds) for _n in _player_counts}
+    _max_x = max(_d.get_column("excessRepeats").max() for _d, _, _ in _datasets)
+
+    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
+    _axes = _axes.flatten()
+    _axes[-1].set_visible(False)
+    _step = 0.8 / len(_player_counts)
+    _width = _step * 3.2
+    _shades = np.linspace(0.3, 0.7, len(_player_counts))
+    _rows = []
+
     for _ax, (_df, _name, _color) in zip(_axes, _datasets):
-        _counts = _df.get_column("repeatPairDifferentOpponentsCount")
-        _counts_arr = _counts.to_numpy()
-        _values, _freqs = np.unique(_counts_arr, return_counts=True)
-        _pcts = _freqs / _freqs.sum() * 100
-        
-        _ax.bar(_values, _pcts, color=_color, alpha=0.8, width=0.8)
-        _ax.set_xlabel("Repeat pairs per run")
+        for _i, _n in enumerate(_player_counts):
+            _excess = _df.filter(pl.col("numPlayers") == _n).get_column("excessRepeats").to_numpy()
+            _values, _freqs = np.unique(_excess, return_counts=True)
+            _ax.bar(
+                _values + (_i - (len(_player_counts) - 1) / 2) * _step,
+                _freqs / _freqs.sum() * 100,
+                width=_width, color=_color, alpha=_shades[_i], edgecolor="none",
+                label=f"{_n} players (min {_mins[_n]})",
+            )
+            _rows.append({"Players": _n, "Algorithm": _name, "Avg repeats": round(float(_excess.mean()) + _mins[_n], 2)})
+        _ax.set_xlabel("Repeat pairs above theoretical minimum per run")
         _ax.set_ylabel("Percentage of runs (%)")
         _ax.set_title(_name, fontweight="bold")
-        _ax.set_xlim(-0.5, _max_x + 0.5)
-        
-        _zero_pct = (_counts == 0).sum() / len(_counts) * 100
-        _ax.annotate(f"Zero repeats: {_zero_pct:.1f}%", 
-                     xy=(0.95, 0.95), xycoords="axes fraction",
-                     ha="right", va="top", fontsize=10,
-                     bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
-    
+        _ax.set_xlim(-0.6, _max_x + 0.6)
+        _ax.legend(loc="upper right", fontsize=8)
+
+    _algo_colors = {_name: _color for _, _name, _color in _datasets}
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 3: Distribution of repeat pair counts per simulation run. Each histogram shows what percentage of runs had 0, 1, 2, etc. repeated pairs. Algorithms concentrated at 0 repeats are more effective.</i></center>"),
+        mo.md(
+            "<center><i>Figure 3: Teammate-pair repeats per run above the theoretical minimum, split by player count. "
+            "Minimum = max(0, 2 × courts × rounds − C(players, 2)); e.g. 16 players on 4 courts for "
+            f"{_rounds} rounds need {2 * _courts * _rounds} pairs but only 120 exist, so ≥ {_mins.get(16, 0)} repeats are unavoidable. "
+            "0 on the x-axis means the engine hit the best achievable result.</i></center>"
+        ),
+        mo.ui.table(
+            pl.DataFrame(_rows)
+            .pivot(on="Algorithm", index="Players", values="Avg repeats")
+            .with_columns(pl.col("Players").replace_strict(_mins, return_dtype=pl.Int64).alias("Theoretical min"))
+            .select(["Players", "Theoretical min", *[_name for _, _name, _ in _datasets]])
+            .sort("Players"),
+            selection=None,
+            style_cell=lambda _row, _col, _val: (
+                {"color": _algo_colors[_col], "fontWeight": "bold"} if _col in _algo_colors else {}
+            ),
+        ),
     ])
     return
 
@@ -553,15 +633,16 @@ def _(
     return
 
 @app.cell(hide_code=True)
-def _(mo, sa_pair_events):
+def _(mo, sa_pair_events, shared_config):
+    _rounds = shared_config.get("rounds", 25)
     _sa_total = sa_pair_events.height
     _sa_note = ""
     if _sa_total == 0:
-        _sa_note = """- **0** consecutive repeats for **Simulated Annealing** means that in every single session of 10 rounds, 
+        _sa_note = f"""- **0** consecutive repeats for **Simulated Annealing** means that in every single session of {_rounds} rounds, 
 no player ever has the same partner twice in a row."""
     
     mo.md(f"""
-    Each heatmap shows a the repeat event counts, we a pair played more than one time in a 10 games session.
+    Each heatmap shows a the repeat event counts, we a pair played more than one time in a {_rounds} games session.
     {_sa_note}
 
     We limit the hotspot effects for the algorithms with a better shuffling mechanism before the engine makes the final assignment.
@@ -651,87 +732,75 @@ def _(adjacency_bias_data, mo):
     return
 
 @app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
+def _(mo, shared_config):
+    _rounds = shared_config.get("rounds", 25)
+    mo.md(f"""
     ### Teammate Diversity
     
-    How many **different** teammates does each player get to play with in a single 10-round session?
+    How many **different** teammates does each player get to play with in a single {_rounds}-round session?
     More unique teammates = more variety and social mixing. This metric captures the diversity of 
     partner assignments within a single session.
     """)
     return
 
 @app.cell
-def _(compute_teammate_diversity, data_dir, pl):
-    random_match_events_div = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
-    mc_match_events_div = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
-    sa_match_events_div = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
-    cg_match_events_div = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
-    sl_match_events_div = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
-
-    random_diversity = compute_teammate_diversity(random_match_events_div)
-    mc_diversity = compute_teammate_diversity(mc_match_events_div)
-    sa_diversity = compute_teammate_diversity(sa_match_events_div)
-    cg_diversity = compute_teammate_diversity(cg_match_events_div)
-    sl_diversity = compute_teammate_diversity(sl_match_events_div)
+def _(
+    cg_match_events,
+    compute_teammate_diversity,
+    mc_match_events,
+    random_match_events,
+    sa_match_events,
+    sl_match_events,
+):
+    random_diversity = compute_teammate_diversity(random_match_events)
+    mc_diversity = compute_teammate_diversity(mc_match_events)
+    sa_diversity = compute_teammate_diversity(sa_match_events)
+    cg_diversity = compute_teammate_diversity(cg_match_events)
+    sl_diversity = compute_teammate_diversity(sl_match_events)
     return (
-        random_match_events_div, mc_match_events_div, sa_match_events_div, cg_match_events_div, sl_match_events_div,
-        random_diversity, mc_diversity, sa_diversity, cg_diversity, sl_diversity,
+        cg_diversity,
+        mc_diversity,
+        random_diversity,
+        sa_diversity,
+        sl_diversity,
     )
 
 @app.cell
-def _(cg_match_events_div, mc_match_events_div, pl, random_match_events_div, sa_match_events_div, sl_match_events_div):
-    """Shared computation of court-group freshness and co-occurrence distributions.
-    Results are consumed by both the chart cells and algo_metrics to avoid duplication."""
-    def _court_freshness_fn(match_df):
-        scores = []
-        sim_ids = match_df.get_column("simulationId").unique().sort().to_list()
-        for sid in sim_ids:
-            sim = match_df.filter(pl.col("simulationId") == sid)
-            hist: dict = {}
-            for row in sim.iter_rows(named=True):
-                court = set(row["team1Players"].split("|") + row["team2Players"].split("|"))
-                for p in court:
-                    hist.setdefault(p, []).append((row["roundIndex"], frozenset(court - {p})))
-            for rounds in hist.values():
-                rounds.sort(key=lambda x: x[0])
-                for i in range(1, len(rounds)):
-                    scores.append(len(rounds[i][1] - rounds[i - 1][1]))
-        return scores
-
-    def _cooccurrence_fn(match_df):
-        all_counts = []
-        sim_ids = match_df.get_column("simulationId").unique().sort().to_list()
-        for sid in sim_ids:
-            sim = match_df.filter(pl.col("simulationId") == sid)
-            pair_counts: dict = {}
-            for row in sim.iter_rows(named=True):
-                court = sorted(set(row["team1Players"].split("|") + row["team2Players"].split("|")))
-                for i in range(len(court)):
-                    for j in range(i + 1, len(court)):
-                        key = f"{court[i]}|{court[j]}"
-                        pair_counts[key] = pair_counts.get(key, 0) + 1
-            all_counts.extend(pair_counts.values())
-        return all_counts
-
+def _(
+    cg_match_events,
+    compute_court_cooccurrences,
+    compute_court_freshness_scores,
+    mc_match_events,
+    pl,
+    random_match_events,
+    sa_match_events,
+    sl_match_events,
+):
     freshness_by_algo = {
-        "Random Baseline": _court_freshness_fn(random_match_events_div),
-        "Monte Carlo": _court_freshness_fn(mc_match_events_div),
-        "Simulated Annealing": _court_freshness_fn(sa_match_events_div),
-        "Conflict Graph": _court_freshness_fn(cg_match_events_div),
-        "Smart Matching": _court_freshness_fn(sl_match_events_div),
+        "Random Baseline": compute_court_freshness_scores(random_match_events),
+        "Monte Carlo": compute_court_freshness_scores(mc_match_events),
+        "Simulated Annealing": compute_court_freshness_scores(sa_match_events),
+        "Conflict Graph": compute_court_freshness_scores(cg_match_events),
+        "Smart Matching": compute_court_freshness_scores(sl_match_events),
     }
     cooc_by_algo = {
-        "Random Baseline": _cooccurrence_fn(random_match_events_div),
-        "Monte Carlo": _cooccurrence_fn(mc_match_events_div),
-        "Simulated Annealing": _cooccurrence_fn(sa_match_events_div),
-        "Conflict Graph": _cooccurrence_fn(cg_match_events_div),
-        "Smart Matching": _cooccurrence_fn(sl_match_events_div),
+        _name: {
+            _n: compute_court_cooccurrences(_df.filter(pl.col("numPlayers") == _n))
+            for _n in sorted(_df.get_column("numPlayers").unique().to_list())
+        }
+        for _name, _df in [
+            ("Random Baseline", random_match_events),
+            ("Monte Carlo", mc_match_events),
+            ("Simulated Annealing", sa_match_events),
+            ("Conflict Graph", cg_match_events),
+            ("Smart Matching", sl_match_events),
+        ]
     }
     return freshness_by_algo, cooc_by_algo
 
 @app.cell
-def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random_diversity, sa_diversity, sl_diversity):
+def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random_diversity, sa_diversity, shared_config, sl_diversity):
+    _rounds = shared_config.get("rounds", 25)
     _algo_names = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
     _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
     _diversities = [random_diversity, mc_diversity, sa_diversity, cg_diversity, sl_diversity]
@@ -766,7 +835,7 @@ def _(ALGO_COLORS, cg_diversity, fig_to_image, mc_diversity, mo, np, plt, random
         _ax2.scatter(_i, _mean, color='red', s=50, zorder=5, marker='D', label='Mean' if _i == 1 else '')
     _ax2.legend(loc='lower right')
     
-    _fig.suptitle("Teammate Diversity: Unique Partners per 10-Round Session", fontsize=13, fontweight="bold", y=1.02)
+    _fig.suptitle(f"Teammate Diversity: Unique Partners per {_rounds}-Round Session", fontsize=13, fontweight="bold", y=1.02)
     plt.tight_layout()
     
     mo.vstack([
@@ -790,6 +859,82 @@ Players assigned to singles courts have no teammate that round, which slightly r
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
+    #### Court Rematch Distribution
+
+    Measuring how many times the same 4 players meet on a court per session (court group recycling / rematch distribution).
+    While partner combinations can rotate among the four, repeatedly gathering the exact same group of 4 players on a court diminishes overall session-level variety.
+    """)
+    return
+
+@app.cell
+def _(
+    ALGO_COLORS,
+    ALGO_NAMES,
+    cg_match_events,
+    compute_court_rematches_per_session,
+    fig_to_image,
+    mc_match_events,
+    mo,
+    np,
+    plt,
+    random_match_events,
+    sa_match_events,
+    sl_match_events,
+):
+    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
+    _axes = _axes.flatten()
+    _axes[-1].set_visible(False)
+
+    _datasets = list(zip(
+        [mc_match_events, sa_match_events, cg_match_events, sl_match_events, random_match_events],
+        ALGO_NAMES,
+        ALGO_COLORS,
+    ))
+
+    _all_rematches = [
+        compute_court_rematches_per_session(_df)
+        for _df, _, _ in _datasets
+    ]
+
+    _max_x = max(
+        max(_r) if _r else 0
+        for _r in _all_rematches
+    )
+
+    for _ax, (_r, (_, _name, _color)) in zip(_axes, zip(_all_rematches, _datasets)):
+        _counts_arr = np.array(_r)
+        _values, _freqs = np.unique(_counts_arr, return_counts=True)
+        _pcts = _freqs / _freqs.sum() * 100
+
+        _ax.bar(_values, _pcts, color=_color, alpha=0.8, width=0.8)
+        _ax.set_xlabel("Court rematches per run")
+        _ax.set_ylabel("Percentage of runs (%)")
+        _ax.set_title(_name, fontweight="bold")
+        _ax.set_xlim(-0.5, _max_x + 0.5)
+
+        _mean = float(np.mean(_counts_arr)) if len(_counts_arr) > 0 else 0.0
+        _min = int(np.min(_counts_arr)) if len(_counts_arr) > 0 else 0
+        _max = int(np.max(_counts_arr)) if len(_counts_arr) > 0 else 0
+        _ax.annotate(
+            f"Avg rematches: {_mean:.1f}\nMin: {_min}, Max: {_max}",
+            xy=(0.95, 0.95),
+            xycoords="axes fraction",
+            ha="right",
+            va="top",
+            fontsize=10,
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+        )
+
+    _fig.tight_layout()
+    mo.vstack([
+        mo.image(fig_to_image(_fig)),
+        mo.md("<center><i>Figure 7: Distribution of 4-player court rematches per session. Each histogram shows what percentage of simulation runs had 0, 1, 2, etc. duplicate 4-player court groups. Lower rematch counts indicate better court group variety.</i></center>"),
+    ])
+    return
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
     ### Match Repeat Likelihood
 
     Given a specific match from one session (e.g., A+B vs C+D), how likely is the **exact same matchup**
@@ -802,26 +947,45 @@ def _(mo):
     return
 
 @app.cell
-def _(compute_match_session_frequency, data_dir, pl):
-    random_match_events_mrf = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
-    mc_match_events_mrf = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
-    sa_match_events_mrf = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
-    cg_match_events_mrf = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
-    sl_match_events_mrf = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
-
-    random_mrf = compute_match_session_frequency(random_match_events_mrf)
-    mc_mrf = compute_match_session_frequency(mc_match_events_mrf)
-    sa_mrf = compute_match_session_frequency(sa_match_events_mrf)
-    cg_mrf = compute_match_session_frequency(cg_match_events_mrf)
-    sl_mrf = compute_match_session_frequency(sl_match_events_mrf)
+def _(
+    cg_match_events,
+    compute_match_session_frequency,
+    mc_match_events,
+    pl,
+    random_match_events,
+    sa_match_events,
+    sl_match_events,
+):
+    random_mrf = compute_match_session_frequency(random_match_events)
+    mc_mrf = compute_match_session_frequency(mc_match_events)
+    sa_mrf = compute_match_session_frequency(sa_match_events)
+    cg_mrf = compute_match_session_frequency(cg_match_events)
+    sl_mrf = compute_match_session_frequency(sl_match_events)
+    distinct_per_1000 = {
+        _name: {
+            _n: compute_match_session_frequency(_sub)["total_unique_matches"] / _sub.height * 1000
+            for _n in sorted(_df.get_column("numPlayers").unique().to_list())
+            for _sub in [_df.filter(pl.col("numPlayers") == _n)]
+        }
+        for _name, _df in [
+            ("Random Baseline", random_match_events),
+            ("Monte Carlo", mc_match_events),
+            ("Simulated Annealing", sa_match_events),
+            ("Conflict Graph", cg_match_events),
+            ("Smart Matching", sl_match_events),
+        ]
+    }
     return (
-        random_match_events_mrf, mc_match_events_mrf, sa_match_events_mrf,
-        cg_match_events_mrf, sl_match_events_mrf,
-        random_mrf, mc_mrf, sa_mrf, cg_mrf, sl_mrf,
+        cg_mrf,
+        distinct_per_1000,
+        mc_mrf,
+        random_mrf,
+        sa_mrf,
+        sl_mrf,
     )
 
 @app.cell
-def _(ALGO_COLORS, cg_mrf, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf, sl_mrf):
+def _(ALGO_COLORS, cg_mrf, distinct_per_1000, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf, sl_mrf):
     _display_order_mrf = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
     _algo_names_mrf = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
     _colors_mrf = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
@@ -829,20 +993,23 @@ def _(ALGO_COLORS, cg_mrf, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf
 
     _fig_mrf, (_ax_mrf1, _ax_mrf2) = plt.subplots(1, 2, figsize=(14, 5))
 
-    # Left: % of match configurations that appear in exactly 1 session
-    _unique_pcts = [m["unique_only_pct"] for m in _mrfs]
-    _x_mrf = np.arange(len(_algo_names_mrf))
-    _bars_mrf = _ax_mrf1.bar(_x_mrf, _unique_pcts, color=_colors_mrf, alpha=0.85, edgecolor='black', linewidth=1.5)
+    _player_counts = sorted(distinct_per_1000["Random Baseline"].keys())
+    _x_mrf = np.arange(len(_player_counts))
+    _bw = 0.8 / len(_display_order_mrf)
+    for _i, (_algo, _name, _col) in enumerate(zip(_display_order_mrf, _algo_names_mrf, _colors_mrf)):
+        _vals = [distinct_per_1000[_algo][_n] for _n in _player_counts]
+        _bars_mrf = _ax_mrf1.bar(_x_mrf + (_i - (len(_display_order_mrf) - 1) / 2) * _bw, _vals, width=_bw,
+                                 color=_col, alpha=0.85, label=_name.replace("\n", " "))
+        for _bar in _bars_mrf:
+            _ax_mrf1.text(_bar.get_x() + _bar.get_width() / 2, _bar.get_height() + 5, f"{_bar.get_height():.0f}",
+                          ha="center", va="bottom", fontsize=7, rotation=90)
     _ax_mrf1.set_xticks(_x_mrf)
-    _ax_mrf1.set_xticklabels(_algo_names_mrf, fontsize=10)
-    _ax_mrf1.set_ylabel("% of unique match configurations", fontsize=11)
-    _ax_mrf1.set_title("Matches Seen in Exactly 1 Session\n(Higher = More Session-Unique Matchups)", fontsize=12, fontweight="bold")
-    _ax_mrf1.set_ylim(0, 105)
+    _ax_mrf1.set_xticklabels([f"{_n} players" for _n in _player_counts], fontsize=10)
+    _ax_mrf1.set_ylabel("Distinct matchups per 1,000 matches", fontsize=11)
+    _ax_mrf1.set_title("Matchup Variety by Player Count\n(Higher = wider range of matchups across sessions)", fontsize=12, fontweight="bold")
+    _ax_mrf1.set_ylim(0, 1100)
     _ax_mrf1.grid(True, alpha=0.3, axis='y')
-    for _bar in _bars_mrf:
-        _h = _bar.get_height()
-        _ax_mrf1.text(_bar.get_x() + _bar.get_width() / 2, _h + 1, f"{_h:.1f}%",
-                      ha="center", va="bottom", fontsize=11, fontweight="bold")
+    _ax_mrf1.legend(fontsize=8, loc="lower right")
 
     # Right: distribution line chart — X = # sessions a match appears in, Y = % of unique matches
     _max_s = max(m["max_sessions"] for m in _mrfs)
@@ -867,16 +1034,17 @@ def _(ALGO_COLORS, cg_mrf, fig_to_image, mc_mrf, mo, np, plt, random_mrf, sa_mrf
 
     mo.vstack([
         mo.image(fig_to_image(_fig_mrf)),
-        mo.md("<center><i>Left: % of match configurations seen in only 1 session. Right: distribution of how many sessions each unique matchup appears in.</i></center>"),
+        mo.md("<center><i>Figure 8: Left: distinct matchups (A+B vs C+D) produced per 1,000 matches, split by player count; 1,000 would mean no matchup ever recurs across sessions. Engines that keep picking from a narrow set of balanced matchups score lower. Right: distribution of how many sessions each unique matchup appears in.</i></center>"),
     ])
     return
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-A higher percentage of session-unique match configurations (e.g. A+B vs C+D) is better — it means the algorithm
-rarely produces the same matchup twice. Ideally, the distribution peaks at 1 session with as few repeats as possible,
-showing that most matchups are one-off occurrences across all runs.
+Each session starts with a fresh history, so cross-session repeats are partly unavoidable: there are only
+C(n, 4) × 3 possible matchups (4,095 for 15 players up to 9,180 for 18), against 2,550 matches (15 players, 3 courts) or 3,400 matches (16–18 players) per engine.
+The left panel shows how much of that space each engine actually uses. A lower value means the engine
+narrows its choices (e.g. strong level balancing keeps picking the same "balanced" matchups), so the same matches recur more often.
     """)
     return
 
@@ -933,7 +1101,7 @@ def _(ALGO_COLORS, fig_to_image, freshness_by_algo, mo, np, plt):
     plt.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig_v)),
-        mo.md("<center><i>Each bar = one algorithm. Colour bands show % of round-to-round transitions where the player gained 0 / 1 / 2 / 3 new court-mates. Ideal engine: tall green top, thin red bottom. Note that optimising for partner variety (who you team with) is a different objective from court-group freshness (who you share a court with at all) — an algorithm may do well on one metric while scoring lower on the other.</i></center>"),
+        mo.md("<center><i>Figure 9: Each bar = one algorithm. Colour bands show % of round-to-round transitions where the player gained 0 / 1 / 2 / 3 new court-mates. Ideal engine: tall green top, thin red bottom. Note that optimising for partner variety (who you team with) is a different objective from court-group freshness (who you share a court with at all) — an algorithm may do well on one metric while scoring lower on the other.</i></center>"),
     ])
     return
 
@@ -944,8 +1112,12 @@ def _(mo):
 
     Within a single session, how many rounds does any player pair share a court (as teammates *or* opponents)?
 
-    - **1 shared round** — they met once and moved on (ideal variety)
-    - **3+ shared rounds** — they kept appearing on the same court each session (low variety)
+    Every player on court shares it with 3 others, so the average is fixed by the setup:
+    rounds played × 3 / (players − 1). With 17 rounds and 4 courts that is about 2.7 to 3.4 shared rounds per pair,
+    so "everyone meets once" is not achievable.
+
+    - **Narrow peak at the expected value** — court time is spread evenly across all pairs (ideal)
+    - **Wide spread / long tail** — some pairs barely meet while others keep landing on the same court (low variety)
 
     Even if two players are never on the same *team*, being opponents on the same court repeatedly
     still reduces the freshness of the experience.
@@ -953,35 +1125,63 @@ def _(mo):
     return
 
 @app.cell
-def _(ALGO_COLORS, cooc_by_algo, fig_to_image, mo, plt):
-    _display_order_c = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
-    _algo_names_c = ["Random\nBaseline", "Monte\nCarlo", "Simulated\nAnnealing", "Conflict\nGraph", "Smart\nMatching"]
-    _colors_c = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
-    _cooc_data = [cooc_by_algo[name] for name in _display_order_c]
+def _(ALGO_COLORS, ALGO_NAMES, cooc_by_algo, expected_court_cooccurrence, fig_to_image, mo, np, pl, plt, shared_config):
+    _rounds = shared_config.get("rounds", 17)
+    _courts = shared_config.get("numCourts", 4)
+    _order = ["Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching", "Random Baseline"]
+    _algo_colors = dict(zip(ALGO_NAMES, ALGO_COLORS))
+    _player_counts = sorted(next(iter(cooc_by_algo.values())).keys())
+    _expected = {_n: expected_court_cooccurrence(_n, _courts, _rounds) for _n in _player_counts}
+    _max_x = max(max(_v) for _by_n in cooc_by_algo.values() for _v in _by_n.values() if _v)
+    _xs = np.arange(1, _max_x + 1)
 
-    # Overlapping line chart: X = rounds sharing a court (1, 2, 3 …), Y = % of pair-sessions
-    _max_rounds_c = max((max(d) for d in _cooc_data if d), default=10)
-    _xs_c = list(range(1, _max_rounds_c + 1))
+    _fig, _axes = plt.subplots(2, 3, figsize=(18, 10))
+    _axes = _axes.flatten()
+    _axes[-1].set_visible(False)
+    _step = 0.8 / len(_player_counts)
+    _width = _step * 1.6
+    _shades = np.linspace(0.3, 0.7, len(_player_counts))
+    _rows = []
 
-    _fig_c, _ax_c = plt.subplots(figsize=(11, 6))
-    _line_styles = ["-o", "-s", "-^", "-D", "-v"]
-    for _i, (_d, _name, _col, _ls) in enumerate(zip(_cooc_data, _algo_names_c, _colors_c, _line_styles)):
-        _total = len(_d) or 1
-        _ys_c = [sum(1 for v in _d if v == k) / _total * 100 for k in _xs_c]
-        _ax_c.plot(_xs_c, _ys_c, _ls, color=_col, label=_name.replace("\n", " "),
-                   linewidth=2, markersize=7, alpha=0.9)
+    for _ax, _name in zip(_axes, _order):
+        _color = _algo_colors[_name]
+        for _i, _n in enumerate(_player_counts):
+            _vals = np.array(cooc_by_algo[_name][_n])
+            _pcts = np.array([(_vals == _k).mean() * 100 for _k in _xs])
+            _ax.bar(
+                _xs + (_i - (len(_player_counts) - 1) / 2) * _step, _pcts,
+                width=_width, color=_color, alpha=_shades[_i], edgecolor="none",
+                label=f"{_n} players (expected {_expected[_n]:.1f})",
+            )
+            _rows.append({"Players": _n, "Algorithm": _name, "Std dev": round(float(_vals.std()), 2)})
+        for _n in _player_counts:
+            _ax.axvline(_expected[_n], color="gray", linestyle="--", linewidth=1, alpha=0.5)
+        _ax.set_xlabel("Rounds sharing a court per pair per session")
+        _ax.set_ylabel("% of pair-sessions")
+        _ax.set_title(_name, fontweight="bold")
+        _ax.set_xticks(_xs)
+        _ax.legend(loc="upper right", fontsize=8)
 
-    _ax_c.set_xlabel("Rounds sharing a court per pair per session", fontsize=11)
-    _ax_c.set_ylabel("% of all pair-sessions", fontsize=11)
-    _ax_c.set_xticks(_xs_c)
-    _ax_c.set_title("Co-occurrence Distribution — How Often Do Pairs Share a Court?",
-                    fontsize=12, fontweight="bold")
-    _ax_c.legend(fontsize=10, title="Algorithm", title_fontsize=10)
-    _ax_c.axvline(x=1, color="gray", linestyle="--", linewidth=1, alpha=0.5, label="_ideal")
-    plt.tight_layout()
+    _fig.tight_layout()
     mo.vstack([
-        mo.image(fig_to_image(_fig_c)),
-        mo.md("<center><i>Each line = one algorithm. X = how many rounds two players share a court in a single session. Ideal: spike at 1, short tail. A flat or wide distribution means certain pairs keep meeting.</i></center>"),
+        mo.image(fig_to_image(_fig)),
+        mo.md(
+            "<center><i>Figure 10: Rounds each player pair shares a court within a session, split by player count. "
+            "Dashed lines mark the expected average for each player count (rounds played × 3 / (players − 1)). "
+            "A narrow peak around those lines means court time is shared evenly; the table gives the spread "
+            "(standard deviation, lower = fairer).</i></center>"
+        ),
+        mo.ui.table(
+            pl.DataFrame(_rows)
+            .pivot(on="Algorithm", index="Players", values="Std dev")
+            .with_columns(pl.col("Players").replace_strict({_n: round(_e, 2) for _n, _e in _expected.items()}, return_dtype=pl.Float64).alias("Expected avg"))
+            .select(["Players", "Expected avg", *_order])
+            .sort("Players"),
+            selection=None,
+            style_cell=lambda _row, _col, _val: (
+                {"color": _algo_colors[_col], "fontWeight": "bold"} if _col in _algo_colors else {}
+            ),
+        ),
     ])
     return
 
@@ -1047,25 +1247,32 @@ def _(ALGO_COLORS, cg_config, fig_to_image, mc_config, mo, np, plt, random_confi
     _fig.tight_layout()
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 7: Percentage of win parity matches where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between win parity (equal wins) and uneven (lopsided) team compositions.</i></center>"),
+        mo.md("<center><i>Figure 11: Percentage of win parity matches where teams had exactly equal cumulative wins at match time. Right panel illustrates the difference between win parity (equal wins) and uneven (lopsided) team compositions.</i></center>"),
         mo.md("> **Note — Smart Matching goes beyond wins:** Unlike other algorithms that rely solely on cumulative wins to balance teams, Smart Matching also factors in player **skill level** and **gender** when forming match-ups. This allows it to create more intense, competitive games from the start of a session — before wins have accumulated — by pairing players of similar ability across teams regardless of their current win count."),
     ])
     return
 
 @app.cell
-def _(compute_balance_metrics, data_dir, mc_config, np, pl, random_config, sa_config, cg_config, sl_config, shared_config):
-    random_match_events = pl.read_csv(data_dir / "random_baseline" / "match_events.csv")
-    mc_match_events = pl.read_csv(data_dir / "mc_algo" / "match_events.csv")
-    sa_match_events = pl.read_csv(data_dir / "sa_algo" / "match_events.csv")
-    cg_match_events = pl.read_csv(data_dir / "cg_algo" / "match_events.csv")
-    sl_match_events = pl.read_csv(data_dir / "sl_algo" / "match_events.csv")
-
-    random_player_stats = pl.read_csv(data_dir / "random_baseline" / "player_stats.csv")
-    mc_player_stats = pl.read_csv(data_dir / "mc_algo" / "player_stats.csv")
-    sa_player_stats = pl.read_csv(data_dir / "sa_algo" / "player_stats.csv")
-    cg_player_stats = pl.read_csv(data_dir / "cg_algo" / "player_stats.csv")
-    sl_player_stats = pl.read_csv(data_dir / "sl_algo" / "player_stats.csv")
-
+def _(
+    cg_config,
+    cg_match_events,
+    cg_player_stats,
+    compute_balance_metrics,
+    mc_config,
+    mc_match_events,
+    mc_player_stats,
+    pl,
+    random_config,
+    random_match_events,
+    random_player_stats,
+    sa_config,
+    sa_match_events,
+    sa_player_stats,
+    shared_config,
+    sl_config,
+    sl_match_events,
+    sl_player_stats,
+):
     player_profiles = shared_config.get("playerProfiles", {})
 
     balance_results = {
@@ -1091,17 +1298,7 @@ def _(compute_balance_metrics, data_dir, mc_config, np, pl, random_config, sa_co
     return (
         balance_results,
         balance_summary,
-        cg_match_events,
-        cg_player_stats,
-        mc_match_events,
-        mc_player_stats,
         player_profiles,
-        random_match_events,
-        random_player_stats,
-        sa_match_events,
-        sa_player_stats,
-        sl_match_events,
-        sl_player_stats,
     )
 
 @app.cell
@@ -1116,130 +1313,87 @@ def _(mo):
     
     When there are more players than court spots, some must sit out ("bench") each round.
     **Bench fairness** measures how many games a player gets to play between bench periods.
-    
-    The algorithms (MC, SA, CG) **prioritize preventing double benches** over avoiding teammate repeats.
-    When forced to choose, they allow a repeat rather than bench someone twice in a row.
     """)
     return
 
 @app.cell
-def _(aggregate_bench_stats, aggregate_by_player_count, data_dir, pl):
-    random_bench_stats = pl.read_csv(data_dir / "random_baseline" / "bench_stats.csv", infer_schema_length=10000)
-    mc_bench_stats = pl.read_csv(data_dir / "mc_algo" / "bench_stats.csv", infer_schema_length=10000)
-    sa_bench_stats = pl.read_csv(data_dir / "sa_algo" / "bench_stats.csv", infer_schema_length=10000)
-    cg_bench_stats = pl.read_csv(data_dir / "cg_algo" / "bench_stats.csv", infer_schema_length=10000)
-    sl_bench_stats = pl.read_csv(data_dir / "sl_algo" / "bench_stats.csv", infer_schema_length=10000)
-
-    bench_gap_stats = {
-        "Random": aggregate_bench_stats(random_bench_stats),
-        "MC": aggregate_bench_stats(mc_bench_stats),
-        "SA": aggregate_bench_stats(sa_bench_stats),
-        "CG": aggregate_bench_stats(cg_bench_stats),
-        "SL": aggregate_bench_stats(sl_bench_stats),
+def _(ALGO_COLORS, ALGO_NAMES, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, pl, plt, random_bench_stats, sa_bench_stats, shared_config, sl_bench_stats):
+    _rounds = shared_config.get("rounds", 17)
+    _order = ["Random Baseline", "Monte Carlo", "Simulated Annealing", "Conflict Graph", "Smart Matching"]
+    _algo_colors = dict(zip(ALGO_NAMES, ALGO_COLORS))
+    _bench = {
+        "Random Baseline": random_bench_stats,
+        "Monte Carlo": mc_bench_stats,
+        "Simulated Annealing": sa_bench_stats,
+        "Conflict Graph": cg_bench_stats,
+        "Smart Matching": sl_bench_stats,
     }
-
-    bench_by_players = {
-        "Random": aggregate_by_player_count(random_bench_stats),
-        "MC": aggregate_by_player_count(mc_bench_stats),
-        "SA": aggregate_by_player_count(sa_bench_stats),
-        "CG": aggregate_by_player_count(cg_bench_stats),
-        "SL": aggregate_by_player_count(sl_bench_stats),
+    _by_n = {
+        _name: _df.group_by("numPlayers").agg(
+            (pl.col("avgBenchCount").mean() * pl.col("numPlayers").first() / _rounds).round().cast(pl.Int64).alias("benched"),
+            pl.col("benchRange").mean().alias("range"),
+            pl.col("doubleBenchCount").sum().alias("doubles"),
+            pl.col("totalGapEvents").sum().alias("gaps"),
+        ).sort("numPlayers")
+        for _name, _df in _bench.items()
     }
-    return (
-        bench_gap_stats, bench_by_players,
-        random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats, sl_bench_stats,
-    )
+    _ref = _by_n["Random Baseline"]
+    _player_counts = _ref.get_column("numPlayers").to_list()
+    _benched = dict(zip(_player_counts, _ref.get_column("benched").to_list()))
+    _slots = {_n: _benched[_n] * _rounds for _n in _player_counts}
+    _min_range = {_n: 0 if _slots[_n] % _n == 0 else 1 for _n in _player_counts}
 
-@app.cell
-def _(ALGO_COLORS, bench_by_players, cg_bench_stats, fig_to_image, mc_bench_stats, mo, np, plt, random_bench_stats, sa_bench_stats, shared_config, sl_bench_stats):
-    _algo_names = ["Random", "MC", "SA", "CG", "SL"]
-    _colors = [ALGO_COLORS[4], ALGO_COLORS[0], ALGO_COLORS[1], ALGO_COLORS[2], ALGO_COLORS[3]]
-    _bench_dfs = [random_bench_stats, mc_bench_stats, sa_bench_stats, cg_bench_stats, sl_bench_stats]
-    _max_courts = shared_config.get("numCourts", 4)
-
-    _all_player_counts = set()
-    for _algo in _algo_names:
-        _all_player_counts.update(bench_by_players[_algo].keys())
-    _player_counts = sorted(_all_player_counts) if _all_player_counts else [20]
-
-    def get_court_spots(num_players):
-        num_courts = min(_max_courts, num_players // 4)
-        return num_courts * 4
-    
-    _theoretical_max = []
-    _benched_per_round_list = []
-    for _pc in _player_counts:
-        _court_spots = get_court_spots(_pc)
-        _benched_per_round = _pc - _court_spots
-        _benched_per_round_list.append(_benched_per_round)
-        if _benched_per_round > 0:
-            _theoretical_max.append(_pc / _benched_per_round - 1)
-        else:
-            _theoretical_max.append(0)
-    
-    _fig, (_ax1, _ax2) = plt.subplots(1, 2, figsize=(15, 5))
-    
-    _x1 = np.arange(len(_player_counts))
-    _width1 = 0.12
-    _offsets1 = [-2, -1, 0, 1, 2]
-    
-    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
-        _gaps = []
-        for _j, _pc in enumerate(_player_counts):
-            _data = bench_by_players[_algo].get(_pc, {})
-            _mean_gap = _data.get("mean_gap", 0)
-            _total_events = _data.get("total_events", 0)
-            
-            if _mean_gap == 0 and _total_events == 0 and _theoretical_max[_j] > 0:
-                _gaps.append(_theoretical_max[_j])
-            else:
-                _gaps.append(_mean_gap)
-        _ax1.bar(_x1 + _offsets1[_i] * _width1, _gaps, _width1, label=_algo, color=_color, alpha=0.85)
-    
-    _ax1.plot(_x1, _theoretical_max, color='green', linestyle='--', linewidth=2, marker='o', 
-              markersize=8, label='Theoretical Max', zorder=5)
-    
-    _ax1.set_xticks(_x1)
-    _ax1.set_xticklabels([f"{pc}p\n({b}b)" for pc, b in zip(_player_counts, _benched_per_round_list)], fontsize=9)
-    _ax1.set_xlabel("Player Count (benched per round)", fontsize=10)
-    _ax1.set_ylabel("Mean Gap (games between benches)", fontsize=10)
-    _ax1.set_title("Average Gap Between Benches\n(Higher = Better)", fontsize=11, fontweight="bold")
-    _ax1.legend(loc="upper right", fontsize=8)
-    _ax1.set_ylim(0, max(_theoretical_max) + 1)
-    
-    _range_counts = {}
-    for _algo, _df in zip(_algo_names, _bench_dfs):
-        if "benchRange" in _df.columns:
-            _ranges = _df.get_column("benchRange").to_numpy()
-            _unique, _counts = np.unique(_ranges, return_counts=True)
-            _range_counts[_algo] = dict(zip(_unique, _counts / len(_ranges) * 100))
-    
-    _all_ranges = sorted(set(r for d in _range_counts.values() for r in d.keys()))
-    _width2 = 0.15
-    _offsets2 = [-2, -1, 0, 1, 2]
-    _x2 = np.arange(len(_all_ranges))
-    
-    for _i, (_algo, _color) in enumerate(zip(_algo_names, _colors)):
-        _pcts = [_range_counts.get(_algo, {}).get(r, 0) for r in _all_ranges]
-        _ax2.bar(_x2 + _offsets2[_i] * _width2, _pcts, _width2, label=_algo, color=_color, alpha=0.85)
-    
-    _ax2.set_xticks(_x2)
-    _ax2.set_xticklabels([str(int(r)) for r in _all_ranges], fontsize=10)
-    _ax2.set_xlabel("Bench Range (max - min benches per session)", fontsize=10)
-    _ax2.set_ylabel("% of Sessions", fontsize=10)
-    _ax2.set_title("Bench Range Distribution\n(Higher % at 0-1 = Better)", fontsize=11, fontweight="bold")
-    _ax2.legend(loc="upper right", fontsize=8)
-    
+    _fig, _ax = plt.subplots(figsize=(11, 5))
+    _x = np.arange(len(_player_counts))
+    _bw = 0.8 / len(_order)
+    for _i, _name in enumerate(_order):
+        _d = _by_n[_name]
+        _rates = [
+            (_dbl / _g * 100) if _g else 0.0
+            for _dbl, _g in zip(_d.get_column("doubles").to_list(), _d.get_column("gaps").to_list())
+        ]
+        _bars = _ax.bar(_x + (_i - (len(_order) - 1) / 2) * _bw, _rates, width=_bw,
+                        color=_algo_colors[_name], alpha=0.85, label=_name)
+        for _bar, _r in zip(_bars, _rates):
+            _ax.text(_bar.get_x() + _bar.get_width() / 2, _r + 0.1, f"{_r:.1f}", ha="center", va="bottom", fontsize=7)
+    _ax.set_xticks(_x)
+    _ax.set_xticklabels([f"{_n} players\n({_benched[_n]} benched/round)" for _n in _player_counts])
+    _ax.set_ylabel("Back-to-back benches (% of bench gaps)")
+    _ax.set_title("Double-Bench Rate by Player Count (Lower = Better)", fontweight="bold")
+    _ax.set_ylim(0, max(1.0, _ax.get_ylim()[1]))
+    _ax.legend(fontsize=8, loc="upper left")
+    _ax.grid(True, alpha=0.3, axis="y")
     _fig.tight_layout()
+
+    _rows = [
+        {"Players": _n, "Benched/round": _benched[_n], "Bench slots": _slots[_n], "Min range": _min_range[_n],
+         **{_name: round(float(_by_n[_name].filter(pl.col("numPlayers") == _n)["range"][0]), 2) for _name in _order}}
+        for _n in _player_counts
+    ]
+
     mo.vstack([
         mo.image(fig_to_image(_fig)),
-        mo.md("<center><i>Figure 8: Bench fairness metrics. Left: average games played between bench periods for different player counts. Right: distribution of bench count differences within sessions.</i></center>"),
-        mo.md(f"""
-- **Average Gap (Left):** Mean games between bench periods per player count. Green line = theoretical maximum ($N/B - 1$).
-Optimized algorithms achieve close to theoretical max; Random baseline falls significantly short.
-- **Bench Range (Right):** Distribution of max-min bench count difference per session. Range 0 = perfectly fair (everyone benched equally).
-Optimized algorithms concentrate at 0-1; Random spreads across higher ranges.
-        """)
+        mo.md(
+            "<center><i>Figure 12: Share of bench gaps where a player sat out two rounds in a row, split by player count. "
+            "16 players fill all courts (nobody benched) and 17 players bench exactly one per round, so each player sits out once "
+            "and no gap exists; those groups are empty by construction.</i></center>"
+        ),
+        mo.md(
+            f"**Bench range per session** (max − min times benched). With {_rounds} rounds, bench slots = benched/round × rounds; "
+            "if they don't divide evenly among players, a range of 1 is unavoidable."
+        ),
+        mo.ui.table(
+            pl.DataFrame(_rows),
+            selection=None,
+            style_cell=lambda _row, _col, _val: (
+                {"color": _algo_colors[_col], "fontWeight": "bold"} if _col in _algo_colors else {}
+            ),
+        ),
+        mo.md(
+            "Every engine hits the minimum range and a 0% double-bench rate at every player count. Both come from the shared "
+            "bench rotation, so this section validates that rotation rather than comparing algorithms. A double bench can still "
+            "occur when it is unavoidable, e.g. manually forced benches or more than half the players sitting out each round."
+        ),
     ])
     return
 
@@ -1259,7 +1413,7 @@ def _(math, mc_config, mo, sa_config, shared_config, sl_config):
     _player_counts = shared_config.get("playerCounts", [20])
     _n = max(_player_counts)
     _c = shared_config.get("numCourts", 4)
-    _r = shared_config.get("rounds", 10)
+    _r = shared_config.get("rounds", 25)
     _playing_per_round = _c * 4
     _mc_samples = mc_config.get("algorithmParams", {}).get("samplesPerRound", 300)
     _sa_iterations = sa_config.get("algorithmParams", {}).get("iterations", 500)

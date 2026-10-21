@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { SmartEngine } from '../../src/engines/SmartEngine';
+import { SmartEngine } from '../../analysis/simulation/SmartEngine';
 import type { Court, Player } from '../../src/types';
 
 /**

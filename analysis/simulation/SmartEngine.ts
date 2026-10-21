@@ -1,7 +1,6 @@
-import type { Court, ICourtAssignmentEngine, Player } from '../types';
-import { DEFAULT_LEVEL } from '../types';
-
-import { SimulatedAnnealingBase } from './SimulatedAnnealingBase';
+import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
+import { DEFAULT_LEVEL } from '../../src/types';
+import { SimulatedAnnealingBase } from '../../src/engines/SimulatedAnnealingBase';
 
 /**
  * Gender/Level-Aware Smart Matching Engine

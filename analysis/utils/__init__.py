@@ -1,8 +1,7 @@
 """Common utilities for marimo analysis notebooks."""
 
-from .plotting import setup_matplotlib, fig_to_image
-from .stats import proportion_ci
-from .bench import calc_theoretical_max, simulate_random_baseline, simulate_baseline_double_bench
+from .plotting import add_jitter, create_radar_chart, fig_to_image, setup_matplotlib
+from .stats import gini_coefficient, proportion_ci
 from .config_metrics import (
     ALGO_NAMES,
     ALGO_NAMES_SHORT,
@@ -16,27 +15,41 @@ from .config_metrics import (
     build_configs_by_label,
 )
 from .analysis import (
-    compute_summary_metrics,
-    is_adjacent_pair,
-    analyze_adjacency_bias,
-    compute_teammate_diversity,
-    build_repeat_matrix,
     aggregate_bench_stats,
     aggregate_by_player_count,
+    analyze_adjacency_bias,
+    build_level_heat_matrix,
+    build_repeat_matrix,
     compute_balance_metrics,
+    compute_court_cooccurrences,
+    compute_court_freshness_scores,
+    compute_court_rematches_per_session,
+    compute_danger_zone_pct,
+    compute_differential_buckets,
+    compute_gender_matchup_distribution,
+    compute_match_session_frequency,
+    compute_partnership_rate_buckets,
+    compute_repeat_counts,
+    compute_summary_metrics,
+    compute_teammate_diversity,
+    compute_team_stats,
+    compute_variety_distribution,
+    compute_zero_repeat_pct,
+    extract_max_player_count,
+    is_adjacent_pair,
+    player_id_to_index,
+    player_labels,
+    theoretical_min_repeat_pairs,
+    expected_court_cooccurrence,
 )
 
 __all__ = [
-    # Plotting
     "setup_matplotlib",
     "fig_to_image",
-    # Stats
+    "add_jitter",
+    "create_radar_chart",
     "proportion_ci",
-    # Bench utilities
-    "calc_theoretical_max",
-    "simulate_random_baseline",
-    "simulate_baseline_double_bench",
-    # Config metrics
+    "gini_coefficient",
     "ALGO_NAMES",
     "ALGO_NAMES_SHORT",
     "ALGO_COLORS",
@@ -47,13 +60,30 @@ __all__ = [
     "get_singles_fairness",
     "get_bias_score",
     "build_configs_by_label",
-    # Analysis
-    "compute_summary_metrics",
-    "is_adjacent_pair",
-    "analyze_adjacency_bias",
-    "compute_teammate_diversity",
-    "build_repeat_matrix",
     "aggregate_bench_stats",
     "aggregate_by_player_count",
+    "analyze_adjacency_bias",
+    "build_level_heat_matrix",
+    "build_repeat_matrix",
     "compute_balance_metrics",
+    "compute_court_cooccurrences",
+    "compute_court_freshness_scores",
+    "compute_court_rematches_per_session",
+    "compute_danger_zone_pct",
+    "compute_differential_buckets",
+    "compute_gender_matchup_distribution",
+    "compute_match_session_frequency",
+    "compute_partnership_rate_buckets",
+    "compute_repeat_counts",
+    "compute_summary_metrics",
+    "compute_teammate_diversity",
+    "compute_team_stats",
+    "compute_variety_distribution",
+    "compute_zero_repeat_pct",
+    "theoretical_min_repeat_pairs",
+    "expected_court_cooccurrence",
+    "extract_max_player_count",
+    "is_adjacent_pair",
+    "player_id_to_index",
+    "player_labels",
 ]

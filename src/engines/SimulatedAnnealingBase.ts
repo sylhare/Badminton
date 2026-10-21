@@ -13,10 +13,10 @@ import { BaseCourtAssignmentEngine } from './BaseCourtAssignmentEngine';
 export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine implements ICourtAssignmentEngine {
   SA_ITERATIONS: number = 500;
   INITIAL_TEMPERATURE: number = 2000.0;
-  COOLING_RATE: number = 0.9995;
+  COOLING_RATE: number = 0.985;
   protected MIN_TEMPERATURE: number = 0.1;
 
-  protected readonly TEAMMATE_REPEAT_PENALTY = 10000;
+  protected readonly TEAMMATE_REPEAT_PENALTY = 100000;
   protected readonly OPPONENT_REPEAT_PENALTY = 50;
   protected readonly BALANCE_PENALTY = 2000;
   protected readonly SINGLES_REPEAT_PENALTY = 100;
@@ -40,12 +40,11 @@ export abstract class SimulatedAnnealingBase extends BaseCourtAssignmentEngine i
     return totalCost;
   }
 
-  /** The four cost terms every SA engine shares: teammate repeats, opponent repeats, and win balance. */
+  /** Cost terms every SA engine shares: teammate repeats and opponent repeats. */
   protected sharedTeamCost(team1: Player[], team2: Player[]): number {
     return this.calculateTeammateCost(team1, this.TEAMMATE_REPEAT_PENALTY)
       + this.calculateTeammateCost(team2, this.TEAMMATE_REPEAT_PENALTY)
-      + this.calculateOpponentCost(team1, team2, this.OPPONENT_REPEAT_PENALTY)
-      + this.calculateWinBalanceCost(team1, team2, this.BALANCE_PENALTY);
+      + this.calculateOpponentCost(team1, team2, this.OPPONENT_REPEAT_PENALTY);
   }
 
   /** Split cost defaults to the shared terms; Smart adds gender/level on top. */

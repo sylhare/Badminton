@@ -11,6 +11,7 @@ _NOTEBOOKS = [
     ("/smart_matching_analysis", "Smart Matching Analysis"),
     ("/level_tracker_analysis", "Level Tracker Analysis"),
     ("/ui_load_analysis", "UI Load Analysis"),
+    ("/smart2_disparity_analysis", "Smart2 Disparity & Weight Analysis"),
 ]
 
 _INDEX_HTML = """\
@@ -50,6 +51,7 @@ _marimo_app = (
     .with_app(path="/smart_matching_analysis", root="./smart_matching_analysis.py")
     .with_app(path="/level_tracker_analysis", root="./level_tracker_analysis.py")
     .with_app(path="/ui_load_analysis", root="./ui_load_analysis.py")
+    .with_app(path="/smart2_disparity_analysis", root="./smart2_disparity_analysis.py")
     .build()
 )
 
@@ -86,5 +88,5 @@ if __name__ == "__main__":
         host="localhost",
         port=8765,
         reload=True,
-        reload_includes=["serve.py"],  # Only restart server when serve.py changes
+        reload_includes=["serve.py"],
     )

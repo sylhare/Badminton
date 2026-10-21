@@ -522,6 +522,20 @@ describe('BaseCourtAssignmentEngine', () => {
     });
   });
 
+  describe('bench rotation', () => {
+    it.each([15, 18])('never benches a player twice in a row with %i players over 17 rounds', (count) => {
+      const players = mockPlayers(count);
+      for (let session = 0; session < 100; session++) {
+        engine.resetHistory();
+        for (let round = 0; round < 17; round++) {
+          engine.clearCurrentSession();
+          const { anomalies } = engine.generate(players, 4);
+          expect(anomalies.find(a => a.type === 'consecutive_bench')).toBeUndefined();
+        }
+      }
+    });
+  });
+
   describe('detectAnomalies', () => {
     it('returns empty on first generation (no previous delta)', () => {
       const players = mockPlayers(4);

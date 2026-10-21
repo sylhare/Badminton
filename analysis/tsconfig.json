@@ -5,6 +5,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["ui_simulation/**/*.ts"],
+  "include": ["ui_simulation/**/*.ts", "simulation/**/*.ts"],
   "exclude": []
 }

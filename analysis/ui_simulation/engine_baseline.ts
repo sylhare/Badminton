@@ -2,10 +2,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { engineSA } from '../../src/engines/SimulatedAnnealingEngine.ts';
-import { engineSL } from '../../src/engines/SmartEngine.ts';
-import type { Court } from '../../src/types';
-import { pairKey } from '../../src/utils/playerUtils';
-import type { SimEngine } from '../simulation/types.ts';
+import { engineSL } from '../simulation/SmartEngine.ts';
+import type { Court, ICourtAssignmentEngine } from '../../src/types';
 import { calculateTeamStrength, loadConfig, simulateMatchOutcome } from '../simulation/utils.ts';
 
 import { buildPlayers } from './storage.ts';
@@ -32,7 +30,7 @@ interface EngineBaseline {
   strongerWinPct: number;
 }
 
-function runEngine(engine: SimEngine, players: ReturnType<typeof buildPlayers>, courts: number, rounds: number): EngineBaseline {
+function runEngine(engine: ICourtAssignmentEngine, players: ReturnType<typeof buildPlayers>, courts: number, rounds: number): EngineBaseline {
   const levels = new Map(players.map(p => [p.id, p.level]));
   let genMs = 0;
   let genCalls = 0;
@@ -44,7 +42,6 @@ function runEngine(engine: SimEngine, players: ReturnType<typeof buildPlayers>, 
 
   for (let run = 0; run < RUNS; run++) {
     engine.resetHistory();
-    const pairRounds = new Map<string, number>();
 
     for (let r = 0; r < rounds; r++) {
       const t0 = Date.now();
@@ -58,11 +55,6 @@ function runEngine(engine: SimEngine, players: ReturnType<typeof buildPlayers>, 
         const { team1, team2 } = court.teams;
         if (team1.length < 2 || team2.length < 2) continue;
 
-        const k1 = pairKey(team1[0].id, team1[1].id);
-        const k2 = pairKey(team2[0].id, team2[1].id);
-        pairRounds.set(k1, (pairRounds.get(k1) ?? 0) + 1);
-        pairRounds.set(k2, (pairRounds.get(k2) ?? 0) + 1);
-
         const s1 = calculateTeamStrength(team1, levels);
         const s2 = calculateTeamStrength(team2, levels);
         const winner = simulateMatchOutcome(s1, s2);
@@ -71,10 +63,10 @@ function runEngine(engine: SimEngine, players: ReturnType<typeof buildPlayers>, 
         if (winner === (s1 >= s2 ? 1 : 2)) strongerWon += 1;
         decided.push({ ...court, winner });
       }
-      engine.recordWins?.(decided);
+      engine.recordWins(decided);
     }
 
-    const repeatPairs = [...pairRounds.values()].filter(c => c > 1).length;
+    const repeatPairs = Object.values(engine.snapshot().teammateCountMap).filter(c => c > 1).length;
     totalRepeatPairs += repeatPairs;
     if (repeatPairs === 0) zeroRuns += 1;
   }
@@ -96,7 +88,7 @@ function main(): void {
   const playerCount = ui.playerCount ?? 16;
   const players = buildPlayers(playerCount, raw.playerProfiles ?? {});
 
-  const engines: Record<UiEngine, SimEngine> = { sa: engineSA, sl: engineSL };
+  const engines: Record<UiEngine, ICourtAssignmentEngine> = { sa: engineSA, sl: engineSL };
   const wanted = (ui.engines ?? ['sa', 'sl']) as UiEngine[];
 
   console.log(`Engine baseline (matched to UI): ${playerCount} players, ${courts} courts, ${rounds} rounds, ${RUNS} runs`);

@@ -1,6 +1,6 @@
 {
   "runs": 50,
-  "rounds": 10,
+  "rounds": 17,
   "playerCounts": [15, 16, 17, 18],
   "numCourts": 4,
   "ui": {
@@ -16,9 +16,20 @@
   "engines": {
     "random": { "iterationsPerRound": 1 },
     "mc": { "samplesPerRound": 300 },
-    "sa": { "iterations": 500, "initialTemperature": 2000, "coolingRate": 0.9995 },
+    "sa": { "iterations": 500, "initialTemperature": 2000, "coolingRate": 0.985 },
     "cg": { "iterationsPerRound": 1 },
-    "sl": { "iterations": 500, "initialTemperature": 2000, "coolingRate": 0.9985 }
+    "sl": { "iterations": 500, "initialTemperature": 2000, "coolingRate": 0.9985 },
+    "sl2": {
+      "levelWeight": 150,
+      "varietyWeight": 800,
+      "mixedDoublesWeight": 200,
+      "winStreakWeight": 300,
+      "windowTolerance": 25,
+      "podRepeatThreshold": 3,
+      "iterations": 500,
+      "initialTemperature": 2000,
+      "coolingRate": 0.9985
+    }
   },
   "playerProfiles": {
     "P1": { "level": 20 },

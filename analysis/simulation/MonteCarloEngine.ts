@@ -1,5 +1,6 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
+import { shuffleArray } from '../../src/utils/playerUtils';
 
 /**
  * Monte Carlo Greedy Search Implementation
@@ -65,13 +66,7 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
     cost += this.calculateSkillPairPenalty(court.teams.team1, 1);
     cost += this.calculateSkillPairPenalty(court.teams.team2, 1);
 
-    const winCost = this.calculateWinBalanceCost(court.teams.team1, court.teams.team2, 1);
-    if (winCost > 0) {
-      const team1WinSum = court.teams.team1.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-      const team2WinSum = court.teams.team2.reduce((acc, p) => acc + (this.winCountMap.get(p.id) ?? 0), 0);
-      console.log(`[ENGINE DEBUG] T1 Wins: ${team1WinSum}, T2 Wins: ${team2WinSum}, Diff: ${winCost}`);
-    }
-    cost += winCost;
+    cost += this.calculateWinBalanceCost(court.teams.team1, court.teams.team2, 1);
     cost += this.calculateLossBalanceCost(court.teams.team1, court.teams.team2, 1);
 
     if (cacheKey) this.costCache.set(cacheKey, cost);
@@ -87,7 +82,7 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
 
   private generateCandidate(onCourtPlayers: Player[], numberOfCourts: number, startCourtNum: number) {
     const courts: Court[] = [];
-    const playersCopy = this.shuffleArray([...onCourtPlayers]);
+    const playersCopy = shuffleArray([...onCourtPlayers]);
     let idx = 0;
     let totalCost = 0;
 

@@ -1,13 +1,7 @@
-import type { Court, ICourtAssignmentEngine } from '../../src/types';
+import type { ICourtAssignmentEngine } from '../../src/types';
 
-/**
- * Engine as the harness uses it: adds optional `recordWins`/`stats` (present on the
- * concrete engines, guarded at every call site) beyond `ICourtAssignmentEngine`.
- */
-export type SimEngine = ICourtAssignmentEngine & {
-  recordWins?(courts: Court[]): void;
-  stats?(): { winCountMap: Map<string, number> };
-};
+export type { ICourtAssignmentEngine };
+export type SimEngine = ICourtAssignmentEngine;
 
 /** Records a single match with team compositions, strengths, and outcome. */
 export type MatchEvent = {
@@ -66,6 +60,7 @@ export type MatchPairEvent = {
 /** Summary of repeat pair statistics for a simulation. */
 export type SimulationSummary = {
   simulationId: number;
+  numPlayers: number;
   rounds: number;
   repeatAnyPair: boolean;
   repeatPairDifferentOpponents: boolean;
@@ -78,6 +73,7 @@ export type SimulationSummary = {
 /** Records when a team pairing was repeated across rounds. */
 export type PairEvent = {
   simulationId: number;
+  numPlayers: number;
   fromRound: number;
   toRound: number;
   pairId: string;

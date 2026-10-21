@@ -231,6 +231,10 @@ class StorageManager {
     return Array.isArray(parsed?.app?.players);
   }
 
+  async decodeEngineState(raw: string): Promise<Partial<CourtEngineState>> {
+    return decodeEngineState(raw);
+  }
+
   /**
    * Returns savedAt timestamps for the import modal.
    * Returns undefined for both if both raw states share the same sessionId
@@ -300,7 +304,7 @@ class StorageManager {
     return { v: 3, et: state.engineType, ts: state.savedAt, pi, ps, pc, lh, rp: state.roundsPlayed };
   }
 
-  private fromCompact(c: CompactEngineState): CourtEngineState {
+  fromCompact(c: CompactEngineState): CourtEngineState {
     const pi = c.pi ?? [];
     const benchCountMap: Record<string, number> = {};
     const singleCountMap: Record<string, number> = {};
@@ -401,3 +405,21 @@ class StorageManager {
 }
 
 export const storageManager = new StorageManager();
+
+/**
+ * Decodes and unpacks engine state from a raw compressed storage payload.
+ */
+export async function decodeEngineState(raw: string): Promise<Partial<CourtEngineState>> {
+  if (!raw) return {};
+  try {
+    const decompressed = await decompress(raw);
+    const data = JSON.parse(decompressed);
+    if (!data || typeof data !== 'object') return {};
+    const engine = (data as { engine?: CompactEngineState }).engine;
+    if (!engine || typeof engine !== 'object' || engine.v !== 3) return {};
+    return storageManager.fromCompact(engine);
+  } catch {
+    return {};
+  }
+}
+
