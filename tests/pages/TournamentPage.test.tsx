@@ -31,7 +31,7 @@ describe('TournamentPage', () => {
   const match = (id: string, round: number, i: number, j: number) =>
     ({ id, round, courtNumber: 1, team1: team(i), team2: team(j) });
   const savedRR = (teamIdx: number[], matches: ReturnType<typeof match>[]) => ({
-    phase: 'active' as const, format: 'singles' as const, type: 'round-robin' as const,
+    format: 'singles' as const, type: 'round-robin' as const,
     numberOfCourts: 2, teams: teamIdx.map(team), matches,
   });
 
@@ -241,7 +241,6 @@ describe('TournamentPage', () => {
       const [A, B, C, D] = [mockPlayers[0], mockPlayers[1], mockPlayers[2], mockPlayers[3]];
       const t = (id: string, p: typeof A) => ({ id, players: [p] });
       await storageManager.saveTournament({
-        phase: 'active' as const,
         format: 'singles' as const,
         type: 'elimination' as const,
         numberOfCourts: 3,
@@ -249,8 +248,8 @@ describe('TournamentPage', () => {
         bestOf: 3,
         teams: [t('t1', A), t('t2', B), t('t3', C), t('t4', D)],
         matches: [
-          { id: 'm1', round: 1, courtNumber: 1, bracket: BracketKind.Winners, team1: t('t1', A), team2: t('t2', B) },
-          { id: 'm2', round: 1, courtNumber: 2, bracket: BracketKind.Winners, team1: t('t3', C), team2: t('t4', D) },
+          { id: 'm1', round: 1, courtNumber: 1, bracket: BracketKind.Winners, team1: t('t1', A), team2: t('t2', B), sets:[] },
+          { id: 'm2', round: 1, courtNumber: 2, bracket: BracketKind.Winners, team1: t('t3', C), team2: t('t4', D), sets: [] },
         ],
       });
       await flushPendingSaves();
@@ -271,9 +270,9 @@ describe('TournamentPage', () => {
     it('restores elimination tournament from saved state', async () => {
       const [A, B, C, D] = [mockPlayers[0], mockPlayers[1], mockPlayers[2], mockPlayers[3]];
       const savedState = {
-        phase: 'active' as const,
         format: 'singles' as const,
         type: 'elimination' as const,
+        bestOf: 1,
         numberOfCourts: 2,
         bracketSize: 4,
         teams: [

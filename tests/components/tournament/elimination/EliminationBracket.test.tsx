@@ -1,11 +1,11 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { EliminationBracket } from '../../../../src/components/tournament/elimination/EliminationBracket';
 import { EliminationTournament } from '../../../../src/tournament/EliminationTournament';
-import type { TournamentTeam } from '../../../../src/tournament/types';
+import type { OnMatchResult, TournamentTeam } from '../../../../src/tournament/types';
 import { createMockPlayer } from '../../../data/testFactories';
 import { playAllCBRounds, playFullTournament, playWBRound } from '../../../data/tournamentTestHelpers';
 
@@ -18,7 +18,7 @@ function makeTeams(ids: string[]): TournamentTeam[] {
 }
 
 describe('EliminationBracket', () => {
-  let onMatchResult: ReturnType<typeof vi.fn>;
+  let onMatchResult: Mock<OnMatchResult>;
 
   beforeEach(() => {
     onMatchResult = vi.fn();

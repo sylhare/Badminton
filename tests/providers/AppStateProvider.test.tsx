@@ -131,7 +131,6 @@ describe('AppStateProvider', () => {
       players: [alice, bob],
       teams: { team1: [alice], team2: [bob] },
       winner,
-      score: { team1: winner === 1 ? 21 : 10, team2: winner === 2 ? 21 : 10 },
     });
 
     it('replays from baseline into the winner/loser levels', async () => {
@@ -212,7 +211,7 @@ describe('AppStateProvider', () => {
       const winnerId = match.team1.players[0].id;
       const loserId = match.team2.players[0].id;
 
-      applyResult(t.withMatchResult(match.id, 1, { team1: 21, team2: 10 }));
+      applyResult(t.withMatchResult(match.id, 1, [{ team1: 21, team2: 10 }]));
 
       await waitFor(() => {
         expect(levelOf(winnerId)).toBeGreaterThan(50);
@@ -226,10 +225,10 @@ describe('AppStateProvider', () => {
       const match = t.matches()[0];
       const team1Id = match.team1.players[0].id;
 
-      applyResult(t.withMatchResult(match.id, 1, { team1: 21, team2: 10 }));
+      applyResult(t.withMatchResult(match.id, 1, [{ team1: 21, team2: 10 }]));
       await waitFor(() => expect(levelOf(team1Id)).toBeGreaterThan(50));
 
-      applyResult(t.withMatchResult(match.id, 2, { team1: 10, team2: 21 }));
+      applyResult(t.withMatchResult(match.id, 2, [{ team1: 10, team2: 21 }]));
       await waitFor(() => expect(levelOf(team1Id)).toBeLessThan(50));
     });
 
@@ -238,7 +237,7 @@ describe('AppStateProvider', () => {
       const t = singlesTournament();
       const winnerId = t.matches()[0].team1.players[0].id;
 
-      applyResult(t.withMatchResult(t.matches()[0].id, 1, { team1: 15, team2: 2 }));
+      applyResult(t.withMatchResult(t.matches()[0].id, 1, [{ team1: 15, team2: 2 }]));
       await waitFor(() => expect(levelOf(winnerId)).toBeGreaterThan(50));
     });
 
@@ -248,7 +247,7 @@ describe('AppStateProvider', () => {
       const match = t.matches()[0];
       const winnerId = match.team1.players[0].id;
 
-      applyResult(t.withMatchResult(match.id, 1, { team1: 21, team2: 10 }));
+      applyResult(t.withMatchResult(match.id, 1, [{ team1: 21, team2: 10 }]));
 
       await waitFor(() => {
         const history = appState.current!.engineState?.levelHistory?.[winnerId];

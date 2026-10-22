@@ -69,7 +69,7 @@ describe('StatsPage Component', () => {
     mockOnStateChange.mockImplementation(() => vi.fn());
     mockLoadState.mockResolvedValue(undefined);
     mockSaveState.mockResolvedValue(undefined);
-    mockStart.mockReturnValue(() => {});
+    mockStart.mockReturnValue(vi.fn());
   });
 
   afterEach(() => {

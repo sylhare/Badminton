@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -9,6 +9,7 @@ import {
   createTournamentMatch as makeMatch,
   createTournamentTeam as makeTeam,
 } from '../../../data/testFactories';
+import { OnMatchResult } from '../../../../src/tournament/types.ts';
 
 const teamA = makeTeam('a', ['Alice']);
 const teamB = makeTeam('b', ['Bob']);
@@ -24,7 +25,7 @@ const threeMatchSingles = makeTournament(
 );
 
 describe('RoundRobinMatches', () => {
-  let onMatchResult: ReturnType<typeof vi.fn>;
+  let onMatchResult: Mock<OnMatchResult>;
 
   beforeEach(() => {
     onMatchResult = vi.fn();
