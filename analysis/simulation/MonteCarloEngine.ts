@@ -1,4 +1,5 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
+import { shuffleArray } from '../../src/utils/playerUtils';
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
 import { shuffleArray } from '../../src/utils/playerUtils';
 
@@ -29,10 +30,6 @@ export class MonteCarloEngine extends BaseCourtAssignmentEngine implements ICour
     }
 
     return best ? best.courts : [];
-  }
-
-  protected getOptimalTeamSplit(players: Player[]): Court['teams'] {
-    return this.chooseBestTeamSplit(players).teams;
   }
 
   protected evaluateTeamSplitCost(team1: Player[], team2: Player[]): number {

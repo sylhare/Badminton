@@ -20,10 +20,6 @@ export class ConflictGraphEngine extends BaseCourtAssignmentEngine implements IC
     return this.buildCourtsWithConflictGraph(players, numberOfCourts, startCourtNum);
   }
 
-  protected getOptimalTeamSplit(players: Player[]): Court['teams'] {
-    return this.chooseBestTeamSplit(players).teams;
-  }
-
   protected evaluateTeamSplitCost(t1: Player[], t2: Player[]): number {
     let cost = 0;
     cost += this.calculateOpponentCost(t1, t2, this.OPPONENT_WEIGHT);

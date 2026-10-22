@@ -27,7 +27,7 @@ export function formatPlayerNames(players: Player[]): string {
 
 export interface Court {
   courtNumber: number;
-  players: Player[];
+  players: Player[]; // TODO Why save player and teams?
   teams?: {
     team1: Player[];
     team2: Player[];
@@ -107,6 +107,7 @@ export interface ICourtAssignmentTracker {
   applyRoundStats(courts: Court[], players: Player[]): AssignmentAnomaly[];
   snapshot(): EngineSnapshot;
   prepareStateForSaving(engineType: EngineType): CourtEngineState;
+  recordWins(courts: Court[]): void;
   saveState(engineType: EngineType): Promise<void>;
   loadState(engineType: EngineType): Promise<void>;
   recordLevelSnapshot(players: Player[]): void;

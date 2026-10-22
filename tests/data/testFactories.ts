@@ -125,7 +125,7 @@ export function createMockCourt(courtNumber: number, players: Player[], winner?:
 
 export function createRoundRobinTournament(matches: TournamentMatch[], teams: TournamentTeam[]): RoundRobinTournament {
   return RoundRobinTournament.fromState({
-    phase: 'active',
+    bestOf: 1,
     format: 'singles',
     type: 'round-robin',
     numberOfCourts: 1,

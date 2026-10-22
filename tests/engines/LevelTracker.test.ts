@@ -25,7 +25,7 @@ function makeCourt(
   winner: 1 | 2,
   score?: { team1: number; team2: number },
 ): Court {
-  return { courtNumber: 1, teams: { team1, team2 }, winner, sets: score ? [score] : [] };
+  return { courtNumber: 1, players: [...team1, ...team2], teams: { team1, team2 }, winner, sets: score ? [score] : [] };
 }
 
 describe('LevelTracker', () => {
@@ -367,6 +367,7 @@ describe('resolveMatchImportance', () => {
     id: `m${round}`, round, courtNumber: 1,
     team1: team('t1', [makePlayer('a', 50)]), team2: team('t2', [makePlayer('b', 50)]),
     bracket: BracketKind.Winners,
+    sets: [],
   });
 
   it('boosts the winners-bracket final (last round)', () => {

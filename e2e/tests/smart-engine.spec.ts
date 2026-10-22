@@ -100,7 +100,35 @@ test.describe('Smart Engine', () => {
     });
   });
 
-  test.describe('Score input modal', () => {
+  test.describe('Enhanced Leaderboard', () => {
+    test('smart mode leaderboard', async ({ page }) => {
+      await mainPage.addPlayers(DEFAULT_PLAYERS);
+      await mainPage.toggleSmartEngine();
+      await mainPage.generateAssignments(1);
+
+      await page.locator('.team-clickable').first().click();
+      await mainPage.enterScore('21', '15');
+
+      await test.step('Level / Avg Pts / Matches column headers visible', async () => {
+        await expect(page.getByTestId('leaderboard-level-header')).toBeVisible();
+        await expect(page.getByTestId('leaderboard-avg-pts-header')).toBeVisible();
+        await expect(page.getByTestId('leaderboard-matches-header')).toBeVisible();
+      });
+
+      await mainPage.regenerate();
+
+      await test.step('avg pts shows a numeric value after a scored game', async () => {
+        const firstRow = page.locator('.leaderboard-table tbody tr').first();
+        await expect(firstRow).toBeVisible();
+        const avgPtsCell = firstRow.locator('td').nth(3);
+        await expect(avgPtsCell).not.toHaveText('—');
+        const avgPts = await avgPtsCell.textContent();
+        expect(parseFloat(avgPts ?? '')).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  test.describe('Score and Level Trend Indicator', () => {
     test.beforeEach(async ({ page: _page }) => {
       await mainPage.addPlayers(DEFAULT_PLAYERS);
       await mainPage.toggleSmartEngine();
@@ -135,42 +163,6 @@ test.describe('Smart Engine', () => {
       const leaderboard = page.locator('.leaderboard-table');
       await expect(leaderboard).toBeVisible();
       await expect(page.getByTestId('leaderboard-avg-pts-header')).toBeVisible();
-    });
-  });
-
-  test.describe('Enhanced Leaderboard', () => {
-    test('smart mode leaderboard', async ({ page }) => {
-      await mainPage.addPlayers(DEFAULT_PLAYERS);
-      await mainPage.toggleSmartEngine();
-      await mainPage.generateAssignments(1);
-
-      await page.locator('.team-clickable').first().click();
-      await mainPage.enterScore('21', '15');
-
-      await test.step('Level / Avg Pts / Matches column headers visible', async () => {
-        await expect(page.getByTestId('leaderboard-level-header')).toBeVisible();
-        await expect(page.getByTestId('leaderboard-avg-pts-header')).toBeVisible();
-        await expect(page.getByTestId('leaderboard-matches-header')).toBeVisible();
-      });
-
-      await mainPage.regenerate();
-
-      await test.step('avg pts shows a numeric value after a scored game', async () => {
-        const firstRow = page.locator('.leaderboard-table tbody tr').first();
-        await expect(firstRow).toBeVisible();
-        const avgPtsCell = firstRow.locator('td').nth(3);
-        await expect(avgPtsCell).not.toHaveText('—');
-        const avgPts = await avgPtsCell.textContent();
-        expect(parseFloat(avgPts ?? '')).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  test.describe('Level Trend Indicator', () => {
-    test.beforeEach(async ({ page: _page }) => {
-      await mainPage.addPlayers(DEFAULT_PLAYERS);
-      await mainPage.toggleSmartEngine();
-      await mainPage.generateAssignments(1);
     });
 
     test('▲/▼ trend indicators', async ({ page }) => {
