@@ -6,7 +6,6 @@ import * as selector from '../../src/engines/engineSelector';
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { benchedPlayers } from '../../src/utils/playerUtils';
 import { createMockCourt, createSequentialPlayers as mockPlayers } from '../data/testFactories';
-import { getEngineType } from '../../src/engines/engineSelector';
 
 /**
  * Test subclass exposing protected methods of CourtAssignmentEngineSA.
@@ -777,7 +776,9 @@ describe.each(engines)('$name Assignments', ({ name, engine, type }) => {
       expect(distinctCount).toBeLessThanOrEqual(500);
 
       let notified = 0;
-      const unsubscribe = engine.onStateChange(() => { notified++; });
+      const unsubscribe = engine.onStateChange(() => {
+        notified++;
+      });
       engine.prepareStateForSaving(type);
       unsubscribe();
 
