@@ -1,3 +1,5 @@
+import type { TranslationKey, TranslationParams } from '../i18n';
+
 export interface Player {
   id: string;
   name: string;
@@ -120,4 +122,8 @@ export interface ICourtAssignmentEngine extends ICourtAssignmentTracker {
   generate(players: Player[], numberOfCourts: number, forceBenchPlayerIds?: Set<string>): GenerateResult;
   readonly name: string;
   readonly description: string;
+  /** Catalog key for a localised `description`; engines without one stay as-is. */
+  readonly descriptionKey?: TranslationKey;
+  /** Placeholder values for `descriptionKey`. */
+  readonly descriptionParams?: TranslationParams;
 }

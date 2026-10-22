@@ -8,14 +8,48 @@ import BenchGraph from '../components/graphs/BenchGraph';
 import PairsGraph from '../components/graphs/PairsGraph';
 import LevelHistoryGraph from '../components/graphs/LevelHistoryGraph';
 import Footer from '../components/Footer';
+import { useTranslation } from '../i18n';
+import type { Translate } from '../i18n';
 
 import { computeDiagnostics, getChipClass, getFairnessClass, hasEntries } from './statsDiagnostics';
+import type { DiagnosticWarning } from './statsDiagnostics';
 import './StatsPage.css';
 
 const analysisUrl = 'https://github.com/sylhare/Badminton/tree/main/analysis';
 
+/** Phrase a diagnostic warning in the active language. */
+function formatWarning(warning: DiagnosticWarning, t: Translate): string {
+  switch (warning.code) {
+    case 'benchImbalance':
+      return t('stats.warnBenchImbalance', {
+        spread: warning.spread,
+        expected: warning.expected,
+        rounds: warning.rounds,
+      });
+    case 'singlesOverplay':
+      return t('stats.warnSingles', {
+        count: warning.count,
+        threshold: warning.threshold,
+        expected: warning.expected,
+      });
+    case 'repeatedPairs':
+      return t('stats.warnPairs', {
+        count: warning.count,
+        label: warning.relation === 'teamedUp'
+          ? t('stats.labelTeamedUp')
+          : t('stats.labelFacedEachOther'),
+        threshold: warning.threshold,
+        avg: warning.average,
+      });
+  }
+}
+
 function StatsPage(): React.ReactElement {
-  const { players, isSmartEngineEnabled: isSmartEngine, engineState, engineName, engineDescription } = useAppState();
+  const {
+    players, isSmartEngineEnabled: isSmartEngine, engineState, engineName,
+    engineDescription, engineDescriptionKey, engineDescriptionParams,
+  } = useAppState();
+  const { t } = useTranslation();
 
   const {
     benchCountMap = {},
@@ -35,33 +69,37 @@ function StatsPage(): React.ReactElement {
 
   const playerNameMap = useMemo(() => new Map(players.map(p => [p.id, p.name])), [players]);
   const resolvePlayerName = useCallback(
-    (playerId: string) => playerNameMap.get(playerId) || 'removed',
-    [playerNameMap],
+    (playerId: string) => playerNameMap.get(playerId) || t('common.removedPlayer'),
+    [playerNameMap, t],
   );
+
+  const description = engineDescriptionKey
+    ? t(engineDescriptionKey, engineDescriptionParams)
+    : engineDescription;
 
   return (
     <div className="stats-page">
       <nav className="stats-banner" data-testid="stats-banner">
         <Link to="/" className="stats-banner-link" data-testid="back-to-app">
-          ← Court Manager
+          {t('stats.backToApp')}
         </Link>
       </nav>
       <div className="stats-container">
         <header className="stats-header">
-          <h1>{engineName} Diagnostics</h1>
+          <h1>{t('stats.title', { engine: engineName })}</h1>
           <p className="stats-subtitle">
-            {engineDescription}
+            {description}
           </p>
         </header>
 
         {/* Warnings Section */}
         {hasData && diagnostics.warnings.length > 0 && (
           <section className="warnings-section">
-            <h2>⚠️ Warnings</h2>
+            <h2>{t('stats.warnings')}</h2>
             <div className="warnings-list">
               {diagnostics.warnings.map((warning, idx) => (
                 <div key={idx} className="warning-item">
-                  {warning}
+                  {formatWarning(warning, t)}
                 </div>
               ))}
             </div>
@@ -69,60 +107,62 @@ function StatsPage(): React.ReactElement {
         )}
 
         <section className="session-stats">
-          <h2>🔍 Current Session Diagnostics</h2>
+          <h2>{t('stats.currentSession')}</h2>
           {hasData ? (
             <>
               {/* Overview Stats */}
               <div className="stats-grid">
                 <div className="stat-card">
                   <div className="stat-value">{diagnostics.totalPlayers}</div>
-                  <div className="stat-label">Total Players</div>
+                  <div className="stat-label">{t('stats.totalPlayers')}</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-value">{diagnostics.totalRounds}</div>
-                  <div className="stat-label">Rounds Played</div>
+                  <div className="stat-label">{t('stats.roundsPlayed')}</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-value">{diagnostics.repeatedTeammates.length}</div>
-                  <div className="stat-label">Repeated Pairs</div>
+                  <div className="stat-label">{t('stats.repeatedPairs')}</div>
                 </div>
                 <div className="stat-card highlight-warning" data-warning={diagnostics.warnings.length > 0}>
                   <div className="stat-value">{diagnostics.warnings.length}</div>
-                  <div className="stat-label">Warnings</div>
+                  <div className="stat-label">{t('stats.warningsLabel')}</div>
                 </div>
               </div>
 
               {/* Bench Distribution */}
               <div className="diagnostic-section">
-                <h3>🪑 Bench Distribution</h3>
+                <h3>{t('stats.benchDistribution')}</h3>
                 <div className="bench-summary">
                   <div className="bench-stat">
-                    <span className="bench-label">Never benched:</span>
+                    <span className="bench-label">{t('stats.neverBenched')}</span>
                     <span className="bench-value good">{diagnostics.neverBenched}</span>
                   </div>
                   <div className="bench-stat">
-                    <span className="bench-label">Benched once:</span>
+                    <span className="bench-label">{t('stats.benchedOnce')}</span>
                     <span className="bench-value neutral">{diagnostics.benchedOnce}</span>
                   </div>
                   <div className="bench-stat">
-                    <span className="bench-label">Benched multiple times:</span>
+                    <span className="bench-label">{t('stats.benchedMultiple')}</span>
                     <span className="bench-value warning">{diagnostics.benchedMultiple}</span>
                   </div>
                   <div className="bench-stat">
-                    <span className="bench-label">Min/Max bench count:</span>
+                    <span className="bench-label">{t('stats.minMaxBench')}</span>
                     <span className="bench-value">{diagnostics.minBenchCount} / {diagnostics.maxBenchCount}</span>
                   </div>
                   <div className="bench-stat">
-                    <span className="bench-label">Fairness score:</span>
+                    <span className="bench-label">{t('stats.fairnessScore')}</span>
                     <span className={`bench-value ${getFairnessClass(diagnostics.benchFairnessScore)}`}>
-                      {diagnostics.benchFairnessScore} <small>(lower is better)</small>
+                      {diagnostics.benchFairnessScore} <small>{t('stats.lowerIsBetter')}</small>
                     </span>
                   </div>
                 </div>
 
                 {diagnostics.benchPlayers.length > 0 && (
                   <details className="collapsible-section">
-                    <summary>View bench counts per player ({diagnostics.benchPlayers.length})</summary>
+                    <summary>
+                      {t('stats.viewBenchCounts', { count: diagnostics.benchPlayers.length })}
+                    </summary>
                     <div style={{ padding: '16px' }}>
                       <BenchGraph
                         benchData={benchCountMap}
@@ -142,7 +182,7 @@ function StatsPage(): React.ReactElement {
 
               {/* Repeated Teammates */}
               <div className="diagnostic-section">
-                <h3>👥 Teammate Connections</h3>
+                <h3>{t('stats.teammateConnections')}</h3>
                 {hasEntries(teammateCountMap) ? (
                   <>
                     <TeammateGraph
@@ -152,7 +192,9 @@ function StatsPage(): React.ReactElement {
                     />
                     {diagnostics.repeatedTeammates.length > 0 && (
                       <details className="collapsible-section">
-                        <summary>View repeated pairs ({diagnostics.repeatedTeammates.length})</summary>
+                        <summary>
+                          {t('stats.viewRepeatedPairs', { count: diagnostics.repeatedTeammates.length })}
+                        </summary>
                         <div style={{ padding: '16px' }}>
                           <PairsGraph pairsData={diagnostics.repeatedTeammates} />
                         </div>
@@ -160,13 +202,13 @@ function StatsPage(): React.ReactElement {
                     )}
                   </>
                 ) : (
-                  <p className="no-issues">✓ No teammate pairings recorded yet</p>
+                  <p className="no-issues">{t('stats.noTeammatePairings')}</p>
                 )}
               </div>
 
               {/* Repeated Opponents */}
               <div className="diagnostic-section">
-                <h3>⚔️ Opponent Matchups</h3>
+                <h3>{t('stats.opponentMatchups')}</h3>
                 {hasEntries(opponentCountMap) ? (
                   <>
                     <TeammateGraph
@@ -177,7 +219,9 @@ function StatsPage(): React.ReactElement {
                     />
                     {diagnostics.repeatedOpponents.length > 0 && (
                       <details className="collapsible-section">
-                        <summary>View repeated matchups ({diagnostics.repeatedOpponents.length})</summary>
+                        <summary>
+                          {t('stats.viewRepeatedMatchups', { count: diagnostics.repeatedOpponents.length })}
+                        </summary>
                         <div style={{ padding: '16px' }}>
                           <PairsGraph pairsData={diagnostics.repeatedOpponents} />
                         </div>
@@ -185,20 +229,20 @@ function StatsPage(): React.ReactElement {
                     )}
                   </>
                 ) : (
-                  <p className="no-issues">✓ No opponent matchups recorded yet</p>
+                  <p className="no-issues">{t('stats.noOpponentMatchups')}</p>
                 )}
               </div>
 
               {/* Singles Distribution */}
               <div className="diagnostic-section">
-                <h3>🎯 Singles Matches</h3>
+                <h3>{t('stats.singlesMatches')}</h3>
                 {hasEntries(singleCountMap) ? (
                   <>
                     <div className="singles-summary">
-                      <span>{diagnostics.singlesPlayers.length} players have played singles</span>
+                      <span>{t('stats.singlesSummary', { count: diagnostics.singlesPlayers.length })}</span>
                       {diagnostics.playersWithMultipleSingles > 0 && (
                         <span className="warning-text">
-                          ({diagnostics.playersWithMultipleSingles} with multiple)
+                          {t('stats.singlesWithMultiple', { count: diagnostics.playersWithMultipleSingles })}
                         </span>
                       )}
                     </div>
@@ -207,7 +251,7 @@ function StatsPage(): React.ReactElement {
                       getPlayerName={resolvePlayerName}
                     />
                     <details className="collapsible-section">
-                      <summary>View singles list ({diagnostics.singlesPlayers.length})</summary>
+                      <summary>{t('stats.viewSinglesList', { count: diagnostics.singlesPlayers.length })}</summary>
                       <div className="player-chips">
                         {diagnostics.singlesPlayers.map(({ player, count }) => (
                           <span key={player} className={`chip ${count > 1 ? 'warning' : 'neutral'}`}>
@@ -218,13 +262,13 @@ function StatsPage(): React.ReactElement {
                     </details>
                   </>
                 ) : (
-                  <p className="no-issues">No singles matches recorded</p>
+                  <p className="no-issues">{t('stats.noSingles')}</p>
                 )}
               </div>
               {/* Level Progression - Smart Engine only */}
               {isSmartEngine && hasEntries(levelHistory) && (
                 <div className="diagnostic-section">
-                  <h3>📈 Level Progression</h3>
+                  <h3>{t('stats.levelProgression')}</h3>
                   <LevelHistoryGraph
                     levelHistory={levelHistory}
                     getPlayerName={resolvePlayerName}
@@ -234,16 +278,16 @@ function StatsPage(): React.ReactElement {
             </>
           ) : (
             <div className="no-data">
-              <p>No session data yet. Start playing to see diagnostics!</p>
+              <p>{t('stats.noData')}</p>
               <Link to="/" className="start-link">
-                Start a Game →
+                {t('stats.startGame')}
               </Link>
             </div>
           )}
         </section>
 
         <section className="analysis-links">
-          <h2>📊 GitHub Analysis</h2>
+          <h2>{t('stats.githubAnalysis')}</h2>
           <div className="analysis-grid">
             <a
               href={analysisUrl}
@@ -254,10 +298,9 @@ function StatsPage(): React.ReactElement {
             >
               <div className="analysis-icon">📊</div>
               <div className="analysis-content">
-                <h3>Explore the Analysis</h3>
+                <h3>{t('stats.exploreAnalysis')}</h3>
                 <p>
-                  Read the algorithm documentation, engine comparisons, and level tracker
-                  analysis on GitHub.
+                  {t('stats.analysisBody')}
                 </p>
               </div>
               <span className="analysis-arrow">→</span>

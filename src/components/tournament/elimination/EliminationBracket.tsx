@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import type { OnMatchResult } from '../../../tournament/types';
 import type { BracketNode } from '../../../tournament/bracketTree';
 import { nextPowerOf2, roundLabel } from '../../../tournament/bracketTree';
+import type { RoundLabels } from '../../../tournament/bracketTree';
+import { useTranslation } from '../../../i18n';
 import { EliminationTournament } from '../../../tournament/EliminationTournament';
 import { useMatchModal } from '../useMatchModal';
 
@@ -26,7 +28,16 @@ interface EliminationBracketProps {
 }
 
 export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onMatchResult }) => {
+  const { t } = useTranslation();
   const { handleTeamClick, scoreModal } = useMatchModal(onMatchResult);
+
+  const labels: RoundLabels = {
+    final: t('tournament.final'),
+    semiFinal: t('tournament.semiFinal'),
+    early: (count, round) => t('tournament.nthOfFinal', { count, round }),
+  };
+  const localizedRoundLabel = (round: number, totalRounds: number): string =>
+    roundLabel(round, totalRounds, labels);
 
   const bracketSize = tournament.bracketSize();
 
@@ -51,10 +62,10 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
     {
       key: 'wb',
       testId: 'wb-section',
-      title: 'Winners Bracket',
+      title: t('tournament.winnersBracket'),
       tree: wbTree,
       height: wbHeight,
-      roundLabel,
+      roundLabel: localizedRoundLabel,
     },
   ];
 
@@ -62,10 +73,10 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
     sections.push({
       key: 'cb',
       testId: 'cb-section',
-      title: 'Consolation Bracket',
+      title: t('tournament.consolationBracket'),
       tree: cbTree,
       height: cbHeight,
-      roundLabel,
+      roundLabel: localizedRoundLabel,
     });
   }
 
@@ -73,10 +84,10 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
     sections.push({
       key: 'tp',
       testId: 'tp-section',
-      title: '3rd Place',
+      title: t('tournament.thirdPlace'),
       tree: [[{ type: 'match', match: thirdPlaceMatch, slotIndex: 0 }]],
       height: CARD_HEIGHT + HEADER_HEIGHT,
-      roundLabel: () => '3rd Place',
+      roundLabel: () => t('tournament.thirdPlace'),
     });
   }
 

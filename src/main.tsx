@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 
 import App from './App.tsx';
 import { AppStateProvider } from './providers/AppStateProvider.tsx';
+import { I18nProvider } from './i18n';
 import './index.css';
 
 function ScrollToTop() {
@@ -20,18 +21,20 @@ const basePath = import.meta.env.BASE_URL || '/';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Router basename={basePath}>
-      <ScrollToTop />
-      <AppStateProvider>
-        <Suspense fallback={null}>
-          <Routes>
-            <Route path="/" element={<App />} />
-            <Route path="/stats" element={<StatsPage />} />
-            <Route path="/tournament" element={<TournamentPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-      </AppStateProvider>
-    </Router>
+    <I18nProvider>
+      <Router basename={basePath}>
+        <ScrollToTop />
+        <AppStateProvider>
+          <Suspense fallback={null}>
+            <Routes>
+              <Route path="/" element={<App />} />
+              <Route path="/stats" element={<StatsPage />} />
+              <Route path="/tournament" element={<TournamentPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
+        </AppStateProvider>
+      </Router>
+    </I18nProvider>
   </React.StrictMode>,
 );

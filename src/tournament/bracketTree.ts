@@ -175,12 +175,28 @@ export function getCBExpectedPool(
   return result;
 }
 
-export function roundLabel(roundNumber: number, totalRounds: number): string {
+/** Text for a bracket round's column header. Overridable so the UI can localise it. */
+export interface RoundLabels {
+  final: string;
+  semiFinal: string;
+  early: (teamsInRound: number, roundNumber: number) => string;
+}
+
+export const DEFAULT_ROUND_LABELS: RoundLabels = {
+  final: 'Final',
+  semiFinal: 'Semi Final',
+  early: teamsInRound => `${teamsInRound}th of Final`,
+};
+
+export function roundLabel(
+  roundNumber: number,
+  totalRounds: number,
+  labels: RoundLabels = DEFAULT_ROUND_LABELS,
+): string {
   const roundsFromFinal = totalRounds - roundNumber;
-  if (roundsFromFinal === 0) return 'Final';
-  if (roundsFromFinal === 1) return 'Semi Final';
-  const n = Math.pow(2, roundsFromFinal);
-  return `${n}th of Final`;
+  if (roundsFromFinal === 0) return labels.final;
+  if (roundsFromFinal === 1) return labels.semiFinal;
+  return labels.early(Math.pow(2, roundsFromFinal), roundNumber);
 }
 
 /** Map a node's two feeding results to its render node (a match node stands as soon as the match exists). */

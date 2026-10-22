@@ -16,6 +16,7 @@ export class Smart2Engine extends SimulatedAnnealingBase implements ICourtAssign
 
   readonly name = 'Smart Matching v2';
   readonly description = 'Sliding window level grouping with win momentum and mixed doubles preference.';
+  readonly descriptionKey = 'engine.smart2.description';
 
   /** Updates hyperparameter weights and simulated annealing settings. */
   override configure(params: Record<string, unknown>): void {

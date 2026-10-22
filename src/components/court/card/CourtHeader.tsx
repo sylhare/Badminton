@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useAnalytics } from '../../../hooks/useAnalytics';
+import { useTranslation } from '../../../i18n';
 
 interface CourtHeaderProps {
   courtNumber: number;
@@ -13,6 +14,7 @@ const CourtHeader: React.FC<CourtHeaderProps> = ({
   matchType,
   onRotateTeams,
 }) => {
+  const { t } = useTranslation();
   const { trackCourtAction } = useAnalytics();
 
   const handleRotateTeams = onRotateTeams ? () => {
@@ -23,14 +25,14 @@ const CourtHeader: React.FC<CourtHeaderProps> = ({
   return (
     <div className="court-header">
       <h3>
-        Court {courtNumber}{matchType ? ` - ${matchType}` : ''}
+        {t('court.court', { number: courtNumber })}{matchType ? ` - ${matchType}` : ''}
       </h3>
       {handleRotateTeams && (
         <button
           className="rotate-teams-button"
           onClick={handleRotateTeams}
-          title="Rotate team assignment"
-          aria-label="Rotate team assignment"
+          title={t('court.rotateTooltip')}
+          aria-label={t('court.rotateTooltip')}
           data-testid="rotate-teams-button"
         >
           ↻

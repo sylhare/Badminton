@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { TournamentStandingRow } from '../../tournament/types';
 import ManualOrderModal from '../modals/ManualOrderModal';
 import { cx } from '../common/cx';
+import { useTranslation } from '../../i18n';
 
 import { StandingsTable } from './common/StandingsTable';
 
@@ -27,18 +28,19 @@ export const TournamentStandings: React.FC<TournamentStandingsProps> = ({
   tieGroups,
   onResolveTies,
 }) => {
+  const { t } = useTranslation();
   const [ordering, setOrdering] = useState(false);
   const tiedRanks = new Set((tieGroups ?? []).flat());
   const canResolve = tiedRanks.size > 0 && !!onResolveTies;
 
   return (
     <div className="tournament-standings" data-testid="tournament-standings">
-      <h2>Standings</h2>
+      <h2>{t('tournament.standings')}</h2>
       <p className="standings-subtitle" data-testid="standings-subtitle">{subtitle}</p>
 
       <StandingsTable
         rows={standings}
-        rankHeader="Rank"
+        rankHeader={t('tournament.rank')}
         rankCell={rank => {
           const base = isComplete && rank < 3 ? RANK_EMOJI[rank] : rank + 1;
           if (!tiedRanks.has(rank)) return base;
@@ -47,8 +49,8 @@ export const TournamentStandings: React.FC<TournamentStandingsProps> = ({
               {base}
               <span
                 className="tie-warning"
-                title="Tied on every metric — set the finishing order by hand"
-                aria-label="Tied — needs manual ordering"
+                title={t('tournament.tiedTooltip')}
+                aria-label={t('tournament.tiedAria')}
                 data-testid={`standing-tie-flag-${rank}`}
               >
                 ⚠
@@ -68,7 +70,7 @@ export const TournamentStandings: React.FC<TournamentStandingsProps> = ({
           onClick={() => setOrdering(true)}
           data-testid="standings-tie-break"
         >
-          <span aria-hidden>⇅</span> Set tie-break order
+          <span aria-hidden>⇅</span> {t('tournament.setTieBreak')}
         </button>
       )}
 

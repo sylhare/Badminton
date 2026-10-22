@@ -4,6 +4,7 @@ import type { OnMatchResult, TournamentTeam } from '../../tournament/types';
 import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
 import ManualOrderModal from '../modals/ManualOrderModal';
 import { cx } from '../common/cx';
+import { useTranslation } from '../../i18n';
 
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { EliminationBracket } from './elimination/EliminationBracket';
@@ -16,9 +17,8 @@ interface GroupKnockoutProps {
   onUpdateTournament: (next: GroupKnockoutTournament) => void;
 }
 
-const groupLabel = (index: number): string => `Group ${String.fromCharCode(65 + index)}`;
-
 export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatchResult, onUpdateTournament }) => {
+  const { t } = useTranslation();
   const groups = tournament.groups();
   const qualifiersPerGroup = tournament.qualifiersPerGroup();
   const knockoutStarted = tournament.knockoutStarted();
@@ -48,7 +48,7 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
           }
           return (
             <section key={groupIndex} className="group-section" data-testid={`group-section-${groupIndex}`}>
-              <h3>{groupLabel(groupIndex)}</h3>
+              <h3>{t('tournament.group', { letter: String.fromCharCode(65 + groupIndex) })}</h3>
               <StandingsTable
                 rows={standings}
                 rankHeader="#"
@@ -60,7 +60,7 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
                       type="button"
                       className="tie-break-button"
                       onClick={() => setTiedTeams(tied)}
-                      aria-label="Set tie-break order"
+                      aria-label={t('tournament.setTieBreak')}
                       data-testid={`tie-break-${groupIndex}-${rank}`}
                     >
                       <span aria-hidden>⇅</span>
@@ -85,13 +85,13 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
       {hasBlockingTie && (
         <div className="knockout-tie-warning" data-testid="knockout-tie-warning" role="alert">
           <span className="tie-break-flag" aria-hidden>⚑</span>
-          <span>A group tie must be resolved before the knockout can start — use the ⇅ button on the tied rows above.</span>
+          <span>{t('tournament.groupTieWarning')}</span>
         </div>
       )}
 
       {knockoutStarted && (
         <div className="knockout-stage" data-testid="knockout-stage">
-          <h2>Knockout Stage</h2>
+          <h2>{t('tournament.knockoutStage')}</h2>
           <EliminationBracket tournament={tournament.knockout()} onMatchResult={onMatchResult} />
         </div>
       )}
@@ -101,7 +101,7 @@ export const GroupKnockout: React.FC<GroupKnockoutProps> = ({ tournament, onMatc
           <TournamentStandings
             standings={tournament.overallStandings()}
             isComplete
-            subtitle="Final Results"
+            subtitle={t('tournament.finalResults')}
             showPoints
           />
         </div>

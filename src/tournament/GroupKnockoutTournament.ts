@@ -16,6 +16,31 @@ import type {
   TournamentTeam,
 } from './types';
 
+/** Blocking setup issue, as a code the UI translates. */
+export type GroupSetupError = 'tooFewQualifiers';
+/** Advisory setup issue, as a code the UI translates. */
+export type GroupSetupWarning = 'allAdvance';
+
+/** The split a config actually forms: N groups, each this many teams. */
+export interface GroupShape {
+  groups: number;
+  sizes: number[];
+  /** Every group ended up the same size. */
+  uniform: boolean;
+  /** Every group fell short of the requested group size. */
+  undersized: boolean;
+}
+
+/** Setup note as data, so the view can compose the sentence in the active language. */
+export interface GroupSetupNote {
+  teamCount: number;
+  requestedGroupSize: number;
+  qualifiersPerGroup: number;
+  shape: GroupShape;
+  issue: GroupSetupError | GroupSetupWarning | null;
+  severity: 'hint' | 'warning' | 'error';
+}
+
 const DEFAULT_GROUP_SIZE = 4;
 const DEFAULT_QUALIFIERS_PER_GROUP = 2;
 const MIN_KNOCKOUT_TEAMS = 2;
@@ -79,10 +104,14 @@ export class GroupKnockoutTournament extends Tournament {
    * when fewer than two teams would advance. Counting actual advancers avoids a false alarm
    * when uneven groups leave one group with exactly `qualifiersPerGroup` teams.
    */
-  static validateConfig(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
+  static validateConfig(
+    teams: TournamentTeam[],
+    groupSize: number,
+    qualifiersPerGroup: number,
+  ): GroupSetupError | null {
     if (teams.length === 0) return null;
     if (GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup) < MIN_KNOCKOUT_TEAMS) {
-      return 'Too few teams would qualify for a knockout — add teams or lower the group size.';
+      return 'tooFewQualifiers';
     }
     return null;
   }
@@ -91,22 +120,28 @@ export class GroupKnockoutTournament extends Tournament {
    * Advisory (non-blocking) config note, else null. Everyone advancing is a valid setup — the
    * group stage just seeds a full knockout — but the user probably wants to know no one is cut.
    */
-  static configWarning(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
+  static configWarning(
+    teams: TournamentTeam[],
+    groupSize: number,
+    qualifiersPerGroup: number,
+  ): GroupSetupWarning | null {
     if (teams.length === 0) return null;
     if (GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup) >= teams.length) {
-      return 'No one will be eliminated in the group phase — every team advances. Is that what you want?';
+      return 'allAdvance';
     }
     return null;
   }
 
-  /** The bare "X groups of Y" shape a config forms, plus whether every group fell short of the requested size. */
-  private static groupShape(teams: TournamentTeam[], groupSize: number): { shape: string; undersized: boolean } {
+  /** The split a config forms, plus whether every group fell short of the requested size. */
+  private static groupShape(teams: TournamentTeam[], groupSize: number): GroupShape {
     const sizes = partitionIntoGroups(teams, groupSize).map(group => group.length);
     const undersized = Math.max(...sizes) < groupSize;
-    const noun = sizes.length === 1 ? 'group' : 'groups';
-    const uniform = sizes.every(size => size === sizes[0]);
-    const shape = uniform ? `${sizes.length} ${noun} of ${sizes[0]}` : `${sizes.length} ${noun} of ${sizes.join(', ')}`;
-    return { shape, undersized };
+    return {
+      groups: sizes.length,
+      sizes,
+      uniform: sizes.every(size => size === sizes[0]),
+      undersized,
+    };
   }
 
   /**
@@ -120,27 +155,23 @@ export class GroupKnockoutTournament extends Tournament {
     teams: TournamentTeam[],
     groupSize: number,
     qualifiersPerGroup: number,
-  ): { message: string; severity: 'hint' | 'warning' | 'error' } | null {
+  ): GroupSetupNote | null {
     if (teams.length === 0) return null;
-    const { shape, undersized } = GroupKnockoutTournament.groupShape(teams, groupSize);
-    const split = undersized
-      ? `${teams.length} teams can't fill groups of ${groupSize}, so they'll play as ${shape}.`
-      : `${teams.length} teams → ${shape}.`;
+    const shape = GroupKnockoutTournament.groupShape(teams, groupSize);
+    const note = {
+      teamCount: teams.length,
+      requestedGroupSize: groupSize,
+      qualifiersPerGroup,
+      shape,
+    };
 
-    if (GroupKnockoutTournament.validateConfig(teams, groupSize, qualifiersPerGroup)) {
-      return {
-        message: `${split} That leaves too few to seed a knockout — add teams or lower the group size.`,
-        severity: 'error',
-      };
-    }
-    if (GroupKnockoutTournament.configWarning(teams, groupSize, qualifiersPerGroup)) {
-      return {
-        message: `${split} With the top ${qualifiersPerGroup} qualifying, every team advances`
-          + ' — no one is eliminated in the group phase.',
-        severity: 'warning',
-      };
-    }
-    return { message: split, severity: undersized ? 'warning' : 'hint' };
+    const error = GroupKnockoutTournament.validateConfig(teams, groupSize, qualifiersPerGroup);
+    if (error) return { ...note, issue: error, severity: 'error' };
+
+    const warning = GroupKnockoutTournament.configWarning(teams, groupSize, qualifiersPerGroup);
+    if (warning) return { ...note, issue: warning, severity: 'warning' };
+
+    return { ...note, issue: null, severity: shape.undersized ? 'warning' : 'hint' };
   }
 
   static fromState(state: TournamentState): GroupKnockoutTournament {

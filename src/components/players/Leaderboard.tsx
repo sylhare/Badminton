@@ -4,6 +4,7 @@ import { CaretDown, CaretUp } from '@phosphor-icons/react';
 import type { Player } from '../../types';
 import { DEFAULT_LEVEL } from '../../types';
 import { useAppState } from '../../providers/AppStateProvider';
+import { useTranslation } from '../../i18n';
 
 interface LeaderboardProps {
   players: Player[];
@@ -28,6 +29,7 @@ const SortIcon: React.FC<{ col: SortColumn; sortCol: SortColumn; sortDir: SortDi
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCounts }) => {
   const { levelTrend, isSmartEngineEnabled } = useAppState();
+  const { t } = useTranslation();
   const [sortCol, setSortCol] = useState<SortColumn>('avgScore');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
@@ -68,23 +70,23 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
 
     return (
       <div className="leaderboard panel">
-        <h2>🏆 Leaderboard</h2>
+        <h2>{t('leaderboard.title')}</h2>
         <div className="leaderboard-scroll">
           <table className="leaderboard-table">
             <thead>
             <tr>
               <th>#</th>
-              <th>Player</th>
+              <th>{t('leaderboard.player')}</th>
               <th {...thProps('level', 'leaderboard-level-header')}>
-                <span className="th-content">Level <SortIcon col="level" sortCol={sortCol} sortDir={sortDir} /></span>
+                <span className="th-content">{t('leaderboard.level')} <SortIcon col="level" sortCol={sortCol} sortDir={sortDir} /></span>
               </th>
               <th {...thProps('avgScore', 'leaderboard-avg-pts-header')}>
-                <span className="th-content">Avg Pts <SortIcon col="avgScore" sortCol={sortCol} sortDir={sortDir} /></span>
+                <span className="th-content">{t('leaderboard.avgPoints')} <SortIcon col="avgScore" sortCol={sortCol} sortDir={sortDir} /></span>
               </th>
               <th {...thProps('wins')}>
-                <span className="th-content">Wins <SortIcon col="wins" sortCol={sortCol} sortDir={sortDir} /></span>
+                <span className="th-content">{t('leaderboard.wins')} <SortIcon col="wins" sortCol={sortCol} sortDir={sortDir} /></span>
               </th>
-              <th data-testid="leaderboard-matches-header">Matches</th>
+              <th data-testid="leaderboard-matches-header">{t('leaderboard.matches')}</th>
             </tr>
             </thead>
             <tbody>
@@ -122,14 +124,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ players, winCounts, lossCount
 
   return (
     <div className="leaderboard panel">
-      <h2>🏆 Leaderboard</h2>
+      <h2>{t('leaderboard.title')}</h2>
       <div className="leaderboard-scroll">
         <table className="leaderboard-table">
           <thead>
           <tr>
             <th>#</th>
-            <th>Player</th>
-            <th>Wins</th>
+            <th>{t('leaderboard.player')}</th>
+            <th>{t('leaderboard.wins')}</th>
           </tr>
           </thead>
           <tbody>

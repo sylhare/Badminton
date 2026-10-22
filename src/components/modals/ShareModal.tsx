@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard';
+import { useTranslation } from '../../i18n';
 
 import Modal from './Modal';
 
@@ -11,14 +12,15 @@ interface ShareModalProps {
 }
 
 const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, shareUrl }) => {
+  const { t } = useTranslation();
   const { copied, copy } = useCopyToClipboard();
 
   const handleCopy = () => copy(shareUrl);
 
   return (
-    <Modal isOpen={isOpen} title="Share Session" onClose={onClose} testId="share-modal">
+    <Modal isOpen={isOpen} title={t('share.title')} onClose={onClose} testId="share-modal">
       <div className="modal-body">
-        <p>Share this URL to let others load your current session:</p>
+        <p>{t('share.body')}</p>
         <input
           type="text"
           readOnly
@@ -31,14 +33,14 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, shareUrl }) =>
 
       <div className="modal-footer">
         <button className="button button-secondary" onClick={onClose}>
-          Close
+          {t('common.close')}
         </button>
         <button
           className="button button-primary"
           onClick={handleCopy}
           data-testid="copy-share-url-button"
         >
-          {copied ? 'Copied!' : 'Copy URL'}
+          {copied ? t('common.copied') : t('share.copyUrl')}
         </button>
       </div>
     </Modal>

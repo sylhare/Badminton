@@ -6,6 +6,7 @@ import { RoundRobinTournament } from '../../../tournament/RoundRobinTournament';
 import { DoublesMatch, SinglesMatch } from '../../court/display';
 import { cx } from '../../common/cx';
 import { useMatchModal } from '../useMatchModal';
+import { useTranslation } from '../../../i18n';
 
 import { useExpandedRounds } from './useExpandedRounds';
 
@@ -18,6 +19,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   tournament,
   onMatchResult,
 }) => {
+  const { t } = useTranslation();
   const { handleTeamClick, scoreModal } = useMatchModal(onMatchResult);
 
   const currentRound = tournament.currentRound();
@@ -44,9 +46,14 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
               onClick={() => toggle(round)}
               data-testid={`round-header-${round}`}
             >
-              <h3>Round {round}</h3>
+              <h3>{t('tournament.round', { number: round })}</h3>
               <span className="round-status">
-                {roundDone ? '✓ Complete' : `${roundMatches.filter(m => m.winner).length}/${roundMatches.length} done`}
+                {roundDone
+                  ? t('tournament.roundComplete')
+                  : t('tournament.roundProgress', {
+                    done: roundMatches.filter(m => m.winner).length,
+                    total: roundMatches.length,
+                  })}
               </span>
               <span className="collapse-indicator">{expanded ? '▼' : '▶'}</span>
             </div>
@@ -61,7 +68,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
                       className={cx('match-row', match.winner && 'match-complete')}
                       data-testid={`match-${match.id}`}
                     >
-                      <div className="match-court">Court {match.courtNumber}</div>
+                      <div className="match-court">{t('tournament.court', { number: match.courtNumber })}</div>
                       <div className="match-display">
                         {isSingles(match) ? (
                           <SinglesMatch

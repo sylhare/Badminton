@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import { TOURNAMENT_FACTORY } from '../tournament/tournamentFactory';
 import type { CreateTournamentOptions } from '../tournament/tournamentFactory';
 import { tournamentToScoredGames } from '../engines/levelAdapters';
+import { useTranslation } from '../i18n';
 import type { SetScore, TournamentTeam } from '../tournament/types';
 import './TournamentPage.css';
 
@@ -18,6 +19,7 @@ const TournamentPage = (): React.ReactElement => {
     applyGameResults, numberOfCourts, tournament, setTournament,
   } = useAppState();
   const [showSetup, setShowSetup] = useState(false);
+  const { t } = useTranslation();
 
   const commitElo = (t: AnyTournament) => {
     const { baseline, games } = tournamentToScoredGames(t);
@@ -74,7 +76,7 @@ const TournamentPage = (): React.ReactElement => {
     <div className={`app tournament-page${isSmartEngineEnabled ? ' smart-mode' : ''}`} data-loaded={isLoaded}>
       <nav className="tournament-banner" data-testid="tournament-banner">
         <Link to="/" className="banner-nav-link" data-testid="back-to-app">
-          ← Court Manager
+          {t('stats.backToApp')}
         </Link>
         <button
           className="banner-nav-link"
@@ -82,7 +84,7 @@ const TournamentPage = (): React.ReactElement => {
           disabled={isSetupView}
           data-testid="back-to-setup"
         >
-          Tournament Setup
+          {t('tournament.setup')}
         </button>
         <button
           className="banner-nav-link"
@@ -90,13 +92,13 @@ const TournamentPage = (): React.ReactElement => {
           disabled={!hasTournament || !isSetupView}
           data-testid="back-to-tournament"
         >
-          Current Tournament
+          {t('tournament.current')}
         </button>
       </nav>
       <div className="container main-container">
         <h1>
           <span className="title-emoji">{isSetupView ? '⚙️ ' : '🏆 '}</span>
-          {isSetupView ? 'Tournament Setup' : 'Tournament'}
+          {isSetupView ? t('tournament.setup') : t('tournament.title')}
         </h1>
         <Tournament
           tournament={tournament}

@@ -6,7 +6,9 @@ import type { Tournament as TournamentBase } from '../../tournament/Tournament';
 import type { CreateTournamentOptions } from '../../tournament/tournamentFactory';
 import { SegmentedControl } from '../common/SegmentedControl';
 import ConfirmModal from '../modals/ConfirmModal';
+import { useTranslation } from '../../i18n';
 
+import { formatStandingsSubtitle } from './formatStandingsSubtitle';
 import { TournamentSetup } from './TournamentSetup';
 import { TournamentStandings } from './TournamentStandings';
 import { TOURNAMENT_KINDS, TOURNAMENT_TYPES } from './tournamentKinds';
@@ -36,6 +38,7 @@ export const Tournament: React.FC<TournamentProps> = ({
   onTogglePlayer,
   showSetup,
 }) => {
+  const { t } = useTranslation();
   const [typeOverride, setTypeOverride] = useState<TournamentType | null>(null);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const selectedType = typeOverride ?? tournament?.state().type ?? 'round-robin';
@@ -51,12 +54,12 @@ export const Tournament: React.FC<TournamentProps> = ({
     return (
       <div className="tournament-setup-wrapper">
         <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
-          <h3>Mode</h3>
+          <h3>{t('tournament.mode')}</h3>
           <SegmentedControl
             options={TOURNAMENT_TYPES}
             selected={selectedType}
             onSelect={setTypeOverride}
-            label={type => TOURNAMENT_KINDS[type].label}
+            label={type => t(TOURNAMENT_KINDS[type].labelKey)}
             testIdFor={type => `type-pill-${type}`}
           />
         </div>
@@ -86,7 +89,7 @@ export const Tournament: React.FC<TournamentProps> = ({
         <TournamentStandings
           standings={standings}
           isComplete={isComplete}
-          subtitle={tournament.standingsSubtitle()}
+          subtitle={formatStandingsSubtitle(tournament.standingsSubtitle(), t)}
           showPoints={tournament.showsPoints()}
           tieGroups={tieGroups}
           onResolveTies={ids => onUpdateTournament(tournament.withManualOrder(ids))}
@@ -97,13 +100,13 @@ export const Tournament: React.FC<TournamentProps> = ({
         onClick={() => setConfirmingReset(true)}
         data-testid="new-tournament-button"
       >
-        Start a New Tournament
+        {t('tournament.newTournament')}
       </button>
       <ConfirmModal
         isOpen={confirmingReset}
-        title="Start a new tournament?"
-        message="This discards the current tournament and its results. Are you sure you want to start a new one?"
-        confirmText="Start new"
+        title={t('tournament.newTitle')}
+        message={t('tournament.newMessage')}
+        confirmText={t('tournament.newConfirm')}
         isDestructive
         onConfirm={() => { setConfirmingReset(false); onReset(); }}
         onCancel={() => setConfirmingReset(false)}

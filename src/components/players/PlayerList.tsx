@@ -3,6 +3,7 @@ import { ArrowClockwise, Pause, Play, ShareNetwork, Trash } from '@phosphor-icon
 
 import type { Player } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { useTranslation } from '../../i18n';
 import ConfirmModal from '../modals/ConfirmModal';
 import PlayerEditModal from '../modals/PlayerEditModal';
 import PlayerRemovalModal from '../modals/PlayerRemovalModal';
@@ -42,6 +43,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
   const [playerToRemove, setPlayerToRemove] = useState<Player | null>(null);
   const [playerToEdit, setPlayerToEdit] = useState<Player | null>(null);
   const { trackPlayerAction, trackGameAction, trackUIAction } = useAnalytics();
+  const { t } = useTranslation();
 
   const presentCount = players.filter(p => p.isPresent).length;
   const totalCount = players.length;
@@ -115,15 +117,15 @@ const PlayerList: React.FC<PlayerListProps> = ({
       <div className="player-stats" data-testid="player-stats">
         <div className="stats-item" data-testid="stats-present">
           <div className="stats-number" data-testid="stats-present-count">{presentCount}</div>
-          <div>Present</div>
+          <div>{t('players.present')}</div>
         </div>
         <div className="stats-item" data-testid="stats-absent">
           <div className="stats-number" data-testid="stats-absent-count">{totalCount - presentCount}</div>
-          <div>Absent</div>
+          <div>{t('players.absent')}</div>
         </div>
         <div className="stats-item" data-testid="stats-total">
           <div className="stats-number" data-testid="stats-total-count">{totalCount}</div>
-          <div>Total</div>
+          <div>{t('players.total')}</div>
         </div>
       </div>
 
@@ -143,7 +145,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
                   className={`player-name ${isSmartEngineEnabled ? 'player-name-clickable' : ''}`}
                   data-testid={`player-name-${player.id}`}
                   onClick={isSmartEngineEnabled ? () => handlePlayerNameClick(player) : undefined}
-                  title={isSmartEngineEnabled ? 'Click to edit gender/level' : undefined}
+                  title={isSmartEngineEnabled ? t('players.editPrompt') : undefined}
                 >
                   {player.name}
                   {badge && (
@@ -155,8 +157,8 @@ const PlayerList: React.FC<PlayerListProps> = ({
                     onClick={() => handlePlayerToggle(player.id)}
                     className={`toggle-presence-button ${player.isPresent ? 'present' : 'absent'}`}
                     data-testid={`toggle-presence-${player.id}`}
-                    title={player.isPresent ? 'Mark as absent' : 'Mark as present'}
-                    aria-label={player.isPresent ? 'Mark as absent' : 'Mark as present'}
+                    title={player.isPresent ? t('players.markAbsent') : t('players.markPresent')}
+                    aria-label={player.isPresent ? t('players.markAbsent') : t('players.markPresent')}
                   >
                     {player.isPresent ? <Pause size={14} weight="bold" /> : <Play size={14} weight="bold" />}
                   </button>
@@ -164,7 +166,7 @@ const PlayerList: React.FC<PlayerListProps> = ({
                     onClick={() => handleRemoveClick(player)}
                     className="remove-button"
                     data-testid={`remove-player-${player.id}`}
-                    title="Delete player permanently"
+                    title={t('players.deletePermanently')}
                   >
                     <Trash size={14} />
                   </button>
@@ -174,13 +176,13 @@ const PlayerList: React.FC<PlayerListProps> = ({
                 <div className="player-bench-row">
                   <span
                     className="bench-count-emoji"
-                    title={`Bench count: ${benchCount}`}
+                    title={t('players.benchCount', { count: benchCount })}
                     data-testid={`bench-count-${player.id}`}
                   >
                     🪑 {benchCount}
                   </span>
                   <label className="bench-next-toggle">
-                    <span>Bench next</span>
+                    <span>{t('players.benchNext')}</span>
                     <input
                       type="checkbox"
                       checked={isForceBenched}
@@ -202,35 +204,35 @@ const PlayerList: React.FC<PlayerListProps> = ({
             onClick={() => setShowResetAlgorithmModal(true)}
             className="reset-algorithm-button"
             data-testid="reset-algorithm-button"
-            title="Reset who played with who history (keeps all players)"
+            title={t('players.resetAlgorithmTooltip')}
           >
             <ArrowClockwise size={16} />
-            Reset Algorithm
+            {t('players.resetAlgorithm')}
           </button>
           <button
             onClick={() => setShowClearModal(true)}
             className="clear-all-button"
             data-testid="clear-all-button"
-            title="Remove all players and reset scores"
+            title={t('players.clearAllTooltip')}
           >
             <Trash size={16} />
-            Clear All Players
+            {t('players.clearAll')}
           </button>
           <button
             onClick={onShare}
             className="share-button"
             data-testid="share-button"
-            title="Share session via URL"
+            title={t('players.shareTooltip')}
           >
             <ShareNetwork size={16} />
-            Share
+            {t('players.share')}
           </button>
         </div>
       )}
 
       <div className="smart-engine-toggle-row">
         <label className="bench-next-toggle" data-testid="smart-engine-toggle-label">
-          <span>Smart Engine</span>
+          <span>{t('players.smartEngine')}</span>
           <input
             type="checkbox"
             checked={isSmartEngineEnabled}
@@ -242,15 +244,15 @@ const PlayerList: React.FC<PlayerListProps> = ({
           />
           <span className={`toggle-switch ${isSmartEngineEnabled ? 'active smart-engine-active' : ''}`}></span>
         </label>
-        <Tooltip testId="smart-engine" text="Smart Engine balances matches using gender and skill level. Enable it then click any player name to set their gender and level." />
+        <Tooltip testId="smart-engine" text={t('players.smartEngineTooltip')} />
       </div>
 
       <ConfirmModal
         isOpen={showClearModal}
-        title="Clear All Players"
-        message="Are you sure you want to remove all players? This will also reset all scores and game history. This action cannot be undone."
-        confirmText="Clear All"
-        cancelText="Cancel"
+        title={t('players.clearTitle')}
+        message={t('players.clearMessage')}
+        confirmText={t('players.clearConfirm')}
+        cancelText={t('common.cancel')}
         onConfirm={handleClearAll}
         onCancel={() => setShowClearModal(false)}
         isDestructive={true}
@@ -258,10 +260,10 @@ const PlayerList: React.FC<PlayerListProps> = ({
 
       <ConfirmModal
         isOpen={showResetAlgorithmModal}
-        title="Reset Algorithm"
-        message="Are you sure you want to reset the algorithm's memory? This will clear all records of who played with who, bench counts, and win/loss history. Players will remain but pairing preferences will be reset."
-        confirmText="Reset Algorithm"
-        cancelText="Cancel"
+        title={t('players.resetTitle')}
+        message={t('players.resetMessage')}
+        confirmText={t('players.resetAlgorithm')}
+        cancelText={t('common.cancel')}
         onConfirm={handleResetAlgorithm}
         onCancel={() => setShowResetAlgorithmModal(false)}
         isDestructive={false}

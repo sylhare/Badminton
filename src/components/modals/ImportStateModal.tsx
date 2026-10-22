@@ -1,6 +1,8 @@
 import React from 'react';
 
 import { useCopyToClipboard } from '../../hooks/useCopyToClipboard';
+import { useTranslation } from '../../i18n';
+import type { Locale } from '../../i18n';
 
 import Modal from './Modal';
 
@@ -13,8 +15,8 @@ interface ImportStateModalProps {
   onDecline: () => void;
 }
 
-function formatTimestamp(ts: number): string {
-  return new Date(ts).toLocaleString(undefined, {
+function formatTimestamp(ts: number, locale: Locale): string {
+  return new Date(ts).toLocaleString(locale === 'ja' ? 'ja-JP' : undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
@@ -28,6 +30,7 @@ const ImportStateModal: React.FC<ImportStateModalProps> = ({
   onAccept,
   onDecline,
 }) => {
+  const { t, locale } = useTranslation();
   const { copied, copy } = useCopyToClipboard();
 
   const handleCopyBackup = () => copy(currentBackupUrl);
@@ -35,30 +38,30 @@ const ImportStateModal: React.FC<ImportStateModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      title="Load Shared Session"
+      title={t('import.title')}
       onClose={onDecline}
       testId="import-state-modal"
       closeOnOverlayClick={false}
     >
       <div className="modal-body">
-        <p>A shared session was found in the URL. Loading it will replace your current session.</p>
+        <p>{t('import.body')}</p>
         {(sharedSavedAt || currentSavedAt) && (
           <div className="import-state-timestamps">
             {sharedSavedAt && (
               <p data-testid="shared-saved-at">
-                Shared session saved: <strong>{formatTimestamp(sharedSavedAt)}</strong>
+                {t('import.sharedSavedAt')} <strong>{formatTimestamp(sharedSavedAt, locale)}</strong>
               </p>
             )}
             {currentSavedAt && (
               <p data-testid="current-saved-at">
-                Your session saved: <strong>{formatTimestamp(currentSavedAt)}</strong>
+                {t('import.currentSavedAt')} <strong>{formatTimestamp(currentSavedAt, locale)}</strong>
               </p>
             )}
           </div>
         )}
         {currentBackupUrl && (
           <>
-            <p>Save this link to restore your current session later:</p>
+            <p>{t('import.backupHint')}</p>
             <div className="share-url-row">
               <input
                 type="text"
@@ -73,7 +76,7 @@ const ImportStateModal: React.FC<ImportStateModalProps> = ({
                 onClick={handleCopyBackup}
                 data-testid="copy-backup-url-button"
               >
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? t('common.copied') : t('import.copy')}
               </button>
             </div>
           </>
@@ -86,14 +89,14 @@ const ImportStateModal: React.FC<ImportStateModalProps> = ({
           onClick={onDecline}
           data-testid="import-state-decline"
         >
-          Keep my session
+          {t('import.keepMine')}
         </button>
         <button
           className="button button-primary"
           onClick={onAccept}
           data-testid="import-state-accept"
         >
-          Load shared session
+          {t('import.loadShared')}
         </button>
       </div>
     </Modal>

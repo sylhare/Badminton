@@ -9,6 +9,7 @@ import { storageManager } from '../utils/StorageManager';
 import { TOURNAMENT_FACTORY } from '../tournament/tournamentFactory';
 import type { AnyTournament } from '../tournament/tournamentFactory';
 import type { TournamentState } from '../tournament/types';
+import type { TranslationKey, TranslationParams } from '../i18n';
 
 export type { AnyTournament };
 
@@ -50,6 +51,9 @@ export interface AppStateContextType {
   resetAlgorithm(): Promise<void>;
   engineName: string;
   engineDescription: string;
+  /** Catalog key for a localised engine description, when the engine has one. */
+  engineDescriptionKey?: TranslationKey;
+  engineDescriptionParams?: TranslationParams;
 }
 
 const AppStateContext = createContext<AppStateContextType | null>(null);
@@ -261,6 +265,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }): R
     resetAlgorithm,
     engineName: engine().name,
     engineDescription: engine().description,
+    engineDescriptionKey: engine().descriptionKey,
+    engineDescriptionParams: engine().descriptionParams,
   }), [
     players, numberOfCourts, assignments, lastGeneratedAt, isLoaded,
     isSmartEngineEnabled, counts, engineState, tournament,

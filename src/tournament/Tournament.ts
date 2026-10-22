@@ -11,6 +11,18 @@ import type {
   TournamentTeam,
 } from './types';
 
+/** Setup-blocking problem, as a code the UI translates. */
+export type TournamentValidationError = 'needTwoTeams' | 'doublesTwoPlayers';
+
+/**
+ * Standings subtitle as data, not prose, so the view can format it in the
+ * active language. `rounds` covers the in-progress round counter.
+ */
+export type StandingsSubtitle =
+  | { kind: 'rounds'; done: number; total: number }
+  | { kind: 'final' }
+  | { kind: 'inProgress' };
+
 export abstract class Tournament {
   protected readonly _state: TournamentState;
 
@@ -166,12 +178,12 @@ export abstract class Tournament {
     return standings;
   }
 
-  validate(teams: TournamentTeam[], format: TournamentFormat): string | null {
-    if (teams.length < 2) return 'Need at least 2 teams to start';
+  validate(teams: TournamentTeam[], format: TournamentFormat): TournamentValidationError | null {
+    if (teams.length < 2) return 'needTwoTeams';
     if (format === 'doubles') {
       for (const team of teams) {
         if (team.players.length !== 2) {
-          return 'Each doubles team must have exactly 2 players';
+          return 'doublesTwoPlayers';
         }
       }
     }
@@ -179,10 +191,8 @@ export abstract class Tournament {
   }
 
   /** Subtitle shown above the standings table. */
-  standingsSubtitle(): string {
-    const done = this.completedRounds();
-    const total = this.totalRounds();
-    return done > 0 ? `After Round ${done} / ${total}` : `Round 0 / ${total}`;
+  standingsSubtitle(): StandingsSubtitle {
+    return { kind: 'rounds', done: this.completedRounds(), total: this.totalRounds() };
   }
 
   /** Whether the combined standings table is shown (formats with inline standings hide it). */

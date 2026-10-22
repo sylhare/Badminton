@@ -11,10 +11,16 @@ import { useSlotSwap } from '../../hooks/useSlotSwap';
 import ManualPlayerEntry from '../players/ManualPlayerEntry';
 import { SegmentedControl } from '../common/SegmentedControl';
 import { NumberField } from '../common/NumberField';
+import { useTranslation } from '../../i18n';
 
 import { TOURNAMENT_KINDS } from './tournamentKinds';
 
 const BEST_OF_OPTIONS = [1, 3, 5];
+
+const VALIDATION_MESSAGES = {
+  needTwoTeams: 'tournament.needTwoTeams',
+  doublesTwoPlayers: 'tournament.doublesTwoPlayers',
+} as const;
 
 interface TournamentSetupProps {
   initialPlayers: Player[];
@@ -36,6 +42,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   onAddPlayers,
   onTogglePlayer,
 }) => {
+  const { t, tp } = useTranslation();
   const [format, setFormat] = useState<TournamentFormat>(initialConfig?.format ?? 'doubles');
   const [numberOfCourts, setNumberOfCourts] = useState(initialConfig?.numberOfCourts ?? initialNumberOfCourts);
   const [bestOf, setBestOf] = useState(initialConfig?.bestOf ?? 1);
@@ -75,11 +82,15 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
   const setupConfig = { groupSize, qualifiersPerGroup, setGroupSize, setQualifiersPerGroup };
 
   const validationError = tournament.validate(teams, format);
+  const validationMessage = validationError === null ? null : t(VALIDATION_MESSAGES[validationError]);
   const matchesPerRound = kind.matchesPerRound?.(teams, setupConfig)
     ?? RoundRobinTournament.matchesPerRound(teams);
   const courtWarning =
     !validationError && matchesPerRound > numberOfCourts
-      ? `${matchesPerRound} matches per round but only ${numberOfCourts} court${numberOfCourts > 1 ? 's' : ''} — some matches will need to wait.`
+      ? tp('tournament.courtWarningOne', 'tournament.courtWarningOther', numberOfCourts, {
+        matches: matchesPerRound,
+        courts: numberOfCourts,
+      })
       : null;
 
   const qualifierError = kind.validateSetup?.(teams, setupConfig) ?? null;
@@ -93,19 +104,19 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
     <div className="tournament-setup">
       {swap.dragGhost}
       <div className="setup-section">
-        <h3>Format</h3>
+        <h3>{t('tournament.format')}</h3>
         <SegmentedControl
           options={['doubles', 'singles'] as TournamentFormat[]}
           selected={format}
           onSelect={setFormat}
-          label={f => (f === 'singles' ? 'Singles (1v1)' : 'Doubles (2v2)')}
+          label={f => (f === 'singles' ? t('tournament.singlesPill') : t('tournament.doublesPill'))}
           testIdFor={f => `format-pill-${f}`}
           containerTestId="format-pills"
         />
       </div>
 
       <div className="setup-section">
-        <h3>Players</h3>
+        <h3>{t('tournament.players')}</h3>
         <div className="tournament-player-entry">
           <ManualPlayerEntry onPlayersAdded={names => onAddPlayers?.(names)} />
         </div>
@@ -125,22 +136,22 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
       </div>
 
       <div className="setup-section">
-        <h3>Number of Courts</h3>
+        <h3>{t('tournament.numberOfCourts')}</h3>
         <NumberField value={numberOfCourts} min={1} onChange={setNumberOfCourts} testId="tournament-court-count" />
       </div>
 
       <div className="setup-section">
-        <h3>Sets per Match</h3>
+        <h3>{t('tournament.setsPerMatch')}</h3>
         <SegmentedControl
           options={BEST_OF_OPTIONS}
           selected={bestOf}
           onSelect={setBestOf}
-          label={n => (n === 1 ? 'Single game' : `Best of ${n}`)}
+          label={n => (n === 1 ? t('tournament.singleGame') : t('tournament.bestOf', { count: n }))}
           testIdFor={n => `best-of-pill-${n}`}
           containerTestId="best-of-pills"
         />
         <label className="set-size-field">
-          Points per set
+          {t('tournament.pointsPerSet')}
           <NumberField value={setSize} min={1} onChange={setSetSize} testId="set-size-input" />
         </label>
       </div>
@@ -149,14 +160,14 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
       {teams.length > 0 && (
         <div className="setup-section">
-          <h3>Teams</h3>
+          <h3>{t('tournament.teams')}</h3>
           {format === 'doubles' && (
-            <p className="setup-hint">Drag a player onto another to swap them — or tap two players.</p>
+            <p className="setup-hint">{t('tournament.dragHint')}</p>
           )}
           <div className="teams-grid" data-testid="teams-grid">
             {teams.map((team, teamIdx) => (
               <div key={team.id} className="team-card" data-testid={`team-card-${teamIdx}`}>
-                <div className="team-card-title">Team {teamIdx + 1}</div>
+                <div className="team-card-title">{t('tournament.teamNumber', { number: teamIdx + 1 })}</div>
                 {format === 'doubles' ? (
                   <div className="team-players-slots">
                     {(() => {
@@ -189,8 +200,8 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
         </div>
       )}
 
-      {validationError && (
-        <p className="setup-error" data-testid="setup-error">{validationError}</p>
+      {validationMessage && (
+        <p className="setup-error" data-testid="setup-error">{validationMessage}</p>
       )}
       {courtWarning && (
         <p className="setup-warning" data-testid="court-warning">{courtWarning}</p>
@@ -202,7 +213,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
         disabled={!!validationError || teams.length === 0 || !!qualifierError}
         data-testid="start-tournament-button"
       >
-        Start Tournament
+        {t('tournament.start')}
       </button>
     </div>
   );

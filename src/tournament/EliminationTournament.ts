@@ -1,6 +1,7 @@
 import { shuffleArray } from '../utils/playerUtils';
 
 import { Tournament } from './Tournament';
+import type { StandingsSubtitle } from './Tournament';
 import { BracketKind, DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
   SetScore,
@@ -312,8 +313,8 @@ export class EliminationTournament extends Tournament {
     );
   }
 
-  override standingsSubtitle(): string {
-    return this.isComplete() ? 'Final Results' : 'In Progress';
+  override standingsSubtitle(): StandingsSubtitle {
+    return this.isComplete() ? { kind: 'final' } : { kind: 'inProgress' };
   }
 
   override showsPoints(): boolean {

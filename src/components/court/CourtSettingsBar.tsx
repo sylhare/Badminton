@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowsLeftRight } from '@phosphor-icons/react';
 
 import { cx } from '../common/cx';
+import { useTranslation } from '../../i18n';
 
 import { MAX_COURTS, MIN_COURTS } from './courtCountUtils';
 
@@ -21,36 +22,40 @@ const CourtSettingsBar: React.FC<CourtSettingsBarProps> = ({
   canRearrange,
   isEditMode,
   onToggleEditMode,
-}) => (
-  <div className="court-settings-inline">
-    <div className="court-input-group">
-      <label htmlFor="courts">Courts:</label>
-      <input
-        id="courts"
-        type="number"
-        min={MIN_COURTS}
-        max={MAX_COURTS}
-        value={courtInputValue}
-        onChange={onCourtsChange}
-        onBlur={onCourtsBlur}
-        className="court-input"
-        data-testid="court-count-input"
-      />
-    </div>
+}) => {
+  const { t } = useTranslation();
 
-    {canRearrange && (
-      <button
-        onClick={onToggleEditMode}
-        className={cx('rearrange-button', isEditMode && 'active')}
-        data-testid="rearrange-button"
-        aria-pressed={isEditMode}
-        data-tooltip="Drag a player onto another to swap them between teams, courts and the bench — or tap two players."
-      >
-        <ArrowsLeftRight size={16} weight="bold" />
-        Rearrange players
-      </button>
-    )}
-  </div>
-);
+  return (
+    <div className="court-settings-inline">
+      <div className="court-input-group">
+        <label htmlFor="courts">{t('court.courts')}</label>
+        <input
+          id="courts"
+          type="number"
+          min={MIN_COURTS}
+          max={MAX_COURTS}
+          value={courtInputValue}
+          onChange={onCourtsChange}
+          onBlur={onCourtsBlur}
+          className="court-input"
+          data-testid="court-count-input"
+        />
+      </div>
+
+      {canRearrange && (
+        <button
+          onClick={onToggleEditMode}
+          className={cx('rearrange-button', isEditMode && 'active')}
+          data-testid="rearrange-button"
+          aria-pressed={isEditMode}
+          data-tooltip={t('court.rearrangeTooltip')}
+        >
+          <ArrowsLeftRight size={16} weight="bold" />
+          {t('court.rearrange')}
+        </button>
+      )}
+    </div>
+  );
+};
 
 export default React.memo(CourtSettingsBar);

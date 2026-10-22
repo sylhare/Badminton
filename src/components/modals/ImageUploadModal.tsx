@@ -5,6 +5,7 @@ import { useImageOcr } from '../../hooks/useImageOcr';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { getFirstFile, isImageFile } from '../../utils/fileUtils';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { useTranslation } from '../../i18n';
 
 import Modal from './Modal';
 
@@ -23,6 +24,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { trackPlayerAction } = useAnalytics();
+  const { t, tp } = useTranslation();
 
   const handlePlayersExtracted = (players: string[]) => {
     setExtractedPlayers(players);
@@ -91,7 +93,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      title="📸 Import Players from Image"
+      title={t('image.title')}
       onClose={handleClose}
       testId="image-upload-modal"
       className="image-upload-modal"
@@ -118,19 +120,19 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
               <div className="upload-content">
                 <Camera size={48} weight="light" className="upload-icon" />
                 <p>
-                  Take a photo or upload an image of your player list.
+                  {t('image.instructions1')}
                   <br />
-                  Drag and drop, or click to select.
+                  {t('image.instructions2')}
                 </p>
                 <button type="button" className="upload-button">
-                  Choose Image
+                  {t('image.choose')}
                 </button>
               </div>
             </div>
 
             {isProcessing && (
               <div className="processing">
-                <p>🔍 Processing image and extracting player names...</p>
+                <p>{t('image.processing')}</p>
                 <div className="progress-container">
                   <div
                     className="progress-bar"
@@ -145,7 +147,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
           <div className="extracted-players-section">
             <div className="extracted-players-header">
               <p className="extracted-count">
-                Found <strong>{extractedPlayers.length}</strong> player{extractedPlayers.length !== 1 ? 's' : ''}
+                {tp('image.foundOne', 'image.foundOther', extractedPlayers.length)}
               </p>
               <div className="selection-actions">
                 <button
@@ -154,7 +156,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                   onClick={handleSelectAll}
                   disabled={selectedPlayers.size === extractedPlayers.length}
                 >
-                  Select all
+                  {t('image.selectAll')}
                 </button>
                 <button
                   type="button"
@@ -162,7 +164,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                   onClick={handleDeselectAll}
                   disabled={selectedPlayers.size === 0}
                 >
-                  Deselect all
+                  {t('image.deselectAll')}
                 </button>
               </div>
             </div>
@@ -193,7 +195,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
               className="try-another-image-btn"
               onClick={handleClick}
             >
-              📸 Try another image
+              {t('image.tryAnother')}
             </button>
           </div>
         )}
@@ -202,7 +204,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       {extractedPlayers.length > 0 && (
         <div className="modal-footer">
           <button className="button button-secondary" onClick={handleClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             className="button button-primary"
@@ -210,7 +212,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             disabled={selectedPlayers.size === 0}
             data-testid="add-extracted-players-button"
           >
-            Add {selectedPlayers.size} Player{selectedPlayers.size !== 1 ? 's' : ''}
+            {tp('image.addOne', 'image.addOther', selectedPlayers.size)}
           </button>
         </div>
       )}

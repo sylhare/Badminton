@@ -5,6 +5,8 @@ import { useAnalytics } from '../../hooks/useAnalytics';
 import { useSlotSwap } from '../../hooks/useSlotSwap';
 import type { SlotAddr } from '../../utils/slotSwap';
 import { benchSlot, courtSlot } from '../../utils/courtSwap';
+import { defaultTranslate, useTranslation } from '../../i18n';
+import type { Translate } from '../../i18n';
 
 import AssignmentsEmptyState from './AssignmentsEmptyState';
 import BenchSection from './BenchSection';
@@ -14,17 +16,17 @@ import CourtSettingsBar from './CourtSettingsBar';
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
 
-export function formatTimeAgo(timestampMs: number): string {
+export function formatTimeAgo(timestampMs: number, t: Translate = defaultTranslate): string {
   const diffMs = Date.now() - timestampMs;
   const diffSeconds = Math.floor(diffMs / 1000);
-  if (diffSeconds < 1) return 'just now';
-  if (diffSeconds < 60) return `${diffSeconds}s ago`;
+  if (diffSeconds < 1) return t('time.justNow');
+  if (diffSeconds < 60) return t('time.secondsAgo', { count: diffSeconds });
   const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) return `${diffMinutes}min ago`;
+  if (diffMinutes < 60) return t('time.minutesAgo', { count: diffMinutes });
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return t('time.hoursAgo', { count: diffHours });
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return t('time.daysAgo', { count: diffDays });
 }
 
 interface CourtAssignmentsProps {
@@ -60,6 +62,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   lastGeneratedAt,
   isSmartEngineEnabled = false,
 }) => {
+  const { t } = useTranslation();
   const { trackCourtAction } = useAnalytics();
   const [isAnimating, setIsAnimating] = useState(false);
   const [isButtonShaking, setIsButtonShaking] = useState(false);
@@ -152,14 +155,14 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
       {isEditMode && (
         <div className="edit-mode-banner" data-testid="edit-mode-banner">
-          <span>Drag a player onto another to swap them — or tap two players.</span>
+          <span>{t('court.editBanner')}</span>
           <button
             type="button"
             className="edit-mode-done"
             onClick={exitEditMode}
             data-testid="edit-mode-done"
           >
-            Done
+            {t('court.done')}
           </button>
         </div>
       )}
@@ -197,9 +200,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
           {onWinnerChange && !hasHistoricalWinners && !assignments.some(c => c.winner !== undefined) && (
             <div className="winner-instructions">
-              💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the
-              winning
-              team. Click again to remove the winner.
+              💡 <strong>{t('court.winnerTipPrefix')}</strong> {t('court.winnerTip')}
             </div>
           )}
 
@@ -210,11 +211,11 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
               className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
               data-testid="generate-assignments-button"
             >
-              🎲 Regenerate Assignments
+              {t('court.regenerate')}
             </button>
             {isRecentAssignment && (
               <div className="last-generated" data-testid="last-generated">
-                Last generated {formatTimeAgo(lastGeneratedAt!)}
+                {t('court.lastGenerated', { time: formatTimeAgo(lastGeneratedAt!, t) })}
               </div>
             )}
           </div>

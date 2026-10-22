@@ -4,6 +4,18 @@ import type { EngineSnapshot, Player } from '../types';
 import { mean, sum } from '../utils/numberUtils';
 import { splitPairKey } from '../utils/playerUtils';
 
+/** A warning as data, so the view can phrase it in the active language. */
+export type DiagnosticWarning =
+  | { code: 'benchImbalance'; spread: number; expected: number; rounds: number }
+  | { code: 'singlesOverplay'; count: number; threshold: number; expected: string }
+  | {
+    code: 'repeatedPairs';
+    count: number;
+    relation: 'teamedUp' | 'facedEachOther';
+    threshold: number;
+    average: string;
+  };
+
 /**
  * Diagnostic statistics for the current session.
  * Provides insights into algorithm fairness and player distribution.
@@ -34,7 +46,7 @@ export interface DiagnosticStats {
   /** Number of players who played singles more than once */
   playersWithMultipleSingles: number;
   /** Context-aware warnings about algorithm fairness */
-  warnings: string[];
+  warnings: DiagnosticWarning[];
 }
 
 export const getPlayerName = (players: Player[], playerId: string): string => {
@@ -79,15 +91,21 @@ function formatRepeatedPairs(
 }
 
 function addPairWarning(
-  warnings: string[],
+  warnings: DiagnosticWarning[],
   pairs: Array<{ pair: string; count: number }>,
   expectedAvg: number,
-  label: string,
+  relation: 'teamedUp' | 'facedEachOther',
 ): void {
   const threshold = Math.max(4, Math.ceil(expectedAvg * 2), Math.ceil(expectedAvg) + 3);
   const highPairs = pairs.filter(p => p.count >= threshold);
   if (highPairs.length > 0) {
-    warnings.push(`${highPairs.length} pair(s) ${label} ${threshold}+ times (avg is ${expectedAvg.toFixed(1)})`);
+    warnings.push({
+      code: 'repeatedPairs',
+      count: highPairs.length,
+      relation,
+      threshold,
+      average: expectedAvg.toFixed(1),
+    });
   }
 }
 
@@ -133,7 +151,7 @@ export function computeDiagnostics(
     .sort((a, b) => b.count - a.count);
   const playersWithMultipleSingles = singlesPlayers.filter(p => p.count > 1).length;
 
-  const warnings: string[] = [];
+  const warnings: DiagnosticWarning[] = [];
   const possiblePairs = Math.max(1, (totalPlayers * (totalPlayers - 1)) / 2);
 
   const totalTeammatePairings = sum(Object.values(snapshot.teammateCountMap));
@@ -143,19 +161,28 @@ export function computeDiagnostics(
 
   const expectedBenchSpread = Math.ceil(Math.sqrt(totalRounds)) + 1;
   if (maxBenchCount - minBenchCount > expectedBenchSpread + 2) {
-    warnings.push(`Bench imbalance: spread of ${maxBenchCount - minBenchCount} (expected ~${expectedBenchSpread} for ${totalRounds} rounds)`);
+    warnings.push({
+      code: 'benchImbalance',
+      spread: maxBenchCount - minBenchCount,
+      expected: expectedBenchSpread,
+      rounds: totalRounds,
+    });
   }
 
   if (singlesPlayers.length > 0 && singlesPlayers[0].count > expectedSinglesPerPlayer + 1.5) {
     const overPlayedSingles = singlesPlayers.filter(p => p.count > expectedSinglesPerPlayer + 1);
     if (overPlayedSingles.length > 0) {
-      const expected = expectedSinglesPerPlayer.toFixed(1);
-      warnings.push(`${overPlayedSingles.length} player(s) played singles ${Math.round(expectedSinglesPerPlayer + 1.5)}+ times (expected ~${expected} each)`);
+      warnings.push({
+        code: 'singlesOverplay',
+        count: overPlayedSingles.length,
+        threshold: Math.round(expectedSinglesPerPlayer + 1.5),
+        expected: expectedSinglesPerPlayer.toFixed(1),
+      });
     }
   }
 
-  addPairWarning(warnings, repeatedTeammates, totalTeammatePairings / possiblePairs, 'teamed up');
-  addPairWarning(warnings, repeatedOpponents, totalOpponentPairings / possiblePairs, 'faced each other');
+  addPairWarning(warnings, repeatedTeammates, totalTeammatePairings / possiblePairs, 'teamedUp');
+  addPairWarning(warnings, repeatedOpponents, totalOpponentPairings / possiblePairs, 'facedEachOther');
 
   return {
     totalPlayers,

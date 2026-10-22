@@ -3,6 +3,7 @@ import React from 'react';
 import type { BracketNode } from '../../../tournament/bracketTree';
 import type { TournamentMatch } from '../../../tournament/types';
 import { formatTeamName } from '../../../tournament/types';
+import { useTranslation } from '../../../i18n';
 
 interface BracketMatchNodeProps {
   node: BracketNode;
@@ -17,6 +18,7 @@ function teamClass(winner: 1 | 2 | undefined, teamNumber: 1 | 2): string {
 }
 
 export const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHeight, onTeamClick }) => {
+  const { t } = useTranslation();
   const halfH = cardHeight / 2;
 
   if (node.type === 'empty') {
@@ -26,18 +28,18 @@ export const BracketMatchNode: React.FC<BracketMatchNodeProps> = ({ node, cardHe
   if (node.type === 'tbd') {
     return (
       <div className="bracket-node bracket-node-tbd" style={{ height: cardHeight }} data-testid="bracket-node-tbd">
-        <div className="bracket-team bracket-team-tbd" style={{ height: halfH }}>TBD</div>
-        <div className="bracket-team bracket-team-tbd" style={{ height: halfH }}>TBD</div>
+        <div className="bracket-team bracket-team-tbd" style={{ height: halfH }}>{t('tournament.tbd')}</div>
+        <div className="bracket-team bracket-team-tbd" style={{ height: halfH }}>{t('tournament.tbd')}</div>
       </div>
     );
   }
 
   if (node.type === 'bye-advance') {
-    const name = node.team ? formatTeamName(node.team) : 'BYE';
+    const name = node.team ? formatTeamName(node.team) : t('tournament.bye');
     return (
       <div className="bracket-node bracket-node-bye" style={{ height: cardHeight }} data-testid="bracket-node-bye">
         <div className="bracket-team bracket-team-winner" style={{ height: halfH }}>{name}</div>
-        <div className="bracket-team bracket-team-bye-label" style={{ height: halfH }}>BYE</div>
+        <div className="bracket-team bracket-team-bye-label" style={{ height: halfH }}>{t('tournament.bye')}</div>
       </div>
     );
   }

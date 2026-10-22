@@ -5,7 +5,10 @@ import type { Tournament } from '../../tournament/Tournament';
 import type { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import type { EliminationTournament } from '../../tournament/EliminationTournament';
 import { GroupKnockoutTournament } from '../../tournament/GroupKnockoutTournament';
+import type { GroupSetupNote } from '../../tournament/GroupKnockoutTournament';
 import { NumberField } from '../common/NumberField';
+import { useTranslation } from '../../i18n';
+import type { Translate, TranslationKey } from '../../i18n';
 
 import { RoundRobinMatches } from './round-robin/RoundRobinMatches';
 import { EliminationBracket } from './elimination/EliminationBracket';
@@ -22,8 +25,8 @@ export interface SetupConfig {
 }
 
 export interface TournamentKind {
-  /** Label for the mode-selector pill. */
-  label: string;
+  /** Message key for the mode-selector pill. */
+  labelKey: TranslationKey;
   /**
    * Render this format's matches view. The cast is safe because the key is taken
    * from `tournament.state().type`, which always matches the concrete class.
@@ -43,6 +46,75 @@ export interface TournamentKind {
   renderSetupConfig?: (config: SetupConfig, teams: TournamentTeam[]) => React.ReactNode;
 }
 
+/** Compose the setup note sentence from its data. */
+function formatSetupNote(note: GroupSetupNote, t: Translate): string {
+  const noun = t(note.shape.groups === 1 ? 'tournament.groupNounOne' : 'tournament.groupNounOther');
+  const shapeText = note.shape.uniform
+    ? t('tournament.groupShapeUniform', { count: note.shape.groups, noun, size: note.shape.sizes[0] })
+    : t('tournament.groupShapeMixed', {
+      count: note.shape.groups,
+      noun,
+      sizes: note.shape.sizes.join(', '),
+    });
+
+  const splitText = note.shape.undersized
+    ? t('tournament.groupSplitShort', {
+      teams: note.teamCount,
+      size: note.requestedGroupSize,
+      shape: shapeText,
+    })
+    : t('tournament.groupSplit', { teams: note.teamCount, shape: shapeText });
+
+  if (note.issue === 'tooFewQualifiers') {
+    return `${splitText} ${t('tournament.groupTooFewQualifiers')}`;
+  }
+  if (note.issue === 'allAdvance') {
+    return `${splitText} ${t('tournament.groupAllAdvance', { count: note.qualifiersPerGroup })}`;
+  }
+  return splitText;
+}
+
+/** Group-stage setup fields plus the live "N groups of M" note. */
+const GroupKnockoutSetup: React.FC<{ config: SetupConfig; teams: TournamentTeam[] }> = ({ config, teams }) => {
+  const { t } = useTranslation();
+  const note = GroupKnockoutTournament.setupSummary(teams, config.groupSize, config.qualifiersPerGroup);
+
+  return (
+    <div className="setup-section" data-testid="group-knockout-config">
+      <h3>{t('tournament.groupsKnockout')}</h3>
+      <div className="group-knockout-fields">
+        <label className="group-knockout-field">
+          {t('tournament.teamsPerGroup')}
+          <NumberField
+            value={config.groupSize}
+            min={2}
+            onChange={next => {
+              config.setGroupSize(next);
+              config.setQualifiersPerGroup(Math.min(config.qualifiersPerGroup, next));
+            }}
+            testId="group-size-input"
+          />
+        </label>
+        <label className="group-knockout-field">
+          {t('tournament.qualifiersPerGroup')}
+          <NumberField
+            value={config.qualifiersPerGroup}
+            min={1}
+            max={config.groupSize}
+            onChange={config.setQualifiersPerGroup}
+            testId="qualifiers-input"
+          />
+        </label>
+      </div>
+      {note && (
+        <p className={`setup-${note.severity}`} data-testid="group-preview">
+          {formatSetupNote(note, t)}
+        </p>
+      )}
+    </div>
+  );
+};
+
 /**
  * Per-format view wiring. Presentation *policy* (subtitles, which tables to show)
  * lives on the tournament classes; this registry only maps a format to its React
@@ -51,19 +123,19 @@ export interface TournamentKind {
  */
 export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
   'round-robin': {
-    label: 'Round Robin',
+    labelKey: 'tournament.roundRobin',
     renderMatches: (t, onMatchResult) => (
       <RoundRobinMatches tournament={t as RoundRobinTournament} onMatchResult={onMatchResult} />
     ),
   },
   elimination: {
-    label: 'Elimination',
+    labelKey: 'tournament.elimination',
     renderMatches: (t, onMatchResult) => (
       <EliminationBracket tournament={t as EliminationTournament} onMatchResult={onMatchResult} />
     ),
   },
   'group-knockout': {
-    label: 'Groups + Knockout',
+    labelKey: 'tournament.groupsKnockout',
     renderMatches: (t, onMatchResult, onUpdate) => (
       <GroupKnockout
         tournament={t as GroupKnockoutTournament}
@@ -73,43 +145,7 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
     ),
     matchesPerRound: (teams, c) => GroupKnockoutTournament.matchesPerRound(teams, c.groupSize),
     validateSetup: (teams, c) => GroupKnockoutTournament.validateConfig(teams, c.groupSize, c.qualifiersPerGroup),
-    renderSetupConfig: (c, teams) => {
-      const note = GroupKnockoutTournament.setupSummary(teams, c.groupSize, c.qualifiersPerGroup);
-      return (
-      <div className="setup-section" data-testid="group-knockout-config">
-        <h3>Groups + Knockout</h3>
-        <div className="group-knockout-fields">
-          <label className="group-knockout-field">
-            Teams per group
-            <NumberField
-              value={c.groupSize}
-              min={2}
-              onChange={next => {
-                c.setGroupSize(next);
-                c.setQualifiersPerGroup(Math.min(c.qualifiersPerGroup, next));
-              }}
-              testId="group-size-input"
-            />
-          </label>
-          <label className="group-knockout-field">
-            Qualifiers per group
-            <NumberField
-              value={c.qualifiersPerGroup}
-              min={1}
-              max={c.groupSize}
-              onChange={c.setQualifiersPerGroup}
-              testId="qualifiers-input"
-            />
-          </label>
-        </div>
-        {note && (
-          <p className={`setup-${note.severity}`} data-testid="group-preview">
-            {note.message}
-          </p>
-        )}
-      </div>
-      );
-    },
+    renderSetupConfig: (config, teams) => <GroupKnockoutSetup config={config} teams={teams} />,
   },
 };
 

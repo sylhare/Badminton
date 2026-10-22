@@ -205,3 +205,67 @@ input:focus {
     25% { transform: rotate(-1.2deg); }
     75% { transform: rotate(1.2deg); }
 }
+/* ============================================================
+   Localised typography
+   Inter has no Japanese glyphs, so a Japanese UI would fall back
+   glyph by glyph. Give CJK locales an explicit stack instead, and
+   let text wrap inside controls rather than clip at fixed widths.
+   ============================================================ */
+
+html.locale-ja body,
+html.locale-ja button,
+html.locale-ja input,
+html.locale-ja select,
+html.locale-ja textarea {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI",
+        "Noto Sans JP", "Noto Sans CJK JP", Meiryo, system-ui, sans-serif;
+    line-height: 1.6;
+}
+
+html.locale-ja button,
+html.locale-ja a,
+html.locale-ja summary,
+html.locale-ja label,
+html.locale-ja .player-name,
+html.locale-ja .team-label,
+html.locale-ja .bench-header {
+    overflow-wrap: anywhere;
+}
+
+/* Full-width text is wider per character; allow it to wrap instead of clipping. */
+html.locale-ja button,
+html.locale-ja .analysis-link,
+html.locale-ja .banner-nav-link,
+html.locale-ja .stats-banner-link {
+    white-space: normal;
+}
+
+/* ============================================================
+   Language switcher
+   ============================================================ */
+
+.language-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 0.9rem;
+}
+
+.language-switcher-label {
+    opacity: 0.85;
+}
+
+.language-switcher-select {
+    padding: 4px 8px;
+    border-radius: var(--radius-sm, 6px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.12);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.language-switcher-select option {
+    color: #213547;
+}

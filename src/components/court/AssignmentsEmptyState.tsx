@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { cx } from '../common/cx';
+import { useTranslation } from '../../i18n';
 
 interface AssignmentsEmptyStateProps {
   hasAssignments: boolean;
@@ -15,6 +16,7 @@ const AssignmentsEmptyState: React.FC<AssignmentsEmptyStateProps> = ({
   isButtonShaking,
   onGenerate,
 }) => {
+  const { t } = useTranslation();
   if (hasAssignments) return null;
 
   return (
@@ -22,12 +24,10 @@ const AssignmentsEmptyState: React.FC<AssignmentsEmptyStateProps> = ({
       <p>
         {hasPlayers ? (
           <>
-            <strong>How it works:</strong> Players will be randomly assigned to courts.
-            Doubles (4 players) is preferred, but singles (2 players) will be used for odd numbers.
-            Extra players will be benched.
+            <strong>{t('court.howItWorksTitle')}</strong> {t('court.howItWorksBody')}
           </>
         ) : (
-          'Add some players above to start generating court assignments.'
+          t('court.addPlayersFirst')
         )}
       </p>
       <button
@@ -36,7 +36,7 @@ const AssignmentsEmptyState: React.FC<AssignmentsEmptyStateProps> = ({
         className={cx('generate-button', isButtonShaking && 'button-shake')}
         data-testid="generate-assignments-button"
       >
-        🎲 Generate Assignments
+        {t('court.generate')}
       </button>
     </div>
   );

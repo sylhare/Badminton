@@ -2,6 +2,7 @@ import React from 'react';
 
 import type { Player } from '../../types';
 import { cx } from '../common/cx';
+import { useTranslation } from '../../i18n';
 
 import type { SlotBinding } from './edit/slotBinding';
 import { TeamPlayerList } from './team';
@@ -18,28 +19,32 @@ const BenchSection: React.FC<BenchSectionProps> = ({
   isAnimating,
   slotBinding,
   onViewBenchCounts,
-}) => (
-  <div className={cx('bench-section', isAnimating && 'animating-blur')}>
-    <div className="bench-header">
-      🪑 Bench ({benchedPlayers.length} player{benchedPlayers.length !== 1 ? 's' : ''})
+}) => {
+  const { t, tp } = useTranslation();
+
+  return (
+    <div className={cx('bench-section', isAnimating && 'animating-blur')}>
+      <div className="bench-header">
+        {tp('court.benchOne', 'court.benchOther', benchedPlayers.length)}
+      </div>
+      <div className="bench-players">
+        <TeamPlayerList
+          players={benchedPlayers}
+          className="bench-player"
+          slotBinding={slotBinding}
+        />
+      </div>
+      {onViewBenchCounts && (
+        <button
+          onClick={onViewBenchCounts}
+          className="view-bench-counts-button"
+          data-testid="view-bench-counts-button"
+        >
+          {t('court.viewBenchCounts')}
+        </button>
+      )}
     </div>
-    <div className="bench-players">
-      <TeamPlayerList
-        players={benchedPlayers}
-        className="bench-player"
-        slotBinding={slotBinding}
-      />
-    </div>
-    {onViewBenchCounts && (
-      <button
-        onClick={onViewBenchCounts}
-        className="view-bench-counts-button"
-        data-testid="view-bench-counts-button"
-      >
-        View bench counts &amp; manage
-      </button>
-    )}
-  </div>
-);
+  );
+};
 
 export default React.memo(BenchSection);

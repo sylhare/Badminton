@@ -10,6 +10,10 @@ import { SimulatedAnnealingBase } from './SimulatedAnnealingBase';
  */
 export class CourtAssignmentEngineSA extends SimulatedAnnealingBase implements ICourtAssignmentEngine {
   readonly name = 'Simulated Annealing';
+  readonly descriptionKey = 'engine.sa.description';
+  get descriptionParams(): { iterations: number } {
+    return { iterations: this.SA_ITERATIONS };
+  }
   get description(): string {
     return `Simulated Annealing with iterative improvement. Performs ${this.SA_ITERATIONS} iterations, accepting worse solutions probabilistically to escape local minima.`;
   }

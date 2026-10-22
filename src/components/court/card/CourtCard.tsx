@@ -5,6 +5,7 @@ import { DoublesMatch, NoTeamsDisplay, SinglesMatch } from '../display';
 import { triggerConfetti } from '../../../utils/confetti.ts';
 import ScoreInputModal from '../../modals/ScoreInputModal';
 import { useAnalytics } from '../../../hooks/useAnalytics';
+import { useTranslation } from '../../../i18n';
 import type { SlotBinding } from '../edit/slotBinding';
 
 import CourtHeader from './CourtHeader';
@@ -35,6 +36,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
 }) => {
   const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
   const clickCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const { t } = useTranslation();
   const { trackGameAction } = useAnalytics();
 
   const handleTeamClick = (event: React.MouseEvent, teamNumber: 1 | 2) => {
@@ -80,7 +82,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   if (!teams) {
     matchContent = <NoTeamsDisplay players={court.players} isAnimating={isAnimating} />;
   } else if (isSingles) {
-    matchType = 'Singles';
+    matchType = t('court.singles');
     matchContent = (
       <SinglesMatch
         team1Player={teams.team1[0]}
@@ -95,7 +97,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
       />
     );
   } else if (isDoubles) {
-    matchType = 'Doubles';
+    matchType = t('court.doubles');
     matchContent = (
       <DoublesMatch
         team1Players={teams.team1}

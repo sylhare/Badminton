@@ -8,6 +8,7 @@ import { useShareState } from './hooks/useShareState';
 import Leaderboard from './components/players/Leaderboard';
 import Footer from './components/Footer';
 import { useAppState } from './providers/AppStateProvider';
+import { useTranslation } from './i18n';
 import { benchedPlayers } from './utils/playerUtils';
 import { applyCourtSwap } from './utils/courtSwap';
 import type { SlotAddr } from './utils/slotSwap';
@@ -63,6 +64,8 @@ function App(): React.ReactElement {
     applyManualEdit,
     resetAlgorithm,
   } = useAppState();
+
+  const { t } = useTranslation();
 
   const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(false);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
@@ -161,7 +164,7 @@ function App(): React.ReactElement {
   return (
     <div className={`app${isSmartEngineEnabled ? ' smart-mode' : ''}`} data-loaded={isLoaded}>
       <div className="container main-container">
-        <h1><span className="title-emoji">🏸 </span>Badminton Court Manager</h1>
+        <h1><span className="title-emoji">🏸 </span>{t('app.title')}</h1>
 
         <div
           ref={managePlayersRef}
@@ -172,7 +175,7 @@ function App(): React.ReactElement {
             className="section-header"
             onClick={toggleManagePlayers}
           >
-            <h2>Manage Players</h2>
+            <h2>{t('app.managePlayers')}</h2>
             <span className="collapse-indicator">{isManagePlayersCollapsed ? '▶' : '▼'}</span>
           </div>
 
@@ -202,7 +205,7 @@ function App(): React.ReactElement {
 
         <div className="section" data-testid="court-assignments-section">
           <div className="section-header no-collapse">
-            <h2>Court Assignments</h2>
+            <h2>{t('app.courtAssignments')}</h2>
           </div>
 
           <div className="section-content">

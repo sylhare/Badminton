@@ -98,7 +98,9 @@ describe('computeDiagnostics', () => {
       winCountMap: { '1': 1, '2': 1 },
     }, players);
 
-    expect(diagnostics?.warnings.some(w => w.includes('Bench imbalance'))).toBe(true);
+    expect(diagnostics?.warnings).toEqual([
+      { code: 'benchImbalance', spread: 10, expected: expect.any(Number), rounds: expect.any(Number) },
+    ]);
   });
 
   it('flags repeated teammate and opponent warnings above threshold', () => {
@@ -109,8 +111,9 @@ describe('computeDiagnostics', () => {
       opponentCountMap: { '1|3': 5 },
     }, players);
 
-    expect(diagnostics?.warnings.some(w => w.includes('teamed up'))).toBe(true);
-    expect(diagnostics?.warnings.some(w => w.includes('faced each other'))).toBe(true);
+    expect(diagnostics?.warnings.map(w => w.code)).toEqual(['repeatedPairs', 'repeatedPairs']);
+    expect(diagnostics?.warnings.map(w => w.code === 'repeatedPairs' && w.relation))
+      .toEqual(['teamedUp', 'facedEachOther']);
   });
 
   it('flags a singles-overplay warning when one player dominates singles', () => {
@@ -119,7 +122,9 @@ describe('computeDiagnostics', () => {
       singleCountMap: { '1': 6, '2': 0, '3': 0 },
     }, players);
 
-    expect(diagnostics?.warnings.some(w => w.includes('played singles'))).toBe(true);
+    expect(diagnostics?.warnings).toEqual([
+      { code: 'singlesOverplay', count: 1, threshold: expect.any(Number), expected: expect.any(String) },
+    ]);
     expect(diagnostics?.playersWithMultipleSingles).toBe(1);
   });
 
@@ -144,7 +149,7 @@ describe('computeDiagnostics', () => {
 
     expect(diagnostics).not.toBeNull();
     expect(Number.isNaN(diagnostics?.benchFairnessScore)).toBe(false);
-    expect(diagnostics?.warnings.some(w => w.includes('Infinity'))).toBe(false);
+    expect(JSON.stringify(diagnostics?.warnings)).not.toContain('Infinity');
     expect(diagnostics?.totalPlayers).toBe(1);
   });
 

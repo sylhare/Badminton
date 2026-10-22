@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { recognizePlayerNames } from '../utils/ocrEngine';
+import { useTranslation } from '../i18n';
 
 interface UseImageOcrOptions {
   onPlayersExtracted: (players: string[]) => void;
@@ -11,6 +12,7 @@ export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
   progress: number;
   processImage: (file: File) => Promise<void>;
 } {
+  const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -25,7 +27,7 @@ export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
       onPlayersExtracted(playerNames);
     } catch (error) {
       console.error('OCR processing failed:', error);
-      alert('Failed to process image. Please try again or add players manually.');
+      alert(t('ocr.failed'));
     } finally {
       setIsProcessing(false);
       setProgress(0);

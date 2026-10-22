@@ -4,6 +4,7 @@ import type { Player } from '../../../types';
 import { cx } from '../../common/cx';
 import TeamPlayerList from '../team/TeamPlayerList';
 import type { SlotBinding } from '../edit/slotBinding';
+import { useTranslation } from '../../../i18n';
 
 interface TeamDisplayProps {
   teamNumber: number;
@@ -24,6 +25,7 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({
   isClickable = false,
   slotBinding,
 }) => {
+  const { t } = useTranslation();
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (isClickable && onTeamClick) {
       onTeamClick(event, teamNumber);
@@ -38,14 +40,14 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({
         data-testid={`team-${teamNumber}`}
       >
         <div className="team-label">
-          Team {teamNumber}
+          {t('court.team', { number: teamNumber })}
           {isWinner && <span className="crown">👑</span>}
         </div>
         <div className="team-players">
           <TeamPlayerList players={players} slotBinding={slotBinding} />
         </div>
       </div>
-      {showVsDivider && <div className="vs-divider">VS</div>}
+      {showVsDivider && <div className="vs-divider">{t('score.vs').toUpperCase()}</div>}
     </>
   );
 };
