@@ -36,26 +36,21 @@ describe('ScoreInputModal', () => {
   beforeEach(() => vi.clearAllMocks());
 
   describe('initial state', () => {
-    it('pre-fills winner team 1 score with 21', () => {
-      const { input1, input2 } = renderModal(1);
-      expect(input1().value).toBe('21');
-      expect(input2().value).toBe('');
+    it.each([
+      ['team 1', 1, '21', ''],
+      ['team 2', 2, '', '21'],
+    ] as const)('pre-fills the %s winner score with 21', (_label, winnerTeam, team1Score, team2Score) => {
+      const { input1, input2 } = renderModal(winnerTeam);
+      expect(input1().value).toBe(team1Score);
+      expect(input2().value).toBe(team2Score);
     });
 
-    it('pre-fills winner team 2 score with 21', () => {
-      const { input1, input2 } = renderModal(2);
-      expect(input1().value).toBe('');
-      expect(input2().value).toBe('21');
-    });
-
-    it('shows 18 as placeholder for loser when team 1 wins', () => {
-      const { input2 } = renderModal(1);
-      expect(input2().placeholder).toBe('18');
-    });
-
-    it('shows 18 as placeholder for loser when team 2 wins', () => {
-      const { input1 } = renderModal(2);
-      expect(input1().placeholder).toBe('18');
+    it.each([
+      ['team 1 wins', 1, 'input2'],
+      ['team 2 wins', 2, 'input1'],
+    ] as const)('shows 18 as placeholder for loser when %s', (_label, winnerTeam, loserInput) => {
+      const inputs = renderModal(winnerTeam);
+      expect(inputs[loserInput]().placeholder).toBe('18');
     });
 
     it('confirm is enabled when only winner score is filled', () => {
@@ -66,16 +61,13 @@ describe('ScoreInputModal', () => {
   });
 
   describe('confirm uses 18 as default loser score', () => {
-    it('calls onConfirm with winner 1 and {team1: 21, team2: 18} when team 1 wins and loser is empty', async () => {
-      const { confirmBtn, onConfirm } = renderModal(1);
+    it.each([
+      ['team 1', 1, 1, [{ team1: 21, team2: 18 }]],
+      ['team 2', 2, 2, [{ team1: 18, team2: 21 }]],
+    ] as const)('calls onConfirm with winner %s and the default loser score', async (_label, clickedTeam, expectedWinner, sets) => {
+      const { confirmBtn, onConfirm } = renderModal(clickedTeam);
       await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(1, [{ team1: 21, team2: 18 }]);
-    });
-
-    it('calls onConfirm with winner 2 and {team1: 18, team2: 21} when team 2 wins and loser is empty', async () => {
-      const { confirmBtn, onConfirm } = renderModal(2);
-      await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(2, [{ team1: 18, team2: 21 }]);
+      expect(onConfirm).toHaveBeenCalledWith(expectedWinner, sets);
     });
 
     it('calls onConfirm with entered scores when both are filled', async () => {
@@ -125,21 +117,19 @@ describe('ScoreInputModal', () => {
   });
 
   describe('settles the loser score from the winner score at deuce', () => {
-    it('records winner − 2 when team 1 winner scores 23 and the loser is left blank', async () => {
-      const { input1, confirmBtn, onConfirm } = renderModal(1);
-      await user.clear(input1());
-      await user.type(input1(), '23');
-      await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(1, [{ team1: 23, team2: 21 }]);
-    });
-
-    it('records winner − 2 when team 2 winner scores 25 and the loser is left blank', async () => {
-      const { input2, confirmBtn, onConfirm } = renderModal(2);
-      await user.clear(input2());
-      await user.type(input2(), '25');
-      await user.click(confirmBtn());
-      expect(onConfirm).toHaveBeenCalledWith(2, [{ team1: 23, team2: 25 }]);
-    });
+    it.each([
+      ['team 1', 1, 'input1', '23', [{ team1: 23, team2: 21 }]],
+      ['team 2', 2, 'input2', '25', [{ team1: 23, team2: 25 }]],
+    ] as Array<[string, 1 | 2, 'input1' | 'input2', string, Array<{ team1: number; team2: number }>]>)(
+      'records winner − 2 when %s winner scores and the loser is left blank',
+      async (_label, winnerTeam, inputKey, score, sets) => {
+        const inputs = renderModal(winnerTeam);
+        await user.clear(inputs[inputKey]());
+        await user.type(inputs[inputKey](), score);
+        await user.click(inputs.confirmBtn());
+        expect(inputs.onConfirm).toHaveBeenCalledWith(winnerTeam, sets);
+      },
+    );
 
     it('uses the standard 18 margin when the winner scores exactly 21', async () => {
       const { input1, confirmBtn, onConfirm } = renderModal(1);

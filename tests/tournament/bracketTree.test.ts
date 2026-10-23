@@ -5,21 +5,14 @@ import { EliminationTournament } from '../../src/tournament/EliminationTournamen
 import { createTournamentTeam, createTournamentTeams } from '../data/testFactories';
 
 describe('roundLabel', () => {
-  it('last round is Final', () => {
-    expect(roundLabel(3, 3)).toBe('Final');
-    expect(roundLabel(1, 1)).toBe('Final');
-  });
-
-  it('second-to-last is Semi Final', () => {
-    expect(roundLabel(2, 3)).toBe('Semi Final');
-  });
-
-  it('third-to-last is 4th of Final', () => {
-    expect(roundLabel(1, 3)).toBe('4th of Final');
-  });
-
-  it('fourth-to-last is 8th of Final', () => {
-    expect(roundLabel(1, 4)).toBe('8th of Final');
+  it.each([
+    [3, 3, 'Final'],
+    [1, 1, 'Final'],
+    [2, 3, 'Semi Final'],
+    [1, 3, '4th of Final'],
+    [1, 4, '8th of Final'],
+  ] as const)('labels round %i of %i as %s', (round, totalRounds, expected) => {
+    expect(roundLabel(round, totalRounds)).toBe(expected);
   });
 });
 

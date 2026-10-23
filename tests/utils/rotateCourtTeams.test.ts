@@ -12,43 +12,21 @@ const D = p('4', 'Diana');
 
 describe('rotateCourtTeams', () => {
   describe('doubles (4 players)', () => {
-    it('rotates from config 0 ([A,B] vs [C,D]) to config 1 ([A,C] vs [B,D])', () => {
+    it.each([
+      ['config 0 ([A,B] vs [C,D]) to config 1 ([A,C] vs [B,D])', [A, B], [C, D], [A, C], [B, D]],
+      ['config 1 ([A,C] vs [B,D]) to config 2 ([A,D] vs [B,C])', [A, C], [B, D], [A, D], [B, C]],
+      ['config 2 ([A,D] vs [B,C]) back to config 0 ([A,B] vs [C,D])', [A, D], [B, C], [A, B], [C, D]],
+    ] as Array<[string, Player[], Player[], Player[], Player[]]>)('rotates from %s', (_label, team1, team2, expected1, expected2) => {
       const court: Court = {
         courtNumber: 1,
         players: [A, B, C, D],
-        teams: { team1: [A, B], team2: [C, D] },
+        teams: { team1, team2 },
       };
 
       const rotated = rotateCourtTeams(court);
 
-      expect(rotated.teams!.team1.map(p => p.id)).toEqual([A.id, C.id]);
-      expect(rotated.teams!.team2.map(p => p.id)).toEqual([B.id, D.id]);
-    });
-
-    it('rotates from config 1 ([A,C] vs [B,D]) to config 2 ([A,D] vs [B,C])', () => {
-      const court: Court = {
-        courtNumber: 1,
-        players: [A, B, C, D],
-        teams: { team1: [A, C], team2: [B, D] },
-      };
-
-      const rotated = rotateCourtTeams(court);
-
-      expect(rotated.teams!.team1.map(p => p.id)).toEqual([A.id, D.id]);
-      expect(rotated.teams!.team2.map(p => p.id)).toEqual([B.id, C.id]);
-    });
-
-    it('rotates from config 2 ([A,D] vs [B,C]) back to config 0 ([A,B] vs [C,D])', () => {
-      const court: Court = {
-        courtNumber: 1,
-        players: [A, B, C, D],
-        teams: { team1: [A, D], team2: [B, C] },
-      };
-
-      const rotated = rotateCourtTeams(court);
-
-      expect(rotated.teams!.team1.map(p => p.id)).toEqual([A.id, B.id]);
-      expect(rotated.teams!.team2.map(p => p.id)).toEqual([C.id, D.id]);
+      expect(rotated.teams!.team1.map(p => p.id)).toEqual(expected1.map(p => p.id));
+      expect(rotated.teams!.team2.map(p => p.id)).toEqual(expected2.map(p => p.id));
     });
 
     it('cycles through all 3 configurations and returns to start', () => {

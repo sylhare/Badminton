@@ -85,6 +85,38 @@ describe('MatchScore', () => {
       const r = MatchScore.resolve([{ team1: null, team2: null }], 1, 1, 15);
       expect(r?.sets).toEqual([{ team1: 15, team2: 12 }]);
     });
+
+    it('parses raw text cells and treats non-numeric text as blank', () => {
+      const r = MatchScore.resolve([{ team1: '21', team2: '15' }, { team1: '21', team2: 'abc' }, { team1: '', team2: '' }], 1, 3);
+      expect(r?.winner).toBe(1);
+      expect(r?.sets).toEqual([{ team1: 21, team2: 15 }, { team1: 21, team2: 0 }]);
+    });
+  });
+
+  describe('clinchSetIndex', () => {
+    const blank = { team1: null, team2: null };
+
+    it('is -1 for a best-of-1 (no set can ever be locked)', () => {
+      expect(MatchScore.clinchSetIndex([{ team1: 21, team2: 15 }], 1)).toBe(-1);
+    });
+
+    it('is -1 while no side has clinched the majority', () => {
+      expect(MatchScore.clinchSetIndex([{ team1: 21, team2: 15 }, blank, blank], 3)).toBe(-1);
+      expect(MatchScore.clinchSetIndex([blank, blank, blank], 3)).toBe(-1);
+    });
+
+    it('returns the index of the clinching set', () => {
+      expect(MatchScore.clinchSetIndex([{ team1: 21, team2: 15 }, { team1: 21, team2: 10 }, blank], 3)).toBe(1);
+      expect(MatchScore.clinchSetIndex(
+        [{ team1: 15, team2: 21 }, { team1: 21, team2: 10 }, { team1: 21, team2: 18 }], 3,
+      )).toBe(2);
+    });
+
+    it('keeps blank sets in place so the index lines up with the inputs', () => {
+      expect(MatchScore.clinchSetIndex(
+        [{ team1: 21, team2: 15 }, blank, { team1: 21, team2: 18 }], 3,
+      )).toBe(2);
+    });
   });
 
   describe('tallies and rendering (of)', () => {

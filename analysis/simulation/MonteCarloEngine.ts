@@ -1,7 +1,6 @@
 import type { Court, ICourtAssignmentEngine, Player } from '../../src/types';
 import { shuffleArray } from '../../src/utils/playerUtils';
 import { BaseCourtAssignmentEngine } from '../../src/engines/BaseCourtAssignmentEngine';
-import { shuffleArray } from '../../src/utils/playerUtils';
 
 /**
  * Monte Carlo Greedy Search Implementation

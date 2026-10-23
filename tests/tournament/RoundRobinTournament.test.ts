@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
-import { createMockPlayer, createRoundRobinTournament, createTournamentMatch, createTournamentTeam } from '../data/testFactories';
+import { createMockPlayer, createRoundRobinTournament, createTournamentMatch, createTournamentTeam, createTournamentTeams } from '../data/testFactories';
 
 describe('RoundRobinTournament', () => {
   const teamA = createTournamentTeam('a', ['A']);
@@ -14,31 +14,17 @@ describe('RoundRobinTournament', () => {
   }
 
   describe('start', () => {
-    it('produces 1 match for 2 teams', () => {
-      const teams = [createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B'])];
-      const tournament = RoundRobinTournament.create().start(teams, 2);
-      expect(tournament.matches()).toHaveLength(1);
-      expect(tournament.matches()[0].round).toBe(1);
-    });
-
-    it('produces 3 matches for 3 teams with no duplicate pairings', () => {
-      const teams = [createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']), createTournamentTeam('c', ['C'])];
+    it.each([
+      [2, 1],
+      [3, 3],
+      [4, 6],
+    ] as const)('produces %i unique-pairing matches for %i teams', (teamCount, expectedMatches) => {
+      const teams = createTournamentTeams(Array.from({ length: teamCount }, (_, i) => String.fromCharCode(97 + i)));
       const matches = RoundRobinTournament.create().start(teams, 2).matches();
-      expect(matches).toHaveLength(3);
+      expect(matches).toHaveLength(expectedMatches);
+      expect(matches[0].round).toBe(1);
       const pairings = matches.map(m => [m.team1.id, m.team2.id].sort().join('|'));
-      expect(new Set(pairings).size).toBe(3);
-    });
-
-    it('produces 6 matches for 4 teams', () => {
-      const teams = [createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']), createTournamentTeam('c', ['C']), createTournamentTeam('d', ['D'])];
-      expect(RoundRobinTournament.create().start(teams, 2).matches()).toHaveLength(6);
-    });
-
-    it('has no duplicate pairings for 4 teams', () => {
-      const teams = [createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']), createTournamentTeam('c', ['C']), createTournamentTeam('d', ['D'])];
-      const matches = RoundRobinTournament.create().start(teams, 4).matches();
-      const pairings = matches.map(m => [m.team1.id, m.team2.id].sort().join('|'));
-      expect(new Set(pairings).size).toBe(6);
+      expect(new Set(pairings).size).toBe(expectedMatches);
     });
 
     it('cycles court numbers wrapping at numberOfCourts', () => {

@@ -60,22 +60,16 @@ describe('ManualOrderModal Component', () => {
       expect(mockOnConfirm).toHaveBeenCalledWith(['a', 'b', 'c']);
     });
 
-    it('moves a team down and saves the new order', async () => {
+    it.each([
+      ['down', 'manual-order-down-0', ['b', 'a', 'c']],
+      ['up', 'manual-order-up-2', ['a', 'c', 'b']],
+    ] as Array<[string, string, string[]]>)('moves a team %s and saves the new order', async (_direction, control, expected) => {
       render(<ManualOrderModal {...defaultProps} />);
 
-      await user.click(screen.getByTestId('manual-order-down-0'));
+      await user.click(screen.getByTestId(control));
       await user.click(screen.getByTestId('manual-order-save'));
 
-      expect(mockOnConfirm).toHaveBeenCalledWith(['b', 'a', 'c']);
-    });
-
-    it('moves a team up and saves the new order', async () => {
-      render(<ManualOrderModal {...defaultProps} />);
-
-      await user.click(screen.getByTestId('manual-order-up-2'));
-      await user.click(screen.getByTestId('manual-order-save'));
-
-      expect(mockOnConfirm).toHaveBeenCalledWith(['a', 'c', 'b']);
+      expect(mockOnConfirm).toHaveBeenCalledWith(expected);
     });
 
     it('reflects the moved position in the rendered list', async () => {

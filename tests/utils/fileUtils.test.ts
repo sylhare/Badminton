@@ -5,18 +5,22 @@ import { createMockFileList, MOCK_FILES } from '../data/testFactories';
 
 describe('File Utils', () => {
   describe('isImageFile', () => {
-    it('should return true for image files', () => {
-      expect(isImageFile(MOCK_FILES.image.jpg)).toBe(true);
-      expect(isImageFile(MOCK_FILES.image.png)).toBe(true);
-      expect(isImageFile(MOCK_FILES.image.gif)).toBe(true);
-      expect(isImageFile(MOCK_FILES.image.svg)).toBe(true);
+    it.each([
+      ['jpg', MOCK_FILES.image.jpg],
+      ['png', MOCK_FILES.image.png],
+      ['gif', MOCK_FILES.image.gif],
+      ['svg', MOCK_FILES.image.svg],
+    ])('should return true for %s image files', (_label, file) => {
+      expect(isImageFile(file)).toBe(true);
     });
 
-    it('should return false for non-image files', () => {
-      expect(isImageFile(MOCK_FILES.nonImage.txt)).toBe(false);
-      expect(isImageFile(MOCK_FILES.nonImage.pdf)).toBe(false);
-      expect(isImageFile(MOCK_FILES.nonImage.json)).toBe(false);
-      expect(isImageFile(MOCK_FILES.nonImage.video)).toBe(false);
+    it.each([
+      ['txt', MOCK_FILES.nonImage.txt],
+      ['pdf', MOCK_FILES.nonImage.pdf],
+      ['json', MOCK_FILES.nonImage.json],
+      ['video', MOCK_FILES.nonImage.video],
+    ])('should return false for %s non-image files', (_label, file) => {
+      expect(isImageFile(file)).toBe(false);
     });
 
     it('should return false for null or undefined', () => {

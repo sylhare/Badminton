@@ -2,69 +2,44 @@ import { describe, expect, it } from 'vitest';
 
 import { removeComments } from '../../script/remove_comments';
 
+const CASES: Array<[string, string, string]> = [
+  ['single-line comments', 'const x = 1; // inline comment\n', 'const x = 1;\n'],
+  [
+    'comment-only lines entirely, not leave whitespace',
+    'function foo() {\n    // this is a comment\n    const x = 1;\n}\n',
+    'function foo() {\n    const x = 1;\n}\n',
+  ],
+  [
+    'comment-only lines with various indentation',
+    'const a = 1;\n  // comment with spaces\nconst b = 2;\n',
+    'const a = 1;\nconst b = 2;\n',
+  ],
+  ['intentional empty lines between code', 'const a = 1;\n\nconst b = 2;\n', 'const a = 1;\n\nconst b = 2;\n'],
+  ['block comments', 'const x = 1;\n/* block comment */\nconst y = 2;\n', 'const x = 1;\n\nconst y = 2;\n'],
+  ['JSDoc comments', '/** JSDoc comment */\nfunction foo() {}\n', '/** JSDoc comment */\nfunction foo() {}\n'],
+  ['triple-slash directives', '/// <reference types="react" />\nconst x = 1;\n', '/// <reference types="react" />\nconst x = 1;\n'],
+  ['URLs', 'const url = "https://example.com";\n', 'const url = "https://example.com";\n'],
+  ['// inside string literals', 'const s = "value // not a comment";\n', 'const s = "value // not a comment";\n'],
+  ['multiple blank lines collapsed to at most two', 'const a = 1;\n\n\n\nconst b = 2;\n', 'const a = 1;\n\nconst b = 2;\n'],
+  [
+    'an apostrophe inside a comment is not a string opener',
+    '// a slot\'s group\nconst mode = \'tap\';\nreturn mode;\n',
+    '\nconst mode = \'tap\';\nreturn mode;\n',
+  ],
+  [
+    'code following a comment that contains quotes',
+    'function f() {\n  // don\'t drop the "return" below\n  return 1;\n}\n',
+    'function f() {\n  return 1;\n}\n',
+  ],
+  [
+    'code after a block comment containing an apostrophe',
+    '/* it\'s fine */\nconst x = \'a\';\nconst y = \'b\';\n',
+    '\nconst x = \'a\';\nconst y = \'b\';\n',
+  ],
+];
+
 describe('removeComments', () => {
-  it('should remove single-line comments', () => {
-    const input = 'const x = 1; // inline comment\n';
-    expect(removeComments(input)).toBe('const x = 1;\n');
-  });
-
-  it('should remove comment-only lines entirely, not leave whitespace', () => {
-    const input = 'function foo() {\n    // this is a comment\n    const x = 1;\n}\n';
-    expect(removeComments(input)).toBe('function foo() {\n    const x = 1;\n}\n');
-  });
-
-  it('should remove comment-only lines with various indentation', () => {
-    const input = 'const a = 1;\n  // comment with spaces\nconst b = 2;\n';
-    expect(removeComments(input)).toBe('const a = 1;\nconst b = 2;\n');
-  });
-
-  it('should not remove intentional empty lines between code', () => {
-    const input = 'const a = 1;\n\nconst b = 2;\n';
-    expect(removeComments(input)).toBe('const a = 1;\n\nconst b = 2;\n');
-  });
-
-  it('should remove block comments', () => {
-    const input = 'const x = 1;\n/* block comment */\nconst y = 2;\n';
-    expect(removeComments(input)).toBe('const x = 1;\n\nconst y = 2;\n');
-  });
-
-  it('should preserve JSDoc comments', () => {
-    const input = '/** JSDoc comment */\nfunction foo() {}\n';
-    expect(removeComments(input)).toBe('/** JSDoc comment */\nfunction foo() {}\n');
-  });
-
-  it('should preserve triple-slash directives', () => {
-    const input = '/// <reference types="react" />\nconst x = 1;\n';
-    expect(removeComments(input)).toBe('/// <reference types="react" />\nconst x = 1;\n');
-  });
-
-  it('should preserve URLs', () => {
-    const input = 'const url = "https://example.com";\n';
-    expect(removeComments(input)).toBe('const url = "https://example.com";\n');
-  });
-
-  it('should not remove // inside string literals', () => {
-    const input = 'const s = "value // not a comment";\n';
-    expect(removeComments(input)).toBe('const s = "value // not a comment";\n');
-  });
-
-  it('should collapse multiple blank lines to at most two', () => {
-    const input = 'const a = 1;\n\n\n\nconst b = 2;\n';
-    expect(removeComments(input)).toBe('const a = 1;\n\nconst b = 2;\n');
-  });
-
-  it('should not treat an apostrophe inside a comment as a string opener', () => {
-    const input = '// a slot\'s group\nconst mode = \'tap\';\nreturn mode;\n';
-    expect(removeComments(input)).toBe('\nconst mode = \'tap\';\nreturn mode;\n');
-  });
-
-  it('should keep code following a comment that contains quotes', () => {
-    const input = 'function f() {\n  // don\'t drop the "return" below\n  return 1;\n}\n';
-    expect(removeComments(input)).toBe('function f() {\n  return 1;\n}\n');
-  });
-
-  it('should keep code after a block comment containing an apostrophe', () => {
-    const input = '/* it\'s fine */\nconst x = \'a\';\nconst y = \'b\';\n';
-    expect(removeComments(input)).toBe('\nconst x = \'a\';\nconst y = \'b\';\n');
+  it.each(CASES)('should remove %s', (_label, input, expected) => {
+    expect(removeComments(input)).toBe(expected);
   });
 });
