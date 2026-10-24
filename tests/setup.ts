@@ -1,6 +1,14 @@
+import {
+  ReadableStream as NodeReadableStream,
+  WritableStream as NodeWritableStream,
+} from 'node:stream/web';
+
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+
+globalThis.ReadableStream = NodeReadableStream as typeof ReadableStream;
+globalThis.WritableStream = NodeWritableStream as typeof WritableStream;
 
 /**
  * Mock CompressionStream / DecompressionStream with pass-through transforms.
@@ -33,19 +41,13 @@ class MockTransformStream {
   }
 }
 
-globalThis.CompressionStream =
-  class MockCompressionStream extends MockTransformStream {
-    constructor(_format: CompressionFormat) {
-      super();
-    }
-  } as unknown as typeof CompressionStream;
+globalThis.CompressionStream = class MockCompressionStream extends MockTransformStream {
+  constructor(_format: CompressionFormat) { super(); }
+} as unknown as typeof CompressionStream;
 
-globalThis.DecompressionStream =
-  class MockDecompressionStream extends MockTransformStream {
-    constructor(_format: CompressionFormat) {
-      super();
-    }
-  } as unknown as typeof DecompressionStream;
+globalThis.DecompressionStream = class MockDecompressionStream extends MockTransformStream {
+  constructor(_format: CompressionFormat) { super(); }
+} as unknown as typeof DecompressionStream;
 
 afterEach(async () => {
   cleanup();
