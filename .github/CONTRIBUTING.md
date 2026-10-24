@@ -7,23 +7,23 @@
 1. Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 2. Start the development server:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 3. Open your browser and navigate to `http://localhost:5174`
 
 ### Scripts
 
-- `npm run build` - Build for production
-- `npm run lint:fix` - Run ESLint (and fix most of them automatically)
-- `npm run test` - Run unit tests
-- `npm run test:e2e` - Run e2e tests
+- `pnpm run build` - Build for production
+- `pnpm run lint:fix` - Run ESLint (and fix most of them automatically)
+- `pnpm run test` - Run unit tests
+- `pnpm run test:e2e` - Run e2e tests
 
 ## Code Guidelines
 
@@ -37,7 +37,8 @@ the JSDoc of the enclosing function, not inline.
 
 ```ts
 // ❌
-const v = arr.filter(p => p.present); // get present players
+// get present players
+const v = arr.filter(p => p.present); 
 
 // ✅
 const presentPlayers = arr.filter(p => p.present);
@@ -90,7 +91,7 @@ interface Court {
   players: Player[];
 }
 
-type EngineType = 'sa' | 'mc' | 'cg' | 'sl';
+type EngineType = 'sa' | 'sl';
 ```
 
 ### Components
@@ -145,6 +146,8 @@ describe('MyClass', () => {
 });
 ```
 
+Use `it.each` or `describe.each` to limit duplication for test setup.
+
 ## Pull Request Guidelines
 
 ### Commit messages
@@ -164,7 +167,7 @@ Fix bench fairness bug
 ### Prefer rebase to merge commits
 
 Keep the history linear. 
-Rebase your branch on `main` before marking a PR ready for review instead of merging `main`into your branch.
+Rebase your branch on `main` before marking a PR ready for review instead of merging `main` into your branch.
 
 ```bash
 git fetch origin
