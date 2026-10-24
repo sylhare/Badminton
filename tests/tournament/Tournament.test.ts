@@ -1,21 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
-import { createTournamentTeam } from '../data/testFactories';
+import { createRoundRobinTournament, createTournamentMatch, createTournamentTeam } from '../data/testFactories';
+import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types.ts';
 
 describe('Tournament', () => {
   const teamA = createTournamentTeam('a', ['Alice']);
   const teamB = createTournamentTeam('b', ['Bob']);
+  const teamC = createTournamentTeam('c', ['Carl']);
 
-  function makeTournament(sets: { team1: number; team2: number }[] = []) {
-    return RoundRobinTournament.fromState({
-      phase: 'active',
-      format: 'singles',
-      type: 'round-robin',
-      numberOfCourts: 1,
-      teams: [teamA, teamB],
-      matches: [{ id: 'm1', round: 1, courtNumber: 1, team1: teamA, team2: teamB, sets }],
-    });
+  function makeTournament(
+    matches: TournamentMatch[] = [{ id: 'm1', round: 1, courtNumber: 1, team1: teamA, team2: teamB, sets: [] }],
+    teams: TournamentTeam[] = [teamA, teamB, teamC],
+    ): RoundRobinTournament {
+    return createRoundRobinTournament(matches, teams);
   }
 
   describe('withMatchResult', () => {
@@ -28,7 +26,9 @@ describe('Tournament', () => {
     });
 
     it('preserves existing sets when no new sets are given', () => {
-      const updated = makeTournament([{ team1: 21, team2: 10 }]).withMatchResult('m1', 2);
+      const updated = makeTournament([
+        { id: 'm1', round: 1, courtNumber: 1, team1: teamA, team2: teamB, sets: [{ team1: 21, team2: 10 }] },
+      ]).withMatchResult('m1', 2);
       expect(updated.matches()[0].sets).toEqual([{ team1: 21, team2: 10 }]);
     });
 
@@ -74,6 +74,49 @@ describe('Tournament', () => {
     it('keeps flagging a run that is only partly ordered', () => {
       const partial = threeTiedTeams({ a: 2, b: 1 });
       expect(partial.tieGroups(partial.calculateStandings())).toHaveLength(1);
+    });
+  });
+
+  describe('Tournament match, completion and rounds', () => {
+    it('returns 0 when no matches', () => {
+      const tournament = makeTournament([]);
+      expect(tournament.completedRounds()).toBe(0);
+      expect(tournament.totalRounds()).toBe(0);
+      expect(tournament.isComplete()).toBe(false);
+    });
+
+    it('returns 0 when no winners set', () => {
+      expect(makeTournament([createTournamentMatch('m1', 1, teamA, teamB)]).completedRounds()).toBe(0);
+    });
+
+    it('returns 1 when round 1 is fully done but round 2 has unfinished matches', () => {
+      const tournament = makeTournament([
+        createTournamentMatch('m1', 1, teamA, teamB, 1),
+        createTournamentMatch('m2', 2, teamA, teamC),
+      ]);
+      expect(tournament.completedRounds()).toEqual(1);
+      expect(tournament.currentRound()).toEqual(2);
+      expect(tournament.isComplete()).toBe(false);
+    });
+
+    it('does not advance past a partial round', () => {
+      expect(makeTournament([
+        createTournamentMatch('m1', 1, teamA, teamB, 1),
+        createTournamentMatch('m2', 1, teamA, teamC),
+        createTournamentMatch('m3', 2, teamB, teamC, 2),
+      ]).completedRounds()).toBe(0);
+    });
+
+    it('returns total rounds when all complete', () => {
+      const tournament = makeTournament([
+        createTournamentMatch('m1', 1, teamA, teamB, 1),
+        createTournamentMatch('m2', 2, teamA, teamC, 2),
+        createTournamentMatch('m3', 3, teamB, teamC, 1),
+      ], [teamA, teamB, teamC]);
+      expect(tournament.completedRounds()).toBe(3);
+      expect(tournament.isComplete()).toBe(true);
+      expect(tournament.currentRound()).toEqual(3);
+      expect(tournament.totalRounds()).toEqual(3);
     });
   });
 });

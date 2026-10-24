@@ -174,7 +174,7 @@ describe('Team rotation', () => {
       });
 
       const state = await storageManager.loadApp();
-      const playerId = state!.players[0].id;
+      const playerId = state!.players![0].id;
       await act(async () => {
         await user.click(screen.getByTestId(`force-bench-${playerId}`));
       });

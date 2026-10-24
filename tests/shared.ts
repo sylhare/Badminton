@@ -85,21 +85,6 @@ export const clickTeam = async (
   });
 };
 
-/** Click a team element and confirm the score input modal */
-export const clickTeamAndConfirm = async (
-  user: ReturnType<typeof userEvent.setup>,
-  teamElement: HTMLElement,
-): Promise<void> => {
-  await act(async () => {
-    await user.click(teamElement);
-    await new Promise(resolve => setTimeout(resolve, 50));
-  });
-  await act(async () => {
-    await user.click(screen.getByTestId('score-modal-confirm'));
-    await new Promise(resolve => setTimeout(resolve, 50));
-  });
-};
-
 /** Helper to generate assignments and wait for them to appear */
 export const generateAndWaitForAssignments = async (
   user: ReturnType<typeof userEvent.setup>,

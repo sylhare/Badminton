@@ -25,7 +25,7 @@ function makeCourt(
   winner: 1 | 2,
   score?: { team1: number; team2: number },
 ): Court {
-  return { courtNumber: 1, teams: { team1, team2 }, winner, sets: score ? [score] : [] };
+  return { courtNumber: 1, players: [...team1, ...team2], teams: { team1, team2 }, winner, sets: score ? [score] : [] };
 }
 
 describe('LevelTracker', () => {
@@ -37,36 +37,22 @@ describe('LevelTracker', () => {
       expect(tracker.getKFactor()).toBe(LevelTrackerConfig.K_DEFAULT);
     });
 
-    it('treats a deuce win (23–21) as a close win, normalised past the reference length', () => {
-      expect(tracker.getKFactor({ team1: 23, team2: 21 }, 1)).toBe(LevelTrackerConfig.K_SCALE[0].k);
+    const cases: Array<[string, { team1: number; team2: number }, number]> = [
+      ['a deuce win (23–21) as a close win, normalised past the reference length', { team1: 23, team2: 21 }, LevelTrackerConfig.K_SCALE[0].k],
+      ['K_SCALE[0].k for a close win (loser 18–20)', { team1: 21, team2: 19 }, LevelTrackerConfig.K_SCALE[0].k],
+      ['K_SCALE[1].k for loser score 15–17', { team1: 21, team2: 16 }, LevelTrackerConfig.K_SCALE[1].k],
+      ['K_MAX for a dominant win (loser < 6)', { team1: 21, team2: 3 }, LevelTrackerConfig.K_MAX],
+      ['a shorter match (15–13) so a close win scales like a game to 21', { team1: 15, team2: 13 }, LevelTrackerConfig.K_SCALE[0].k],
+      ['K_MAX for a dominant short match (15–2)', { team1: 15, team2: 2 }, LevelTrackerConfig.K_MAX],
+      ['an 11-point match win (11–9)', { team1: 11, team2: 9 }, LevelTrackerConfig.K_SCALE[1].k],
+    ];
+
+    it.each(cases)('returns %s', (_label, score, expected) => {
+      expect(tracker.getKFactor(score, 1)).toBe(expected);
     });
 
     it('weights a dominant best-of-N average (23–12) by margin, not the deuce default', () => {
       expect(tracker.getKFactor({ team1: 23, team2: 12 }, 1)).toBeGreaterThan(LevelTrackerConfig.K_SCALE[1].k);
-    });
-
-    it('returns K_SCALE[0].k for a close win (loser 18–20)', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 19 }, 1)).toBe(LevelTrackerConfig.K_SCALE[0].k);
-    });
-
-    it('returns K_SCALE[1].k for loser score 15–17', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 16 }, 1)).toBe(LevelTrackerConfig.K_SCALE[1].k);
-    });
-
-    it('returns K_MAX for a dominant win (loser < 6)', () => {
-      expect(tracker.getKFactor({ team1: 21, team2: 3 }, 1)).toBe(LevelTrackerConfig.K_MAX);
-    });
-
-    it('normalises a shorter match (15–13) so a close win scales like a game to 21', () => {
-      expect(tracker.getKFactor({ team1: 15, team2: 13 }, 1)).toBe(LevelTrackerConfig.K_SCALE[0].k);
-    });
-
-    it('returns K_MAX for a dominant short match (15–2)', () => {
-      expect(tracker.getKFactor({ team1: 15, team2: 2 }, 1)).toBe(LevelTrackerConfig.K_MAX);
-    });
-
-    it('normalises an 11-point match win (11–9)', () => {
-      expect(tracker.getKFactor({ team1: 11, team2: 9 }, 1)).toBe(LevelTrackerConfig.K_SCALE[1].k);
     });
 
     it('scales K by balance factor for an unbalanced team', () => {
@@ -367,6 +353,7 @@ describe('resolveMatchImportance', () => {
     id: `m${round}`, round, courtNumber: 1,
     team1: team('t1', [makePlayer('a', 50)]), team2: team('t2', [makePlayer('b', 50)]),
     bracket: BracketKind.Winners,
+    sets: [],
   });
 
   it('boosts the winners-bracket final (last round)', () => {

@@ -134,11 +134,9 @@ describe('Player Utils', () => {
       },
     ];
 
-    testCases.forEach(({ description, input, expected }) => {
-      it(description, () => {
-        const result = validatePlayerNames(input);
-        expect(result).toEqual(expected);
-      });
+    it.each(testCases)('$description', ({ input, expected }) => {
+      const result = validatePlayerNames(input);
+      expect(result).toEqual(expected);
     });
   });
 

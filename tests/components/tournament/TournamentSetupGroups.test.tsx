@@ -1,10 +1,12 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { TournamentSetup } from '../../../src/components/tournament/TournamentSetup';
 import { createMockPlayer } from '../../data/testFactories';
+import type { TournamentTeam } from '../../../src/tournament/types.ts';
+import type { CreateTournamentOptions } from '../../../src/tournament/tournamentFactory.ts';
 
 vi.mock('../../../src/components/modals/ImageUploadModal', () => ({ default: () => null }));
 
@@ -20,7 +22,7 @@ const presentPlayers = [
 ];
 
 describe('TournamentSetup — group-knockout config', () => {
-  let onStart: ReturnType<typeof vi.fn>;
+  let onStart: Mock<(teams: TournamentTeam[], options: CreateTournamentOptions) => void>;
 
   beforeEach(() => { onStart = vi.fn(); });
   afterEach(() => { vi.clearAllMocks(); });

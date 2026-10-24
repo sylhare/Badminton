@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { TournamentMatch, TournamentTeam } from '../../src/tournament/types';
 import { RoundRobinTournament } from '../../src/tournament/RoundRobinTournament';
-import { createMockPlayer, createRoundRobinTournament, createTournamentMatch, createTournamentTeam } from '../data/testFactories';
+import { createMockPlayer, createRoundRobinTournament, createTournamentMatch, createTournamentTeam, createTournamentTeams } from '../data/testFactories';
 
 describe('RoundRobinTournament', () => {
   const teamA = createTournamentTeam('a', ['A']);
@@ -14,31 +14,17 @@ describe('RoundRobinTournament', () => {
   }
 
   describe('start', () => {
-    it('produces 1 match for 2 teams', () => {
-      const teams = [createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B'])];
-      const tournament = RoundRobinTournament.create().start(teams, 2);
-      expect(tournament.matches()).toHaveLength(1);
-      expect(tournament.matches()[0].round).toBe(1);
-    });
-
-    it('produces 3 matches for 3 teams with no duplicate pairings', () => {
-      const teams = [createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']), createTournamentTeam('c', ['C'])];
+    it.each([
+      [2, 1],
+      [3, 3],
+      [4, 6],
+    ] as const)('produces %i unique-pairing matches for %i teams', (teamCount, expectedMatches) => {
+      const teams = createTournamentTeams(Array.from({ length: teamCount }, (_, i) => String.fromCharCode(97 + i)));
       const matches = RoundRobinTournament.create().start(teams, 2).matches();
-      expect(matches).toHaveLength(3);
+      expect(matches).toHaveLength(expectedMatches);
+      expect(matches[0].round).toBe(1);
       const pairings = matches.map(m => [m.team1.id, m.team2.id].sort().join('|'));
-      expect(new Set(pairings).size).toBe(3);
-    });
-
-    it('produces 6 matches for 4 teams', () => {
-      const teams = [createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']), createTournamentTeam('c', ['C']), createTournamentTeam('d', ['D'])];
-      expect(RoundRobinTournament.create().start(teams, 2).matches()).toHaveLength(6);
-    });
-
-    it('has no duplicate pairings for 4 teams', () => {
-      const teams = [createTournamentTeam('a', ['A']), createTournamentTeam('b', ['B']), createTournamentTeam('c', ['C']), createTournamentTeam('d', ['D'])];
-      const matches = RoundRobinTournament.create().start(teams, 4).matches();
-      const pairings = matches.map(m => [m.team1.id, m.team2.id].sort().join('|'));
-      expect(new Set(pairings).size).toBe(6);
+      expect(new Set(pairings).size).toBe(expectedMatches);
     });
 
     it('cycles court numbers wrapping at numberOfCourts', () => {
@@ -216,53 +202,6 @@ describe('RoundRobinTournament', () => {
     });
   });
 
-  describe('completedRounds', () => {
-    it('returns 0 when no matches', () => {
-      expect(makeTournament([]).completedRounds()).toBe(0);
-    });
-
-    it('returns 0 when no winners set', () => {
-      expect(makeTournament([createTournamentMatch('m1', 1, teamA, teamB)]).completedRounds()).toBe(0);
-    });
-
-    it('returns 1 when round 1 is fully done but round 2 has unfinished matches', () => {
-      expect(makeTournament([
-        createTournamentMatch('m1', 1, teamA, teamB, 1),
-        createTournamentMatch('m2', 2, teamA, teamC),
-      ]).completedRounds()).toBe(1);
-    });
-
-    it('does not advance past a partial round', () => {
-      expect(makeTournament([
-        createTournamentMatch('m1', 1, teamA, teamB, 1),
-        createTournamentMatch('m2', 1, teamA, teamC),
-        createTournamentMatch('m3', 2, teamB, teamC, 2),
-      ]).completedRounds()).toBe(0);
-    });
-
-    it('returns total rounds when all complete', () => {
-      expect(makeTournament([
-        createTournamentMatch('m1', 1, teamA, teamB, 1),
-        createTournamentMatch('m2', 2, teamA, teamC, 2),
-        createTournamentMatch('m3', 3, teamB, teamC, 1),
-      ]).completedRounds()).toBe(3);
-    });
-  });
-
-  describe('totalRounds', () => {
-    it('returns 0 for empty matches', () => {
-      expect(makeTournament([]).totalRounds()).toBe(0);
-    });
-
-    it('returns max round number', () => {
-      expect(makeTournament([
-        createTournamentMatch('m1', 1, teamA, teamB),
-        createTournamentMatch('m2', 2, teamA, teamB),
-        createTournamentMatch('m3', 3, teamA, teamB),
-      ], [teamA, teamB]).totalRounds()).toBe(3);
-    });
-  });
-
   describe('validate', () => {
     it('returns error for fewer than 2 teams', () => {
       const t = RoundRobinTournament.create();
@@ -356,45 +295,6 @@ describe('RoundRobinTournament', () => {
     ]);
     expect(t.isRoundComplete(1)).toBe(true);
     expect(t.isRoundComplete(2)).toBe(false);
-  });
-
-  describe('isComplete', () => {
-    it('returns false when some matches have no winner', () => {
-      expect(makeTournament([
-        createTournamentMatch('m1', 1, teamA, teamB, 1),
-        createTournamentMatch('m2', 2, teamA, teamC),
-      ]).isComplete()).toBe(false);
-    });
-
-    it('returns true when all matches have a winner', () => {
-      expect(makeTournament([
-        createTournamentMatch('m1', 1, teamA, teamB, 1),
-        createTournamentMatch('m2', 2, teamA, teamC, 2),
-        createTournamentMatch('m3', 3, teamB, teamC, 1),
-      ]).isComplete()).toBe(true);
-    });
-
-    it('returns false for empty matches', () => {
-      expect(makeTournament([]).isComplete()).toBe(false);
-    });
-  });
-
-  describe('currentRound', () => {
-    it('returns first round with unfinished matches', () => {
-      expect(makeTournament([
-        createTournamentMatch('m1', 1, teamA, teamB, 1),
-        createTournamentMatch('m2', 2, teamA, teamC),
-        createTournamentMatch('m3', 3, teamB, teamC),
-      ]).currentRound()).toBe(2);
-    });
-
-    it('returns last round when all matches are complete', () => {
-      expect(makeTournament([
-        createTournamentMatch('m1', 1, teamA, teamB, 1),
-        createTournamentMatch('m2', 2, teamA, teamC, 2),
-        createTournamentMatch('m3', 3, teamB, teamC, 1),
-      ]).currentRound()).toBe(3);
-    });
   });
 
   it('matchesPerRound returns floor of teams / 2', () => {

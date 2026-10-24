@@ -33,13 +33,19 @@ class MockTransformStream {
   }
 }
 
-globalThis.CompressionStream = class MockCompressionStream extends MockTransformStream {
-  constructor(_format: string) { super(); }
-};
+globalThis.CompressionStream =
+  class MockCompressionStream extends MockTransformStream {
+    constructor(_format: CompressionFormat) {
+      super();
+    }
+  } as unknown as typeof CompressionStream;
 
-globalThis.DecompressionStream = class MockDecompressionStream extends MockTransformStream {
-  constructor(_format: string) { super(); }
-};
+globalThis.DecompressionStream =
+  class MockDecompressionStream extends MockTransformStream {
+    constructor(_format: CompressionFormat) {
+      super();
+    }
+  } as unknown as typeof DecompressionStream;
 
 afterEach(async () => {
   cleanup();

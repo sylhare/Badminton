@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -38,7 +38,7 @@ function ControlledSetup(props: React.ComponentProps<typeof TournamentSetup>) {
 }
 
 describe('TournamentSetup', () => {
-  let onStart: ReturnType<typeof vi.fn>;
+  let onStart: Mock<(teams: TournamentTeam[], options: CreateTournamentOptions) => void>;
 
   beforeEach(() => {
     onStart = vi.fn();
