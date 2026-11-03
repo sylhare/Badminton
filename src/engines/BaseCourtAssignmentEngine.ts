@@ -3,33 +3,18 @@ import { pairKey, teamPairs } from '../utils/playerUtils';
 
 import { CourtAssignmentTracker } from './CourtAssignmentTracker';
 
-/**
- * Base Court Assignment Engine
- *
- * Implements the Template Method pattern for court generation.
- * Handles common tasks like:
- * - Filtering present players
- * - Calculating and assigning bench spots
- * - Recording statistics (benching, singles, pairs)
- *
- * Subclasses must implement `generateAssignments` to provide the specific
- * algorithm for pairing players on the available courts.
- */
+/** Template method for court generation; subclasses implement generateAssignments. */
 export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker implements ICourtAssignmentEngine {
 
   abstract readonly name: string;
   abstract readonly description: string;
 
-  /**
-   * Generates court assignments for a set of players.
-   * This template method defines the skeletal implementation of the assignment process.
-   */
+  /** Generates courts and settles the previous round. */
   generate(
     players: Player[],
     numberOfCourts: number,
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult {
-    const replaceRound = !this.shouldCommitRound();
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return { courts: [], committed: true, anomalies: [] };
 
@@ -52,15 +37,10 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
 
     const finalCourts = this.generateAssignments(onCourtPlayers, numberOfCourts, 1);
 
-    if (!replaceRound) this.markRoundCompleted();
-    this.clearCurrentSession();
-    CourtAssignmentTracker.lastGeneratedAt = Date.now();
-    if (replaceRound) this.undoLastRound();
-    const detectedAnomalies = this.applyRoundStats(finalCourts, presentPlayers);
-    const anomalies = replaceRound ? [] : detectedAnomalies;
+    const { committed, anomalies } = this.transitionRound(finalCourts, presentPlayers);
     this.notifyStateChange();
 
-    return { courts: finalCourts, committed: !replaceRound, anomalies };
+    return { courts: finalCourts, committed, anomalies };
   }
 
   /**

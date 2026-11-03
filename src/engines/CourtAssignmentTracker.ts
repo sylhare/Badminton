@@ -14,12 +14,12 @@ import { benchedPlayers, opponentPairs, samePlayers, shuffleArray, teamPairs } f
 
 import { levelTracker } from './LevelTracker';
 
-/**
- * CourtAssignmentTracker
- *
- * Provides shared telemetry, historical tracking, and persistence.
- * Static members ensure all inherited engines share the same state.
- */
+interface RoundTransition {
+  committed: boolean;
+  anomalies: AssignmentAnomaly[];
+}
+
+/** Shared telemetry, history, and persistence for every engine; state is static. */
 export class CourtAssignmentTracker implements ICourtAssignmentTracker {
 
   private static readonly PAIR_HISTORY_TTL_MS = 5 * 24 * 60 * 60 * 1000;
@@ -66,15 +66,16 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   /** Observer pattern listeners for state change notifications */
   private static stateChangeListeners: Array<() => void> = [];
 
+  /** Grace window: a regeneration within this and with no winner discards the previous round. */
   static readonly REGENERATION_DEBOUNCE_MS = 2 * 60 * 1000;
 
   /** Court numbers whose team-pair stats were already updated via rotation this round */
   private static pendingRotatedCourts = new Set<number>();
 
-  /** Delta of stats recorded in the most recent generate() call, used to undo on replace */
+  /** Stats of the most recent round, kept so a discarded round can be undone. */
   private static lastRoundDelta: { bench: string[]; singles: string[]; teammates: string[]; opponents: string[] } | null = null;
 
-  /** Timestamp of the most recent generate() call, used to detect rapid regeneration */
+  /** Timestamp of the most recent generate() call. */
   protected static lastGeneratedAt: number | undefined = undefined;
 
   protected get teammateCountMap(): Map<string, number> {
@@ -128,19 +129,8 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.notifyStateChange();
   }
 
-  /** Increments roundsPlayed if the current session had at least one winner. */
-  protected markRoundCompleted(): void {
-    if (CourtAssignmentTracker.recordedWinsMap.size > 0) {
-      CourtAssignmentTracker.roundsPlayed++;
-    }
-  }
-
-  /**
-   * Returns true if the previous round's results should be committed before generating.
-   * False when this is a rapid regeneration with no winners (discard the previous trial round).
-   * Must be called before generate() so recordedWinsMap reflects the previous round.
-   */
-  protected shouldCommitRound(): boolean {
+  /** False only for a regeneration inside the grace window that recorded no winner. */
+  private shouldCommitRound(): boolean {
     const isRapidRegeneration =
       CourtAssignmentTracker.lastGeneratedAt !== undefined &&
       Date.now() - CourtAssignmentTracker.lastGeneratedAt < CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS;
@@ -168,19 +158,25 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.notifyStateChange();
   }
 
-  /** Clears only the current session's recorded match outcomes. */
+  /** Clears per-round session state: recorded wins and rotated courts. */
   clearCurrentSession(): void {
     CourtAssignmentTracker.recordedWinsMap.clear();
     CourtAssignmentTracker.pendingRotatedCourts.clear();
-    CourtAssignmentTracker.lastGeneratedAt = undefined;
   }
 
-  /**
-   * Records bench/singles/teammate/opponent stats for a round.
-   * Called from generate() so stats are immediately visible after generation.
-   * Tracks a delta so undoLastRound() can reverse it on rapid re-generation.
-   * Returns anomalies detected by comparing against the previous round's delta.
-   */
+  /** Settles the previous round (commit or discard) and records the new one. */
+  protected transitionRound(courts: Court[], players: Player[]): RoundTransition {
+    const hasPreviousRound = CourtAssignmentTracker.lastGeneratedAt !== undefined;
+    const committed = this.shouldCommitRound();
+    if (hasPreviousRound && committed) CourtAssignmentTracker.roundsPlayed++;
+    this.clearCurrentSession();
+    CourtAssignmentTracker.lastGeneratedAt = Date.now();
+    if (hasPreviousRound && !committed) this.undoLastRound();
+    const anomalies = this.applyRoundStats(courts, players);
+    return { committed, anomalies: committed ? anomalies : [] };
+  }
+
+  /** Records the round's stats and returns anomalies against the previous round. */
   applyRoundStats(courts: Court[], players: Player[]): AssignmentAnomaly[] {
     const prev = CourtAssignmentTracker.lastRoundDelta;
     const delta = { bench: [] as string[], singles: [] as string[], teammates: [] as string[], opponents: [] as string[] };
@@ -247,7 +243,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
   }
 
   /** Reverses the stats recorded by the most recent applyRoundStats call. */
-  protected undoLastRound(): void {
+  private undoLastRound(): void {
     if (!CourtAssignmentTracker.lastRoundDelta) return;
     const { bench, singles, teammates, opponents } = CourtAssignmentTracker.lastRoundDelta;
     bench.forEach(id => this.decrementMapCount(CourtAssignmentTracker.benchCountMap, id));
@@ -392,10 +388,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.notifyStateChange();
   }
 
-  /**
-   * Records teammate and opponent pairing stats for a court.
-   * If previousCourt is provided, its stats are reversed first (used on rotation).
-   */
+  /** Swaps a court's pair stats, reversing previousCourt first when given. */
   private updateCourtTeamStats(court: Court, previousCourt?: Court): void {
     if (previousCourt?.teams) {
       const { team1, team2 } = previousCourt.teams;
@@ -425,10 +418,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
   }
 
-  /**
-   * Updates the winner of a match and records the result.
-   * If rotatedCourt is provided, applies the rotation and updates team pairing stats.
-   */
+  /** Records a winner and, when rotated, applies the rotation and pair stats. */
   updateWinner({ courtNumber, winner, currentAssignments, rotatedCourt }: UpdateWinnerParams): Court[] {
     const court = currentAssignments.find(c => c.courtNumber === courtNumber);
     if (!court) return currentAssignments;
@@ -454,15 +444,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     return updatedAssignments;
   }
 
-  /**
-   * Reconciles tracker stats after a manual team edit (drag-and-drop or a
-   * rotation) that produced `next` from `previous`. For every court whose team
-   * composition changed it: reverses any recorded win (the result is void once
-   * the line-up differs), swaps that court's teammate/opponent pair stats
-   * (reverse old, apply new), and marks it pending so the next generate does
-   * not double-count. Bench membership changes are reconciled too. Incremental
-   * by design, so it composes correctly with prior edits/rotations this round.
-   */
+  /** Reconciles stats after a manual edit: voids changed wins, swaps pair stats, updates bench counts. */
   applyManualEdit(previous: Court[], next: Court[], players: Player[]): Court[] {
     const prevByNumber = new Map(previous.map(c => [c.courtNumber, c]));
 

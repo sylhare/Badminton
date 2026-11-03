@@ -1,10 +1,89 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CourtAssignmentTracker } from '../../src/engines/CourtAssignmentTracker';
 import { createMockPlayers } from '../data/testFactories';
-import type { Court } from '../../src/types';
+import type { Court, Player } from '../../src/types';
 
 describe('CourtAssignmentTracker', () => {
+  describe('transitionRound', () => {
+    class TestTracker extends CourtAssignmentTracker {
+      transition(courts: Court[], players: Player[]) {
+        return this.transitionRound(courts, players);
+      }
+    }
+
+    const tracker = new TestTracker();
+    const players = createMockPlayers(4);
+    const round1Courts: Court[] = [
+      {
+        courtNumber: 1,
+        players,
+        teams: { team1: [players[0], players[1]], team2: [players[2], players[3]] },
+      },
+    ];
+    const round2Courts: Court[] = [
+      {
+        courtNumber: 1,
+        players,
+        teams: { team1: [players[0], players[2]], team2: [players[1], players[3]] },
+      },
+    ];
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      tracker.resetHistory();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it.each([
+      {
+        scenario: 'round played no winner before debounce -> no new round added',
+        hasWinner: false,
+        advanceMs: CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS - 1000,
+        expectedNewRound: false,
+        expectedRoundsPlayed: 0,
+      },
+      {
+        scenario: 'round played no winner after debounce -> new round added',
+        hasWinner: false,
+        advanceMs: CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 1000,
+        expectedNewRound: true,
+        expectedRoundsPlayed: 1,
+      },
+      {
+        scenario: 'round played with winner before debounce -> new round added',
+        hasWinner: true,
+        advanceMs: CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS - 1000,
+        expectedNewRound: true,
+        expectedRoundsPlayed: 1,
+      },
+      {
+        scenario: 'round played with winner after debounce -> new round added',
+        hasWinner: true,
+        advanceMs: CourtAssignmentTracker.REGENERATION_DEBOUNCE_MS + 1000,
+        expectedNewRound: true,
+        expectedRoundsPlayed: 1,
+      },
+    ])('$scenario', ({ hasWinner, advanceMs, expectedNewRound, expectedRoundsPlayed }) => {
+      tracker.transition(round1Courts, players);
+      expect(tracker.snapshot().roundsPlayed).toBe(0);
+
+      if (hasWinner) {
+        tracker.recordWins([{ ...round1Courts[0], winner: 1 }]);
+      }
+
+      vi.advanceTimersByTime(advanceMs);
+
+      const result = tracker.transition(round2Courts, players);
+
+      expect(result.committed).toBe(expectedNewRound);
+      expect(tracker.snapshot().roundsPlayed).toBe(expectedRoundsPlayed);
+    });
+  });
+
   describe('removePlayerHistory', () => {
     const tracker = new CourtAssignmentTracker();
     const [alice, bob, carol, dave] = createMockPlayers(4);
