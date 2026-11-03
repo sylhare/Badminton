@@ -29,7 +29,6 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
     numberOfCourts: number,
     forceBenchPlayerIds?: Set<string>,
   ): GenerateResult {
-    const replaceRound = !this.shouldCommitRound();
     const presentPlayers = players.filter(p => p.isPresent);
     if (presentPlayers.length === 0) return { courts: [], committed: true, anomalies: [] };
 
@@ -52,15 +51,10 @@ export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker i
 
     const finalCourts = this.generateAssignments(onCourtPlayers, numberOfCourts, 1);
 
-    if (!replaceRound) this.markRoundCompleted();
-    this.clearCurrentSession();
-    CourtAssignmentTracker.lastGeneratedAt = Date.now();
-    if (replaceRound) this.undoLastRound();
-    const detectedAnomalies = this.applyRoundStats(finalCourts, presentPlayers);
-    const anomalies = replaceRound ? [] : detectedAnomalies;
+    const { committed, anomalies } = this.transitionRound(finalCourts, presentPlayers);
     this.notifyStateChange();
 
-    return { courts: finalCourts, committed: !replaceRound, anomalies };
+    return { courts: finalCourts, committed, anomalies };
   }
 
   /**
