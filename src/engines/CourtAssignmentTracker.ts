@@ -388,10 +388,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     this.notifyStateChange();
   }
 
-  /**
-   * Records teammate and opponent pairing stats for a court.
-   * If previousCourt is provided, its stats are reversed first (used on rotation).
-   */
+  /** Swaps a court's pair stats, reversing previousCourt first when given. */
   private updateCourtTeamStats(court: Court, previousCourt?: Court): void {
     if (previousCourt?.teams) {
       const { team1, team2 } = previousCourt.teams;
@@ -421,10 +418,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     }
   }
 
-  /**
-   * Updates the winner of a match and records the result.
-   * If rotatedCourt is provided, applies the rotation and updates team pairing stats.
-   */
+  /** Records a winner and, when rotated, applies the rotation and pair stats. */
   updateWinner({ courtNumber, winner, currentAssignments, rotatedCourt }: UpdateWinnerParams): Court[] {
     const court = currentAssignments.find(c => c.courtNumber === courtNumber);
     if (!court) return currentAssignments;
@@ -450,15 +444,7 @@ export class CourtAssignmentTracker implements ICourtAssignmentTracker {
     return updatedAssignments;
   }
 
-  /**
-   * Reconciles tracker stats after a manual team edit (drag-and-drop or a
-   * rotation) that produced `next` from `previous`. For every court whose team
-   * composition changed it: reverses any recorded win (the result is void once
-   * the line-up differs), swaps that court's teammate/opponent pair stats
-   * (reverse old, apply new), and marks it pending so the next generate does
-   * not double-count. Bench membership changes are reconciled too. Incremental
-   * by design, so it composes correctly with prior edits/rotations this round.
-   */
+  /** Reconciles stats after a manual edit: voids changed wins, swaps pair stats, updates bench counts. */
   applyManualEdit(previous: Court[], next: Court[], players: Player[]): Court[] {
     const prevByNumber = new Map(previous.map(c => [c.courtNumber, c]));
 

@@ -95,6 +95,7 @@ export interface AssignmentAnomaly {
 
 export interface GenerateResult {
   courts: Court[];
+  /** False when the previous round was discarded as a rapid, no-winner regeneration. */
   committed: boolean;
   anomalies: AssignmentAnomaly[];
 }

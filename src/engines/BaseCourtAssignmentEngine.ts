@@ -3,27 +3,13 @@ import { pairKey, teamPairs } from '../utils/playerUtils';
 
 import { CourtAssignmentTracker } from './CourtAssignmentTracker';
 
-/**
- * Base Court Assignment Engine
- *
- * Implements the Template Method pattern for court generation.
- * Handles common tasks like:
- * - Filtering present players
- * - Calculating and assigning bench spots
- * - Recording statistics (benching, singles, pairs)
- *
- * Subclasses must implement `generateAssignments` to provide the specific
- * algorithm for pairing players on the available courts.
- */
+/** Template method for court generation; subclasses implement generateAssignments. */
 export abstract class BaseCourtAssignmentEngine extends CourtAssignmentTracker implements ICourtAssignmentEngine {
 
   abstract readonly name: string;
   abstract readonly description: string;
 
-  /**
-   * Generates court assignments for a set of players.
-   * This template method defines the skeletal implementation of the assignment process.
-   */
+  /** Generates courts and settles the previous round. */
   generate(
     players: Player[],
     numberOfCourts: number,
