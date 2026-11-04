@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import { useAppState } from '../providers/AppStateProvider';
 import type { AnyTournament } from '../providers/AppStateProvider';
@@ -13,6 +14,7 @@ import type { SetScore, TournamentTeam } from '../tournament/types';
 import './TournamentPage.css';
 
 const TournamentPage = (): React.ReactElement => {
+  const { t } = useTranslation();
   const {
     players, isLoaded, handleAddPlayers, handlePlayerToggle, isSmartEngineEnabled,
     applyGameResults, numberOfCourts, tournament, setTournament,
@@ -74,7 +76,7 @@ const TournamentPage = (): React.ReactElement => {
     <div className={`app tournament-page${isSmartEngineEnabled ? ' smart-mode' : ''}`} data-loaded={isLoaded}>
       <nav className="tournament-banner" data-testid="tournament-banner">
         <Link to="/" className="banner-nav-link" data-testid="back-to-app">
-          ← Court Manager
+          {t('nav.backToApp')}
         </Link>
         <button
           className="banner-nav-link"
@@ -82,7 +84,7 @@ const TournamentPage = (): React.ReactElement => {
           disabled={isSetupView}
           data-testid="back-to-setup"
         >
-          Tournament Setup
+          {t('tournament.banner.setup')}
         </button>
         <button
           className="banner-nav-link"
@@ -90,13 +92,13 @@ const TournamentPage = (): React.ReactElement => {
           disabled={!hasTournament || !isSetupView}
           data-testid="back-to-tournament"
         >
-          Current Tournament
+          {t('tournament.banner.current')}
         </button>
       </nav>
       <div className="container main-container">
         <h1>
           <span className="title-emoji">{isSetupView ? '⚙️ ' : '🏆 '}</span>
-          {isSetupView ? 'Tournament Setup' : 'Tournament'}
+          {isSetupView ? t('tournament.setupTitle') : t('tournament.title')}
         </h1>
         <Tournament
           tournament={tournament}

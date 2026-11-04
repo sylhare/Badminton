@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { TournamentTeam } from '../../tournament/types';
 import { formatTeamName } from '../../tournament/types';
@@ -28,6 +29,7 @@ function move<T>(items: T[], index: number, delta: number): T[] {
  * as the tie-break.
  */
 const ManualOrderModal: React.FC<ManualOrderModalProps> = ({ isOpen, teams, onConfirm, onCancel }) => {
+  const { t } = useTranslation();
   const [ordered, setOrdered] = useState<TournamentTeam[]>(teams);
 
   useEffect(() => {
@@ -35,9 +37,9 @@ const ManualOrderModal: React.FC<ManualOrderModalProps> = ({ isOpen, teams, onCo
   }, [isOpen, teams]);
 
   return (
-    <Modal isOpen={isOpen} title="Set the tie-break order" onClose={onCancel} testId="manual-order-modal">
+    <Modal isOpen={isOpen} title={t('modals.manualOrder.title')} onClose={onCancel} testId="manual-order-modal">
       <div className="modal-body">
-        <p>These teams are tied on every metric — put them in the order they should finish:</p>
+        <p>{t('modals.manualOrder.description')}</p>
         <ol className="manual-order-list" data-testid="manual-order-list">
           {ordered.map((team, index) => (
             <li key={team.id} className="manual-order-item" data-testid={`manual-order-item-${index}`}>
@@ -49,7 +51,7 @@ const ManualOrderModal: React.FC<ManualOrderModalProps> = ({ isOpen, teams, onCo
                   className="button button-secondary manual-order-up"
                   disabled={index === 0}
                   onClick={() => setOrdered(prev => move(prev, index, -1))}
-                  aria-label={`Move ${formatTeamName(team)} up`}
+                  aria-label={t('modals.manualOrder.moveUpAria', { name: formatTeamName(team) })}
                   data-testid={`manual-order-up-${index}`}
                 >
                   ▲
@@ -59,7 +61,7 @@ const ManualOrderModal: React.FC<ManualOrderModalProps> = ({ isOpen, teams, onCo
                   className="button button-secondary manual-order-down"
                   disabled={index === ordered.length - 1}
                   onClick={() => setOrdered(prev => move(prev, index, 1))}
-                  aria-label={`Move ${formatTeamName(team)} down`}
+                  aria-label={t('modals.manualOrder.moveDownAria', { name: formatTeamName(team) })}
                   data-testid={`manual-order-down-${index}`}
                 >
                   ▼
@@ -71,14 +73,14 @@ const ManualOrderModal: React.FC<ManualOrderModalProps> = ({ isOpen, teams, onCo
       </div>
       <div className="modal-footer">
         <button className="button button-secondary" onClick={onCancel} data-testid="manual-order-cancel">
-          Cancel
+          {t('modals.manualOrder.cancel')}
         </button>
         <button
           className="button button-primary"
           onClick={() => onConfirm(ordered.map(team => team.id))}
           data-testid="manual-order-save"
         >
-          Save order
+          {t('modals.manualOrder.save')}
         </button>
       </div>
     </Modal>

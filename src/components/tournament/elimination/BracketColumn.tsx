@@ -15,6 +15,7 @@ interface BracketColumnProps {
   nodes: BracketNode[];
   round: number;
   label: string;
+  roundTestId?: string;
   onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
 }
 
@@ -35,11 +36,13 @@ export const BracketColumn: React.FC<BracketColumnProps> = ({
   nodes,
   round,
   label,
+  roundTestId,
   onTeamClick,
 }) => {
+  const headerTestId = roundTestId ?? label.replace(/\s/g, '-');
   return (
     <div className="bracket-column" style={{ width: COLUMN_WIDTH }}>
-      <div className="bracket-column-header" data-testid={`bracket-round-label-${label.replace(/\s/g, '-')}`}>
+      <div className="bracket-column-header" data-testid={`bracket-round-label-${headerTestId}`}>
         {label}
       </div>
       <div className="bracket-column-nodes" style={{ position: 'relative' }}>

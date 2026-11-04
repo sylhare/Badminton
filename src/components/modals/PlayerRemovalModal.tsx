@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pause, Trash } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 import Modal from './Modal';
 
@@ -18,17 +19,19 @@ const PlayerRemovalModal: React.FC<PlayerRemovalModalProps> = ({
   onMarkAbsent,
   onCancel,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Modal
       isOpen={isOpen}
-      title="Remove Player"
+      title={t('modals.playerRemoval.title')}
       onClose={onCancel}
       testId="player-removal-modal"
       closeButtonTestId="player-removal-modal-close"
     >
       <div className="modal-body">
         <p>
-          What would you like to do with <strong>{playerName}</strong>?
+          {t('modals.playerRemoval.message', { name: playerName })}
         </p>
       </div>
 
@@ -39,7 +42,7 @@ const PlayerRemovalModal: React.FC<PlayerRemovalModalProps> = ({
           data-testid="player-removal-modal-absent"
         >
           <Pause size={14} weight="bold" />
-          Mark as Absent
+          {t('modals.playerRemoval.markAbsent')}
         </button>
         <button
           className="button button-danger"
@@ -47,7 +50,7 @@ const PlayerRemovalModal: React.FC<PlayerRemovalModalProps> = ({
           data-testid="player-removal-modal-remove"
         >
           <Trash size={14} />
-          Remove Player
+          {t('modals.playerRemoval.removePlayer')}
         </button>
       </div>
     </Modal>

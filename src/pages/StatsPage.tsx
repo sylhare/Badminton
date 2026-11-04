@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import { useAppState } from '../providers/AppStateProvider';
 import TeammateGraph from '../components/graphs/TeammateGraph';
@@ -15,6 +16,7 @@ import './StatsPage.css';
 const analysisUrl = 'https://github.com/sylhare/Badminton/tree/main/analysis';
 
 function StatsPage(): React.ReactElement {
+  const { t } = useTranslation();
   const { players, isSmartEngineEnabled: isSmartEngine, engineState, engineName, engineDescription } = useAppState();
 
   const {
@@ -43,12 +45,12 @@ function StatsPage(): React.ReactElement {
     <div className="stats-page">
       <nav className="stats-banner" data-testid="stats-banner">
         <Link to="/" className="stats-banner-link" data-testid="back-to-app">
-          ← Court Manager
+          {t('nav.backToApp')}
         </Link>
       </nav>
       <div className="stats-container">
         <header className="stats-header">
-          <h1>{engineName} Diagnostics</h1>
+          <h1>{t('stats.header', { engineName })}</h1>
           <p className="stats-subtitle">
             {engineDescription}
           </p>
@@ -57,11 +59,11 @@ function StatsPage(): React.ReactElement {
         {/* Warnings Section */}
         {hasData && diagnostics.warnings.length > 0 && (
           <section className="warnings-section">
-            <h2>⚠️ Warnings</h2>
+            <h2>{t('stats.warnings.title')}</h2>
             <div className="warnings-list">
               {diagnostics.warnings.map((warning, idx) => (
                 <div key={idx} className="warning-item">
-                  {warning}
+                  {t(warning.key, warning.params)}
                 </div>
               ))}
             </div>
@@ -69,60 +71,60 @@ function StatsPage(): React.ReactElement {
         )}
 
         <section className="session-stats">
-          <h2>🔍 Current Session Diagnostics</h2>
+          <h2>{t('stats.sessionDiagnostics')}</h2>
           {hasData ? (
             <>
               {/* Overview Stats */}
               <div className="stats-grid">
                 <div className="stat-card">
                   <div className="stat-value">{diagnostics.totalPlayers}</div>
-                  <div className="stat-label">Total Players</div>
+                  <div className="stat-label">{t('stats.cards.totalPlayers')}</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-value">{diagnostics.totalRounds}</div>
-                  <div className="stat-label">Rounds Played</div>
+                  <div className="stat-label">{t('stats.cards.roundsPlayed')}</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-value">{diagnostics.repeatedTeammates.length}</div>
-                  <div className="stat-label">Repeated Pairs</div>
+                  <div className="stat-label">{t('stats.cards.repeatedPairs')}</div>
                 </div>
                 <div className="stat-card highlight-warning" data-warning={diagnostics.warnings.length > 0}>
                   <div className="stat-value">{diagnostics.warnings.length}</div>
-                  <div className="stat-label">Warnings</div>
+                  <div className="stat-label">{t('stats.cards.warnings')}</div>
                 </div>
               </div>
 
               {/* Bench Distribution */}
               <div className="diagnostic-section">
-                <h3>🪑 Bench Distribution</h3>
+                <h3>{t('stats.bench.title')}</h3>
                 <div className="bench-summary">
                   <div className="bench-stat">
-                    <span className="bench-label">Never benched:</span>
+                    <span className="bench-label">{t('stats.bench.neverBenched')}</span>
                     <span className="bench-value good">{diagnostics.neverBenched}</span>
                   </div>
                   <div className="bench-stat">
-                    <span className="bench-label">Benched once:</span>
+                    <span className="bench-label">{t('stats.bench.benchedOnce')}</span>
                     <span className="bench-value neutral">{diagnostics.benchedOnce}</span>
                   </div>
                   <div className="bench-stat">
-                    <span className="bench-label">Benched multiple times:</span>
+                    <span className="bench-label">{t('stats.bench.benchedMultiple')}</span>
                     <span className="bench-value warning">{diagnostics.benchedMultiple}</span>
                   </div>
                   <div className="bench-stat">
-                    <span className="bench-label">Min/Max bench count:</span>
+                    <span className="bench-label">{t('stats.bench.minMax')}</span>
                     <span className="bench-value">{diagnostics.minBenchCount} / {diagnostics.maxBenchCount}</span>
                   </div>
                   <div className="bench-stat">
-                    <span className="bench-label">Fairness score:</span>
+                    <span className="bench-label">{t('stats.bench.fairnessScore')}</span>
                     <span className={`bench-value ${getFairnessClass(diagnostics.benchFairnessScore)}`}>
-                      {diagnostics.benchFairnessScore} <small>(lower is better)</small>
+                      {diagnostics.benchFairnessScore} <small>{t('stats.bench.lowerIsBetter')}</small>
                     </span>
                   </div>
                 </div>
 
                 {diagnostics.benchPlayers.length > 0 && (
                   <details className="collapsible-section">
-                    <summary>View bench counts per player ({diagnostics.benchPlayers.length})</summary>
+                    <summary>{t('stats.bench.viewCounts', { count: diagnostics.benchPlayers.length })}</summary>
                     <div style={{ padding: '16px' }}>
                       <BenchGraph
                         benchData={benchCountMap}
@@ -142,7 +144,7 @@ function StatsPage(): React.ReactElement {
 
               {/* Repeated Teammates */}
               <div className="diagnostic-section">
-                <h3>👥 Teammate Connections</h3>
+                <h3>{t('stats.teammates.title')}</h3>
                 {hasEntries(teammateCountMap) ? (
                   <>
                     <TeammateGraph
@@ -152,7 +154,7 @@ function StatsPage(): React.ReactElement {
                     />
                     {diagnostics.repeatedTeammates.length > 0 && (
                       <details className="collapsible-section">
-                        <summary>View repeated pairs ({diagnostics.repeatedTeammates.length})</summary>
+                        <summary>{t('stats.teammates.viewRepeated', { count: diagnostics.repeatedTeammates.length })}</summary>
                         <div style={{ padding: '16px' }}>
                           <PairsGraph pairsData={diagnostics.repeatedTeammates} />
                         </div>
@@ -160,13 +162,13 @@ function StatsPage(): React.ReactElement {
                     )}
                   </>
                 ) : (
-                  <p className="no-issues">✓ No teammate pairings recorded yet</p>
+                  <p className="no-issues">{t('stats.teammates.empty')}</p>
                 )}
               </div>
 
               {/* Repeated Opponents */}
               <div className="diagnostic-section">
-                <h3>⚔️ Opponent Matchups</h3>
+                <h3>{t('stats.opponents.title')}</h3>
                 {hasEntries(opponentCountMap) ? (
                   <>
                     <TeammateGraph
@@ -177,7 +179,7 @@ function StatsPage(): React.ReactElement {
                     />
                     {diagnostics.repeatedOpponents.length > 0 && (
                       <details className="collapsible-section">
-                        <summary>View repeated matchups ({diagnostics.repeatedOpponents.length})</summary>
+                        <summary>{t('stats.opponents.viewRepeated', { count: diagnostics.repeatedOpponents.length })}</summary>
                         <div style={{ padding: '16px' }}>
                           <PairsGraph pairsData={diagnostics.repeatedOpponents} />
                         </div>
@@ -185,20 +187,20 @@ function StatsPage(): React.ReactElement {
                     )}
                   </>
                 ) : (
-                  <p className="no-issues">✓ No opponent matchups recorded yet</p>
+                  <p className="no-issues">{t('stats.opponents.empty')}</p>
                 )}
               </div>
 
               {/* Singles Distribution */}
               <div className="diagnostic-section">
-                <h3>🎯 Singles Matches</h3>
+                <h3>{t('stats.singles.title')}</h3>
                 {hasEntries(singleCountMap) ? (
                   <>
                     <div className="singles-summary">
-                      <span>{diagnostics.singlesPlayers.length} players have played singles</span>
+                      <span>{t('stats.singles.playersCount', { count: diagnostics.singlesPlayers.length })}</span>
                       {diagnostics.playersWithMultipleSingles > 0 && (
                         <span className="warning-text">
-                          ({diagnostics.playersWithMultipleSingles} with multiple)
+                          {t('stats.singles.multipleCount', { count: diagnostics.playersWithMultipleSingles })}
                         </span>
                       )}
                     </div>
@@ -207,7 +209,7 @@ function StatsPage(): React.ReactElement {
                       getPlayerName={resolvePlayerName}
                     />
                     <details className="collapsible-section">
-                      <summary>View singles list ({diagnostics.singlesPlayers.length})</summary>
+                      <summary>{t('stats.singles.viewList', { count: diagnostics.singlesPlayers.length })}</summary>
                       <div className="player-chips">
                         {diagnostics.singlesPlayers.map(({ player, count }) => (
                           <span key={player} className={`chip ${count > 1 ? 'warning' : 'neutral'}`}>
@@ -218,13 +220,13 @@ function StatsPage(): React.ReactElement {
                     </details>
                   </>
                 ) : (
-                  <p className="no-issues">No singles matches recorded</p>
+                  <p className="no-issues">{t('stats.singles.empty')}</p>
                 )}
               </div>
               {/* Level Progression - Smart Engine only */}
               {isSmartEngine && hasEntries(levelHistory) && (
                 <div className="diagnostic-section">
-                  <h3>📈 Level Progression</h3>
+                  <h3>{t('stats.level.title')}</h3>
                   <LevelHistoryGraph
                     levelHistory={levelHistory}
                     getPlayerName={resolvePlayerName}
@@ -234,16 +236,16 @@ function StatsPage(): React.ReactElement {
             </>
           ) : (
             <div className="no-data">
-              <p>No session data yet. Start playing to see diagnostics!</p>
+              <p>{t('stats.empty.message')}</p>
               <Link to="/" className="start-link">
-                Start a Game →
+                {t('stats.empty.startCta')}
               </Link>
             </div>
           )}
         </section>
 
         <section className="analysis-links">
-          <h2>📊 GitHub Analysis</h2>
+          <h2>{t('stats.githubAnalysis.heading')}</h2>
           <div className="analysis-grid">
             <a
               href={analysisUrl}
@@ -254,10 +256,9 @@ function StatsPage(): React.ReactElement {
             >
               <div className="analysis-icon">📊</div>
               <div className="analysis-content">
-                <h3>Explore the Analysis</h3>
+                <h3>{t('stats.githubAnalysis.cardTitle')}</h3>
                 <p>
-                  Read the algorithm documentation, engine comparisons, and level tracker
-                  analysis on GitHub.
+                  {t('stats.githubAnalysis.description')}
                 </p>
               </div>
               <span className="analysis-arrow">→</span>

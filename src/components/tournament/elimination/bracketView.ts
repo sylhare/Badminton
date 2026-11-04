@@ -5,5 +5,6 @@ import type { TournamentMatch } from '../../../tournament/types';
 export interface BracketView {
   tree: BracketNode[][];
   roundLabel: (round: number, totalRounds: number) => string;
+  roundTestId?: (round: number, totalRounds: number) => string;
   onTeamClick: (match: TournamentMatch, teamNumber: 1 | 2) => void;
 }

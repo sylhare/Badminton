@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../types';
 import { DEFAULT_LEVEL } from '../../types';
@@ -6,8 +7,6 @@ import { Tooltip } from '../Tooltip';
 import { SegmentedControl } from '../common/SegmentedControl';
 
 import Modal from './Modal';
-
-const GENDER_LABEL = { F: '💁‍♀️ F', M: '🙋‍♂️ M', Unknown: 'Unknown' } as const;
 
 interface PlayerEditModalProps {
   player: Player | null;
@@ -22,6 +21,7 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   onSave,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   const [gender, setGender] = useState<Player['gender']>('Unknown');
   const [level, setLevel] = useState<number>(50);
 
@@ -38,28 +38,34 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
     onSave(player.id, gender, level);
   };
 
+  const genderLabel = (g: 'F' | 'M' | 'Unknown') => {
+    if (g === 'F') return t('modals.playerEdit.genderOptions.female');
+    if (g === 'M') return t('modals.playerEdit.genderOptions.male');
+    return t('modals.playerEdit.genderOptions.unknown');
+  };
+
   return (
     <Modal isOpen={isOpen} title={player.name} onClose={onCancel} testId="player-edit-modal" closeButtonTestId="player-edit-modal-close">
       <div className="modal-body">
         <div className="player-edit-field">
           <label className="player-edit-label">
-            Gender
-            <Tooltip testId="gender" text="Setting gender helps Smart Engine balance mixed doubles — it avoids putting all players of the same gender on one team." />
+            {t('modals.playerEdit.gender')}
+            <Tooltip testId="gender" text={t('modals.playerEdit.genderTooltip')} />
           </label>
           <SegmentedControl
             variant="gender"
             options={['F', 'M', 'Unknown'] as const}
             selected={gender ?? 'Unknown'}
             onSelect={setGender}
-            label={g => GENDER_LABEL[g]}
+            label={genderLabel}
             testIdFor={g => `gender-pill-${g}`}
           />
         </div>
 
         <div className="player-edit-field">
           <label className="player-edit-label">
-            Level: {level}
-            <Tooltip testId="level" text="Level (0–100) represents playing skill. Smart Engine pairs players of similar levels together for more competitive and enjoyable matches." />
+            {t('modals.playerEdit.level', { level })}
+            <Tooltip testId="level" text={t('modals.playerEdit.levelTooltip')} />
           </label>
           <input
             type="range"
@@ -75,10 +81,10 @@ const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
 
       <div className="modal-footer">
         <button className="button button-secondary" onClick={onCancel} data-testid="player-edit-cancel">
-          Cancel
+          {t('modals.playerEdit.cancel')}
         </button>
         <button className="button button-primary" onClick={handleSave} data-testid="player-edit-save">
-          Save
+          {t('modals.playerEdit.save')}
         </button>
       </div>
     </Modal>

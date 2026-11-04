@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../types';
 import { cx } from '../common/cx';
@@ -18,28 +19,34 @@ const BenchSection: React.FC<BenchSectionProps> = ({
   isAnimating,
   slotBinding,
   onViewBenchCounts,
-}) => (
-  <div className={cx('bench-section', isAnimating && 'animating-blur')}>
-    <div className="bench-header">
-      🪑 Bench ({benchedPlayers.length} player{benchedPlayers.length !== 1 ? 's' : ''})
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className={cx('bench-section', isAnimating && 'animating-blur')}>
+      <div className="bench-header">
+        {benchedPlayers.length === 1
+          ? t('bench.titleSingle')
+          : t('bench.title', { count: benchedPlayers.length })}
+      </div>
+      <div className="bench-players">
+        <TeamPlayerList
+          players={benchedPlayers}
+          className="bench-player"
+          slotBinding={slotBinding}
+        />
+      </div>
+      {onViewBenchCounts && (
+        <button
+          onClick={onViewBenchCounts}
+          className="view-bench-counts-button"
+          data-testid="view-bench-counts-button"
+        >
+          {t('bench.viewCounts')}
+        </button>
+      )}
     </div>
-    <div className="bench-players">
-      <TeamPlayerList
-        players={benchedPlayers}
-        className="bench-player"
-        slotBinding={slotBinding}
-      />
-    </div>
-    {onViewBenchCounts && (
-      <button
-        onClick={onViewBenchCounts}
-        className="view-bench-counts-button"
-        data-testid="view-bench-counts-button"
-      >
-        View bench counts &amp; manage
-      </button>
-    )}
-  </div>
-);
+  );
+};
 
 export default React.memo(BenchSection);

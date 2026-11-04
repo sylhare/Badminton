@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { getColorForCount, GRAPH_COLORS } from '../../constants/graphColors';
 import { splitPairKey } from '../../utils/playerUtils';
@@ -84,6 +85,7 @@ export function TeammateGraph({
   variant = 'teammate',
   playerGender,
 }: TeammateGraphProps): React.ReactElement | null {
+  const { t } = useTranslation();
   const { nodes, edges, maxCount } = useMemo(() => {
     const playerIds = new Set<string>();
     const edgeList: Edge[] = [];
@@ -161,6 +163,8 @@ export function TeammateGraph({
           width={displaySize}
           height={displaySize}
           style={{ display: 'block', flexShrink: 0 }}
+          role="img"
+          aria-label={variant === 'opponent' ? t('stats.opponents.title') : t('stats.teammates.title')}
         >
           {edges.map(edge => {
             const source = nodeMap.get(edge.source);
@@ -216,21 +220,21 @@ export function TeammateGraph({
       <div className="graph-legend">
         <div className="legend-item">
           <span className="legend-line thin" style={{ background: GRAPH_COLORS.count1 }}></span>
-          <span>1×</span>
+          <span>{t('stats.graphs.counts.once')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-line"
                 style={{ background: GRAPH_COLORS.count2, width: '24px', height: '3px' }}></span>
-          <span>2×</span>
+          <span>{t('stats.graphs.counts.twice')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-line"
                 style={{ background: GRAPH_COLORS.count3, width: '24px', height: '5px' }}></span>
-          <span>3×</span>
+          <span>{t('stats.graphs.counts.threeTimes')}</span>
         </div>
         <div className="legend-item">
           <span className="legend-line thick" style={{ background: GRAPH_COLORS.count4Plus }}></span>
-          <span>4×+</span>
+          <span>{t('stats.graphs.counts.fourPlus')}</span>
         </div>
       </div>
 
@@ -238,15 +242,15 @@ export function TeammateGraph({
         <div className="graph-legend" style={{ marginTop: '4px' }}>
           <div className="legend-item">
             <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: GENDER_NODE_COLORS.M, flexShrink: 0 }}></span>
-            <span>M</span>
+            <span>{t('stats.graphs.genderLegend.male')}</span>
           </div>
           <div className="legend-item">
             <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: GENDER_NODE_COLORS.F, flexShrink: 0 }}></span>
-            <span>F</span>
+            <span>{t('stats.graphs.genderLegend.female')}</span>
           </div>
           <div className="legend-item">
             <span style={{ display: 'inline-block', width: '14px', height: '14px', borderRadius: '50%', background: GENDER_NODE_COLORS.Unknown, border: '1px solid #444', flexShrink: 0 }}></span>
-            <span>?</span>
+            <span>{t('stats.graphs.genderLegend.unknown')}</span>
           </div>
         </div>
       )}

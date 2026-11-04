@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import Modal from './Modal';
 
@@ -17,12 +18,14 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   onConfirm,
   onCancel,
   isDestructive = false,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Modal isOpen={isOpen} title={title} onClose={onCancel} testId="confirm-modal">
       <div className="modal-body">
@@ -31,14 +34,14 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
       <div className="modal-footer">
         <button className="button button-secondary" onClick={onCancel}>
-          {cancelText}
+          {cancelText ?? t('modals.confirm.cancel')}
         </button>
         <button
           className={`button ${isDestructive ? 'button-danger' : 'button-primary'}`}
           onClick={onConfirm}
           data-testid="confirm-modal-confirm"
         >
-          {confirmText}
+          {confirmText ?? t('modals.confirm.confirm')}
         </button>
       </div>
     </Modal>

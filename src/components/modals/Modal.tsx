@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 interface ModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ const Modal: React.FC<ModalProps> = ({
   closeOnOverlayClick = true,
   closeButtonTestId,
 }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
@@ -36,7 +39,7 @@ const Modal: React.FC<ModalProps> = ({
       >
         <div className="modal-header">
           <h3>{title}</h3>
-          <button className="modal-close" onClick={onClose} aria-label="Close" data-testid={closeButtonTestId}>
+          <button className="modal-close" onClick={onClose} aria-label={t('modals.close')} data-testid={closeButtonTestId}>
             <X size={20} />
           </button>
         </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player, SetScore } from '../../types';
 import { DEFAULT_SET_SIZE, formatPlayerNames } from '../../types';
@@ -37,6 +38,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
   const setCount = Math.max(1, bestOf);
   const isSingle = setCount === 1;
   const defaults = useMemo(() => MatchScore.defaultSingle(winnerTeam, setSize), [winnerTeam, setSize]);
@@ -74,9 +76,11 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   const setRow = (set: SetInput, index: number) => {
     const suffix = isSingle ? '' : `-${index}`;
     const locked = isLocked(index);
+    const setLabelText = t('modals.scoreInput.setLabel', { number: index + 1 });
+    const setSuffix = isSingle ? '' : ` ${setLabelText.toLowerCase()}`;
     return (
       <div className={cx('score-modal-set-row', locked && 'score-modal-set-locked')} key={index}>
-        {!isSingle && <span className="score-modal-set-label">Set {index + 1}</span>}
+        {!isSingle && <span className="score-modal-set-label">{setLabelText}</span>}
         <div className="score-modal-inputs">
           <input
             type="number"
@@ -85,7 +89,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
             disabled={locked}
             onChange={(e) => updateSet(index, 's1', e.target.value)}
             placeholder={String(defaults.team1)}
-            aria-label={`Team 1 score${isSingle ? '' : ` set ${index + 1}`}`}
+            aria-label={t('modals.scoreInput.team1ScoreAria', { set: setSuffix })}
             data-testid={`score-input-team1${suffix}`}
           />
           <span className="court-score-separator">—</span>
@@ -96,7 +100,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
             disabled={locked}
             onChange={(e) => updateSet(index, 's2', e.target.value)}
             placeholder={String(defaults.team2)}
-            aria-label={`Team 2 score${isSingle ? '' : ` set ${index + 1}`}`}
+            aria-label={t('modals.scoreInput.team2ScoreAria', { set: setSuffix })}
             data-testid={`score-input-team2${suffix}`}
           />
         </div>
@@ -107,17 +111,20 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      title={canConfirm ? `🏆 Team ${resolvedWinner} wins!` : 'Enter the set scores'}
+      title={canConfirm ? t('modals.scoreInput.titleWinner', { winner: resolvedWinner }) : t('modals.scoreInput.titleScores')}
       onClose={onCancel}
       testId="score-input-modal"
     >
       <div className="modal-body">
         <p>{isSingle
-          ? `Enter the score (defaults to ${setSize} – ${winnerTeam === 1 ? defaults.team2 : defaults.team1}):`
-          : `Enter the score for each set (best of ${setCount}):`}</p>
+          ? t('modals.scoreInput.promptSingle', {
+              setSize,
+              defaultOpponent: winnerTeam === 1 ? defaults.team2 : defaults.team1,
+            })
+          : t('modals.scoreInput.promptMultiple', { count: setCount })}</p>
         <div className="score-modal-teams">
           <span className="score-modal-team-name">{formatPlayerNames(team1Players)}</span>
-          <span className="score-modal-vs">vs</span>
+          <span className="score-modal-vs">{t('modals.scoreInput.vs')}</span>
           <span className="score-modal-team-name">{formatPlayerNames(team2Players)}</span>
         </div>
         <div className="score-modal-sets">
@@ -132,7 +139,7 @@ const ScoreInputModal: React.FC<ScoreInputModalProps> = ({
           disabled={!canConfirm}
           data-testid="score-modal-confirm"
         >
-          Confirm
+          {t('modals.scoreInput.confirm')}
         </button>
       </div>
     </Modal>
