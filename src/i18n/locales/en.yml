@@ -1,0 +1,345 @@
+app:
+  title: "🏸 Badminton Court Manager"
+  managePlayers: "Manage Players"
+  courtAssignments: "Court Assignments"
+  bench: "Bench"
+  settings: "Settings"
+
+players:
+  entry:
+    placeholder: "Enter player name (use ` or , to add multiple)"
+    importImage: "Import players from image"
+    addSingle: "Add Player"
+    addMultiple: "Add {{count}} Players"
+    detectedHint: "💡 Detected {{count}} players separated by {{separator}}"
+  stats:
+    present: "Present"
+    absent: "Absent"
+    total: "Total"
+  actions:
+    editGenderLevel: "Click to edit gender/level"
+    markAbsent: "Mark as absent"
+    markPresent: "Mark as present"
+    deletePlayer: "Delete player permanently"
+    benchCountTitle: "Bench count: {{count}}"
+    benchNext: "Bench next"
+    resetAlgorithmTitle: "Reset who played with who history (keeps all players)"
+    resetAlgorithm: "Reset Algorithm"
+    clearAllTitle: "Remove all players and reset scores"
+    clearAll: "Clear All Players"
+    shareTitle: "Share session via URL"
+    share: "Share"
+  smartEngine:
+    label: "Smart Engine"
+    tooltip: "Smart Engine balances matches using gender and skill level. Enable it then click any player name to set their gender and level."
+  modals:
+    clearTitle: "Clear All Players"
+    clearMessage: "Are you sure you want to remove all players? This will also reset all scores and game history. This action cannot be undone."
+    clearConfirm: "Clear All"
+    resetTitle: "Reset Algorithm"
+    resetMessage: "Are you sure you want to reset the algorithm's memory? This will clear all records of who played with who, bench counts, and win/loss history. Players will remain but pairing preferences will be reset."
+    resetConfirm: "Reset Algorithm"
+    cancel: "Cancel"
+
+leaderboard:
+  title: "🏆 Leaderboard"
+  rank: "#"
+  player: "Player"
+  level: "Level"
+  avgPts: "Avg Pts"
+  wins: "Wins"
+  matches: "Matches"
+
+court:
+  settings:
+    courts: "Courts:"
+    rearrange: "Rearrange players"
+    rearrangeTooltip: "Drag a player onto another to swap them between teams, courts and the bench — or tap two players."
+  empty:
+    noPlayers: "Add some players above to start generating court assignments."
+    howItWorksTitle: "How it works:"
+    howItWorksDescription: " Players will be randomly assigned to courts. Doubles (4 players) is preferred, but singles (2 players) will be used for odd numbers. Extra players will be benched."
+    generateButton: "🎲 Generate Assignments"
+  assignments:
+    editModeBanner: "Drag a player onto another to swap them — or tap two players."
+    editModeDone: "Done"
+    tip: "Tip:"
+    winnerInstructions: " Click on a team to mark them as the winner. A crown 👑 will appear next to the winning team. Click again to remove the winner."
+    regenerateButton: "🎲 Regenerate Assignments"
+    lastGenerated: "Last generated {{time}}"
+    timeAgo:
+      justNow: "just now"
+      seconds: "{{count}}s ago"
+      minutes: "{{count}}min ago"
+      hours: "{{count}}h ago"
+      days: "{{count}}d ago"
+  card:
+    header: "Court {{number}}"
+    headerWithMatch: "Court {{number}} - {{matchType}}"
+    singles: "Singles"
+    doubles: "Doubles"
+    rotateTeam: "Rotate team assignment"
+  match:
+    waiting: "Waiting: {{name}}"
+  display:
+    playersOnCourt: "Players on court:"
+    teamTitle: "Team {{number}}"
+    vs: "VS"
+
+bench:
+  title: "🪑 Bench ({{count}} players)"
+  titleSingle: "🪑 Bench (1 player)"
+  viewCounts: "View bench counts & manage"
+
+footer:
+  feedback: "Have feedback? Found a bug or want to suggest a feature?"
+  githubLink: "Let us know on GitHub"
+  viewStats: "View Statistics & Analysis"
+  tryTournament: "Try Tournament Mode"
+  language: "Language"
+
+nav:
+  backToApp: "← Court Manager"
+
+notFound:
+  title: "404"
+  message: "Page not found"
+  goHome: "Return to Court Manager"
+
+stats:
+  header: "{{engineName}} Diagnostics"
+  title: "Diagnostics"
+  sessionDiagnostics: "🔍 Current Session Diagnostics"
+  warnings:
+    title: "⚠️ Warnings"
+    benchImbalance: "Bench imbalance: spread of {{spread}} (expected ~{{expected}} for {{rounds}} rounds)"
+    singlesOverplayed: "{{count}} player(s) played singles {{threshold}}+ times (expected ~{{expected}} each)"
+    pairTeamedUp: "{{count}} pair(s) teamed up {{threshold}}+ times (avg is {{avg}})"
+    pairFacedEachOther: "{{count}} pair(s) faced each other {{threshold}}+ times (avg is {{avg}})"
+    sittingTooLong: "{{player}} has been sitting out for {{count}} consecutive rounds"
+    unbalancedCourts: "Courts are unbalanced: {{details}}"
+  cards:
+    totalPlayers: "Total Players"
+    roundsPlayed: "Rounds Played"
+    repeatedPairs: "Repeated Pairs"
+    warnings: "Warnings"
+  bench:
+    title: "🪑 Bench Distribution"
+    neverBenched: "Never benched:"
+    benchedOnce: "Benched once:"
+    benchedMultiple: "Benched multiple times:"
+    minMax: "Min/Max bench count:"
+    fairnessScore: "Fairness score:"
+    lowerIsBetter: "(lower is better)"
+    viewCounts: "View bench counts per player ({{count}})"
+  teammates:
+    title: "👥 Teammate Connections"
+    viewRepeated: "View repeated pairs ({{count}})"
+    empty: "✓ No teammate pairings recorded yet"
+  opponents:
+    title: "⚔️ Opponent Matchups"
+    viewRepeated: "View repeated matchups ({{count}})"
+    empty: "✓ No opponent matchups recorded yet"
+  singles:
+    title: "🎯 Singles Matches"
+    playersCount: "{{count}} players have played singles"
+    multipleCount: "({{count}} with multiple)"
+    viewList: "View singles list ({{count}})"
+    empty: "No singles matches recorded"
+  level:
+    title: "📈 Level Progression"
+  empty:
+    message: "No session data yet. Start playing to see diagnostics!"
+    startCta: "Start a Game →"
+  graphs:
+    levelHistory:
+      ariaLabel: "Level progression chart"
+      xAxisLabel: "Round"
+    genderLegend:
+      male: "M"
+      female: "F"
+      unknown: "?"
+    counts:
+      once: "1×"
+      twice: "2×"
+      threeTimes: "3×"
+      fourPlus: "4×+"
+  githubAnalysis:
+    heading: "📊 GitHub Analysis"
+    cardTitle: "Explore the Analysis"
+    description: "Read the algorithm documentation, engine comparisons, and level tracker analysis on GitHub."
+
+tournament:
+  title: "Tournament"
+  setupTitle: "Tournament Setup"
+  mode: "Mode"
+  banner:
+    setup: "Tournament Setup"
+    current: "Current Tournament"
+  actions:
+    startNew: "Start a New Tournament"
+    start: "Start Tournament"
+  resetModal:
+    title: "Start a new tournament?"
+    message: "This discards the current tournament and its results. Are you sure you want to start a new one?"
+    confirm: "Start new"
+    cancel: "Cancel"
+  setup:
+    format: "Format"
+    players: "Players"
+    courts: "Number of Courts"
+    sets: "Sets per Match"
+    pointsPerSet: "Points per set"
+    singleGame: "Single game"
+    bestOf: "Best of {{n}}"
+    teams: "Teams"
+    teamTitle: "Team {{number}}"
+    dragHint: "Drag a player onto another to swap them — or tap two players."
+    formats:
+      singles: "Singles (1v1)"
+      doubles: "Doubles (2v2)"
+    warnings:
+      courtWarning: "{{matches}} matches per round but only {{courts}} court{{plural}} — some matches will need to wait."
+    groupKnockout:
+      teamsPerGroup: "Teams per group"
+      qualifiersPerGroup: "Qualifiers per group"
+  kinds:
+    roundRobin:
+      label: "Round Robin"
+      description: "Every team plays every other team."
+    elimination:
+      label: "Elimination"
+      description: "Single elimination bracket with consolation."
+    groupKnockout:
+      label: "Groups + Knockout"
+      description: "Group stage followed by single elimination knockout."
+  standings:
+    title: "Standings"
+    tieBreakTitle: "Tied on every metric — set the finishing order by hand"
+    tieBreakAria: "Tied — needs manual ordering"
+    setTieBreakOrder: "Set tie-break order"
+    table:
+      rank: "Rank"
+      rankShort: "#"
+      team: "Team"
+      won: "W"
+      lost: "L"
+      points: "Pts"
+      sets: "Sets"
+      scoreDiff: "Score Diff"
+  roundRobin:
+    roundHeader: "Round {{round}}"
+    roundComplete: "✓ Complete"
+    roundProgress: "{{done}}/{{total}} done"
+    courtNumber: "Court {{court}}"
+  groupKnockout:
+    groupLabel: "Group {{letter}}"
+    tieBreakAria: "Set tie-break order"
+    groupTieWarning: "A group tie must be resolved before the knockout can start — use the ⇅ button on the tied rows above."
+    knockoutStage: "Knockout Stage"
+    finalResults: "Final Results"
+  elimination:
+    winnersBracket: "Winners Bracket"
+    consolationBracket: "Consolation Bracket"
+    thirdPlace: "3rd Place"
+    tbd: "TBD"
+    bye: "BYE"
+    rounds:
+      final: "Final"
+      semiFinal: "Semi Final"
+      nthOfFinal: "{{n}}th of Final"
+  domain:
+    subtitles:
+      afterRound: "After Round {{done}} / {{total}}"
+      roundZero: "Round 0 / {{total}}"
+      inProgress: "In Progress"
+      finalResults: "Final Results"
+    validation:
+      minTeams: "Need at least 2 teams to start"
+      doublesPlayers: "Each doubles team must have exactly 2 players"
+      tooFewQualifiers: "Too few teams would qualify for a knockout — add teams or lower the group size."
+    warnings:
+      everyoneAdvances: "No one will be eliminated in the group phase — every team advances. Is that what you want?"
+    summary:
+      undersized: "{{count}} teams can't fill groups of {{size}}, so they'll play as {{shape}}."
+      normal: "{{count}} teams → {{shape}}."
+      tooFewKnockout: "{{split}} That leaves too few to seed a knockout — add teams or lower the group size."
+      allAdvance: "{{split}} With the top {{qualifiers}} qualifying, every team advances — no one is eliminated in the group phase."
+
+modals:
+  close: "Close"
+  confirm:
+    defaultTitle: "Confirm"
+    confirm: "Confirm"
+    cancel: "Cancel"
+  imageUpload:
+    title: "📸 Import Players from Image"
+    instructions: "Take a photo or upload an image of your player list. Drag and drop, or click to select."
+    chooseImage: "Choose Image"
+    processing: "🔍 Processing image and extracting player names..."
+    foundPlayers: "Found {{count}} player{{plural}}"
+    selectAll: "Select all"
+    deselectAll: "Deselect all"
+    tryAnotherImage: "📸 Try another image"
+    cancel: "Cancel"
+    addPlayers: "Add {{count}} Player{{plural}}"
+  importState:
+    title: "Load Shared Session"
+    description: "A shared session was found in the URL. Loading it will replace your current session."
+    sharedSavedAt: "Shared session saved: {{time}}"
+    currentSavedAt: "Your session saved: {{time}}"
+    backupPrompt: "Save this link to restore your current session later:"
+    copy: "Copy"
+    copied: "Copied!"
+    decline: "Keep my session"
+    accept: "Load shared session"
+  manualOrder:
+    title: "Set the tie-break order"
+    description: "These teams are tied on every metric — put them in the order they should finish:"
+    moveUpAria: "Move {{name}} up"
+    moveDownAria: "Move {{name}} down"
+    cancel: "Cancel"
+    save: "Save order"
+  playerEdit:
+    gender: "Gender"
+    genderTooltip: "Setting gender helps Smart Engine balance mixed doubles — it avoids putting all players of the same gender on one team."
+    level: "Level: {{level}}"
+    levelTooltip: "Level (0–100) represents playing skill. Smart Engine pairs players of similar levels together for more competitive and enjoyable matches."
+    cancel: "Cancel"
+    save: "Save"
+    genderOptions:
+      female: "💁‍♀️ F"
+      male: "🙋‍♂️ M"
+      unknown: "Unknown"
+  playerRemoval:
+    title: "Remove Player"
+    message: "What would you like to do with {{name}}?"
+    markAbsent: "Mark as Absent"
+    removePlayer: "Remove Player"
+  scoreInput:
+    titleWinner: "🏆 Team {{winner}} wins!"
+    titleScores: "Enter the set scores"
+    promptSingle: "Enter the score (defaults to {{setSize}} – {{defaultOpponent}}):"
+    promptMultiple: "Enter the score for each set (best of {{count}}):"
+    vs: "vs"
+    setLabel: "Set {{number}}"
+    team1ScoreAria: "Team 1 score{{set}}"
+    team2ScoreAria: "Team 2 score{{set}}"
+    confirm: "Confirm"
+  share:
+    title: "Share Session"
+    description: "Share this URL to let others load your current session:"
+    close: "Close"
+    copyUrl: "Copy URL"
+    copied: "Copied!"
+
+ocr:
+  failed: "Failed to process image. Please try again or enter players manually."
+
+engines:
+  simulatedAnnealing:
+    name: "Simulated Annealing"
+    description: "Simulated Annealing with iterative improvement. Performs {{iterations}} iterations, accepting worse solutions probabilistically to escape local minima."
+  smartMatching:
+    name: "Smart Matching v2"
+    description: "Sliding window level grouping with win momentum and mixed doubles preference."

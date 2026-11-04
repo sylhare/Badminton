@@ -1,7 +1,8 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
-import { copyTesseractAssets } from './script/copy-tesseract-assets';
+import { copyTesseractAssets } from './script/copy-tesseract-assets.ts';
+import { yamlPlugin } from './vite/yamlPlugin.ts';
 
 function tesseractAssets(): Plugin {
   return {
@@ -13,7 +14,7 @@ function tesseractAssets(): Plugin {
 }
 
 export default defineConfig(({ command }) => ({
-  plugins: [react(), tesseractAssets()],
+  plugins: [yamlPlugin(), react(), tesseractAssets()],
   base: command === 'build' ? '/Badminton/' : '/',
   build: {
     rolldownOptions: {
