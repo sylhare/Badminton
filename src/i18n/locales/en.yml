@@ -4,6 +4,7 @@ app:
   courtAssignments: "Court Assignments"
   bench: "Bench"
   settings: "Settings"
+  moreInfo: "More information"
 
 players:
   entry:

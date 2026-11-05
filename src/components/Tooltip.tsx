@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const HOVER_DELAY_MS = 1500;
 
@@ -8,6 +9,7 @@ interface TooltipProps {
 }
 
 export function Tooltip({ text, testId }: TooltipProps): React.ReactElement {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const iconRef = useRef<HTMLSpanElement>(null);
@@ -77,7 +79,7 @@ export function Tooltip({ text, testId }: TooltipProps): React.ReactElement {
         data-testid={`${testId}-tooltip-icon`}
         role="button"
         tabIndex={0}
-        aria-label="More information"
+        aria-label={t('app.moreInfo')}
         aria-expanded={open}
       >
         ⓘ

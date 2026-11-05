@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { ConsolationBracket, WinnersBracket, roundLabel } from '../../src/tournament/bracketTree';
+import { ConsolationBracket, WinnersBracket, roundHeader, roundLabel, roundTestId } from '../../src/tournament/bracketTree';
 import { EliminationTournament } from '../../src/tournament/EliminationTournament';
 import { createTournamentTeam, createTournamentTeams } from '../data/testFactories';
 
-describe('roundLabel', () => {
+describe('roundHeader', () => {
   it.each([
-    [3, 3, 'Final'],
-    [1, 1, 'Final'],
-    [2, 3, 'Semi Final'],
-    [1, 3, '4th of Final'],
-    [1, 4, '8th of Final'],
-  ] as const)('labels round %i of %i as %s', (round, totalRounds, expected) => {
-    expect(roundLabel(round, totalRounds)).toBe(expected);
+    [3, 3, { key: 'tournament.elimination.rounds.final' }, 'Final'],
+    [1, 1, { key: 'tournament.elimination.rounds.final' }, 'Final'],
+    [2, 3, { key: 'tournament.elimination.rounds.semiFinal' }, 'Semi-Final'],
+    [1, 3, { key: 'tournament.elimination.rounds.nthOfFinal', params: { n: 4 } }, '4th-of-Final'],
+    [1, 4, { key: 'tournament.elimination.rounds.nthOfFinal', params: { n: 8 } }, '8th-of-Final'],
+  ] as const)('returns header for round %i of %i as %j / %s', (round, totalRounds, expectedLabel, expectedTestId) => {
+    expect(roundHeader(round, totalRounds)).toEqual({ label: expectedLabel, testId: expectedTestId });
+    expect(roundLabel(round, totalRounds)).toEqual(expectedLabel);
+    expect(roundTestId(round, totalRounds)).toBe(expectedTestId);
   });
 });
 

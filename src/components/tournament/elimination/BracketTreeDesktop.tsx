@@ -14,7 +14,7 @@ interface BracketTreeDesktopProps {
  * columns with doubling vertical spacing and SVG elbow connectors between them.
  */
 export const BracketTreeDesktop: React.FC<BracketTreeDesktopProps> = ({
-  view: { tree, roundLabel, roundTestId, onTeamClick },
+  view: { tree, roundHeader, onTeamClick },
   height,
 }) => {
   return (
@@ -28,8 +28,7 @@ export const BracketTreeDesktop: React.FC<BracketTreeDesktopProps> = ({
     >
       {tree.map((nodes, roundIdx) => {
         const round = roundIdx + 1;
-        const label = roundLabel(round, tree.length);
-        const testId = roundTestId ? roundTestId(round, tree.length) : undefined;
+        const { label, testId } = roundHeader(round, tree.length);
         return (
           <div
             key={round}

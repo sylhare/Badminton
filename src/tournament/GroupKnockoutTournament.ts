@@ -8,6 +8,7 @@ import { partitionIntoGroups, seedQualifiers } from './groups';
 import { makeId } from './ids';
 import { DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
+  LocalizedDescriptor,
   SetScore,
   TournamentCreateOptions,
   TournamentMatch,
@@ -79,10 +80,10 @@ export class GroupKnockoutTournament extends Tournament {
    * when fewer than two teams would advance. Counting actual advancers avoids a false alarm
    * when uneven groups leave one group with exactly `qualifiersPerGroup` teams.
    */
-  static validateConfig(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
+  static validateConfig(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): LocalizedDescriptor | null {
     if (teams.length === 0) return null;
     if (GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup) < MIN_KNOCKOUT_TEAMS) {
-      return 'Too few teams would qualify for a knockout — add teams or lower the group size.';
+      return { key: 'tournament.domain.validation.tooFewQualifiers' };
     }
     return null;
   }
@@ -91,10 +92,10 @@ export class GroupKnockoutTournament extends Tournament {
    * Advisory (non-blocking) config note, else null. Everyone advancing is a valid setup — the
    * group stage just seeds a full knockout — but the user probably wants to know no one is cut.
    */
-  static configWarning(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): string | null {
+  static configWarning(teams: TournamentTeam[], groupSize: number, qualifiersPerGroup: number): LocalizedDescriptor | null {
     if (teams.length === 0) return null;
     if (GroupKnockoutTournament.advancingCount(teams, groupSize, qualifiersPerGroup) >= teams.length) {
-      return 'No one will be eliminated in the group phase — every team advances. Is that what you want?';
+      return { key: 'tournament.domain.warnings.everyoneAdvances' };
     }
     return null;
   }
@@ -120,7 +121,7 @@ export class GroupKnockoutTournament extends Tournament {
     teams: TournamentTeam[],
     groupSize: number,
     qualifiersPerGroup: number,
-  ): { message: string; severity: 'hint' | 'warning' | 'error' } | null {
+  ): { message: string; descriptor: LocalizedDescriptor; severity: 'hint' | 'warning' | 'error' } | null {
     if (teams.length === 0) return null;
     const { shape, undersized } = GroupKnockoutTournament.groupShape(teams, groupSize);
     const split = undersized
@@ -130,6 +131,10 @@ export class GroupKnockoutTournament extends Tournament {
     if (GroupKnockoutTournament.validateConfig(teams, groupSize, qualifiersPerGroup)) {
       return {
         message: `${split} That leaves too few to seed a knockout — add teams or lower the group size.`,
+        descriptor: {
+          key: 'tournament.domain.summary.tooFewKnockout',
+          params: { split },
+        },
         severity: 'error',
       };
     }
@@ -137,10 +142,26 @@ export class GroupKnockoutTournament extends Tournament {
       return {
         message: `${split} With the top ${qualifiersPerGroup} qualifying, every team advances`
           + ' — no one is eliminated in the group phase.',
+        descriptor: {
+          key: 'tournament.domain.summary.allAdvance',
+          params: { split, qualifiers: qualifiersPerGroup },
+        },
         severity: 'warning',
       };
     }
-    return { message: split, severity: undersized ? 'warning' : 'hint' };
+    return {
+      message: split,
+      descriptor: undersized
+        ? {
+            key: 'tournament.domain.summary.undersized',
+            params: { count: teams.length, size: groupSize, shape },
+          }
+        : {
+            key: 'tournament.domain.summary.normal',
+            params: { count: teams.length, shape },
+          },
+      severity: undersized ? 'warning' : 'hint',
+    };
   }
 
   static fromState(state: TournamentState): GroupKnockoutTournament {

@@ -4,6 +4,11 @@ import { DEFAULT_SET_SIZE, formatPlayerNames } from '../types';
 export type { SetScore };
 export { DEFAULT_SET_SIZE };
 
+export interface LocalizedDescriptor {
+  key: string;
+  params?: Record<string, string | number>;
+}
+
 export type TournamentFormat = 'singles' | 'doubles';
 
 export enum BracketKind {

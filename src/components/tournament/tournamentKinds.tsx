@@ -27,8 +27,6 @@ export interface TournamentKind {
   labelKey: string;
   /** i18n key for the description. */
   descriptionKey: string;
-  /** Label for the mode-selector pill. */
-  label: string;
   /**
    * Render this format's matches view. The cast is safe because the key is taken
    * from `tournament.state().type`, which always matches the concrete class.
@@ -97,7 +95,6 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
   'round-robin': {
     labelKey: 'tournament.kinds.roundRobin.label',
     descriptionKey: 'tournament.kinds.roundRobin.description',
-    label: 'Round Robin',
     renderMatches: (t, onMatchResult) => (
       <RoundRobinMatches tournament={t as RoundRobinTournament} onMatchResult={onMatchResult} />
     ),
@@ -105,7 +102,6 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
   elimination: {
     labelKey: 'tournament.kinds.elimination.label',
     descriptionKey: 'tournament.kinds.elimination.description',
-    label: 'Elimination',
     renderMatches: (t, onMatchResult) => (
       <EliminationBracket tournament={t as EliminationTournament} onMatchResult={onMatchResult} />
     ),
@@ -113,7 +109,6 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
   'group-knockout': {
     labelKey: 'tournament.kinds.groupKnockout.label',
     descriptionKey: 'tournament.kinds.groupKnockout.description',
-    label: 'Groups + Knockout',
     renderMatches: (t, onMatchResult, onUpdate) => (
       <GroupKnockout
         tournament={t as GroupKnockoutTournament}

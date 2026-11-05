@@ -4,6 +4,7 @@ app:
   courtAssignments: "场地分配"
   bench: "替补席"
   settings: "设置"
+  moreInfo: "更多信息"
 
 players:
   entry:

@@ -234,7 +234,9 @@ describe('GroupKnockoutTournament.validateConfig', () => {
   });
 
   it('blocks only when too few teams would qualify for a knockout', () => {
-    expect(GroupKnockoutTournament.validateConfig(teams(2), 2, 1)).toMatch(/too few/i);
+    expect(GroupKnockoutTournament.validateConfig(teams(2), 2, 1)).toEqual({
+      key: 'tournament.domain.validation.tooFewQualifiers',
+    });
   });
 });
 
@@ -243,7 +245,9 @@ describe('GroupKnockoutTournament.configWarning', () => {
     createTournamentTeams(Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)));
 
   it('warns when every team advances (world-cup group of 4, all 4 qualify)', () => {
-    expect(GroupKnockoutTournament.configWarning(teams(4), 4, 4)).toMatch(/every team advances/i);
+    expect(GroupKnockoutTournament.configWarning(teams(4), 4, 4)).toEqual({
+      key: 'tournament.domain.warnings.everyoneAdvances',
+    });
   });
 
   it('stays silent for the world-cup shape where some teams are cut (2 groups of 4, top 3 advance)', () => {
@@ -262,6 +266,10 @@ describe('GroupKnockoutTournament.setupSummary', () => {
   it('is a neutral hint for an honoured split that eliminates some teams', () => {
     expect(GroupKnockoutTournament.setupSummary(teams(8), 4, 2)).toEqual({
       message: '8 teams → 2 groups of 4.',
+      descriptor: {
+        key: 'tournament.domain.summary.normal',
+        params: { count: 8, shape: '2 groups of 4' },
+      },
       severity: 'hint',
     });
   });
@@ -269,6 +277,10 @@ describe('GroupKnockoutTournament.setupSummary', () => {
   it('lists uneven group sizes in the split', () => {
     expect(GroupKnockoutTournament.setupSummary(teams(7), 4, 2)).toEqual({
       message: '7 teams → 2 groups of 4, 3.',
+      descriptor: {
+        key: 'tournament.domain.summary.normal',
+        params: { count: 7, shape: '2 groups of 4, 3' },
+      },
       severity: 'hint',
     });
   });
@@ -277,6 +289,10 @@ describe('GroupKnockoutTournament.setupSummary', () => {
     expect(GroupKnockoutTournament.setupSummary(teams(4), 3, 2)).toEqual({
       message: '4 teams can\'t fill groups of 3, so they\'ll play as 2 groups of 2. '
         + 'With the top 2 qualifying, every team advances — no one is eliminated in the group phase.',
+      descriptor: {
+        key: 'tournament.domain.summary.allAdvance',
+        params: { split: '4 teams can\'t fill groups of 3, so they\'ll play as 2 groups of 2.', qualifiers: 2 },
+      },
       severity: 'warning',
     });
   });
@@ -284,6 +300,10 @@ describe('GroupKnockoutTournament.setupSummary', () => {
   it('warns on an unreachable size alone when the split still eliminates teams', () => {
     expect(GroupKnockoutTournament.setupSummary(teams(6), 4, 1)).toEqual({
       message: '6 teams can\'t fill groups of 4, so they\'ll play as 2 groups of 3.',
+      descriptor: {
+        key: 'tournament.domain.summary.undersized',
+        params: { count: 6, size: 4, shape: '2 groups of 3' },
+      },
       severity: 'warning',
     });
   });
@@ -293,6 +313,10 @@ describe('GroupKnockoutTournament.setupSummary', () => {
     expect(note.severity).toBe('error');
     expect(note.message).toContain('3 teams can\'t fill groups of 4');
     expect(note.message).toContain('too few to seed a knockout');
+    expect(note.descriptor).toEqual({
+      key: 'tournament.domain.summary.tooFewKnockout',
+      params: { split: '3 teams can\'t fill groups of 4, so they\'ll play as 1 group of 3.' },
+    });
   });
 });
 

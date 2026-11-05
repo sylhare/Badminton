@@ -3,6 +3,7 @@ import { shuffleArray } from '../utils/playerUtils';
 import { Tournament } from './Tournament';
 import { BracketKind, DEFAULT_SET_SIZE, DEFAULT_TOURNAMENT_STATE } from './types';
 import type {
+  LocalizedDescriptor,
   SetScore,
   TournamentCreateOptions,
   TournamentMatch,
@@ -312,8 +313,10 @@ export class EliminationTournament extends Tournament {
     );
   }
 
-  override standingsSubtitle(): string {
-    return this.isComplete() ? 'Final Results' : 'In Progress';
+  override standingsSubtitle(): LocalizedDescriptor {
+    return this.isComplete()
+      ? { key: 'tournament.domain.subtitles.finalResults' }
+      : { key: 'tournament.domain.subtitles.inProgress' };
   }
 
   override showsPoints(): boolean {

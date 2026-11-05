@@ -2,6 +2,7 @@ import { MatchScore } from '../scoring/MatchScore';
 
 import { DEFAULT_SET_SIZE, standingsTied } from './types';
 import type {
+  LocalizedDescriptor,
   SetScore,
   TournamentFormat,
   TournamentMatch,
@@ -166,12 +167,12 @@ export abstract class Tournament {
     return standings;
   }
 
-  validate(teams: TournamentTeam[], format: TournamentFormat): string | null {
-    if (teams.length < 2) return 'Need at least 2 teams to start';
+  validate(teams: TournamentTeam[], format: TournamentFormat): LocalizedDescriptor | null {
+    if (teams.length < 2) return { key: 'tournament.domain.validation.minTeams' };
     if (format === 'doubles') {
       for (const team of teams) {
         if (team.players.length !== 2) {
-          return 'Each doubles team must have exactly 2 players';
+          return { key: 'tournament.domain.validation.doublesPlayers' };
         }
       }
     }
@@ -179,10 +180,12 @@ export abstract class Tournament {
   }
 
   /** Subtitle shown above the standings table. */
-  standingsSubtitle(): string {
+  standingsSubtitle(): LocalizedDescriptor {
     const done = this.completedRounds();
     const total = this.totalRounds();
-    return done > 0 ? `After Round ${done} / ${total}` : `Round 0 / ${total}`;
+    return done > 0
+      ? { key: 'tournament.domain.subtitles.afterRound', params: { done, total } }
+      : { key: 'tournament.domain.subtitles.roundZero', params: { total } };
   }
 
   /** Whether the combined standings table is shown (formats with inline standings hide it). */

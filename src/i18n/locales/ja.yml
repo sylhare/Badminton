@@ -4,6 +4,7 @@ app:
   courtAssignments: "コート割り当て"
   bench: "ベンチ"
   settings: "設定"
+  moreInfo: "詳細情報"
 
 players:
   entry:
