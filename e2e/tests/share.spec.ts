@@ -24,6 +24,7 @@ test.describe('Session Sharing via URL', () => {
     await mainPage.openShareModal();
 
     await test.step('share modal URL contains ?state=', async () => {
+      await expect(page.getByTestId('share-url-input')).toHaveValue(/\?state=.+/);
       const urlValue = await mainPage.getShareUrl();
       expect(urlValue).toContain('?state=');
     });
@@ -31,12 +32,15 @@ test.describe('Session Sharing via URL', () => {
 
   test('import from shared URL', async ({ page }) => {
     await mainPage.addPlayers(DEFAULT_PLAYERS);
+    await expect(page.getByTestId('share-button')).toBeVisible();
     await mainPage.openShareModal();
+    await expect(page.getByTestId('share-url-input')).toHaveValue(/\?state=.+/);
     const shareUrl = await mainPage.getShareUrl();
     expect(shareUrl).toContain('?state=');
 
     await page.evaluate(() => localStorage.clear());
     await page.goto(shareUrl);
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
 
     await test.step('import modal visible with shared metadata', async () => {
@@ -46,6 +50,7 @@ test.describe('Session Sharing via URL', () => {
     });
 
     await page.getByTestId('import-state-accept').click();
+    await page.waitForURL(url => !url.searchParams.has('state'));
     await page.waitForLoadState('networkidle');
 
     await test.step('accepting loads players from shared state', async () => {
@@ -60,10 +65,13 @@ test.describe('Session Sharing via URL', () => {
 
   test('Decline import keeps original session and cleans URL', async ({ page }) => {
     await mainPage.addPlayers(DEFAULT_PLAYERS);
+    await expect(page.getByTestId('share-button')).toBeVisible();
     await mainPage.openShareModal();
+    await expect(page.getByTestId('share-url-input')).toHaveValue(/\?state=.+/);
     const shareUrl = await mainPage.getShareUrl();
 
     await page.goto(shareUrl);
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByTestId('import-state-modal')).toBeVisible({ timeout: 5000 });
