@@ -1764,6 +1764,35 @@ h1 {
     margin: 0 auto;
 }
 
+.app-footer .footer-language {
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+}
+
+.language-selector {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.language-selector:hover,
+.language-selector:focus {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.language-selector option {
+    background: #1a1a2e;
+    color: white;
+}
+
 @media (max-width: 768px) {
     .app-footer {
         margin: 0;

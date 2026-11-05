@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import './App.css';
 import ManualPlayerEntry from './components/players/ManualPlayerEntry';
@@ -66,6 +67,10 @@ function App(): React.ReactElement {
 
   const [isManagePlayersCollapsed, setIsManagePlayersCollapsed] = useState<boolean>(false);
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
+
+  const { t } = useTranslation();
+  const title = t('app.title');
+  const hasEmojiPrefix = title.startsWith('🏸 ');
 
   const { shareUrl, setShareUrl, importState, handleShare, handleImportAccept, handleImportDecline } = useShareState();
 
@@ -161,7 +166,16 @@ function App(): React.ReactElement {
   return (
     <div className={`app${isSmartEngineEnabled ? ' smart-mode' : ''}`} data-loaded={isLoaded}>
       <div className="container main-container">
-        <h1><span className="title-emoji">🏸 </span>Badminton Court Manager</h1>
+        <h1>
+          {hasEmojiPrefix ? (
+            <>
+              <span className="title-emoji">🏸 </span>
+              {title.slice(3)}
+            </>
+          ) : (
+            title
+          )}
+        </h1>
 
         <div
           ref={managePlayersRef}
@@ -172,7 +186,7 @@ function App(): React.ReactElement {
             className="section-header"
             onClick={toggleManagePlayers}
           >
-            <h2>Manage Players</h2>
+            <h2>{t('app.managePlayers')}</h2>
             <span className="collapse-indicator">{isManagePlayersCollapsed ? '▶' : '▼'}</span>
           </div>
 
@@ -202,7 +216,7 @@ function App(): React.ReactElement {
 
         <div className="section" data-testid="court-assignments-section">
           <div className="section-header no-collapse">
-            <h2>Court Assignments</h2>
+            <h2>{t('app.courtAssignments')}</h2>
           </div>
 
           <div className="section-content">
