@@ -10,10 +10,18 @@ const ASSETS_DIR = path.join(ROOT, 'dist', 'assets');
 
 const KB = 1024;
 
-export const BUDGETS = {
+export interface BundleBudgets {
+  entryGzip: number;
+  vendorReactGzip: number;
+  vendorReactRaw: number;
+  maxChunkRaw: number;
+}
+
+export const BUDGETS: BundleBudgets = {
   entryGzip: 40 * KB,
   vendorReactGzip: 110 * KB,
-  maxChunkRaw: 500 * KB,
+  vendorReactRaw: 300 * KB,
+  maxChunkRaw: 100 * KB,
 };
 
 export interface ChunkEvaluation {
@@ -37,67 +45,69 @@ export function formatSize(bytes: number): string {
   return `${(bytes / KB).toFixed(2)} kB`;
 }
 
-export function evaluateChunk(file: string, rawSize: number, gzipSize: number, allowOpencv = false): ChunkEvaluation {
-  const isEntry = /^index(-.*)?\.js$/i.test(file);
-  const isVendorReact = /^vendor-react(-.*)?\.js$/i.test(file);
-  const isOpenCv = /^opencv(-.*)?\.js$/i.test(file);
+function checkBudget(
+  file: string,
+  rawSize: number,
+  gzipSize: number,
+  maxGzip?: number,
+  maxRaw?: number,
+): ChunkEvaluation {
+  const failureReasons: string[] = [];
+  const thresholds: string[] = [];
 
-  if (isOpenCv && allowOpencv) {
-    return {
-      file,
-      rawSize,
-      gzipSize,
-      threshold: 'exempt (ALLOW_OPENCV)',
-      passed: true,
-      notes: 'OpenCV chunk exempted via configuration',
-    };
+  if (maxGzip !== undefined) {
+    thresholds.push(`gzip <= ${formatSize(maxGzip)}`);
+    if (gzipSize > maxGzip) {
+      failureReasons.push(`gzip > ${formatSize(maxGzip)}`);
+    }
   }
 
-  if (isEntry) {
-    const passedGzip = gzipSize <= BUDGETS.entryGzip;
-    const passedCeiling = rawSize <= BUDGETS.maxChunkRaw;
-    const passed = passedGzip && passedCeiling;
-    const failureReasons: string[] = [];
-    if (!passedGzip) failureReasons.push(`gzip > ${formatSize(BUDGETS.entryGzip)}`);
-    if (!passedCeiling) failureReasons.push(`raw > ${formatSize(BUDGETS.maxChunkRaw)}`);
-
-    return {
-      file,
-      rawSize,
-      gzipSize,
-      threshold: `gzip <= ${formatSize(BUDGETS.entryGzip)}`,
-      passed,
-      notes: failureReasons.length > 0 ? failureReasons.join(', ') : undefined,
-    };
+  if (maxRaw !== undefined) {
+    if (maxGzip === undefined) {
+      thresholds.push(`raw <= ${formatSize(maxRaw)}`);
+    }
+    if (rawSize > maxRaw) {
+      failureReasons.push(`raw > ${formatSize(maxRaw)}`);
+    }
   }
 
-  if (isVendorReact) {
-    const passedGzip = gzipSize <= BUDGETS.vendorReactGzip;
-    const passedCeiling = rawSize <= BUDGETS.maxChunkRaw;
-    const passed = passedGzip && passedCeiling;
-    const failureReasons: string[] = [];
-    if (!passedGzip) failureReasons.push(`gzip > ${formatSize(BUDGETS.vendorReactGzip)}`);
-    if (!passedCeiling) failureReasons.push(`raw > ${formatSize(BUDGETS.maxChunkRaw)}`);
-
-    return {
-      file,
-      rawSize,
-      gzipSize,
-      threshold: `gzip <= ${formatSize(BUDGETS.vendorReactGzip)}`,
-      passed,
-      notes: failureReasons.length > 0 ? failureReasons.join(', ') : undefined,
-    };
-  }
-
-  const passedCeiling = rawSize <= BUDGETS.maxChunkRaw;
   return {
     file,
     rawSize,
     gzipSize,
-    threshold: `raw <= ${formatSize(BUDGETS.maxChunkRaw)}`,
-    passed: passedCeiling,
-    notes: !passedCeiling ? `raw exceeds ceiling of ${formatSize(BUDGETS.maxChunkRaw)}` : undefined,
+    threshold: thresholds.join(', '),
+    passed: failureReasons.length === 0,
+    notes: failureReasons.length > 0 ? failureReasons.join(', ') : undefined,
   };
+}
+
+export function evaluateChunk(
+  file: string,
+  rawSize: number,
+  gzipSize: number,
+  allowOpencv = true,
+  budgets: BundleBudgets = BUDGETS,
+): ChunkEvaluation {
+  if (/^opencv(-.*)?\.js$/i.test(file) && allowOpencv) {
+    return {
+      file,
+      rawSize,
+      gzipSize,
+      threshold: 'exempt (OpenCV)',
+      passed: true,
+      notes: 'OpenCV chunk exempted (lazy-loaded dependency)',
+    };
+  }
+
+  if (/^index(-.*)?\.js$/i.test(file)) {
+    return checkBudget(file, rawSize, gzipSize, budgets.entryGzip, budgets.maxChunkRaw);
+  }
+
+  if (/^vendor-react(-.*)?\.js$/i.test(file)) {
+    return checkBudget(file, rawSize, gzipSize, budgets.vendorReactGzip, budgets.vendorReactRaw);
+  }
+
+  return checkBudget(file, rawSize, gzipSize, undefined, budgets.maxChunkRaw);
 }
 
 export function renderAsciiTable(evaluations: ChunkEvaluation[]): string {
@@ -136,17 +146,21 @@ export function renderAsciiTable(evaluations: ChunkEvaluation[]): string {
   return [topBorder, headerLine, headerSep, bodyLines, bottomBorder].join('\n');
 }
 
+function emptyResult(): CheckSizeResult {
+  return {
+    passed: false,
+    totalChunks: 0,
+    passedChunks: 0,
+    failedChunks: 0,
+    evaluations: [],
+  };
+}
+
 export function checkBundleSize(): CheckSizeResult {
   if (!fs.existsSync(ASSETS_DIR)) {
     console.error(`Error: Assets directory not found at ${ASSETS_DIR}`);
     console.error('Please run "pnpm build" before checking bundle sizes.');
-    return {
-      passed: false,
-      totalChunks: 0,
-      passedChunks: 0,
-      failedChunks: 0,
-      evaluations: [],
-    };
+    return emptyResult();
   }
 
   const jsFiles = fs.readdirSync(ASSETS_DIR)
@@ -155,18 +169,12 @@ export function checkBundleSize(): CheckSizeResult {
 
   if (jsFiles.length === 0) {
     console.error(`Error: No .js files found in ${ASSETS_DIR}`);
-    return {
-      passed: false,
-      totalChunks: 0,
-      passedChunks: 0,
-      failedChunks: 0,
-      evaluations: [],
-    };
+    return emptyResult();
   }
 
-  const allowOpencv = process.env.CHECK_SIZE_ALLOW_OPENCV === 'true' ||
-    process.env.ALLOW_OPENCV === 'true' ||
-    process.argv.includes('--allow-opencv');
+  const allowOpencv = process.env.CHECK_SIZE_ALLOW_OPENCV !== 'false' &&
+    process.env.DISALLOW_OPENCV !== 'true' &&
+    !process.argv.includes('--no-opencv');
 
   const evaluations: ChunkEvaluation[] = jsFiles.map(file => {
     const filePath = path.join(ASSETS_DIR, file);
