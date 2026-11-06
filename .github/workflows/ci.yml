@@ -39,3 +39,49 @@ jobs:
 
     - name: Run tests
       run: pnpm test
+
+    - name: Check bundle size budgets
+      run: |
+        pnpm check:size
+
+    - name: Ensure Chrome is available
+      run: |
+        if ! command -v google-chrome &> /dev/null && ! command -v chromium &> /dev/null; then
+          sudo apt-get update && sudo apt-get install -y chromium-browser
+        fi
+        google-chrome --version || chromium --version || true
+
+    - name: Run Lighthouse CI
+      run: pnpm lighthouse
+
+    - name: Output Lighthouse report summary
+      if: always()
+      run: |
+        if [ -f .lighthouseci/links.json ]; then
+          echo "=========================================="
+          echo "   Lighthouse CI Report Links (Public)    "
+          echo "=========================================="
+          node -e '
+            const fs = require("fs");
+            const links = JSON.parse(fs.readFileSync(".lighthouseci/links.json", "utf8"));
+            for (const [url, reportUrl] of Object.entries(links)) {
+              console.log(`${url} -> ${reportUrl}`);
+            }
+          '
+          echo "=========================================="
+          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+            {
+              echo "### 🏸 Lighthouse CI Reports"
+              echo ""
+              echo "| Tested URL | Report Link |"
+              echo "| :--- | :--- |"
+              node -e '
+                const fs = require("fs");
+                const links = JSON.parse(fs.readFileSync(".lighthouseci/links.json", "utf8"));
+                for (const [url, reportUrl] of Object.entries(links)) {
+                  console.log(`| \`${url}\` | [View Report](${reportUrl}) |`);
+                }
+              '
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+        fi
