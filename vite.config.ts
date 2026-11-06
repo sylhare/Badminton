@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 import { copyTesseractAssets } from './script/copy-tesseract-assets';
 
@@ -13,7 +14,20 @@ function tesseractAssets(): Plugin {
 }
 
 export default defineConfig(({ command }) => ({
-  plugins: [react(), tesseractAssets()],
+  plugins: [
+    react(),
+    tesseractAssets(),
+    ...(process.env.ANALYZE === 'true'
+      ? [
+          visualizer({
+            filename: 'dist/stats.html',
+            open: false,
+            gzipSize: true,
+            brotliSize: true,
+          }),
+        ]
+      : []),
+  ],
   base: command === 'build' ? '/Badminton/' : '/',
   build: {
     rolldownOptions: {
