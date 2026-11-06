@@ -1,5 +1,5 @@
 app:
-  title: "🏸 羽毛球场地管理器"
+  title: "羽毛球场地管理器"
   managePlayers: "管理球员"
   courtAssignments: "场地分配"
   bench: "替补席"

@@ -1,5 +1,5 @@
 app:
-  title: "🏸 バドミントンコートマネージャー"
+  title: "バドミントンコートマネージャー"
   managePlayers: "プレイヤー管理"
   courtAssignments: "コート割り当て"
   bench: "ベンチ"

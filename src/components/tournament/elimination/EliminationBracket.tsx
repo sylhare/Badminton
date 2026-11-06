@@ -8,6 +8,7 @@ import { EliminationTournament } from '../../../tournament/EliminationTournament
 import { useMatchModal } from '../useMatchModal';
 
 import { CARD_HEIGHT, HEADER_HEIGHT } from './BracketColumn';
+import type { BracketRoundHeader } from './bracketView';
 import { BracketSection } from './BracketSection';
 
 import './EliminationBracket.css';
@@ -18,7 +19,7 @@ interface BracketSectionConfig {
   title: string;
   tree: BracketNode[][];
   height: number;
-  roundHeader: (round: number, totalRounds: number) => { label: string; testId: string };
+  roundHeader: (round: number, totalRounds: number) => BracketRoundHeader;
 }
 
 interface EliminationBracketProps {
@@ -49,6 +50,11 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
   const cbCardAreaHeight = consolationBracketSize > 0 ? Math.max((consolationBracketSize / 2) * CARD_HEIGHT, extraRoundHeight) : 0;
   const cbHeight = cbCardAreaHeight > 0 ? cbCardAreaHeight + HEADER_HEIGHT : 0;
 
+  const formatRoundHeader = (r: number, tot: number): BracketRoundHeader => {
+    const { label, testId } = roundHeader(r, tot);
+    return { label: t(label.key, label.params), testId };
+  };
+
   const sections: BracketSectionConfig[] = [
     {
       key: 'wb',
@@ -56,13 +62,7 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
       title: t('tournament.elimination.winnersBracket'),
       tree: wbTree,
       height: wbHeight,
-      roundHeader: (r, tot) => {
-        const header = roundHeader(r, tot);
-        return {
-          label: t(header.label.key, header.label.params),
-          testId: header.testId,
-        };
-      },
+      roundHeader: formatRoundHeader,
     },
   ];
 
@@ -73,13 +73,7 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
       title: t('tournament.elimination.consolationBracket'),
       tree: cbTree,
       height: cbHeight,
-      roundHeader: (r, tot) => {
-        const header = roundHeader(r, tot);
-        return {
-          label: t(header.label.key, header.label.params),
-          testId: header.testId,
-        };
-      },
+      roundHeader: formatRoundHeader,
     });
   }
 

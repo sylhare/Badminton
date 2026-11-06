@@ -1,5 +1,5 @@
 app:
-  title: "🏸 Badminton Court Manager"
+  title: "Badminton Court Manager"
   managePlayers: "Manage Players"
   courtAssignments: "Court Assignments"
   bench: "Bench"

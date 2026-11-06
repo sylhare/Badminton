@@ -69,8 +69,6 @@ function App(): React.ReactElement {
   const [forceBenchPlayerIds, setForceBenchPlayerIds] = useState<Set<string>>(new Set());
 
   const { t } = useTranslation();
-  const title = t('app.title');
-  const hasEmojiPrefix = title.startsWith('🏸 ');
 
   const { shareUrl, setShareUrl, importState, handleShare, handleImportAccept, handleImportDecline } = useShareState();
 
@@ -167,14 +165,8 @@ function App(): React.ReactElement {
     <div className={`app${isSmartEngineEnabled ? ' smart-mode' : ''}`} data-loaded={isLoaded}>
       <div className="container main-container">
         <h1>
-          {hasEmojiPrefix ? (
-            <>
-              <span className="title-emoji">🏸 </span>
-              {title.slice(3)}
-            </>
-          ) : (
-            title
-          )}
+          <span className="title-emoji">🏸 </span>
+          {t('app.title')}
         </h1>
 
         <div

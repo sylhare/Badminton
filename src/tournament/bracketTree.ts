@@ -195,14 +195,6 @@ export function roundHeader(roundNumber: number, totalRounds: number): RoundHead
   };
 }
 
-export function roundLabel(roundNumber: number, totalRounds: number): LocalizedDescriptor {
-  return roundHeader(roundNumber, totalRounds).label;
-}
-
-export function roundTestId(roundNumber: number, totalRounds: number): string {
-  return roundHeader(roundNumber, totalRounds).testId;
-}
-
 /** Map a node's two feeding results to its render node (a match node stands as soon as the match exists). */
 function nodeFromResults(
   round: number,
