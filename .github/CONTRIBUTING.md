@@ -148,6 +148,33 @@ describe('MyClass', () => {
 
 Use `it.each` or `describe.each` to limit duplication for test setup.
 
+## Internationalization (i18n)
+
+Translations are defined in YAML files under `src/i18n/locales/<lang>.yml`, with `en.yml` as the source of truth. Nested YAML structures are flattened into dot-separated keys (e.g. `app.title`) at build time.
+
+### Usage in components
+
+```tsx
+const { t } = useTranslation();
+<h1>{t('app.title')}</h1>
+```
+
+### Rules
+
+- **Key parity**: Every key in `en.yml` must exist in every other locale file — no missing keys, no extra keys.
+- **Non-empty values**: Values must be non-empty strings.
+- **Build-time enforcement**: The Vite YAML plugin validates parity and non-empty values on dev and build; mismatched keys fail compilation.
+
+### Adding a new locale
+
+1. Create `src/i18n/locales/<lang>.yml` matching all keys from `en.yml`.
+2. Register `<lang>` in `SUPPORTED_LOCALES` (`src/i18n/detectLocale.ts`), lazy imports (`src/i18n/index.ts`), and `LANGUAGE_LABELS` (`src/i18n/LanguageSelector.tsx`).
+3. Verify parity:
+
+```bash
+pnpm vitest run tests/i18n/localeParity.test.ts
+```
+
 ## Pull Request Guidelines
 
 ### Commit messages

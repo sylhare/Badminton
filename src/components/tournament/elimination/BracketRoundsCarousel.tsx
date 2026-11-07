@@ -16,19 +16,19 @@ interface BracketRoundsCarouselProps {
  * round peeks at the edge to hint the swipe.
  */
 export const BracketRoundsCarousel: React.FC<BracketRoundsCarouselProps> = ({
-  view: { tree, roundLabel, onTeamClick },
+  view: { tree, roundHeader, onTeamClick },
 }) => {
   return (
     <div className="bracket-carousel" data-testid="bracket-carousel">
       {tree.map((nodes, roundIdx) => {
         const round = roundIdx + 1;
-        const label = roundLabel(round, tree.length);
+        const { label, testId } = roundHeader(round, tree.length);
         const visible = nodes.filter(node => node.type !== 'empty');
         return (
           <div className="bracket-carousel-page" key={round} data-testid={`bracket-carousel-page-${round}`}>
             <div
               className="bracket-column-header"
-              data-testid={`bracket-round-label-${label.replace(/\s/g, '-')}`}
+              data-testid={`bracket-round-label-${testId}`}
             >
               {label}
             </div>

@@ -479,18 +479,18 @@ describe('formatTimeAgo', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  const cases: Array<[string, string, string]> = [
-    ['"just now" for timestamps less than 1 second old', '2024-01-01T00:00:00.500Z', 'just now'],
-    ['seconds for timestamps under 1 minute old', '2024-01-01T00:00:30.000Z', '30s ago'],
-    ['minutes for timestamps 1–59 minutes old', '2024-01-01T00:10:00.000Z', '10min ago'],
-    ['hours for timestamps 1–23 hours old', '2024-01-01T03:00:00.000Z', '3h ago'],
-    ['days for timestamps 1+ days old', '2024-01-02T01:00:00.000Z', '1d ago'],
-    ['2d ago for timestamps ~2 days old', '2024-01-03T00:00:00.000Z', '2d ago'],
+  const cases: Array<[string, string, { key: string; params?: Record<string, number> }]> = [
+    ['"just now" for timestamps less than 1 second old', '2024-01-01T00:00:00.500Z', { key: 'court.assignments.timeAgo.justNow' }],
+    ['seconds for timestamps under 1 minute old', '2024-01-01T00:00:30.000Z', { key: 'court.assignments.timeAgo.seconds', params: { count: 30 } }],
+    ['minutes for timestamps 1–59 minutes old', '2024-01-01T00:10:00.000Z', { key: 'court.assignments.timeAgo.minutes', params: { count: 10 } }],
+    ['hours for timestamps 1–23 hours old', '2024-01-01T03:00:00.000Z', { key: 'court.assignments.timeAgo.hours', params: { count: 3 } }],
+    ['days for timestamps 1+ days old', '2024-01-02T01:00:00.000Z', { key: 'court.assignments.timeAgo.days', params: { count: 1 } }],
+    ['2d ago for timestamps ~2 days old', '2024-01-03T00:00:00.000Z', { key: 'court.assignments.timeAgo.days', params: { count: 2 } }],
   ];
 
   it.each(cases)('returns %s', (_label, now, expected) => {
     vi.setSystemTime(new Date(now));
-    expect(formatTimeAgo(new Date('2024-01-01T00:00:00.000Z').getTime())).toBe(expected);
+    expect(formatTimeAgo(new Date('2024-01-01T00:00:00.000Z').getTime())).toEqual(expected);
   });
 });
 

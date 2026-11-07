@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../types';
 import { cx } from '../../common/cx';
@@ -27,6 +28,7 @@ const SinglesMatch: React.FC<SinglesMatchProps> = ({
   team1Binding,
   team2Binding,
 }) => {
+  const { t } = useTranslation();
   const b1 = team1Binding?.getProps(0);
   const b2 = team2Binding?.getProps(0);
   const s1 = team1Binding?.stateClass(0);
@@ -43,7 +45,7 @@ const SinglesMatch: React.FC<SinglesMatchProps> = ({
           {team1Player.name}
           {winner === 1 && <span className="crown">👑</span>}
         </div>
-        <div className="vs-divider">VS</div>
+        <div className="vs-divider">{t('court.display.vs')}</div>
         <div
           className={cx('singles-player', isClickable && 'singles-player-clickable', winner === 2 && 'singles-player-winner', team2Binding && 'player-slot-draggable', s2)}
           onClick={(event) => onPlayerClick?.(event, 2)}
@@ -57,7 +59,7 @@ const SinglesMatch: React.FC<SinglesMatchProps> = ({
       {waitingPlayer && (
         <div style={{ marginTop: '15px', fontSize: '0.9rem', color: '#718096' }}>
           <div className={isAnimating ? 'animating-blur' : ''}>
-            Waiting: {waitingPlayer.name}
+            {t('court.match.waiting', { name: waitingPlayer.name })}
           </div>
         </div>
       )}
@@ -66,4 +68,3 @@ const SinglesMatch: React.FC<SinglesMatchProps> = ({
 };
 
 export default SinglesMatch;
-

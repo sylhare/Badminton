@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../types';
 import type { OnMatchResult, TournamentTeam, TournamentType } from '../../tournament/types';
@@ -36,6 +37,7 @@ export const Tournament: React.FC<TournamentProps> = ({
   onTogglePlayer,
   showSetup,
 }) => {
+  const { t } = useTranslation();
   const [typeOverride, setTypeOverride] = useState<TournamentType | null>(null);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const selectedType = typeOverride ?? tournament?.state().type ?? 'round-robin';
@@ -51,12 +53,12 @@ export const Tournament: React.FC<TournamentProps> = ({
     return (
       <div className="tournament-setup-wrapper">
         <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
-          <h3>Mode</h3>
+          <h3>{t('tournament.mode')}</h3>
           <SegmentedControl
             options={TOURNAMENT_TYPES}
             selected={selectedType}
             onSelect={setTypeOverride}
-            label={type => TOURNAMENT_KINDS[type].label}
+            label={type => t(TOURNAMENT_KINDS[type].labelKey)}
             testIdFor={type => `type-pill-${type}`}
           />
         </div>
@@ -97,13 +99,14 @@ export const Tournament: React.FC<TournamentProps> = ({
         onClick={() => setConfirmingReset(true)}
         data-testid="new-tournament-button"
       >
-        Start a New Tournament
+        {t('tournament.actions.startNew')}
       </button>
       <ConfirmModal
         isOpen={confirmingReset}
-        title="Start a new tournament?"
-        message="This discards the current tournament and its results. Are you sure you want to start a new one?"
-        confirmText="Start new"
+        title={t('tournament.resetModal.title')}
+        message={t('tournament.resetModal.message')}
+        confirmText={t('tournament.resetModal.confirm')}
+        cancelText={t('tournament.resetModal.cancel')}
         isDestructive
         onConfirm={() => { setConfirmingReset(false); onReset(); }}
         onCancel={() => setConfirmingReset(false)}

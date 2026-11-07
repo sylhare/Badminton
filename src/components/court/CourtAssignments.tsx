@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Court, Player, SetScore, WinnerSelection } from '../../types';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -14,17 +15,20 @@ import CourtSettingsBar from './CourtSettingsBar';
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
 
-export function formatTimeAgo(timestampMs: number): string {
+/**
+ * Returns a translation key and count params for relative time display.
+ */
+export function formatTimeAgo(timestampMs: number): { key: string; params?: Record<string, number> } {
   const diffMs = Date.now() - timestampMs;
   const diffSeconds = Math.floor(diffMs / 1000);
-  if (diffSeconds < 1) return 'just now';
-  if (diffSeconds < 60) return `${diffSeconds}s ago`;
+  if (diffSeconds < 1) return { key: 'court.assignments.timeAgo.justNow' };
+  if (diffSeconds < 60) return { key: 'court.assignments.timeAgo.seconds', params: { count: diffSeconds } };
   const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) return `${diffMinutes}min ago`;
+  if (diffMinutes < 60) return { key: 'court.assignments.timeAgo.minutes', params: { count: diffMinutes } };
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return { key: 'court.assignments.timeAgo.hours', params: { count: diffHours } };
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return { key: 'court.assignments.timeAgo.days', params: { count: diffDays } };
 }
 
 interface CourtAssignmentsProps {
@@ -60,6 +64,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
   lastGeneratedAt,
   isSmartEngineEnabled = false,
 }) => {
+  const { t } = useTranslation();
   const { trackCourtAction } = useAnalytics();
   const [isAnimating, setIsAnimating] = useState(false);
   const [isButtonShaking, setIsButtonShaking] = useState(false);
@@ -152,14 +157,14 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
       {isEditMode && (
         <div className="edit-mode-banner" data-testid="edit-mode-banner">
-          <span>Drag a player onto another to swap them — or tap two players.</span>
+          <span>{t('court.assignments.editModeBanner')}</span>
           <button
             type="button"
             className="edit-mode-done"
             onClick={exitEditMode}
             data-testid="edit-mode-done"
           >
-            Done
+            {t('court.assignments.editModeDone')}
           </button>
         </div>
       )}
@@ -197,9 +202,7 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
 
           {onWinnerChange && !hasHistoricalWinners && !assignments.some(c => c.winner !== undefined) && (
             <div className="winner-instructions">
-              💡 <strong>Tip:</strong> Click on a team to mark them as the winner. A crown 👑 will appear next to the
-              winning
-              team. Click again to remove the winner.
+              💡 <strong>{t('court.assignments.tip')}</strong>{t('court.assignments.winnerInstructions')}
             </div>
           )}
 
@@ -210,11 +213,14 @@ const CourtAssignments: React.FC<CourtAssignmentsProps> = ({
               className={`generate-button ${isButtonShaking ? 'button-shake' : ''}`}
               data-testid="generate-assignments-button"
             >
-              🎲 Regenerate Assignments
+              {t('court.assignments.regenerateButton')}
             </button>
-            {isRecentAssignment && (
+            {isRecentAssignment && lastGeneratedAt !== undefined && (
               <div className="last-generated" data-testid="last-generated">
-                Last generated {formatTimeAgo(lastGeneratedAt!)}
+                {(() => {
+                  const descriptor = formatTimeAgo(lastGeneratedAt);
+                  return t('court.assignments.lastGenerated', { time: t(descriptor.key, descriptor.params) });
+                })()}
               </div>
             )}
           </div>

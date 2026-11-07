@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Court, SetScore } from '../../../types';
 import { DoublesMatch, NoTeamsDisplay, SinglesMatch } from '../display';
@@ -33,6 +34,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   team1Binding,
   team2Binding,
 }) => {
+  const { t } = useTranslation();
   const [pendingWinner, setPendingWinner] = useState<1 | 2 | null>(null);
   const clickCoordsRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const { trackGameAction } = useAnalytics();
@@ -80,7 +82,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
   if (!teams) {
     matchContent = <NoTeamsDisplay players={court.players} isAnimating={isAnimating} />;
   } else if (isSingles) {
-    matchType = 'Singles';
+    matchType = t('court.card.singles');
     matchContent = (
       <SinglesMatch
         team1Player={teams.team1[0]}
@@ -95,7 +97,7 @@ const CourtCard: React.FC<CourtCardProps> = ({
       />
     );
   } else if (isDoubles) {
-    matchType = 'Doubles';
+    matchType = t('court.card.doubles');
     matchContent = (
       <DoublesMatch
         team1Players={teams.team1}

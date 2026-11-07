@@ -7,6 +7,30 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
+import { initI18n } from '../src/i18n';
+
+// Stub localStorage badminton-locale
+if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+  window.localStorage.setItem('badminton-locale', 'en');
+}
+
+// Stub navigator.languages
+if (typeof navigator !== 'undefined') {
+  Object.defineProperty(navigator, 'languages', {
+    value: ['en-US', 'en'],
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(navigator, 'language', {
+    value: 'en-US',
+    configurable: true,
+    writable: true,
+  });
+}
+
+// Initialize i18n synchronously with English
+void initI18n('en');
+
 globalThis.ReadableStream = NodeReadableStream as typeof ReadableStream;
 globalThis.WritableStream = NodeWritableStream as typeof WritableStream;
 
@@ -51,6 +75,10 @@ globalThis.DecompressionStream = class MockDecompressionStream extends MockTrans
 
 afterEach(async () => {
   cleanup();
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    window.localStorage.setItem('badminton-locale', 'en');
+  }
+  await initI18n('en');
   await new Promise(resolve => setTimeout(resolve, 0));
 });
 

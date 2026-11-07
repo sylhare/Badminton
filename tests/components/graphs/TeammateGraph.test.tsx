@@ -141,4 +141,21 @@ describe('TeammateGraph Component', () => {
 
     expect(Number(largeWidth)).toBeGreaterThanOrEqual(Number(smallWidth));
   });
+
+  it('renders gender legend and aria-label', () => {
+    const data = { '1|2': 1 };
+    render(
+      <TeammateGraph
+        teammateData={data}
+        getPlayerName={mockGetPlayerName}
+        playerGender={{ '1': 'M', '2': 'F' }}
+      />,
+    );
+
+    const svg = screen.getByRole('img', { name: '👥 Teammate Connections' });
+    expect(svg).toBeInTheDocument();
+    expect(screen.getByText('M')).toBeInTheDocument();
+    expect(screen.getByText('F')).toBeInTheDocument();
+    expect(screen.getByText('?')).toBeInTheDocument();
+  });
 });

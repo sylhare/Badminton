@@ -19,10 +19,10 @@ describe('NotFoundPage', () => {
   it('renders 404 page with heading, message, home link, and footer', () => {
     renderNotFound();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('404');
-    expect(screen.getByText(/doesn't exist/)).toBeInTheDocument();
+    expect(screen.getByText('Page not found')).toBeInTheDocument();
 
     const link = screen.getByTestId('go-home-link');
-    expect(link).toHaveTextContent('Go back to the Court Manager');
+    expect(link).toHaveTextContent('Return to Court Manager');
     expect(link).toHaveAttribute('href', '/');
 
     expect(screen.getByTestId('app-footer')).toBeInTheDocument();

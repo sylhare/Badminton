@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useAnalytics } from '../../../hooks/useAnalytics';
 
@@ -13,6 +14,7 @@ const CourtHeader: React.FC<CourtHeaderProps> = ({
   matchType,
   onRotateTeams,
 }) => {
+  const { t } = useTranslation();
   const { trackCourtAction } = useAnalytics();
 
   const handleRotateTeams = onRotateTeams ? () => {
@@ -23,14 +25,16 @@ const CourtHeader: React.FC<CourtHeaderProps> = ({
   return (
     <div className="court-header">
       <h3>
-        Court {courtNumber}{matchType ? ` - ${matchType}` : ''}
+        {matchType
+          ? t('court.card.headerWithMatch', { number: courtNumber, matchType })
+          : t('court.card.header', { number: courtNumber })}
       </h3>
       {handleRotateTeams && (
         <button
           className="rotate-teams-button"
           onClick={handleRotateTeams}
-          title="Rotate team assignment"
-          aria-label="Rotate team assignment"
+          title={t('court.card.rotateTeam')}
+          aria-label={t('court.card.rotateTeam')}
           data-testid="rotate-teams-button"
         >
           ↻
@@ -41,4 +45,3 @@ const CourtHeader: React.FC<CourtHeaderProps> = ({
 };
 
 export default CourtHeader;
-

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useState } from 'react';
 import { Camera, UserPlus } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 import { parsePlayerInput } from '../../utils/playerUtils';
 import { useAnalytics } from '../../hooks/useAnalytics';
@@ -11,6 +12,7 @@ interface ManualPlayerEntryProps {
 }
 
 const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded }) => {
+  const { t } = useTranslation();
   const { trackPlayerAction } = useAnalytics();
   const [playerInput, setPlayerInput] = useState('');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -43,7 +45,7 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
             type="text"
             value={playerInput}
             onChange={(e) => setPlayerInput(e.target.value)}
-            placeholder="Enter player name (use ` or , to add multiple)"
+            placeholder={t('players.entry.placeholder')}
             className="player-entry-input"
             data-testid="player-entry-input"
             autoComplete="off"
@@ -57,7 +59,7 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
             type="button"
             className="camera-button"
             onClick={() => setIsImageModalOpen(true)}
-            title="Import players from image"
+            title={t('players.entry.importImage')}
             data-testid="open-image-modal-button"
           >
             <Camera size={20} weight="bold" />
@@ -69,14 +71,16 @@ const ManualPlayerEntry: React.FC<ManualPlayerEntryProps> = ({ onPlayersAdded })
             data-testid="add-player-button"
           >
             <UserPlus size={18} weight="bold" />
-            {isMultiInput && playerCount > 1 ? `Add ${playerCount} Players` : 'Add Player'}
+            {isMultiInput && playerCount > 1
+              ? t('players.entry.addMultiple', { count: playerCount })
+              : t('players.entry.addSingle')}
           </button>
         </div>
       </form>
 
       {isMultiInput && playerCount > 1 && (
         <p className="multi-input-hint">
-          💡 Detected {playerCount} players separated by {separator}
+          {t('players.entry.detectedHint', { count: playerCount, separator })}
         </p>
       )}
 

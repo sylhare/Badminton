@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { DEFAULT_LEVEL } from '../../types';
 
@@ -42,6 +43,7 @@ export function LevelHistoryGraph({
   levelHistory,
   getPlayerName,
 }: LevelHistoryGraphProps): React.ReactElement | null {
+  const { t } = useTranslation();
   const { topPlayers, greyPlayers, totalRounds, yMin, yMax } = useMemo(() => {
     const entries = Object.entries(levelHistory).filter(([, h]) => h.length > 0);
     if (entries.length === 0) return { topPlayers: [], greyPlayers: [], totalRounds: 0, yMin: 0, yMax: 100 };
@@ -98,7 +100,7 @@ export function LevelHistoryGraph({
 
   return (
     <div className="level-history-graph">
-      <SvgChart viewBoxWidth={CANVAS_WIDTH} viewBoxHeight={CANVAS_HEIGHT} maxWidth={CANVAS_WIDTH} ariaLabel="Level progression chart">
+      <SvgChart viewBoxWidth={CANVAS_WIDTH} viewBoxHeight={CANVAS_HEIGHT} maxWidth={CANVAS_WIDTH} ariaLabel={t('stats.graphs.levelHistory.ariaLabel')}>
         {/* Y gridlines and labels */}
         {yTicks.map(tick => {
           const y = toY(tick);
@@ -164,7 +166,7 @@ export function LevelHistoryGraph({
           fill="#8b949e"
           fontSize={10}
         >
-          Round
+          {t('stats.graphs.levelHistory.xAxisLabel')}
         </text>
 
         {/* Grey lines first (below coloured ones) */}

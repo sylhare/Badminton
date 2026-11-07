@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { OnMatchResult, TournamentMatch } from '../../../tournament/types';
 import { MatchScore } from '../../../scoring/MatchScore';
@@ -18,6 +19,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
   tournament,
   onMatchResult,
 }) => {
+  const { t } = useTranslation();
   const { handleTeamClick, scoreModal } = useMatchModal(onMatchResult);
 
   const currentRound = tournament.currentRound();
@@ -44,9 +46,14 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
               onClick={() => toggle(round)}
               data-testid={`round-header-${round}`}
             >
-              <h3>Round {round}</h3>
+              <h3>{t('tournament.roundRobin.roundHeader', { round })}</h3>
               <span className="round-status">
-                {roundDone ? '✓ Complete' : `${roundMatches.filter(m => m.winner).length}/${roundMatches.length} done`}
+                {roundDone
+                  ? t('tournament.roundRobin.roundComplete')
+                  : t('tournament.roundRobin.roundProgress', {
+                      done: roundMatches.filter(m => m.winner).length,
+                      total: roundMatches.length,
+                    })}
               </span>
               <span className="collapse-indicator">{expanded ? '▼' : '▶'}</span>
             </div>
@@ -61,7 +68,7 @@ export const RoundRobinMatches: React.FC<RoundRobinMatchesProps> = ({
                       className={cx('match-row', match.winner && 'match-complete')}
                       data-testid={`match-${match.id}`}
                     >
-                      <div className="match-court">Court {match.courtNumber}</div>
+                      <div className="match-court">{t('tournament.roundRobin.courtNumber', { court: match.courtNumber })}</div>
                       <div className="match-display">
                         {isSingles(match) ? (
                           <SinglesMatch

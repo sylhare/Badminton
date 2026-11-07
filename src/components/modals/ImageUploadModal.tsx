@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Camera, Check } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 import { useImageOcr } from '../../hooks/useImageOcr';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
@@ -19,6 +20,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   onClose,
   onPlayersAdded,
 }) => {
+  const { t } = useTranslation();
   const [extractedPlayers, setExtractedPlayers] = useState<string[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +93,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      title="📸 Import Players from Image"
+      title={t('modals.imageUpload.title')}
       onClose={handleClose}
       testId="image-upload-modal"
       className="image-upload-modal"
@@ -117,20 +119,16 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             >
               <div className="upload-content">
                 <Camera size={48} weight="light" className="upload-icon" />
-                <p>
-                  Take a photo or upload an image of your player list.
-                  <br />
-                  Drag and drop, or click to select.
-                </p>
+                <p>{t('modals.imageUpload.instructions')}</p>
                 <button type="button" className="upload-button">
-                  Choose Image
+                  {t('modals.imageUpload.chooseImage')}
                 </button>
               </div>
             </div>
 
             {isProcessing && (
               <div className="processing">
-                <p>🔍 Processing image and extracting player names...</p>
+                <p>{t('modals.imageUpload.processing')}</p>
                 <div className="progress-container">
                   <div
                     className="progress-bar"
@@ -145,7 +143,10 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
           <div className="extracted-players-section">
             <div className="extracted-players-header">
               <p className="extracted-count">
-                Found <strong>{extractedPlayers.length}</strong> player{extractedPlayers.length !== 1 ? 's' : ''}
+                {t('modals.imageUpload.foundPlayers', {
+                  count: extractedPlayers.length,
+                  plural: extractedPlayers.length !== 1 ? 's' : '',
+                })}
               </p>
               <div className="selection-actions">
                 <button
@@ -154,7 +155,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                   onClick={handleSelectAll}
                   disabled={selectedPlayers.size === extractedPlayers.length}
                 >
-                  Select all
+                  {t('modals.imageUpload.selectAll')}
                 </button>
                 <button
                   type="button"
@@ -162,7 +163,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
                   onClick={handleDeselectAll}
                   disabled={selectedPlayers.size === 0}
                 >
-                  Deselect all
+                  {t('modals.imageUpload.deselectAll')}
                 </button>
               </div>
             </div>
@@ -193,7 +194,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
               className="try-another-image-btn"
               onClick={handleClick}
             >
-              📸 Try another image
+              {t('modals.imageUpload.tryAnotherImage')}
             </button>
           </div>
         )}
@@ -202,7 +203,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       {extractedPlayers.length > 0 && (
         <div className="modal-footer">
           <button className="button button-secondary" onClick={handleClose}>
-            Cancel
+            {t('modals.imageUpload.cancel')}
           </button>
           <button
             className="button button-primary"
@@ -210,7 +211,10 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             disabled={selectedPlayers.size === 0}
             data-testid="add-extracted-players-button"
           >
-            Add {selectedPlayers.size} Player{selectedPlayers.size !== 1 ? 's' : ''}
+            {t('modals.imageUpload.addPlayers', {
+              count: selectedPlayers.size,
+              plural: selectedPlayers.size !== 1 ? 's' : '',
+            })}
           </button>
         </div>
       )}

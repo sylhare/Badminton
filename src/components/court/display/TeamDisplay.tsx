@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { Player } from '../../../types';
 import { cx } from '../../common/cx';
@@ -24,6 +25,8 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({
   isClickable = false,
   slotBinding,
 }) => {
+  const { t } = useTranslation();
+
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (isClickable && onTeamClick) {
       onTeamClick(event, teamNumber);
@@ -38,14 +41,14 @@ const TeamDisplay: React.FC<TeamDisplayProps> = ({
         data-testid={`team-${teamNumber}`}
       >
         <div className="team-label">
-          Team {teamNumber}
+          {t('court.display.teamTitle', { number: teamNumber })}
           {isWinner && <span className="crown">👑</span>}
         </div>
         <div className="team-players">
           <TeamPlayerList players={players} slotBinding={slotBinding} />
         </div>
       </div>
-      {showVsDivider && <div className="vs-divider">VS</div>}
+      {showVsDivider && <div className="vs-divider">{t('court.display.vs')}</div>}
     </>
   );
 };

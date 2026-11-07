@@ -1,4 +1,4 @@
-import type { TournamentMatch, TournamentTeam } from './types';
+import type { LocalizedDescriptor, TournamentMatch, TournamentTeam } from './types';
 
 export type BracketNodeType = 'match' | 'bye-advance' | 'tbd' | 'empty';
 
@@ -175,12 +175,24 @@ export function getCBExpectedPool(
   return result;
 }
 
-export function roundLabel(roundNumber: number, totalRounds: number): string {
+export interface RoundHeader {
+  label: LocalizedDescriptor;
+  testId: string;
+}
+
+export function roundHeader(roundNumber: number, totalRounds: number): RoundHeader {
   const roundsFromFinal = totalRounds - roundNumber;
-  if (roundsFromFinal === 0) return 'Final';
-  if (roundsFromFinal === 1) return 'Semi Final';
+  if (roundsFromFinal === 0) {
+    return { label: { key: 'tournament.elimination.rounds.final' }, testId: 'Final' };
+  }
+  if (roundsFromFinal === 1) {
+    return { label: { key: 'tournament.elimination.rounds.semiFinal' }, testId: 'Semi-Final' };
+  }
   const n = Math.pow(2, roundsFromFinal);
-  return `${n}th of Final`;
+  return {
+    label: { key: 'tournament.elimination.rounds.nthOfFinal', params: { n } },
+    testId: `${n}th-of-Final`,
+  };
 }
 
 /** Map a node's two feeding results to its render node (a match node stands as soon as the match exists). */

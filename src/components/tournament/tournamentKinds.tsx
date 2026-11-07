@@ -1,6 +1,7 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
-import type { OnMatchResult, TournamentTeam, TournamentType } from '../../tournament/types';
+import type { LocalizedDescriptor, OnMatchResult, TournamentTeam, TournamentType } from '../../tournament/types';
 import type { Tournament } from '../../tournament/Tournament';
 import type { RoundRobinTournament } from '../../tournament/RoundRobinTournament';
 import type { EliminationTournament } from '../../tournament/EliminationTournament';
@@ -22,8 +23,10 @@ export interface SetupConfig {
 }
 
 export interface TournamentKind {
-  /** Label for the mode-selector pill. */
-  label: string;
+  /** i18n key for the label. */
+  labelKey: string;
+  /** i18n key for the description. */
+  descriptionKey: string;
   /**
    * Render this format's matches view. The cast is safe because the key is taken
    * from `tournament.state().type`, which always matches the concrete class.
@@ -38,10 +41,49 @@ export interface TournamentKind {
   /** Peak concurrent matches per round for the setup court warning; defaults to the round-robin count. */
   matchesPerRound?: (teams: TournamentTeam[], config: SetupConfig) => number;
   /** Blocking setup error (e.g. too few qualifiers) that disables Start, else null. */
-  validateSetup?: (teams: TournamentTeam[], config: SetupConfig) => string | null;
+  validateSetup?: (teams: TournamentTeam[], config: SetupConfig) => LocalizedDescriptor | string | null;
   /** Format-specific setup fields, rendered in the setup form under the shared ones. */
   renderSetupConfig?: (config: SetupConfig, teams: TournamentTeam[]) => React.ReactNode;
 }
+
+const GroupKnockoutSetupSection: React.FC<{ config: SetupConfig; teams: TournamentTeam[] }> = ({ config: c, teams }) => {
+  const { t } = useTranslation();
+  const note = GroupKnockoutTournament.setupSummary(teams, c.groupSize, c.qualifiersPerGroup);
+  return (
+    <div className="setup-section" data-testid="group-knockout-config">
+      <h3>{t('tournament.kinds.groupKnockout.label')}</h3>
+      <div className="group-knockout-fields">
+        <label className="group-knockout-field">
+          {t('tournament.setup.groupKnockout.teamsPerGroup')}
+          <NumberField
+            value={c.groupSize}
+            min={2}
+            onChange={next => {
+              c.setGroupSize(next);
+              c.setQualifiersPerGroup(Math.min(c.qualifiersPerGroup, next));
+            }}
+            testId="group-size-input"
+          />
+        </label>
+        <label className="group-knockout-field">
+          {t('tournament.setup.groupKnockout.qualifiersPerGroup')}
+          <NumberField
+            value={c.qualifiersPerGroup}
+            min={1}
+            max={c.groupSize}
+            onChange={c.setQualifiersPerGroup}
+            testId="qualifiers-input"
+          />
+        </label>
+      </div>
+      {note && (
+        <p className={`setup-${note.severity}`} data-testid="group-preview">
+          {note.descriptor ? t(note.descriptor.key, note.descriptor.params) : note.message}
+        </p>
+      )}
+    </div>
+  );
+};
 
 /**
  * Per-format view wiring. Presentation *policy* (subtitles, which tables to show)
@@ -51,19 +93,22 @@ export interface TournamentKind {
  */
 export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
   'round-robin': {
-    label: 'Round Robin',
+    labelKey: 'tournament.kinds.roundRobin.label',
+    descriptionKey: 'tournament.kinds.roundRobin.description',
     renderMatches: (t, onMatchResult) => (
       <RoundRobinMatches tournament={t as RoundRobinTournament} onMatchResult={onMatchResult} />
     ),
   },
   elimination: {
-    label: 'Elimination',
+    labelKey: 'tournament.kinds.elimination.label',
+    descriptionKey: 'tournament.kinds.elimination.description',
     renderMatches: (t, onMatchResult) => (
       <EliminationBracket tournament={t as EliminationTournament} onMatchResult={onMatchResult} />
     ),
   },
   'group-knockout': {
-    label: 'Groups + Knockout',
+    labelKey: 'tournament.kinds.groupKnockout.label',
+    descriptionKey: 'tournament.kinds.groupKnockout.description',
     renderMatches: (t, onMatchResult, onUpdate) => (
       <GroupKnockout
         tournament={t as GroupKnockoutTournament}
@@ -73,43 +118,7 @@ export const TOURNAMENT_KINDS: Record<TournamentType, TournamentKind> = {
     ),
     matchesPerRound: (teams, c) => GroupKnockoutTournament.matchesPerRound(teams, c.groupSize),
     validateSetup: (teams, c) => GroupKnockoutTournament.validateConfig(teams, c.groupSize, c.qualifiersPerGroup),
-    renderSetupConfig: (c, teams) => {
-      const note = GroupKnockoutTournament.setupSummary(teams, c.groupSize, c.qualifiersPerGroup);
-      return (
-      <div className="setup-section" data-testid="group-knockout-config">
-        <h3>Groups + Knockout</h3>
-        <div className="group-knockout-fields">
-          <label className="group-knockout-field">
-            Teams per group
-            <NumberField
-              value={c.groupSize}
-              min={2}
-              onChange={next => {
-                c.setGroupSize(next);
-                c.setQualifiersPerGroup(Math.min(c.qualifiersPerGroup, next));
-              }}
-              testId="group-size-input"
-            />
-          </label>
-          <label className="group-knockout-field">
-            Qualifiers per group
-            <NumberField
-              value={c.qualifiersPerGroup}
-              min={1}
-              max={c.groupSize}
-              onChange={c.setQualifiersPerGroup}
-              testId="qualifiers-input"
-            />
-          </label>
-        </div>
-        {note && (
-          <p className={`setup-${note.severity}`} data-testid="group-preview">
-            {note.message}
-          </p>
-        )}
-      </div>
-      );
-    },
+    renderSetupConfig: (c, teams) => <GroupKnockoutSetupSection config={c} teams={teams} />,
   },
 };
 

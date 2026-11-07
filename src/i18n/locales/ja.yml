@@ -1,0 +1,346 @@
+app:
+  title: "バドミントンコートマネージャー"
+  managePlayers: "プレイヤー管理"
+  courtAssignments: "コート割り当て"
+  bench: "ベンチ"
+  settings: "設定"
+  moreInfo: "詳細情報"
+
+players:
+  entry:
+    placeholder: "プレイヤー名を入力（複数追加は ` または , を使用）"
+    importImage: "画像からプレイヤーを読み込む"
+    addSingle: "プレイヤーを追加"
+    addMultiple: "{{count}} 人のプレイヤーを追加"
+    detectedHint: "💡 {{separator}} 区切りで {{count}} 人のプレイヤーを検出しました"
+  stats:
+    present: "参加"
+    absent: "欠席"
+    total: "合計"
+  actions:
+    editGenderLevel: "クリックして性別・レベルを編集"
+    markAbsent: "欠席にする"
+    markPresent: "参加にする"
+    deletePlayer: "プレイヤーを完全に削除"
+    benchCountTitle: "ベンチ回数: {{count}}"
+    benchNext: "次回ベンチ"
+    resetAlgorithmTitle: "対戦履歴をリセット（プレイヤーは保持）"
+    resetAlgorithm: "アルゴリズムをリセット"
+    clearAllTitle: "全プレイヤーを削除してスコアをリセット"
+    clearAll: "全プレイヤーを削除"
+    shareTitle: "URL でセッションを共有"
+    share: "共有"
+  smartEngine:
+    label: "スマートエンジン"
+    tooltip: "スマートエンジンは性別とスキルレベルを考慮して試合のバランスを調整します。有効化後、プレイヤー名をクリックして性別とレベルを設定してください。"
+  modals:
+    clearTitle: "全プレイヤーを削除"
+    clearMessage: "すべてのプレイヤーを削除してもよろしいですか？スコアと対戦履歴もリセットされます。この操作は取り消せません。"
+    clearConfirm: "すべて削除"
+    resetTitle: "アルゴリズムをリセット"
+    resetMessage: "アルゴリズムの記録をリセットしてもよろしいですか？ペアリング履歴、ベンチ回数、勝敗履歴が消去されます。プレイヤーは残りますが、組み合わせの優先度はリセットされます。"
+    resetConfirm: "アルゴリズムをリセット"
+    cancel: "キャンセル"
+
+leaderboard:
+  title: "🏆 リーダーボード"
+  rank: "#"
+  player: "プレイヤー"
+  level: "レベル"
+  avgPts: "平均得点"
+  wins: "勝利数"
+  matches: "試合数"
+
+court:
+  settings:
+    courts: "コート数:"
+    rearrange: "プレイヤーを入れ替える"
+    rearrangeTooltip: "プレイヤーを別のプレイヤーにドラッグ（または2人をタップ）して、チーム・コート・ベンチ間で入れ替えます。"
+  empty:
+    noPlayers: "コート割り当てを生成するには、上の欄からプレイヤーを追加してください。"
+    howItWorksTitle: "仕組み:"
+    howItWorksDescription: " プレイヤーはランダムにコートへ割り当てられます。ダブルス（4人）が優先されますが、奇数の場合はシングルス（2人）が組まれます。残りのプレイヤーはベンチに入ります。"
+    generateButton: "🎲 コート割り当てを生成"
+  assignments:
+    editModeBanner: "プレイヤーをドラッグまたは2人タップして入れ替えます。"
+    editModeDone: "完了"
+    tip: "ヒント:"
+    winnerInstructions: " チームをクリックして勝者を記録できます。勝ったチームの横に王冠 👑 が表示されます。もう一度クリックすると勝者を解除します。"
+    regenerateButton: "🎲 コート割り当てを再生成"
+    lastGenerated: "最終生成: {{time}}"
+    timeAgo:
+      justNow: "今"
+      seconds: "{{count}}秒前"
+      minutes: "{{count}}分前"
+      hours: "{{count}}時間前"
+      days: "{{count}}日前"
+  card:
+    header: "第{{number}}コート"
+    headerWithMatch: "第{{number}}コート - {{matchType}}"
+    singles: "シングルス"
+    doubles: "ダブルス"
+    rotateTeam: "チーム編成をローテーション"
+  match:
+    waiting: "待機中: {{name}}"
+  display:
+    playersOnCourt: "コート上のプレイヤー:"
+    teamTitle: "チーム {{number}}"
+    vs: "VS"
+
+bench:
+  title: "🪑 ベンチ ({{count}} 人)"
+  titleSingle: "🪑 ベンチ (1 人)"
+  viewCounts: "ベンチ回数の確認と管理"
+
+footer:
+  feedback: "ご意見・バグ報告・機能の提案はこちら"
+  githubLink: "GitHub でお知らせください"
+  viewStats: "統計と分析を見る"
+  tryTournament: "トーナメントモードを試す"
+  language: "言語"
+
+nav:
+  backToApp: "← コートマネージャー"
+
+notFound:
+  title: "404"
+  message: "お探しのページが見つかりません"
+  goHome: "コートマネージャーに戻る"
+
+stats:
+  header: "{{engineName}} 診断"
+  title: "診断"
+  sessionDiagnostics: "🔍 現在のセッション診断"
+  warnings:
+    title: "⚠️ 警告"
+    benchImbalance: "ベンチの不均衡: 差が {{spread}} です（{{rounds}} ラウンドで想定される差は ~{{expected}}）"
+    singlesOverplayed: "{{count}} 人のプレイヤーがシングルスを {{threshold}} 回以上プレイしました（各人の想定回数は ~{{expected}}）"
+    pairTeamedUp: "{{count}} 組のペアが {{threshold}} 回以上組みました（平均は {{avg}} 回）"
+    pairFacedEachOther: "{{count}} 組のペアが {{threshold}} 回以上対戦しました（平均は {{avg}} 回）"
+    sittingTooLong: "{{player}} が {{count}} ラウンド連続でベンチに入っています"
+    unbalancedCourts: "コートのバランスが偏っています: {{details}}"
+  cards:
+    totalPlayers: "合計プレイヤー数"
+    roundsPlayed: "実施ラウンド数"
+    repeatedPairs: "重複ペア数"
+    warnings: "警告数"
+  bench:
+    title: "🪑 ベンチの分布"
+    neverBenched: "ベンチ回数 0回:"
+    benchedOnce: "ベンチ回数 1回:"
+    benchedMultiple: "複数回ベンチ:"
+    minMax: "最小/最大ベンチ回数:"
+    fairnessScore: "公平性スコア:"
+    lowerIsBetter: "（低いほど良好）"
+    viewCounts: "プレイヤーごとのベンチ回数を表示 ({{count}})"
+  teammates:
+    title: "👥 ペアの組み合わせ"
+    viewRepeated: "重複ペアを表示 ({{count}})"
+    empty: "✓ ペアの記録はまだありません"
+  opponents:
+    title: "⚔️ 対戦の組み合わせ"
+    viewRepeated: "重複対戦を表示 ({{count}})"
+    empty: "✓ 対戦の記録はまだありません"
+  singles:
+    title: "🎯 シングルス試合"
+    playersCount: "{{count}} 人のプレイヤーがシングルスを行いました"
+    multipleCount: "（{{count}} 人が複数回）"
+    viewList: "シングルス一覧を表示 ({{count}})"
+    empty: "シングルス試合の記録はありません"
+  level:
+    title: "📈 レベル推移"
+  empty:
+    message: "セッションデータがまだありません。試合を始めると診断が表示されます！"
+    startCta: "試合を開始する →"
+  graphs:
+    levelHistory:
+      ariaLabel: "レベル推移チャート"
+      xAxisLabel: "ラウンド"
+    genderLegend:
+      male: "男性"
+      female: "女性"
+      unknown: "不明"
+    counts:
+      once: "1回"
+      twice: "2回"
+      threeTimes: "3回"
+      fourPlus: "4回以上"
+  githubAnalysis:
+    heading: "📊 GitHub 分析"
+    cardTitle: "分析を確認する"
+    description: "アルゴリズムの解説、エンジンの比較、レベル追跡の分析を GitHub でご覧いただけます（英語）。"
+
+tournament:
+  title: "トーナメント"
+  setupTitle: "トーナメント設定"
+  mode: "形式"
+  banner:
+    setup: "トーナメント設定"
+    current: "現在のトーナメント"
+  actions:
+    startNew: "新しいトーナメントを開始"
+    start: "トーナメントを開始"
+  resetModal:
+    title: "新しいトーナメントを開始しますか？"
+    message: "現在のトーナメントとその結果は破棄されます。新しいトーナメントを開始してもよろしいですか？"
+    confirm: "新しく開始"
+    cancel: "キャンセル"
+  setup:
+    format: "対戦種目"
+    players: "プレイヤー"
+    courts: "コート数"
+    sets: "1試合のゲーム数"
+    pointsPerSet: "1ゲームの得点数"
+    singleGame: "1ゲームマッチ"
+    bestOf: "{{n}} ゲーム制"
+    teams: "チーム"
+    teamTitle: "チーム {{number}}"
+    dragHint: "プレイヤーをドラッグまたは2人タップして入れ替えます。"
+    formats:
+      singles: "シングルス (1v1)"
+      doubles: "ダブルス (2v2)"
+    warnings:
+      courtWarning: "1ラウンドあたり {{matches}} 試合ですが、コートが {{courts}} 面しかないため、待機が発生します。"
+    groupKnockout:
+      teamsPerGroup: "グループごとのチーム数"
+      qualifiersPerGroup: "グループごとの通過チーム数"
+  kinds:
+    roundRobin:
+      label: "総当たり戦（ラウンドロビン）"
+      description: "全チームが他の全チームと対戦します。"
+    elimination:
+      label: "トーナメント戦（ノックアウト）"
+      description: "敗者復活戦付きのシングルエリミネーション方式です。"
+    groupKnockout:
+      label: "グループリーグ ＋ 決勝トーナメント"
+      description: "グループステージ後にノックアウト方式の決勝トーナメントを行います。"
+  standings:
+    title: "順位表"
+    tieBreakTitle: "すべての指標が同点です — 手動で最終順位を設定してください"
+    tieBreakAria: "同率 — 手動での順位決定が必要です"
+    setTieBreakOrder: "順位決定戦の順位を設定"
+    table:
+      rank: "順位"
+      rankShort: "#"
+      team: "チーム"
+      won: "勝"
+      lost: "敗"
+      points: "勝点"
+      sets: "セット差"
+      scoreDiff: "得失点差"
+  roundRobin:
+    roundHeader: "第{{round}}ラウンド"
+    roundComplete: "✓ 完了"
+    roundProgress: "{{done}}/{{total}} 完了"
+    courtNumber: "第{{court}}コート"
+  groupKnockout:
+    groupLabel: "グループ {{letter}}"
+    tieBreakAria: "順位決定戦の順位を設定"
+    groupTieWarning: "決勝トーナメントを開始する前にグループ内の同率を解決する必要があります — 上の同率行にある ⇅ ボタンを使用してください。"
+    knockoutStage: "決勝トーナメント"
+    finalResults: "最終結果"
+  elimination:
+    winnersBracket: "勝者トーナメント"
+    consolationBracket: "敗者復活トーナメント"
+    thirdPlace: "3位決定戦"
+    tbd: "未定"
+    bye: "不戦勝"
+    rounds:
+      final: "決勝"
+      semiFinal: "準決勝"
+      nthOfFinal: "準々決勝（ベスト{{n}}）"
+  domain:
+    subtitles:
+      afterRound: "第{{done}}ラウンド終了時点 / 全{{total}}ラウンド"
+      roundZero: "開始前 / 全{{total}}ラウンド"
+      inProgress: "進行中"
+      finalResults: "最終結果"
+    validation:
+      minTeams: "開始するには最低2チーム必要です"
+      doublesPlayers: "ダブルスの各チームはちょうど2人である必要があります"
+      tooFewQualifiers: "決勝トーナメントに進出するチーム数が少なすぎます — チームを追加するかグループサイズを小さくしてください。"
+    warnings:
+      everyoneAdvances: "グループステージで敗退するチームがなく、全チームが進出します。よろしいですか？"
+    summary:
+      undersized: "{{count}} チームでは {{size}} チームのグループを作れないため、{{shape}} として対戦します。"
+      normal: "{{count}} チーム → {{shape}}。"
+      tooFewKnockout: "{{split}} 決勝トーナメントを組むにはチームが少なすぎます — チームを追加するかグループサイズを小さくしてください。"
+      allAdvance: "{{split}} 上位 {{qualifiers}} チームが通過するため全チームが進出します — グループステージでの敗退はありません。"
+
+modals:
+  close: "閉じる"
+  confirm:
+    defaultTitle: "確認"
+    confirm: "確認"
+    cancel: "キャンセル"
+  imageUpload:
+    title: "📸 画像からプレイヤーを読み込む"
+    instructions: "プレイヤーリストの写真を撮影またはアップロードしてください。ドラッグ＆ドロップ、またはクリックして選択します。"
+    chooseImage: "画像を選択"
+    processing: "🔍 画像を処理してプレイヤー名を抽出中..."
+    foundPlayers: "{{count}} 人のプレイヤーを検出しました"
+    selectAll: "すべて選択"
+    deselectAll: "すべて解除"
+    tryAnotherImage: "📸 別の画像を試す"
+    cancel: "キャンセル"
+    addPlayers: "{{count}} 人のプレイヤーを追加"
+  importState:
+    title: "共有セッションを読み込む"
+    description: "URL に共有セッションが見つかりました。読み込むと現在のセッションが置き換えられます。"
+    sharedSavedAt: "共有セッションの保存日時: {{time}}"
+    currentSavedAt: "あなたのセッションの保存日時: {{time}}"
+    backupPrompt: "現在のセッションを後で復元できるよう、このリンクを保存してください:"
+    copy: "コピー"
+    copied: "コピー完了！"
+    decline: "現在のセッションを維持"
+    accept: "共有セッションを読み込む"
+  manualOrder:
+    title: "順位決定戦の順位を設定"
+    description: "これらのチームはすべての指標で同点です — 終了順に並べ替えてください:"
+    moveUpAria: "{{name}} を上に移動"
+    moveDownAria: "{{name}} を下に移動"
+    cancel: "キャンセル"
+    save: "順位を保存"
+  playerEdit:
+    gender: "性別"
+    genderTooltip: "性別を設定すると、スマートエンジンがミックスダブルスのバランスを調整し、同じ性別のプレイヤーが1チームに偏るのを防ぎます。"
+    level: "レベル: {{level}}"
+    levelTooltip: "レベル（0〜100）はスキルの目安です。スマートエンジンは近いレベルのプレイヤー同士を組み合わせて、白熱した楽しい試合を作ります。"
+    cancel: "キャンセル"
+    save: "保存"
+    genderOptions:
+      female: "💁‍♀️ 女性"
+      male: "🙋‍♂️ 男性"
+      unknown: "不明"
+  playerRemoval:
+    title: "プレイヤーの削除"
+    message: "{{name}} をどうしますか？"
+    markAbsent: "欠席にする"
+    removePlayer: "プレイヤーを削除"
+  scoreInput:
+    titleWinner: "🏆 チーム {{winner}} の勝利！"
+    titleScores: "セットスコアを入力"
+    promptSingle: "スコアを入力してください（デフォルト: {{setSize}} – {{defaultOpponent}}）:"
+    promptMultiple: "各セットのスコアを入力してください（{{count}} ゲーム制）:"
+    vs: "vs"
+    setLabel: "第 {{number}} セット"
+    team1ScoreAria: "チーム 1 スコア{{set}}"
+    team2ScoreAria: "チーム 2 スコア{{set}}"
+    confirm: "確定"
+  share:
+    title: "セッションの共有"
+    description: "他の人が現在のセッションを読み込めるよう、この URL を共有してください:"
+    close: "閉じる"
+    copyUrl: "URL をコピー"
+    copied: "コピー完了！"
+
+ocr:
+  failed: "画像の処理に失敗しました。もう一度試すか、手動でプレイヤーを入力してください。"
+
+engines:
+  simulatedAnnealing:
+    name: "焼きなまし法（シミュレーテッド・アニーリング）"
+    description: "反復改善を伴う焼きなまし法アルゴリズム。局所解から脱出するため確率的に劣る解を受け入れつつ、{{iterations}} 回の反復計算を実行します。"
+  smartMatching:
+    name: "スマートマッチング v2"
+    description: "連勝の勢いとミックスダブルスの好みを考慮した、スライディングウィンドウによるレベルグループ化。"

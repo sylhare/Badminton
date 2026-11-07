@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type { OnMatchResult } from '../../../tournament/types';
 import type { BracketNode } from '../../../tournament/bracketTree';
-import { nextPowerOf2, roundLabel } from '../../../tournament/bracketTree';
+import { nextPowerOf2, roundHeader } from '../../../tournament/bracketTree';
 import { EliminationTournament } from '../../../tournament/EliminationTournament';
 import { useMatchModal } from '../useMatchModal';
 
 import { CARD_HEIGHT, HEADER_HEIGHT } from './BracketColumn';
+import type { BracketRoundHeader } from './bracketView';
 import { BracketSection } from './BracketSection';
 
 import './EliminationBracket.css';
@@ -17,7 +19,7 @@ interface BracketSectionConfig {
   title: string;
   tree: BracketNode[][];
   height: number;
-  roundLabel: (round: number, totalRounds: number) => string;
+  roundHeader: (round: number, totalRounds: number) => BracketRoundHeader;
 }
 
 interface EliminationBracketProps {
@@ -26,6 +28,7 @@ interface EliminationBracketProps {
 }
 
 export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tournament, onMatchResult }) => {
+  const { t } = useTranslation();
   const { handleTeamClick, scoreModal } = useMatchModal(onMatchResult);
 
   const bracketSize = tournament.bracketSize();
@@ -47,14 +50,19 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
   const cbCardAreaHeight = consolationBracketSize > 0 ? Math.max((consolationBracketSize / 2) * CARD_HEIGHT, extraRoundHeight) : 0;
   const cbHeight = cbCardAreaHeight > 0 ? cbCardAreaHeight + HEADER_HEIGHT : 0;
 
+  const formatRoundHeader = (r: number, tot: number): BracketRoundHeader => {
+    const { label, testId } = roundHeader(r, tot);
+    return { label: t(label.key, label.params), testId };
+  };
+
   const sections: BracketSectionConfig[] = [
     {
       key: 'wb',
       testId: 'wb-section',
-      title: 'Winners Bracket',
+      title: t('tournament.elimination.winnersBracket'),
       tree: wbTree,
       height: wbHeight,
-      roundLabel,
+      roundHeader: formatRoundHeader,
     },
   ];
 
@@ -62,10 +70,10 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
     sections.push({
       key: 'cb',
       testId: 'cb-section',
-      title: 'Consolation Bracket',
+      title: t('tournament.elimination.consolationBracket'),
       tree: cbTree,
       height: cbHeight,
-      roundLabel,
+      roundHeader: formatRoundHeader,
     });
   }
 
@@ -73,10 +81,13 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
     sections.push({
       key: 'tp',
       testId: 'tp-section',
-      title: '3rd Place',
+      title: t('tournament.elimination.thirdPlace'),
       tree: [[{ type: 'match', match: thirdPlaceMatch, slotIndex: 0 }]],
       height: CARD_HEIGHT + HEADER_HEIGHT,
-      roundLabel: () => '3rd Place',
+      roundHeader: () => ({
+        label: t('tournament.elimination.thirdPlace'),
+        testId: '3rd-Place',
+      }),
     });
   }
 
@@ -88,7 +99,11 @@ export const EliminationBracket: React.FC<EliminationBracketProps> = ({ tourname
           title={section.title}
           testId={section.testId}
           height={section.height}
-          view={{ tree: section.tree, roundLabel: section.roundLabel, onTeamClick: handleTeamClick }}
+          view={{
+            tree: section.tree,
+            roundHeader: section.roundHeader,
+            onTeamClick: handleTeamClick,
+          }}
         />
       ))}
 

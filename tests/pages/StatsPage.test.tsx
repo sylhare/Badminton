@@ -96,6 +96,7 @@ describe('StatsPage Component', () => {
     renderWithProvider(<StatsPage />);
 
     expect(screen.getByText('📊 GitHub Analysis')).toBeInTheDocument();
+    expect(screen.getByText('Explore the Analysis')).toBeInTheDocument();
     const analysisLinks = screen.getAllByTestId('analysis-link');
     expect(analysisLinks).toHaveLength(1);
     expect(analysisLinks[0]).toHaveAttribute(

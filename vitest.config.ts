@@ -1,8 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
+import { yamlPlugin } from './vite/yamlPlugin.ts';
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [yamlPlugin(), react()],
   test: {
     globals: true,
     environment: 'jsdom',

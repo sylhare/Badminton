@@ -7,11 +7,22 @@ import typescriptEslint from 'typescript-eslint';
 
 export default [
   {
-    ignores: ['**/dist', '**/coverage', '**/node_modules', '**/.venv', '**/playwright-report', '**/test-results'],
+    ignores: [
+      'dist/**',
+      '**/dist/**',
+      '**/dist',
+      '**/coverage',
+      '**/node_modules',
+      '**/.venv',
+      '**/playwright-report',
+      '**/test-results',
+      'public/tesseract/**',
+      'public/analysis/**',
+    ],
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['build', 'public/build'],
+    ignores: ['build', 'public/build', 'public/tesseract/**', 'public/analysis/**', 'dist/**'],
     languageOptions: {
       parser: typescriptEslint.parser,
       parserOptions: {
@@ -81,6 +92,43 @@ export default [
       'import-x/newline-after-import': ['error', { 'count': 1 }],
       ...reactPlugin.configs.recommended.rules,
       'react/jsx-tag-spacing': ['error', { 'beforeSelfClosing': 'always' }],
+    },
+  },
+  {
+    files: [
+      'src/App.tsx',
+      'src/components/**/*.tsx',
+      'src/pages/**/*.tsx',
+    ],
+    rules: {
+      'react/jsx-no-literals': [
+        'error',
+        {
+          noStrings: true,
+          allowedStrings: [
+            '▲',
+            '▼',
+            '—',
+            '%',
+            '🏸',
+            '🪑',
+            '📊',
+            '👑',
+            '✓',
+            '⚠',
+            '💡',
+            '→',
+            '↻',
+            '⇅',
+            '⚑',
+            '/',
+            ':',
+            'ⓘ',
+            '×',
+          ],
+          ignoreProps: true,
+        },
+      ],
     },
   },
   {

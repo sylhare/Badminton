@@ -1,0 +1,346 @@
+app:
+  title: "羽毛球场地管理器"
+  managePlayers: "管理球员"
+  courtAssignments: "场地分配"
+  bench: "替补席"
+  settings: "设置"
+  moreInfo: "更多信息"
+
+players:
+  entry:
+    placeholder: "输入球员姓名（使用 ` 或 , 添加多名球员）"
+    importImage: "从图片导入球员"
+    addSingle: "添加球员"
+    addMultiple: "添加 {{count}} 名球员"
+    detectedHint: "💡 检测到 {{count}} 名球员，分隔符为 {{separator}}"
+  stats:
+    present: "出席"
+    absent: "缺席"
+    total: "总计"
+  actions:
+    editGenderLevel: "点击编辑性别/水平"
+    markAbsent: "标记为缺席"
+    markPresent: "标记为出席"
+    deletePlayer: "永久删除球员"
+    benchCountTitle: "替补次数：{{count}}"
+    benchNext: "下次替补"
+    resetAlgorithmTitle: "重置对战组合历史（保留所有球员）"
+    resetAlgorithm: "重置算法"
+    clearAllTitle: "清除所有球员并重置比分"
+    clearAll: "清除所有球员"
+    shareTitle: "通过 URL 分享会话"
+    share: "分享"
+  smartEngine:
+    label: "智能引擎"
+    tooltip: "智能引擎会根据性别和技能水平平衡比赛。启用后，点击任何球员姓名即可设置其性别和水平。"
+  modals:
+    clearTitle: "清除所有球员"
+    clearMessage: "确定要移除所有球员吗？这还将重置所有比分和比赛记录。此操作无法撤销。"
+    clearConfirm: "全部清除"
+    resetTitle: "重置算法"
+    resetMessage: "确定要重置算法的记录吗？这将清除所有搭档记录、替补次数以及胜负历史。球员将保留，但配对偏好将被重置。"
+    resetConfirm: "重置算法"
+    cancel: "取消"
+
+leaderboard:
+  title: "🏆 排行榜"
+  rank: "#"
+  player: "球员"
+  level: "水平"
+  avgPts: "场均得分"
+  wins: "胜场"
+  matches: "总场次"
+
+court:
+  settings:
+    courts: "场地数："
+    rearrange: "调整球员位置"
+    rearrangeTooltip: "将一名球员拖拽到另一名球员上，或依次点击两名球员，即可在队伍、场地和替补席之间交换位置。"
+  empty:
+    noPlayers: "请在上方添加球员以开始生成场地分配。"
+    howItWorksTitle: "工作原理："
+    howItWorksDescription: " 球员将被随机分配到各场地。优先组织双打（4人），奇数人数时会安排单打（2人），多余球员将进入替补席。"
+    generateButton: "🎲 生成场地分配"
+  assignments:
+    editModeBanner: "将一名球员拖拽到另一名球员上，或依次点击两名球员进行交换。"
+    editModeDone: "完成"
+    tip: "提示："
+    winnerInstructions: " 点击队伍将其标记为获胜方，胜方旁会出现皇冠 👑。再次点击可取消获胜标记。"
+    regenerateButton: "🎲 重新生成分配"
+    lastGenerated: "上次生成：{{time}}"
+    timeAgo:
+      justNow: "刚刚"
+      seconds: "{{count}}秒前"
+      minutes: "{{count}}分钟前"
+      hours: "{{count}}小时前"
+      days: "{{count}}天前"
+  card:
+    header: "场地 {{number}}"
+    headerWithMatch: "场地 {{number}} - {{matchType}}"
+    singles: "单打"
+    doubles: "双打"
+    rotateTeam: "轮换队伍分配"
+  match:
+    waiting: "等待中：{{name}}"
+  display:
+    playersOnCourt: "场上球员："
+    teamTitle: "队伍 {{number}}"
+    vs: "VS"
+
+bench:
+  title: "🪑 替补 ({{count}} 人)"
+  titleSingle: "🪑 替补 (1 人)"
+  viewCounts: "查看替补次数与管理"
+
+footer:
+  feedback: "有任何反馈？发现了漏洞或想建议新功能？"
+  githubLink: "在 GitHub 上反馈"
+  viewStats: "查看统计与分析"
+  tryTournament: "尝试淘汰赛模式"
+  language: "语言"
+
+nav:
+  backToApp: "← 场地管理器"
+
+notFound:
+  title: "404"
+  message: "页面未找到"
+  goHome: "返回场地管理器"
+
+stats:
+  header: "{{engineName}} 诊断"
+  title: "诊断"
+  sessionDiagnostics: "🔍 当前会话诊断"
+  warnings:
+    title: "⚠️ 警告"
+    benchImbalance: "替补不均衡：相差 {{spread}}（{{rounds}} 轮预期相差约为 ~{{expected}}）"
+    singlesOverplayed: "{{count}} 名球员进行了 {{threshold}} 次以上单打（预期每人约为 ~{{expected}} 次）"
+    pairTeamedUp: "{{count}} 对搭档组队达 {{threshold}} 次以上（平均为 {{avg}} 次）"
+    pairFacedEachOther: "{{count}} 对对手交手达 {{threshold}} 次以上（平均为 {{avg}} 次）"
+    sittingTooLong: "{{player}} 已连续替补 {{count}} 轮"
+    unbalancedCourts: "场地实力不均衡：{{details}}"
+  cards:
+    totalPlayers: "总球员数"
+    roundsPlayed: "已进行轮数"
+    repeatedPairs: "重复搭档数"
+    warnings: "警告数"
+  bench:
+    title: "🪑 替补分布"
+    neverBenched: "从未替补："
+    benchedOnce: "替补 1 次："
+    benchedMultiple: "多次替补："
+    minMax: "最小/最大替补次数："
+    fairnessScore: "公平度得分："
+    lowerIsBetter: "（越低越好）"
+    viewCounts: "查看每名球员的替补次数 ({{count}})"
+  teammates:
+    title: "👥 搭档关系"
+    viewRepeated: "查看重复搭档 ({{count}})"
+    empty: "✓ 尚无搭档配对记录"
+  opponents:
+    title: "⚔️ 对手对战"
+    viewRepeated: "查看重复对战 ({{count}})"
+    empty: "✓ 尚无对手对战记录"
+  singles:
+    title: "🎯 单打比赛"
+    playersCount: "{{count}} 名球员参加了单打"
+    multipleCount: "（{{count}} 名多次参加）"
+    viewList: "查看单打列表 ({{count}})"
+    empty: "无单打比赛记录"
+  level:
+    title: "📈 水平变化趋势"
+  empty:
+    message: "暂无会话数据。开始比赛后即可查看诊断！"
+    startCta: "开始比赛 →"
+  graphs:
+    levelHistory:
+      ariaLabel: "水平变化趋势图"
+      xAxisLabel: "轮次"
+    genderLegend:
+      male: "男"
+      female: "女"
+      unknown: "未知"
+    counts:
+      once: "1次"
+      twice: "2次"
+      threeTimes: "3次"
+      fourPlus: "4次以上"
+  githubAnalysis:
+    heading: "📊 GitHub 分析"
+    cardTitle: "探索详细分析"
+    description: "在 GitHub 上阅读算法说明、引擎对比以及水平追踪分析（英文）。"
+
+tournament:
+  title: "淘汰赛"
+  setupTitle: "淘汰赛设置"
+  mode: "模式"
+  banner:
+    setup: "淘汰赛设置"
+    current: "当前淘汰赛"
+  actions:
+    startNew: "开始新淘汰赛"
+    start: "开始淘汰赛"
+  resetModal:
+    title: "开始新的淘汰赛？"
+    message: "这将放弃当前淘汰赛及其成绩。确定要开始新的淘汰赛吗？"
+    confirm: "重新开始"
+    cancel: "取消"
+  setup:
+    format: "赛制"
+    players: "球员"
+    courts: "场地数"
+    sets: "每场局数"
+    pointsPerSet: "每局分值"
+    singleGame: "单局决胜"
+    bestOf: "{{n}} 局胜制"
+    teams: "队伍"
+    teamTitle: "队伍 {{number}}"
+    dragHint: "将一名球员拖拽到另一名球员上，或依次点击两名球员进行交换。"
+    formats:
+      singles: "单打 (1v1)"
+      doubles: "双打 (2v2)"
+    warnings:
+      courtWarning: "每轮有 {{matches}} 场比赛，但只有 {{courts}} 块场地——部分比赛需要等待。"
+    groupKnockout:
+      teamsPerGroup: "每组队伍数"
+      qualifiersPerGroup: "每组晋级队伍数"
+  kinds:
+    roundRobin:
+      label: "循环赛"
+      description: "所有队伍之间相互交手。"
+    elimination:
+      label: "淘汰赛"
+      description: "包含附加赛的单败淘汰制。"
+    groupKnockout:
+      label: "小组赛 + 淘汰赛"
+      description: "小组循环赛后进行单败淘汰赛。"
+  standings:
+    title: "积分榜"
+    tieBreakTitle: "所有数据完全并列——请手动指定最终名次"
+    tieBreakAria: "并列——需要手动排序"
+    setTieBreakOrder: "设置并列决胜排序"
+    table:
+      rank: "排名"
+      rankShort: "#"
+      team: "队伍"
+      won: "胜"
+      lost: "负"
+      points: "积分"
+      sets: "净胜局"
+      scoreDiff: "净胜分"
+  roundRobin:
+    roundHeader: "第 {{round}} 轮"
+    roundComplete: "✓ 已完成"
+    roundProgress: "{{done}}/{{total}} 已完成"
+    courtNumber: "场地 {{court}}"
+  groupKnockout:
+    groupLabel: "小组 {{letter}}"
+    tieBreakAria: "设置并列决胜排序"
+    groupTieWarning: "淘汰赛开始前必须先解决小组并列——请点击上方并列行的 ⇅ 按钮。"
+    knockoutStage: "淘汰赛阶段"
+    finalResults: "最终成绩"
+  elimination:
+    winnersBracket: "胜者组"
+    consolationBracket: "败者组/附加赛"
+    thirdPlace: "季军赛"
+    tbd: "待定"
+    bye: "轮空"
+    rounds:
+      final: "决赛"
+      semiFinal: "半决赛"
+      nthOfFinal: "1/{{n}} 决赛"
+  domain:
+    subtitles:
+      afterRound: "第 {{done}} 轮后 / 共 {{total}} 轮"
+      roundZero: "第 0 轮 / 共 {{total}} 轮"
+      inProgress: "进行中"
+      finalResults: "最终成绩"
+    validation:
+      minTeams: "至少需要 2 支队伍才能开始"
+      doublesPlayers: "每支双打队伍必须恰好有 2 名球员"
+      tooFewQualifiers: "晋级淘汰赛的队伍过少——请增加队伍或缩减每组人数。"
+    warnings:
+      everyoneAdvances: "小组赛阶段无人被淘汰——所有队伍全部晋级。确定要这样设置吗？"
+    summary:
+      undersized: "{{count}} 支队伍无法凑满每组 {{size}} 队，将分为 {{shape}} 进行比赛。"
+      normal: "{{count}} 支队伍 → {{shape}}。"
+      tooFewKnockout: "{{split}} 晋级队伍过少无法组成淘汰赛——请增加队伍或缩减每组人数。"
+      allAdvance: "{{split}} 前 {{qualifiers}} 名晋级，所有队伍全部出线——小组赛阶段无人被淘汰。"
+
+modals:
+  close: "关闭"
+  confirm:
+    defaultTitle: "确认"
+    confirm: "确认"
+    cancel: "取消"
+  imageUpload:
+    title: "📸 从图片导入球员"
+    instructions: "拍摄照片或上传球员名单图片。支持拖拽或点击选择。"
+    chooseImage: "选择图片"
+    processing: "🔍 正在处理图片并提取球员姓名..."
+    foundPlayers: "找到 {{count}} 名球员"
+    selectAll: "全选"
+    deselectAll: "取消全选"
+    tryAnotherImage: "📸 尝试其他图片"
+    cancel: "取消"
+    addPlayers: "添加 {{count}} 名球员"
+  importState:
+    title: "加载共享会话"
+    description: "在 URL 中发现共享会话。加载它将替换您当前的会话。"
+    sharedSavedAt: "共享会话保存于：{{time}}"
+    currentSavedAt: "您的会话保存于：{{time}}"
+    backupPrompt: "保存此链接以便稍后恢复您当前的会话："
+    copy: "复制"
+    copied: "已复制！"
+    decline: "保留我的会话"
+    accept: "加载共享会话"
+  manualOrder:
+    title: "设置并列决胜排序"
+    description: "这些队伍在所有指标上完全并列——请按最终名次排列："
+    moveUpAria: "将 {{name}} 上移"
+    moveDownAria: "将 {{name}} 下移"
+    cancel: "取消"
+    save: "保存排序"
+  playerEdit:
+    gender: "性别"
+    genderTooltip: "设置性别有助于智能引擎平衡混双搭配——避免将相同性别的球员分在同一队。"
+    level: "水平：{{level}}"
+    levelTooltip: "水平（0–100）代表球技水平。智能引擎将水平相近的球员匹配在一起，以带来更具竞争力和趣味性的比赛。"
+    cancel: "取消"
+    save: "保存"
+    genderOptions:
+      female: "💁‍♀️ 女"
+      male: "🙋‍♂️ 男"
+      unknown: "未知"
+  playerRemoval:
+    title: "移除球员"
+    message: "您想如何处理 {{name}}？"
+    markAbsent: "标记为缺席"
+    removePlayer: "移除球员"
+  scoreInput:
+    titleWinner: "🏆 队伍 {{winner}} 获胜！"
+    titleScores: "输入局比分"
+    promptSingle: "输入比分（默认为 {{setSize}} – {{defaultOpponent}}）："
+    promptMultiple: "输入每局比分（{{count}} 局制）："
+    vs: "vs"
+    setLabel: "第 {{number}} 局"
+    team1ScoreAria: "队伍 1 得分{{set}}"
+    team2ScoreAria: "队伍 2 得分{{set}}"
+    confirm: "确认"
+  share:
+    title: "分享会话"
+    description: "分享此 URL 以便他人加载您当前的会话："
+    close: "关闭"
+    copyUrl: "复制 URL"
+    copied: "已复制！"
+
+ocr:
+  failed: "图像处理失败。请重试或手动输入玩家。"
+
+engines:
+  simulatedAnnealing:
+    name: "模拟退火算法"
+    description: "基于迭代改进的模拟退火算法。执行 {{iterations}} 次迭代，以概率方式接受较差解从而跳出局部最优。"
+  smartMatching:
+    name: "智能匹配 v2"
+    description: "滑动窗口水平分组，兼顾连胜势头与混双偏好。"
