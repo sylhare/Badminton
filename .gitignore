@@ -36,6 +36,7 @@ dist-ssr
 # Build outputs
 build/
 out/
+dist/stats.html
 
 # Coverage reports
 coverage/
@@ -81,6 +82,7 @@ jspm_packages/
 tmp/
 temp/ 
 eng.traineddata
+.lighthouseci/
 
 # Tesseract assets vendored from node_modules (regenerated on predev/prebuild)
 /public/tesseract/
