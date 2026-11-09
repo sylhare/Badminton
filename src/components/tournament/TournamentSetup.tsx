@@ -99,7 +99,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
     <div className="tournament-setup">
       {swap.dragGhost}
       <div className="setup-section">
-        <h3>{t('tournament.setup.format')}</h3>
+        <h2>{t('tournament.setup.format')}</h2>
         <SegmentedControl
           options={['doubles', 'singles'] as TournamentFormat[]}
           selected={format}
@@ -111,7 +111,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
       </div>
 
       <div className="setup-section">
-        <h3>{t('tournament.setup.players')}</h3>
+        <h2>{t('tournament.setup.players')}</h2>
         <div className="tournament-player-entry">
           <ManualPlayerEntry onPlayersAdded={names => onAddPlayers?.(names)} />
         </div>
@@ -131,12 +131,18 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
       </div>
 
       <div className="setup-section">
-        <h3>{t('tournament.setup.courts')}</h3>
-        <NumberField value={numberOfCourts} min={1} onChange={setNumberOfCourts} testId="tournament-court-count" />
+        <h2>{t('tournament.setup.courts')}</h2>
+        <NumberField
+          value={numberOfCourts}
+          min={1}
+          onChange={setNumberOfCourts}
+          testId="tournament-court-count"
+          ariaLabel={t('tournament.setup.courts')}
+        />
       </div>
 
       <div className="setup-section">
-        <h3>{t('tournament.setup.sets')}</h3>
+        <h2>{t('tournament.setup.sets')}</h2>
         <SegmentedControl
           options={BEST_OF_OPTIONS}
           selected={bestOf}
@@ -147,7 +153,13 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
         />
         <label className="set-size-field">
           {t('tournament.setup.pointsPerSet')}
-          <NumberField value={setSize} min={1} onChange={setSetSize} testId="set-size-input" />
+          <NumberField
+            value={setSize}
+            min={1}
+            onChange={setSetSize}
+            testId="set-size-input"
+            ariaLabel={t('tournament.setup.pointsPerSet')}
+          />
         </label>
       </div>
 
@@ -155,7 +167,7 @@ export const TournamentSetup: React.FC<TournamentSetupProps> = ({
 
       {teams.length > 0 && (
         <div className="setup-section">
-          <h3>{t('tournament.setup.teams')}</h3>
+          <h2>{t('tournament.setup.teams')}</h2>
           {format === 'doubles' && (
             <p className="setup-hint">{t('tournament.setup.dragHint')}</p>
           )}

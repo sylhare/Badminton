@@ -90,6 +90,7 @@
     gap: 0.75rem;
 }
 
+.setup-section h2,
 .setup-section h3 {
     margin: 0;
     font-size: 1.25rem;
@@ -100,11 +101,11 @@
 .setup-hint {
     margin: 0;
     font-size: 0.85rem;
-    color: #888;
+    color: #4b5563;
 }
 
 .setup-error {
-    color: var(--danger-hover);
+    color: #c53030;
     font-size: 0.9rem;
     margin: 0;
 }
@@ -169,6 +170,7 @@
     background: white;
     cursor: pointer;
     font-size: 0.9rem;
+    color: #1f2937;
     transition: border-color 0.2s, background 0.2s, color 0.2s;
 }
 
@@ -179,7 +181,8 @@
 .format-pill-active {
     background: var(--color-primary);
     border-color: var(--color-primary);
-    color: white;
+    color: #111827;
+    font-weight: 600;
 }
 
 /* Player selection */

@@ -53,7 +53,7 @@ export const Tournament: React.FC<TournamentProps> = ({
     return (
       <div className="tournament-setup-wrapper">
         <div className="tournament-type-selector setup-section" data-testid="tournament-type-selector">
-          <h3>{t('tournament.mode')}</h3>
+          <h2>{t('tournament.mode')}</h2>
           <SegmentedControl
             options={TOURNAMENT_TYPES}
             selected={selectedType}
