@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { recognizePlayerNames } from '../utils/ocrEngine';
+import { isOcrSupported, recognizePlayerNames } from '../utils/ocrEngine';
 
 interface UseImageOcrOptions {
   onPlayersExtracted: (players: string[]) => void;
 }
 
 export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
+  isSupported: boolean;
   isProcessing: boolean;
   progress: number;
   processImage: (file: File) => Promise<void>;
@@ -15,12 +16,12 @@ export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
   const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const isSupported = isOcrSupported();
 
   const processImage = async (file: File) => {
     setIsProcessing(true);
     setProgress(0);
     try {
-
       const playerNames = await recognizePlayerNames(file, {
         onProgress: (p) => setProgress(p),
       });
@@ -34,5 +35,5 @@ export function useImageOcr({ onPlayersExtracted }: UseImageOcrOptions): {
     }
   };
 
-  return { isProcessing, progress, processImage };
+  return { isSupported, isProcessing, progress, processImage };
 }
