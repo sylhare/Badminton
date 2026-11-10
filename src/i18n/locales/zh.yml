@@ -284,6 +284,10 @@ modals:
     tryAnotherImage: "📸 尝试其他图片"
     cancel: "取消"
     addPlayers: "添加 {{count}} 名球员"
+    unsupportedTitle: "文字识别不可用"
+    unsupportedDescription: "抱歉，您的浏览器不支持文字识别。"
+    unsupportedInstructions: "请手动输入球员姓名。"
+    enterManually: "手动输入球员"
   importState:
     title: "加载共享会话"
     description: "在 URL 中发现共享会话。加载它将替换您当前的会话。"

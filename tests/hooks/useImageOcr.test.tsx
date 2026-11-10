@@ -77,7 +77,7 @@ describe('useImageOcr hook', () => {
     expect(hookApi?.isProcessing).toBe(false);
     expect(onPlayersExtracted).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalledWith('OCR processing failed:', expect.any(Error));
-    expect(alertSpy).toHaveBeenCalledWith('Failed to process image. Please try again or add players manually.');
+    expect(alertSpy).toHaveBeenCalledWith('Failed to process image. Please try again or enter players manually.');
 
     consoleErrorSpy.mockRestore();
     alertSpy.mockRestore();
