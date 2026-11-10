@@ -73,11 +73,8 @@ test.describe('Image upload', () => {
   });
 
   /**
-   * Real-browser tests for preprocessImage. Unlike the jsdom unit test, nothing
-   * is stubbed here: the actual browser image decoder, real OpenCV WASM and real
-   * URL.createObjectURL/revokeObjectURL run. The fixtures are loaded from disk
-   * and reconstructed as Files inside the page; preprocessImage is imported live
-   * from the Vite dev server (base '/' in dev).
+   * Real-browser tests for preprocessImage. Verifies pure Canvas 2D pipeline:
+   * decodes images, applies Otsu thresholding/scaling, and revokes object URLs.
    */
   test.describe('preprocessImage (real browser)', () => {
     test.beforeEach(async ({ page }) => {
@@ -122,6 +119,14 @@ test.describe('Image upload', () => {
         await expect(page.locator('.extracted-players-section')).toBeVisible({ timeout: 60000 });
         const extractedCount = await page.locator('[data-testid^="extracted-player-"]').count();
         expect(extractedCount).toBeGreaterThanOrEqual(4);
+
+        const playerNames = await page.locator('.extracted-player-item .player-name-text').allTextContents();
+        const expected = ['Tinley', 'Ella', 'Avrella', 'Yvette', 'Gabriela', 'Noella'];
+        const matched = expected.filter(name =>
+          playerNames.some(p => p.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(p.toLowerCase())),
+        );
+        expect(matched.length).toBeGreaterThanOrEqual(4);
+
         await expect(page.getByTestId('add-extracted-players-button')).toBeEnabled();
       });
 
