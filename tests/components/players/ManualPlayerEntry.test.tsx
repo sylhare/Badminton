@@ -8,6 +8,7 @@ import { useImageOcr } from '../../../src/hooks/useImageOcr';
 
 vi.mock('../../../src/hooks/useImageOcr', () => ({
   useImageOcr: vi.fn(() => ({
+    isSupported: true,
     isProcessing: false,
     progress: 0,
     processImage: vi.fn(),
@@ -147,7 +148,7 @@ describe('ManualPlayerEntry Component', () => {
     let onPlayersExtracted: ((players: string[]) => void) | undefined;
     vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted: callback }) => {
       onPlayersExtracted = callback;
-      return { isProcessing: false, progress: 0, processImage: vi.fn() };
+      return { isSupported: true, isProcessing: false, progress: 0, processImage: vi.fn() };
     });
     const { user } = setup();
 

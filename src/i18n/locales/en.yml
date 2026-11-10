@@ -284,6 +284,10 @@ modals:
     tryAnotherImage: "📸 Try another image"
     cancel: "Cancel"
     addPlayers: "Add {{count}} Player{{plural}}"
+    unsupportedTitle: "Text Recognition Not Available"
+    unsupportedDescription: "Sorry, your browser does not support text recognition."
+    unsupportedInstructions: "Please enter player names manually."
+    enterManually: "Enter Players Manually"
   importState:
     title: "Load Shared Session"
     description: "A shared session was found in the URL. Loading it will replace your current session."

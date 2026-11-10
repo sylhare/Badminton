@@ -1,6 +1,6 @@
 import { preprocessImage } from './imagePreprocess';
 
-interface OcrOptions {
+export interface OcrOptions {
   onProgress?: (progress: number) => void;
   preprocess?: boolean;
   /**
@@ -11,8 +11,12 @@ interface OcrOptions {
   assetOptions?: Record<string, string>;
 }
 
+export function isOcrSupported(): boolean {
+  return typeof window !== 'undefined' && typeof window.Worker !== 'undefined';
+}
+
 function localAssetOptions(): Record<string, string> {
-  const base = `${import.meta.env.BASE_URL}tesseract`;
+  const base = `${(import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')}/tesseract`;
   return {
     workerPath: `${base}/worker.min.js`,
     corePath: `${base}/`,
@@ -21,7 +25,7 @@ function localAssetOptions(): Record<string, string> {
 }
 
 export async function recognizePlayerNames(
-  image: File | Blob | Uint8Array,
+  image: File | Blob | Uint8Array | HTMLCanvasElement,
   { onProgress, preprocess, assetOptions }: OcrOptions = {},
 ): Promise<string[]> {
   const pushProgress = onProgress ?? (() => {});
@@ -33,7 +37,7 @@ export async function recognizePlayerNames(
 
   const { createWorker } = await import('tesseract.js');
   const worker: any = await (createWorker as any)('eng', 1, {
-    ...(assetOptions ?? localAssetOptions()),
+    ...(assetOptions ?? (isBrowser ? localAssetOptions() : undefined)),
     logger: (m: any) => {
       if (m.status === 'recognizing text') {
         pushProgress(0.6 + (m.progress * 0.4));
@@ -56,7 +60,7 @@ export async function recognizePlayerNames(
     pushProgress(0.3);
 
     let imageForOCR: any = image;
-    if (shouldPreprocess && image instanceof File) {
+    if (shouldPreprocess && image instanceof Blob) {
       try {
         pushProgress(0.35);
         imageForOCR = await preprocessImage(image);

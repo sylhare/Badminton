@@ -5,14 +5,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { recognizePlayerNames } from '../../src/utils/ocrEngine';
-
-function nodeOcrAssetOptions(): Record<string, string> {
-  const root = path.resolve(__dirname, '../..');
-  return {
-    workerPath: path.join(root, 'node_modules', 'tesseract.js', 'src', 'worker-script', 'node', 'index.js'),
-  };
-}
+import { extractPlayerNames, isOcrSupported, recognizePlayerNames } from '../../src/utils/ocrEngine';
 
 const SAMPLES: Array<{
   filename: string;
@@ -43,7 +36,7 @@ describe('OCR integration', () => {
     it(`should detect most expected names ${path.basename(sample.filename)}`, async () => {
         const imgBuf = fs.readFileSync(sample.filename);
 
-        const extracted = await recognizePlayerNames(imgBuf, { assetOptions: nodeOcrAssetOptions() });
+        const extracted = await recognizePlayerNames(imgBuf);
 
         const matches = sample.expected.filter((name) =>
           extracted.some((e) =>
@@ -56,5 +49,25 @@ describe('OCR integration', () => {
       },
       60000,
     );
+  });
+
+  describe('isOcrSupported', () => {
+    it('returns boolean based on window and Worker availability', () => {
+      expect(typeof isOcrSupported()).toBe('boolean');
+    });
+  });
+
+  describe('extractPlayerNames', () => {
+    it('returns empty array for empty string', () => {
+      expect(extractPlayerNames('')).toEqual([]);
+    });
+
+    it('filters out line numbers and non-name characters', () => {
+      const raw = '1. Alice Smith\n2) Bob Jones\n3 Charlie';
+      const names = extractPlayerNames(raw);
+      expect(names).toContain('Alice Smith');
+      expect(names).toContain('Bob Jones');
+      expect(names).toContain('Charlie');
+    });
   });
 });

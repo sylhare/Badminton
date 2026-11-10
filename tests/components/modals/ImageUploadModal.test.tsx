@@ -8,6 +8,7 @@ import { useImageOcr } from '../../../src/hooks/useImageOcr';
 
 vi.mock('../../../src/hooks/useImageOcr', () => ({
   useImageOcr: vi.fn(() => ({
+    isSupported: true,
     isProcessing: false,
     progress: 0,
     processImage: vi.fn(),
@@ -63,6 +64,7 @@ describe('ImageUploadModal', () => {
     vi.mocked(useImageOcr).mockImplementation(({ onPlayersExtracted }) => {
       extractionCallback = onPlayersExtracted;
       return {
+        isSupported: true,
         isProcessing: false,
         progress: 0,
         processImage: vi.fn(),
@@ -145,9 +147,41 @@ describe('ImageUploadModal', () => {
     });
   });
 
+  describe('Unsupported OCR state', () => {
+    it('should display fallback state when isSupported is false', () => {
+      vi.mocked(useImageOcr).mockReturnValue({
+        isSupported: false,
+        isProcessing: false,
+        progress: 0,
+        processImage: vi.fn(),
+      });
+
+      renderModal();
+
+      expect(screen.getByTestId('ocr-not-supported')).toBeInTheDocument();
+      expect(screen.getByText('Text Recognition Not Available')).toBeInTheDocument();
+      expect(screen.getByTestId('enter-manually-button')).toBeInTheDocument();
+    });
+
+    it('should call onClose when clicking enter players manually button', async () => {
+      vi.mocked(useImageOcr).mockReturnValue({
+        isSupported: false,
+        isProcessing: false,
+        progress: 0,
+        processImage: vi.fn(),
+      });
+
+      renderModal();
+
+      await user.click(screen.getByTestId('enter-manually-button'));
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+  });
+
   describe('Processing state', () => {
     it('should display processing indicator when processing image', () => {
       vi.mocked(useImageOcr).mockReturnValue({
+        isSupported: true,
         isProcessing: true,
         progress: 0.5,
         processImage: vi.fn(),
@@ -161,6 +195,7 @@ describe('ImageUploadModal', () => {
 
     it('should show progress bar during processing', () => {
       vi.mocked(useImageOcr).mockReturnValue({
+        isSupported: true,
         isProcessing: true,
         progress: 0.75,
         processImage: vi.fn(),
@@ -207,6 +242,40 @@ describe('ImageUploadModal', () => {
       await waitFor(() => {
         expect(screen.getByText('📸 Try another image')).toBeInTheDocument();
       });
+    });
+
+    it('should toggle player selection when clicking player checkbox', async () => {
+      await renderWithExtractedPlayers(['Alice', 'Bob']);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('extracted-player-0')).toBeChecked();
+      });
+
+      await user.click(screen.getByTestId('extracted-player-0'));
+      expect(screen.getByTestId('extracted-player-0')).not.toBeChecked();
+      expect(screen.getByTestId('add-extracted-players-button')).toHaveTextContent('Add 1 Player');
+
+      await user.click(screen.getByTestId('extracted-player-0'));
+      expect(screen.getByTestId('extracted-player-0')).toBeChecked();
+      expect(screen.getByTestId('add-extracted-players-button')).toHaveTextContent('Add 2 Players');
+    });
+
+    it('should deselect all and select all players', async () => {
+      await renderWithExtractedPlayers(['Alice', 'Bob']);
+
+      await waitFor(() => {
+        expect(screen.getByText('Deselect all')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Deselect all'));
+      expect(screen.getByTestId('extracted-player-0')).not.toBeChecked();
+      expect(screen.getByTestId('extracted-player-1')).not.toBeChecked();
+      expect(screen.getByTestId('add-extracted-players-button')).toBeDisabled();
+
+      await user.click(screen.getByText('Select all'));
+      expect(screen.getByTestId('extracted-player-0')).toBeChecked();
+      expect(screen.getByTestId('extracted-player-1')).toBeChecked();
+      expect(screen.getByTestId('add-extracted-players-button')).toBeEnabled();
     });
   });
 

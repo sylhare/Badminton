@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { Camera, Check } from '@phosphor-icons/react';
+import { Camera, Check, WarningCircle } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 import { useImageOcr } from '../../hooks/useImageOcr';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { getFirstFile, isImageFile } from '../../utils/fileUtils';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { cx } from '../common/cx';
 
 import Modal from './Modal';
 
@@ -31,7 +32,9 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
     setSelectedPlayers(new Set(players));
   };
 
-  const { isProcessing, progress, processImage } = useImageOcr({ onPlayersExtracted: handlePlayersExtracted });
+  const { isSupported, isProcessing, progress, processImage } = useImageOcr({
+    onPlayersExtracted: handlePlayersExtracted,
+  });
 
   const handleImageUpload = (file: File) => {
     trackPlayerAction('upload_image', { method: 'image-upload' });
@@ -49,6 +52,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
     if (isImageFile(file)) {
       handleImageUpload(file);
     }
+    event.target.value = '';
   };
 
   const handleClick = () => {
@@ -99,104 +103,129 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       className="image-upload-modal"
     >
       <div className="modal-body">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileSelect}
-          className="file-input"
-          data-testid="image-file-input"
-        />
-        {extractedPlayers.length === 0 ? (
-          <>
-            <div
-              className={`upload-area modal-upload-area ${isDragOver ? 'dragover' : ''}`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onClick={handleClick}
+        {!isSupported ? (
+          <div className="unsupported-ocr-state" data-testid="ocr-not-supported">
+            <WarningCircle size={48} weight="light" className="unsupported-icon" />
+            <h3>{t('modals.imageUpload.unsupportedTitle')}</h3>
+            <p>
+              {t('modals.imageUpload.unsupportedDescription')}
+              <br />
+              {t('modals.imageUpload.unsupportedInstructions')}
+            </p>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={handleClose}
+              data-testid="enter-manually-button"
             >
-              <div className="upload-content">
-                <Camera size={48} weight="light" className="upload-icon" />
-                <p>{t('modals.imageUpload.instructions')}</p>
-                <button type="button" className="upload-button">
-                  {t('modals.imageUpload.chooseImage')}
-                </button>
-              </div>
-            </div>
-
-            {isProcessing && (
-              <div className="processing">
-                <p>{t('modals.imageUpload.processing')}</p>
-                <div className="progress-container">
-                  <div
-                    className="progress-bar"
-                    style={{ width: `${(progress * 100).toFixed(0)}%` }}
-                  />
+              {t('modals.imageUpload.enterManually')}
+            </button>
+          </div>
+        ) : (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileSelect}
+              className="file-input"
+              data-testid="image-file-input"
+            />
+            {extractedPlayers.length === 0 ? (
+              <>
+                <div
+                  className={cx('upload-area modal-upload-area', isDragOver && 'dragover')}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onClick={handleClick}
+                >
+                  <div className="upload-content">
+                    <Camera size={48} weight="light" className="upload-icon" />
+                    <p>{t('modals.imageUpload.instructions')}</p>
+                    <button type="button" className="upload-button">
+                      {t('modals.imageUpload.chooseImage')}
+                    </button>
+                  </div>
                 </div>
-                <p>{Math.round(progress * 100)}%</p>
+
+                {isProcessing && (
+                  <div className="processing">
+                    <p>{t('modals.imageUpload.processing')}</p>
+                    <div className="progress-container">
+                      <div
+                        className="progress-bar"
+                        style={{ width: `${(progress * 100).toFixed(0)}%` }}
+                      />
+                    </div>
+                    <p>{Math.round(progress * 100)}%</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="extracted-players-section">
+                <div className="extracted-players-header">
+                  <p className="extracted-count">
+                    {t('modals.imageUpload.foundPlayers', {
+                      count: extractedPlayers.length,
+                      plural: extractedPlayers.length !== 1 ? 's' : '',
+                    })}
+                  </p>
+                  <div className="selection-actions">
+                    <button
+                      type="button"
+                      className="selection-action-btn"
+                      onClick={handleSelectAll}
+                      disabled={selectedPlayers.size === extractedPlayers.length}
+                    >
+                      {t('modals.imageUpload.selectAll')}
+                    </button>
+                    <button
+                      type="button"
+                      className="selection-action-btn"
+                      onClick={handleDeselectAll}
+                      disabled={selectedPlayers.size === 0}
+                    >
+                      {t('modals.imageUpload.deselectAll')}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="extracted-players-list">
+                  {extractedPlayers.map((player, index) => {
+                    const isSelected = selectedPlayers.has(player);
+                    return (
+                      <label
+                        key={`${player}-${index}`}
+                        className={cx('extracted-player-item', isSelected && 'selected')}
+                      >
+                        <span className="player-checkbox">
+                          {isSelected && <Check size={14} weight="bold" />}
+                        </span>
+                        <span className="player-name-text">{player}</span>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handlePlayerToggle(player)}
+                          className="hidden-checkbox"
+                          data-testid={`extracted-player-${index}`}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  className="try-another-image-btn"
+                  onClick={handleClick}
+                >
+                  {t('modals.imageUpload.tryAnotherImage')}
+                </button>
               </div>
             )}
           </>
-        ) : (
-          <div className="extracted-players-section">
-            <div className="extracted-players-header">
-              <p className="extracted-count">
-                {t('modals.imageUpload.foundPlayers', {
-                  count: extractedPlayers.length,
-                  plural: extractedPlayers.length !== 1 ? 's' : '',
-                })}
-              </p>
-              <div className="selection-actions">
-                <button
-                  type="button"
-                  className="selection-action-btn"
-                  onClick={handleSelectAll}
-                  disabled={selectedPlayers.size === extractedPlayers.length}
-                >
-                  {t('modals.imageUpload.selectAll')}
-                </button>
-                <button
-                  type="button"
-                  className="selection-action-btn"
-                  onClick={handleDeselectAll}
-                  disabled={selectedPlayers.size === 0}
-                >
-                  {t('modals.imageUpload.deselectAll')}
-                </button>
-              </div>
-            </div>
-
-            <div className="extracted-players-list">
-              {extractedPlayers.map((player, index) => (
-                <label
-                  key={`${player}-${index}`}
-                  className={`extracted-player-item ${selectedPlayers.has(player) ? 'selected' : ''}`}
-                >
-                  <span className="player-checkbox">
-                    {selectedPlayers.has(player) && <Check size={14} weight="bold" />}
-                  </span>
-                  <span className="player-name-text">{player}</span>
-                  <input
-                    type="checkbox"
-                    checked={selectedPlayers.has(player)}
-                    onChange={() => handlePlayerToggle(player)}
-                    className="hidden-checkbox"
-                    data-testid={`extracted-player-${index}`}
-                  />
-                </label>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              className="try-another-image-btn"
-              onClick={handleClick}
-            >
-              {t('modals.imageUpload.tryAnotherImage')}
-            </button>
-          </div>
         )}
       </div>
 

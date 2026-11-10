@@ -284,6 +284,10 @@ modals:
     tryAnotherImage: "📸 別の画像を試す"
     cancel: "キャンセル"
     addPlayers: "{{count}} 人のプレイヤーを追加"
+    unsupportedTitle: "テキスト認識を利用できません"
+    unsupportedDescription: "申し訳ありませんが、お使いのブラウザはテキスト認識に対応していません。"
+    unsupportedInstructions: "プレイヤー名を手動で入力してください。"
+    enterManually: "プレイヤーを手動で入力"
   importState:
     title: "共有セッションを読み込む"
     description: "URL に共有セッションが見つかりました。読み込むと現在のセッションが置き換えられます。"
