@@ -41,6 +41,9 @@ export default defineConfig(({ command }) => ({
           if (id.includes('node_modules/@phosphor-icons/react')) {
             return 'vendor-icons';
           }
+          if (id.includes('/src/tournament/')) {
+            return 'tournament-core';
+          }
         },
       },
     },
