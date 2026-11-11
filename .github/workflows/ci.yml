@@ -42,11 +42,9 @@ jobs:
 
     - name: Check bundle size budgets
       run: pnpm check:size
-      continue-on-error: true
 
     - name: Run Lighthouse CI
       run: pnpm lighthouse
-      continue-on-error: true
 
     - name: Output Lighthouse report summary
       if: always()
