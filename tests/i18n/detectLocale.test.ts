@@ -33,6 +33,34 @@ describe('detectLocale', () => {
       expect(matchLocaleTag('zh-Hant-HK')).toBe('zh');
     });
 
+    it('matches French locale tags', () => {
+      expect(matchLocaleTag('fr')).toBe('fr');
+      expect(matchLocaleTag('fr-FR')).toBe('fr');
+      expect(matchLocaleTag('FR-fr')).toBe('fr');
+      expect(matchLocaleTag('fr_FR')).toBe('fr');
+    });
+
+    it('matches German locale tags', () => {
+      expect(matchLocaleTag('de')).toBe('de');
+      expect(matchLocaleTag('de-DE')).toBe('de');
+      expect(matchLocaleTag('DE-de')).toBe('de');
+      expect(matchLocaleTag('de_AT')).toBe('de');
+    });
+
+    it('matches Hindi locale tags', () => {
+      expect(matchLocaleTag('hi')).toBe('hi');
+      expect(matchLocaleTag('hi-IN')).toBe('hi');
+      expect(matchLocaleTag('HI-in')).toBe('hi');
+      expect(matchLocaleTag('hi_IN')).toBe('hi');
+    });
+
+    it('matches Malay locale tags', () => {
+      expect(matchLocaleTag('ms')).toBe('ms');
+      expect(matchLocaleTag('ms-MY')).toBe('ms');
+      expect(matchLocaleTag('MS-my')).toBe('ms');
+      expect(matchLocaleTag('ms_MY')).toBe('ms');
+    });
+
     it('matches English locale tags', () => {
       expect(matchLocaleTag('en')).toBe('en');
       expect(matchLocaleTag('en-US')).toBe('en');
@@ -40,9 +68,9 @@ describe('detectLocale', () => {
     });
 
     it('returns null for unsupported locales', () => {
-      expect(matchLocaleTag('fr')).toBeNull();
-      expect(matchLocaleTag('de-DE')).toBeNull();
       expect(matchLocaleTag('es')).toBeNull();
+      expect(matchLocaleTag('it-IT')).toBeNull();
+      expect(matchLocaleTag('ko')).toBeNull();
       expect(matchLocaleTag('')).toBeNull();
     });
   });
@@ -86,9 +114,9 @@ describe('detectLocale', () => {
       expect(detectLocale()).toBe('zh');
     });
 
-    it('skips unknown locale (e.g. fr) and picks subsequent supported locale', () => {
+    it('skips unknown locale (e.g. es) and picks subsequent supported locale', () => {
       Object.defineProperty(navigator, 'languages', {
-        value: ['fr-FR', 'ja-JP'],
+        value: ['es-ES', 'ja-JP'],
         configurable: true,
       });
 
@@ -97,11 +125,11 @@ describe('detectLocale', () => {
 
     it('falls back to en when navigator has only unknown languages', () => {
       Object.defineProperty(navigator, 'languages', {
-        value: ['fr-FR', 'de-DE'],
+        value: ['es-ES', 'it-IT'],
         configurable: true,
       });
       Object.defineProperty(navigator, 'language', {
-        value: 'fr-FR',
+        value: 'es-ES',
         configurable: true,
       });
 

@@ -12,6 +12,10 @@ export type LocaleDictionary = Record<string, any>;
 const LOCALE_IMPORTERS: Partial<Record<SupportedLocale, () => Promise<{ default: LocaleDictionary }>>> = {
   ja: () => import('./locales/ja.yml'),
   zh: () => import('./locales/zh.yml'),
+  fr: () => import('./locales/fr.yml'),
+  de: () => import('./locales/de.yml'),
+  hi: () => import('./locales/hi.yml'),
+  ms: () => import('./locales/ms.yml'),
 };
 
 const loadedBundles: Partial<Record<SupportedLocale, LocaleDictionary>> = {

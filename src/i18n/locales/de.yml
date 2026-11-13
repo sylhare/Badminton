@@ -1,0 +1,351 @@
+app:
+  title: "Badminton-Court-Manager"
+  managePlayers: "Spieler verwalten"
+  courtAssignments: "Feldzuteilungen"
+  bench: "Bank"
+  settings: "Einstellungen"
+  moreInfo: "Mehr Informationen"
+
+players:
+  entry:
+    placeholder: "Spielernamen eingeben (mit ` oder , mehrere hinzufügen)"
+    importImage: "Spieler aus Bild importieren"
+    addSingle: "Spieler hinzufügen"
+    addMultiple: "{{count}} Spieler hinzufügen"
+    detectedHint: "💡 {{count}} Spieler erkannt, getrennt durch {{separator}}"
+  stats:
+    present: "Anwesend"
+    absent: "Abwesend"
+    total: "Gesamt"
+  actions:
+    editGenderLevel: "Klicken, um Geschlecht/Spielstärke zu bearbeiten"
+    markAbsent: "Als abwesend markieren"
+    markPresent: "Als anwesend markieren"
+    deletePlayer: "Spieler dauerhaft löschen"
+    benchCountTitle: "Bank-Einsätze: {{count}}"
+    benchNext: "Nächste Pause auf der Bank"
+    resetAlgorithmTitle: "Partner-/Gegner-Verlauf zurücksetzen (behält alle Spieler)"
+    resetAlgorithm: "Algorithmus zurücksetzen"
+    clearAllTitle: "Alle Spieler entfernen und Spielstände zurücksetzen"
+    clearAll: "Alle Spieler löschen"
+    shareTitle: "Sitzung per URL teilen"
+    share: "Teilen"
+  smartEngine:
+    label: "Smart Engine"
+    tooltip: "Die Smart Engine gleicht Spiele anhand von Geschlecht und Spielstärke aus. Aktivieren Sie sie und klicken Sie auf einen Spielernamen, um Geschlecht und Spielstärke einzustellen."
+  modals:
+    clearTitle: "Alle Spieler löschen"
+    clearMessage: "Möchten Sie wirklich alle Spieler entfernen? Dadurch werden auch alle Spielstände und der Spielverlauf zurückgesetzt. Diese Aktion kann nicht rückgängig gemacht werden."
+    clearConfirm: "Alle löschen"
+    resetTitle: "Algorithmus zurücksetzen"
+    resetMessage: "Möchten Sie den Speicher des Algorithmus wirklich zurücksetzen? Dadurch werden alle Aufzeichnungen über bisherige Paarungen, Bank-Einsätze und die Sieg-/Niederlagen-Historie gelöscht. Spieler bleiben erhalten, aber die Paarungspräferenzen werden zurückgesetzt."
+    resetConfirm: "Algorithmus zurücksetzen"
+    cancel: "Abbrechen"
+
+leaderboard:
+  title: "🏆 Rangliste"
+  rank: "#"
+  player: "Spieler"
+  level: "Stufe"
+  avgPts: "Ø Pkt."
+  wins: "Siege"
+  matches: "Spiele"
+
+court:
+  settings:
+    courts: "Felder:"
+    rearrange: "Spieler umordnen"
+    rearrangeTooltip: "Ziehen Sie einen Spieler auf einen anderen, um sie zwischen Teams, Feldern und der Bank zu tauschen — oder tippen Sie zwei Spieler an."
+  empty:
+    noPlayers: "Fügen Sie oben Spieler hinzu, um Feldzuteilungen zu erstellen."
+    howItWorksTitle: "So funktioniert's:"
+    howItWorksDescription: " Spieler werden den Feldern zufällig zugewiesen. Doppel (4 Spieler) wird bevorzugt, bei ungeraden Zahlen wird Einzel (2 Spieler) gespielt. Überschüssige Spieler pausieren auf der Bank."
+    generateButton: "🎲 Zuteilungen generieren"
+  assignments:
+    editModeBanner: "Ziehen Sie einen Spieler auf einen anderen, um sie zu tauschen — oder tippen Sie zwei Spieler an."
+    editModeDone: "Fertig"
+    tip: "Tipp:"
+    winnerInstructions: " Klicken Sie auf ein Team, um es als Sieger zu markieren. Eine Krone 👑 erscheint neben dem Siegerteam. Klicken Sie erneut, um den Sieger zu entfernen."
+    regenerateButton: "🎲 Zuteilungen neu generieren"
+    lastGenerated: "Zuletzt generiert: {{time}}"
+    timeAgo:
+      justNow: "gerade eben"
+      seconds: "vor {{count}}s"
+      minutes: "vor {{count}} Min."
+      hours: "vor {{count}} Std."
+      days: "vor {{count}} T."
+  card:
+    header: "Feld {{number}}"
+    headerWithMatch: "Feld {{number}} - {{matchType}}"
+    singles: "Einzel"
+    doubles: "Doppel"
+    rotateTeam: "Teamzuteilung rotieren"
+  match:
+    waiting: "Wartet: {{name}}"
+  display:
+    playersOnCourt: "Spieler auf dem Feld:"
+    teamTitle: "Team {{number}}"
+    vs: "VS"
+
+bench:
+  title: "🪑 Bank ({{count}} Spieler)"
+  titleSingle: "🪑 Bank (1 Spieler)"
+  viewCounts: "Bank-Einsätze anzeigen & verwalten"
+
+footer:
+  feedback: "Feedback? Einen Fehler gefunden oder einen Funktionsvorschlag?"
+  githubLink: "Teilen Sie es uns auf GitHub mit"
+  viewStats: "Statistiken & Analysen ansehen"
+  tryTournament: "Turniermodus ausprobieren"
+  language: "Sprache"
+
+nav:
+  backToApp: "← Court-Manager"
+
+notFound:
+  title: "404"
+  message: "Seite nicht gefunden"
+  goHome: "Zurück zum Court-Manager"
+
+stats:
+  header: "{{engineName}}-Diagnose"
+  title: "Diagnose"
+  sessionDiagnostics: "🔍 Aktuelle Sitzungsdiagnose"
+  warnings:
+    title: "⚠️ Warnungen"
+    benchImbalance: "Ungleichgewicht auf der Bank: Spanne von {{spread}} (erwartet ~{{expected}} für {{rounds}} Runden)"
+    singlesOverplayed: "{{count}} Spieler haben {{threshold}}+ Mal Einzel gespielt (erwartet je ~{{expected}})"
+    pairTeamedUp: "{{count}} Paar(e) haben {{threshold}}+ Mal zusammengespielt (Durchschnitt ist {{avg}})"
+    pairFacedEachOther: "{{count}} Paar(e) haben {{threshold}}+ Mal gegeneinander gespielt (Durchschnitt ist {{avg}})"
+    sittingTooLong: "{{player}} sitzt seit {{count}} aufeinanderfolgenden Runden auf der Bank"
+    unbalancedCourts: "Felder sind unausgeglichen: {{details}}"
+  cards:
+    totalPlayers: "Spieler gesamt"
+    roundsPlayed: "Gespielte Runden"
+    repeatedPairs: "Wiederholte Paare"
+    warnings: "Warnungen"
+  bench:
+    title: "🪑 Bankverteilung"
+    neverBenched: "Nie auf der Bank:"
+    benchedOnce: "Einmal auf der Bank:"
+    benchedMultiple: "Mehrmals auf der Bank:"
+    minMax: "Min./Max. Bankeinsätze:"
+    fairnessScore: "Fairness-Wert:"
+    lowerIsBetter: "(niedriger ist besser)"
+    viewCounts: "Bankeinsätze pro Spieler anzeigen ({{count}})"
+  teammates:
+    title: "👥 Teampartner-Verbindungen"
+    viewRepeated: "Wiederholte Paare anzeigen ({{count}})"
+    empty: "✓ Bisher keine Teampartner-Kombinationen erfasst"
+  opponents:
+    title: "⚔️ Gegner-Duelle"
+    viewRepeated: "Wiederholte Duelle anzeigen ({{count}})"
+    empty: "✓ Bisher keine Gegner-Duelle erfasst"
+  singles:
+    title: "🎯 Einzelspiele"
+    playersCount: "{{count}} Spieler haben Einzel gespielt"
+    multipleCount: "({{count}} mehrmals)"
+    viewList: "Einzelliste anzeigen ({{count}})"
+    empty: "Keine Einzelspiele erfasst"
+  level:
+    title: "📈 Stufenentwicklung"
+  empty:
+    message: "Noch keine Sitzungsdaten vorhanden. Beginnen Sie zu spielen, um die Diagnose anzuzeigen!"
+    startCta: "Spiel starten →"
+  graphs:
+    levelHistory:
+      ariaLabel: "Diagramm zur Stufenentwicklung"
+      xAxisLabel: "Runde"
+    genderLegend:
+      male: "M"
+      female: "W"
+      unknown: "?"
+    counts:
+      once: "1×"
+      twice: "2×"
+      threeTimes: "3×"
+      fourPlus: "4×+"
+  githubAnalysis:
+    heading: "📊 GitHub-Analyse"
+    cardTitle: "Analyse ansehen"
+    description: "Lesen Sie die Algorithmusdokumentation, den Motorenvergleich und die Stufen-Tracker-Analyse auf GitHub."
+
+tournament:
+  title: "Turnier"
+  setupTitle: "Turniereinstellungen"
+  mode: "Modus"
+  banner:
+    setup: "Turniereinstellungen"
+    current: "Aktuelles Turnier"
+  actions:
+    startNew: "Neues Turnier starten"
+    start: "Turnier starten"
+  resetModal:
+    title: "Neues Turnier starten?"
+    message: "Dadurch wird das aktuelle Turnier mit allen Ergebnissen verworfen. Möchten Sie wirklich ein neues Turnier starten?"
+    confirm: "Neues starten"
+    cancel: "Abbrechen"
+  setup:
+    format: "Format"
+    players: "Spieler"
+    courts: "Anzahl der Felder"
+    sets: "Sätze pro Spiel"
+    pointsPerSet: "Punkte pro Satz"
+    singleGame: "Einzelspiel"
+    bestOf: "Best of {{n}}"
+    teams: "Teams"
+    teamTitle: "Team {{number}}"
+    dragHint: "Ziehen Sie einen Spieler auf einen anderen, um sie zu tauschen — oder tippen Sie zwei Spieler an."
+    formats:
+      singles: "Einzel (1v1)"
+      doubles: "Doppel (2v2)"
+    warnings:
+      courtWarning: "{{matches}} Spiele pro Runde, aber nur {{courts}} Feld{{plural}} — einige Spiele müssen warten."
+    groupKnockout:
+      teamsPerGroup: "Teams pro Gruppe"
+      qualifiersPerGroup: "Qualifikanten pro Gruppe"
+  kinds:
+    roundRobin:
+      label: "Round Robin"
+      description: "Jedes Team spielt gegen jedes andere Team."
+    elimination:
+      label: "K.-o.-System"
+      description: "Einfaches K.-o.-System mit Trostrunde."
+    groupKnockout:
+      label: "Gruppen + K.-o.-Phase"
+      description: "Gruppenphase gefolgt von K.-o.-Runde."
+  standings:
+    title: "Tabelle"
+    tieBreakTitle: "Gleichstand in allen Kriterien — legen Sie die Reihenfolge manuell fest"
+    tieBreakAria: "Gleichstand — manuelle Sortierung erforderlich"
+    setTieBreakOrder: "Tie-Break-Reihenfolge festlegen"
+    table:
+      rank: "Platz"
+      rankShort: "#"
+      team: "Team"
+      won: "S"
+      lost: "N"
+      points: "Pkt"
+      sets: "Sätze"
+      scoreDiff: "Punkte-Diff."
+  roundRobin:
+    roundHeader: "Runde {{round}}"
+    roundComplete: "✓ Abgeschlossen"
+    roundProgress: "{{done}}/{{total}} abgeschlossen"
+    courtNumber: "Feld {{court}}"
+  groupKnockout:
+    groupLabel: "Gruppe {{letter}}"
+    tieBreakAria: "Tie-Break-Reihenfolge festlegen"
+    groupTieWarning: "Ein Gleichstand in der Gruppe muss gelöst werden, bevor die K.-o.-Runde beginnen kann — nutzen Sie die Schaltfläche ⇅ in den betroffenen Zeilen oben."
+    knockoutStage: "K.-o.-Phase"
+    finalResults: "Endergebnisse"
+  elimination:
+    winnersBracket: "Hauptrunde"
+    consolationBracket: "Trostrunde"
+    thirdPlace: "3. Platz"
+    tbd: "Offen"
+    bye: "Freilos"
+    rounds:
+      final: "Finale"
+      semiFinal: "Halbfinale"
+      nthOfFinal: "1/{{n}}-Finale"
+  domain:
+    subtitles:
+      afterRound: "Nach Runde {{done}} / {{total}}"
+      roundZero: "Runde 0 / {{total}}"
+      inProgress: "Läuft"
+      finalResults: "Endergebnisse"
+    validation:
+      minTeams: "Mindestens 2 Teams erforderlich"
+      doublesPlayers: "Jedes Doppelteam muss genau 2 Spieler haben"
+      tooFewQualifiers: "Zu wenige Teams würden sich für die K.-o.-Runde qualifizieren — fügen Sie Teams hinzu oder verkleinern Sie die Gruppengröße."
+    warnings:
+      everyoneAdvances: "Niemand scheidet in der Gruppenphase aus — alle Teams kommen weiter. Ist das so gewünscht?"
+    summary:
+      undersized: "{{count}} Teams können keine Gruppen zu je {{size}} füllen, daher spielen sie als {{shape}}."
+      normal: "{{count}} Teams → {{shape}}."
+      tooFewKnockout: "{{split}} Damit verbleiben zu wenige Teams für eine K.-o.-Runde — fügen Sie Teams hinzu oder verkleinern Sie die Gruppengröße."
+      allAdvance: "{{split}} Da die besten {{qualifiers}} weiterkommen, scheidet niemand in der Gruppenphase aus."
+
+modals:
+  close: "Schließen"
+  confirm:
+    defaultTitle: "Bestätigen"
+    confirm: "Bestätigen"
+    cancel: "Abbrechen"
+  imageUpload:
+    title: "📸 Spieler aus Bild importieren"
+    instructions: "Fotografieren Sie Ihre Spielerliste oder laden Sie ein Bild hoch. Per Drag & Drop oder Klick auswählen."
+    chooseImage: "Bild auswählen"
+    processing: "🔍 Bild wird verarbeitet und Spielernamen werden extrahiert..."
+    foundPlayers: "{{count}} Spieler gefunden"
+    selectAll: "Alle auswählen"
+    deselectAll: "Alle abwählen"
+    tryAnotherImage: "📸 Anderes Bild versuchen"
+    cancel: "Abbrechen"
+    addPlayers: "{{count}} Spieler hinzufügen"
+    unsupportedTitle: "Texterkennung nicht verfügbar"
+    unsupportedDescription: "Ihr Browser unterstützt leider keine Texterkennung."
+    unsupportedInstructions: "Bitte geben Sie die Spielernamen manuell ein."
+    enterManually: "Spieler manuell eingeben"
+  importState:
+    title: "Geteilte Sitzung laden"
+    description: "In der URL wurde eine geteilte Sitzung gefunden. Wenn Sie diese laden, wird Ihre aktuelle Sitzung ersetzt."
+    sharedSavedAt: "Geteilte Sitzung gespeichert: {{time}}"
+    currentSavedAt: "Ihre Sitzung gespeichert: {{time}}"
+    backupPrompt: "Speichern Sie diesen Link, um Ihre aktuelle Sitzung später wiederherzustellen:"
+    copy: "Kopieren"
+    copied: "Kopiert!"
+    decline: "Meine Sitzung behalten"
+    accept: "Geteilte Sitzung laden"
+  manualOrder:
+    title: "Tie-Break-Reihenfolge festlegen"
+    description: "Diese Teams haben in allen Kriterien Gleichstand — ordnen Sie sie nach ihrer finalen Platzierung an:"
+    moveUpAria: "{{name}} nach oben verschieben"
+    moveDownAria: "{{name}} nach unten verschieben"
+    cancel: "Abbrechen"
+    save: "Reihenfolge speichern"
+  playerEdit:
+    gender: "Geschlecht"
+    genderTooltip: "Die Angabe des Geschlechts hilft der Smart Engine bei ausgeglichenen Mixed-Doppeln — so wird vermieden, dass alle Spieler desselben Geschlechts in einem Team landen."
+    level: "Stufe: {{level}}"
+    levelTooltip: "Die Stufe (0–100) spiegelt die Spielstärke wider. Die Smart Engine paart Spieler ähnlicher Stärke für spannendere und ausgeglichenere Spiele."
+    cancel: "Abbrechen"
+    save: "Speichern"
+    genderOptions:
+      female: "💁‍♀️ W"
+      male: "🙋‍♂️ M"
+      unknown: "Unbekannt"
+  playerRemoval:
+    title: "Spieler entfernen"
+    message: "Was möchten Sie mit {{name}} tun?"
+    markAbsent: "Als abwesend markieren"
+    removePlayer: "Spieler entfernen"
+  scoreInput:
+    titleWinner: "🏆 Team {{winner}} gewinnt!"
+    titleScores: "Satzergebnisse eingeben"
+    promptSingle: "Ergebnis eingeben (Standard: {{setSize}} – {{defaultOpponent}}):"
+    promptMultiple: "Ergebnis für jeden Satz eingeben (Best of {{count}}):"
+    vs: "vs"
+    setLabel: "Satz {{number}}"
+    team1ScoreAria: "Ergebnis Team 1{{set}}"
+    team2ScoreAria: "Ergebnis Team 2{{set}}"
+    confirm: "Bestätigen"
+  share:
+    title: "Sitzung teilen"
+    description: "Teilen Sie diese URL, damit andere Ihre aktuelle Sitzung laden können:"
+    close: "Schließen"
+    copyUrl: "URL kopieren"
+    copied: "Kopiert!"
+
+ocr:
+  failed: "Fehler beim Verarbeiten des Bildes. Bitte versuchen Sie es erneut oder geben Sie die Spieler manuell ein."
+
+engines:
+  simulatedAnnealing:
+    name: "Simulated Annealing"
+    description: "Simulated Annealing mit iterativer Verbesserung. Führt {{iterations}} Iterationen durch und akzeptiert probabilistisch schlechtere Lösungen, um lokalen Minima zu entkommen."
+  smartMatching:
+    name: "Smart Matching v2"
+    description: "Stufenbasierte Gruppierung mit Schiebefenster, Sieg-Dynamik und Präferenz für gemischte Doppel."
+

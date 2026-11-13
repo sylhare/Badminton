@@ -21,6 +21,10 @@ const readLocale = (locale: string): LocaleDictionary =>
 const en = readLocale('en');
 const ja = readLocale('ja');
 const zh = readLocale('zh');
+const fr = readLocale('fr');
+const de = readLocale('de');
+const hi = readLocale('hi');
+const ms = readLocale('ms');
 
 test.describe('i18n', () => {
   test('ja via locale: ja-JP context renders Japanese title', async ({ browser }) => {
@@ -47,6 +51,54 @@ test.describe('i18n', () => {
     await context.close();
   });
 
+  test('fr via locale: fr-FR context renders French title', async ({ browser }) => {
+    const context = await browser.newContext({
+      locale: 'fr-FR',
+    });
+    const page = await context.newPage();
+    await page.goto('/');
+
+    await expect(page.locator('h1')).toContainText(fr.app.title);
+    await expect(page.locator('h1')).not.toContainText(en.app.title);
+    await context.close();
+  });
+
+  test('de via locale: de-DE context renders German title', async ({ browser }) => {
+    const context = await browser.newContext({
+      locale: 'de-DE',
+    });
+    const page = await context.newPage();
+    await page.goto('/');
+
+    await expect(page.locator('h1')).toContainText(de.app.title);
+    await expect(page.locator('h1')).not.toContainText(en.app.title);
+    await context.close();
+  });
+
+  test('hi via locale: hi-IN context renders Hindi title', async ({ browser }) => {
+    const context = await browser.newContext({
+      locale: 'hi-IN',
+    });
+    const page = await context.newPage();
+    await page.goto('/');
+
+    await expect(page.locator('h1')).toContainText(hi.app.title);
+    await expect(page.locator('h1')).not.toContainText(en.app.title);
+    await context.close();
+  });
+
+  test('ms via locale: ms-MY context renders Malaysian title', async ({ browser }) => {
+    const context = await browser.newContext({
+      locale: 'ms-MY',
+    });
+    const page = await context.newPage();
+    await page.goto('/');
+
+    await expect(page.locator('h1')).toContainText(ms.app.title);
+    await expect(page.locator('h1')).not.toContainText(en.app.title);
+    await context.close();
+  });
+
   test('footer language switch en -> ja -> en updates text and persists across reload', async ({ page }) => {
     await page.goto('/');
     const selector = page.getByTestId('language-selector');
@@ -67,17 +119,15 @@ test.describe('i18n', () => {
     await expect(page.locator('h1')).toContainText(en.app.title);
   });
 
-  test('initial load for an English user does not request ja or zh chunks', async ({ page }) => {
+  test('initial load for an English user does not request non-English chunks', async ({ page }) => {
     const requestedLocales: string[] = [];
+    const nonEnLocales = ['ja', 'zh', 'fr', 'de', 'hi', 'ms'];
     page.on('request', request => {
       const url = request.url();
-      if (
-        url.includes('/ja.yml') ||
-        url.includes('/zh.yml') ||
-        url.match(/\/ja-[^/]+\.js/) ||
-        url.match(/\/zh-[^/]+\.js/)
-      ) {
-        requestedLocales.push(url);
+      for (const loc of nonEnLocales) {
+        if (url.includes(`/${loc}.yml`) || url.match(new RegExp(`/${loc}-[^/]+\\.js`))) {
+          requestedLocales.push(url);
+        }
       }
     });
 
