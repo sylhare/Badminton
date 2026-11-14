@@ -8,11 +8,22 @@ interface NumberFieldProps {
   onChange: (value: number) => void;
   testId: string;
   max?: number;
+  ariaLabel?: string;
+  id?: string;
 }
 
 /** A clamped numeric input: parses the entry and clamps it to `[min, max]` before calling `onChange`. */
-export const NumberField: React.FC<NumberFieldProps> = ({ value, min, onChange, testId, max }) => (
+export const NumberField: React.FC<NumberFieldProps> = ({
+  value,
+  min,
+  onChange,
+  testId,
+  max,
+  ariaLabel,
+  id,
+}) => (
   <input
+    id={id}
     type="number"
     min={min}
     max={max}
@@ -20,5 +31,6 @@ export const NumberField: React.FC<NumberFieldProps> = ({ value, min, onChange, 
     onChange={e => onChange(clamp(parseInt(e.target.value, 10) || min, min, max ?? Infinity))}
     className="court-count-input"
     data-testid={testId}
+    aria-label={ariaLabel}
   />
 );
