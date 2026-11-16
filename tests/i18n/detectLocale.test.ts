@@ -18,53 +18,18 @@ describe('detectLocale', () => {
   });
 
   describe('matchLocaleTag', () => {
-    it('matches Japanese locale tags', () => {
-      expect(matchLocaleTag('ja')).toBe('ja');
-      expect(matchLocaleTag('ja-JP')).toBe('ja');
-      expect(matchLocaleTag('JA-jp')).toBe('ja');
-      expect(matchLocaleTag('ja_JP')).toBe('ja');
-    });
-
-    it('matches Chinese locale tags', () => {
-      expect(matchLocaleTag('zh')).toBe('zh');
-      expect(matchLocaleTag('zh-CN')).toBe('zh');
-      expect(matchLocaleTag('zh-TW')).toBe('zh');
-      expect(matchLocaleTag('zh-Hans')).toBe('zh');
-      expect(matchLocaleTag('zh-Hant-HK')).toBe('zh');
-    });
-
-    it('matches French locale tags', () => {
-      expect(matchLocaleTag('fr')).toBe('fr');
-      expect(matchLocaleTag('fr-FR')).toBe('fr');
-      expect(matchLocaleTag('FR-fr')).toBe('fr');
-      expect(matchLocaleTag('fr_FR')).toBe('fr');
-    });
-
-    it('matches German locale tags', () => {
-      expect(matchLocaleTag('de')).toBe('de');
-      expect(matchLocaleTag('de-DE')).toBe('de');
-      expect(matchLocaleTag('DE-de')).toBe('de');
-      expect(matchLocaleTag('de_AT')).toBe('de');
-    });
-
-    it('matches Hindi locale tags', () => {
-      expect(matchLocaleTag('hi')).toBe('hi');
-      expect(matchLocaleTag('hi-IN')).toBe('hi');
-      expect(matchLocaleTag('HI-in')).toBe('hi');
-      expect(matchLocaleTag('hi_IN')).toBe('hi');
-    });
-
-    it('matches Malay locale tags', () => {
-      expect(matchLocaleTag('ms')).toBe('ms');
-      expect(matchLocaleTag('ms-MY')).toBe('ms');
-      expect(matchLocaleTag('MS-my')).toBe('ms');
-      expect(matchLocaleTag('ms_MY')).toBe('ms');
-    });
-
-    it('matches English locale tags', () => {
-      expect(matchLocaleTag('en')).toBe('en');
-      expect(matchLocaleTag('en-US')).toBe('en');
-      expect(matchLocaleTag('en-GB')).toBe('en');
+    it.each([
+      ['Japanese', 'ja', ['ja', 'ja-JP', 'JA-jp', 'ja_JP']],
+      ['Chinese', 'zh', ['zh', 'zh-CN', 'zh-TW', 'zh-Hans', 'zh-Hant-HK']],
+      ['French', 'fr', ['fr', 'fr-FR', 'FR-fr', 'fr_FR']],
+      ['German', 'de', ['de', 'de-DE', 'DE-de', 'de_AT']],
+      ['Hindi', 'hi', ['hi', 'hi-IN', 'HI-in', 'hi_IN']],
+      ['Malay', 'ms', ['ms', 'ms-MY', 'MS-my', 'ms_MY']],
+      ['English', 'en', ['en', 'en-US', 'en-GB']],
+    ] as const)('matches %s locale tags', (_, expected, tags) => {
+      for (const tag of tags) {
+        expect(matchLocaleTag(tag)).toBe(expected);
+      }
     });
 
     it('returns null for unsupported locales', () => {

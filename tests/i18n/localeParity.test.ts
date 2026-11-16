@@ -1,77 +1,37 @@
 import { describe, expect, it } from 'vitest';
 
-import de from '../../src/i18n/locales/de.yml';
-import en from '../../src/i18n/locales/en.yml';
-import fr from '../../src/i18n/locales/fr.yml';
-import hi from '../../src/i18n/locales/hi.yml';
-import ja from '../../src/i18n/locales/ja.yml';
-import ms from '../../src/i18n/locales/ms.yml';
-import zh from '../../src/i18n/locales/zh.yml';
 import {
   flattenKeys,
   validateNonEmptyStrings,
   validateParity,
 } from '../../vite/yamlPlugin';
 
+const localeModules = import.meta.glob<{ default: Record<string, any> }>(
+  '../../src/i18n/locales/*.yml',
+  { eager: true },
+);
+
+const locales = Object.entries(localeModules).map(([filePath, mod]) => {
+  const filename = filePath.split('/').pop()!;
+  const name = filename.replace(/\.yml$/, '');
+  return {
+    name,
+    filename,
+    flat: flattenKeys(mod.default),
+  };
+});
+
+const enLocale = locales.find(l => l.name === 'en')!;
+const enFlat = enLocale.flat;
+const nonEnLocales = locales.filter(l => l.name !== 'en');
+
 describe('locale parity', () => {
-  const enFlat = flattenKeys(en);
-  const jaFlat = flattenKeys(ja);
-  const zhFlat = flattenKeys(zh);
-  const frFlat = flattenKeys(fr);
-  const deFlat = flattenKeys(de);
-  const hiFlat = flattenKeys(hi);
-  const msFlat = flattenKeys(ms);
-
-  it('has identical keys between en and ja', () => {
-    expect(() => validateParity(jaFlat, enFlat, 'ja.yml')).not.toThrow();
+  it.each(nonEnLocales)('has identical keys between en and $name', ({ flat, filename }) => {
+    expect(() => validateParity(flat, enFlat, filename)).not.toThrow();
   });
 
-  it('has identical keys between en and zh', () => {
-    expect(() => validateParity(zhFlat, enFlat, 'zh.yml')).not.toThrow();
-  });
-
-  it('has identical keys between en and fr', () => {
-    expect(() => validateParity(frFlat, enFlat, 'fr.yml')).not.toThrow();
-  });
-
-  it('has identical keys between en and de', () => {
-    expect(() => validateParity(deFlat, enFlat, 'de.yml')).not.toThrow();
-  });
-
-  it('has identical keys between en and hi', () => {
-    expect(() => validateParity(hiFlat, enFlat, 'hi.yml')).not.toThrow();
-  });
-
-  it('has identical keys between en and ms', () => {
-    expect(() => validateParity(msFlat, enFlat, 'ms.yml')).not.toThrow();
-  });
-
-  it('has no empty or whitespace-only values in en.yml', () => {
-    expect(() => validateNonEmptyStrings(enFlat, 'en.yml')).not.toThrow();
-  });
-
-  it('has no empty or whitespace-only values in ja.yml', () => {
-    expect(() => validateNonEmptyStrings(jaFlat, 'ja.yml')).not.toThrow();
-  });
-
-  it('has no empty or whitespace-only values in zh.yml', () => {
-    expect(() => validateNonEmptyStrings(zhFlat, 'zh.yml')).not.toThrow();
-  });
-
-  it('has no empty or whitespace-only values in fr.yml', () => {
-    expect(() => validateNonEmptyStrings(frFlat, 'fr.yml')).not.toThrow();
-  });
-
-  it('has no empty or whitespace-only values in de.yml', () => {
-    expect(() => validateNonEmptyStrings(deFlat, 'de.yml')).not.toThrow();
-  });
-
-  it('has no empty or whitespace-only values in hi.yml', () => {
-    expect(() => validateNonEmptyStrings(hiFlat, 'hi.yml')).not.toThrow();
-  });
-
-  it('has no empty or whitespace-only values in ms.yml', () => {
-    expect(() => validateNonEmptyStrings(msFlat, 'ms.yml')).not.toThrow();
+  it.each(locales)('has no empty or whitespace-only values in $filename', ({ flat, filename }) => {
+    expect(() => validateNonEmptyStrings(flat, filename)).not.toThrow();
   });
 
   describe('parity and validation helpers', () => {

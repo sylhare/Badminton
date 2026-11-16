@@ -7,28 +7,8 @@ export function isSupportedLocale(locale: unknown): locale is SupportedLocale {
 
 export function matchLocaleTag(tag: string): SupportedLocale | null {
   const normalized = tag.toLowerCase().trim();
-  if (normalized === 'ja' || normalized.startsWith('ja-') || normalized.startsWith('ja_')) {
-    return 'ja';
-  }
-  if (normalized === 'zh' || normalized.startsWith('zh-') || normalized.startsWith('zh_')) {
-    return 'zh';
-  }
-  if (normalized === 'fr' || normalized.startsWith('fr-') || normalized.startsWith('fr_')) {
-    return 'fr';
-  }
-  if (normalized === 'de' || normalized.startsWith('de-') || normalized.startsWith('de_')) {
-    return 'de';
-  }
-  if (normalized === 'hi' || normalized.startsWith('hi-') || normalized.startsWith('hi_')) {
-    return 'hi';
-  }
-  if (normalized === 'ms' || normalized.startsWith('ms-') || normalized.startsWith('ms_')) {
-    return 'ms';
-  }
-  if (normalized === 'en' || normalized.startsWith('en-') || normalized.startsWith('en_')) {
-    return 'en';
-  }
-  return null;
+  const [subtag] = normalized.split(/[-_]/);
+  return isSupportedLocale(subtag) ? subtag : null;
 }
 
 /**

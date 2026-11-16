@@ -18,26 +18,40 @@ interface LocaleDictionary {
 const readLocale = (locale: string): LocaleDictionary =>
   yaml.parse(fs.readFileSync(path.resolve(import.meta.dirname, `../../src/i18n/locales/${locale}.yml`), 'utf-8'));
 
+const localesDir = path.resolve(import.meta.dirname, '../../src/i18n/locales');
+const nonEnLocales = fs
+  .readdirSync(localesDir)
+  .filter(f => f.endsWith('.yml'))
+  .map(f => f.replace(/\.yml$/, ''))
+  .filter(code => code !== 'en');
+
 const en = readLocale('en');
 const ja = readLocale('ja');
 const zh = readLocale('zh');
-const fr = readLocale('fr');
-const de = readLocale('de');
-const hi = readLocale('hi');
-const ms = readLocale('ms');
+
+const browserLocaleCases = [
+  { code: 'ja', localeTag: 'ja-JP', label: 'Japanese' },
+  { code: 'fr', localeTag: 'fr-FR', label: 'French' },
+  { code: 'de', localeTag: 'de-DE', label: 'German' },
+  { code: 'hi', localeTag: 'hi-IN', label: 'Hindi' },
+  { code: 'ms', localeTag: 'ms-MY', label: 'Malaysian' },
+];
 
 test.describe('i18n', () => {
-  test('ja via locale: ja-JP context renders Japanese title', async ({ browser }) => {
-    const context = await browser.newContext({
-      locale: 'ja-JP',
-    });
-    const page = await context.newPage();
-    await page.goto('/');
+  for (const { code, localeTag, label } of browserLocaleCases) {
+    test(`${code} via locale: ${localeTag} context renders ${label} title`, async ({ browser }) => {
+      const localeDict = readLocale(code);
+      const context = await browser.newContext({
+        locale: localeTag,
+      });
+      const page = await context.newPage();
+      await page.goto('/');
 
-    await expect(page.locator('h1')).toContainText(ja.app.title);
-    await expect(page.locator('h1')).not.toContainText(en.app.title);
-    await context.close();
-  });
+      await expect(page.locator('h1')).toContainText(localeDict.app.title);
+      await expect(page.locator('h1')).not.toContainText(en.app.title);
+      await context.close();
+    });
+  }
 
   test('zh via localStorage badminton-locale renders Chinese title', async ({ browser }) => {
     const context = await browser.newContext();
@@ -48,54 +62,6 @@ test.describe('i18n', () => {
     await page.goto('/');
 
     await expect(page.locator('h1')).toContainText(zh.app.title);
-    await context.close();
-  });
-
-  test('fr via locale: fr-FR context renders French title', async ({ browser }) => {
-    const context = await browser.newContext({
-      locale: 'fr-FR',
-    });
-    const page = await context.newPage();
-    await page.goto('/');
-
-    await expect(page.locator('h1')).toContainText(fr.app.title);
-    await expect(page.locator('h1')).not.toContainText(en.app.title);
-    await context.close();
-  });
-
-  test('de via locale: de-DE context renders German title', async ({ browser }) => {
-    const context = await browser.newContext({
-      locale: 'de-DE',
-    });
-    const page = await context.newPage();
-    await page.goto('/');
-
-    await expect(page.locator('h1')).toContainText(de.app.title);
-    await expect(page.locator('h1')).not.toContainText(en.app.title);
-    await context.close();
-  });
-
-  test('hi via locale: hi-IN context renders Hindi title', async ({ browser }) => {
-    const context = await browser.newContext({
-      locale: 'hi-IN',
-    });
-    const page = await context.newPage();
-    await page.goto('/');
-
-    await expect(page.locator('h1')).toContainText(hi.app.title);
-    await expect(page.locator('h1')).not.toContainText(en.app.title);
-    await context.close();
-  });
-
-  test('ms via locale: ms-MY context renders Malaysian title', async ({ browser }) => {
-    const context = await browser.newContext({
-      locale: 'ms-MY',
-    });
-    const page = await context.newPage();
-    await page.goto('/');
-
-    await expect(page.locator('h1')).toContainText(ms.app.title);
-    await expect(page.locator('h1')).not.toContainText(en.app.title);
     await context.close();
   });
 
@@ -121,7 +87,6 @@ test.describe('i18n', () => {
 
   test('initial load for an English user does not request non-English chunks', async ({ page }) => {
     const requestedLocales: string[] = [];
-    const nonEnLocales = ['ja', 'zh', 'fr', 'de', 'hi', 'ms'];
     page.on('request', request => {
       const url = request.url();
       for (const loc of nonEnLocales) {

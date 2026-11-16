@@ -4,14 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import de from '../../src/i18n/locales/de.yml';
-import en from '../../src/i18n/locales/en.yml';
-import fr from '../../src/i18n/locales/fr.yml';
-import hi from '../../src/i18n/locales/hi.yml';
-import ja from '../../src/i18n/locales/ja.yml';
-import ms from '../../src/i18n/locales/ms.yml';
-import zh from '../../src/i18n/locales/zh.yml';
+import { SUPPORTED_LOCALES } from '../../src/i18n';
 import { flattenKeys } from '../../vite/yamlPlugin';
+
+const localeModules = import.meta.glob<{ default: Record<string, any> }>(
+  '../../src/i18n/locales/*.yml',
+  { eager: true },
+);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +23,7 @@ const MAX_BUILT_CHUNK_SIZE_BYTES = 26 * 1024;
 
 describe('bundleSize', () => {
   it('keeps raw locale YAML files within reasonable size limits', () => {
-    const localeFiles = ['en.yml', 'ja.yml', 'zh.yml', 'fr.yml', 'de.yml', 'hi.yml', 'ms.yml'];
+    const localeFiles = fs.readdirSync(localesDir).filter(f => f.endsWith('.yml'));
 
     for (const file of localeFiles) {
       const filePath = path.join(localesDir, file);
@@ -34,18 +33,8 @@ describe('bundleSize', () => {
   });
 
   it('keeps in-memory locale dictionaries compact', () => {
-    const dictionaries = [
-      { name: 'en', dict: en },
-      { name: 'ja', dict: ja },
-      { name: 'zh', dict: zh },
-      { name: 'fr', dict: fr },
-      { name: 'de', dict: de },
-      { name: 'hi', dict: hi },
-      { name: 'ms', dict: ms },
-    ];
-
-    for (const { dict } of dictionaries) {
-      const flat = flattenKeys(dict);
+    for (const mod of Object.values(localeModules)) {
+      const flat = flattenKeys(mod.default);
       const jsonBytes = Buffer.byteLength(JSON.stringify(flat), 'utf8');
       expect(jsonBytes).toBeLessThan(MAX_FLATTENED_JSON_SIZE_BYTES);
     }
@@ -57,7 +46,7 @@ describe('bundleSize', () => {
     }
 
     const files = fs.readdirSync(distAssetsDir);
-    const chunkLocales = ['ja', 'zh', 'fr', 'de', 'hi', 'ms'];
+    const chunkLocales = SUPPORTED_LOCALES.filter(l => l !== 'en');
 
     for (const loc of chunkLocales) {
       const chunkRegex = new RegExp(`^${loc}-[A-Za-z0-9_-]+\\.js$`);
