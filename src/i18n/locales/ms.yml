@@ -1,0 +1,351 @@
+app:
+  title: "Pengurus Gelanggang Badminton"
+  managePlayers: "Urus Pemain"
+  courtAssignments: "Penetapan Gelanggang"
+  bench: "Bangku Simpanan"
+  settings: "Tetapan"
+  moreInfo: "Maklumat lanjut"
+
+players:
+  entry:
+    placeholder: "Masukkan nama pemain (gunakan ` atau , untuk tambah ramai)"
+    importImage: "Import pemain daripada imej"
+    addSingle: "Tambah Pemain"
+    addMultiple: "Tambah {{count}} Pemain"
+    detectedHint: "💡 {{count}} pemain dikesan dipisahkan oleh {{separator}}"
+  stats:
+    present: "Hadir"
+    absent: "Tidak Hadir"
+    total: "Jumlah"
+  actions:
+    editGenderLevel: "Klik untuk edit jantina/tahap"
+    markAbsent: "Tandakan tidak hadir"
+    markPresent: "Tandakan hadir"
+    deletePlayer: "Padam pemain secara kekal"
+    benchCountTitle: "Bilangan di bangku: {{count}}"
+    benchNext: "Rehat di bangku seterusnya"
+    resetAlgorithmTitle: "Tetapkan semula sejarah perlawanan bersama (kekalkan semua pemain)"
+    resetAlgorithm: "Tetapkan Semula Algoritma"
+    clearAllTitle: "Keluarkan semua pemain dan tetapkan semula skor"
+    clearAll: "Kosongkan Semua Pemain"
+    shareTitle: "Kongsi sesi melalui URL"
+    share: "Kongsi"
+  smartEngine:
+    label: "Enjin Pintar"
+    tooltip: "Enjin Pintar mengimbangi perlawanan menggunakan jantina dan tahap kemahiran. Dayakannya kemudian klik nama pemain untuk menetapkan jantina dan tahap mereka."
+  modals:
+    clearTitle: "Kosongkan Semua Pemain"
+    clearMessage: "Adakah anda pasti mahu mengeluarkan semua pemain? Ini juga akan menetapkan semula semua skor dan sejarah perlawanan. Tindakan ini tidak boleh dibatalkan."
+    clearConfirm: "Kosongkan Semua"
+    resetTitle: "Tetapkan Semula Algoritma"
+    resetMessage: "Adakah anda pasti mahu menetapkan semula memori algoritma? Ini akan memadamkan semua rekod gandingan, bilangan di bangku dan sejarah menang/kalah. Pemain akan dikekalkan tetapi keutamaan pasangan akan ditetapkan semula."
+    resetConfirm: "Tetapkan Semula Algoritma"
+    cancel: "Batal"
+
+leaderboard:
+  title: "🏆 Papan Pendahulu"
+  rank: "#"
+  player: "Pemain"
+  level: "Tahap"
+  avgPts: "Purata Mata"
+  wins: "Menang"
+  matches: "Perlawanan"
+
+court:
+  settings:
+    courts: "Gelanggang:"
+    rearrange: "Susun semula pemain"
+    rearrangeTooltip: "Seret pemain ke atas pemain lain untuk menukar mereka antara pasukan, gelanggang dan bangku simpanan — atau ketik dua pemain."
+  empty:
+    noPlayers: "Tambah beberapa pemain di atas untuk mula menjana penetapan gelanggang."
+    howItWorksTitle: "Cara ia berfungsi:"
+    howItWorksDescription: " Pemain akan diagihkan secara rawak ke gelanggang. Beregu (4 pemain) diutamakan, tetapi perseorangan (2 pemain) akan digunakan untuk bilangan ganjil. Pemain lebihan akan berada di bangku simpanan."
+    generateButton: "🎲 Jana Penetapan"
+  assignments:
+    editModeBanner: "Seret pemain ke atas pemain lain untuk menukar mereka — atau ketik dua pemain."
+    editModeDone: "Selesai"
+    tip: "Petua:"
+    winnerInstructions: " Klik pada pasukan untuk menandakan mereka sebagai pemenang. Mahkota 👑 akan dipaparkan di sebelah pasukan pemenang. Klik sekali lagi untuk membatalkannya."
+    regenerateButton: "🎲 Jana Semula Penetapan"
+    lastGenerated: "Dijana kali terakhir {{time}}"
+    timeAgo:
+      justNow: "sebentar tadi"
+      seconds: "{{count}}s yang lalu"
+      minutes: "{{count}} min yang lalu"
+      hours: "{{count}} jam yang lalu"
+      days: "{{count}} hari yang lalu"
+  card:
+    header: "Gelanggang {{number}}"
+    headerWithMatch: "Gelanggang {{number}} - {{matchType}}"
+    singles: "Perseorangan"
+    doubles: "Beregu"
+    rotateTeam: "Putar penetapan pasukan"
+  match:
+    waiting: "Menunggu: {{name}}"
+  display:
+    playersOnCourt: "Pemain di gelanggang:"
+    teamTitle: "Pasukan {{number}}"
+    vs: "LWN"
+
+bench:
+  title: "🪑 Bangku Simpanan ({{count}} pemain)"
+  titleSingle: "🪑 Bangku Simpanan (1 pemain)"
+  viewCounts: "Lihat bilangan di bangku & urus"
+
+footer:
+  feedback: "Ada maklum balas? Jumpa pepijat atau ingin cadangkan ciri baharu?"
+  githubLink: "Beritahu kami di GitHub"
+  viewStats: "Lihat Statistik & Analisis"
+  tryTournament: "Cuba Mod Kejohanan"
+  language: "Bahasa"
+
+nav:
+  backToApp: "← Pengurus Gelanggang"
+
+notFound:
+  title: "404"
+  message: "Halaman tidak dijumpai"
+  goHome: "Kembali ke Pengurus Gelanggang"
+
+stats:
+  header: "Diagnostik {{engineName}}"
+  title: "Diagnostik"
+  sessionDiagnostics: "🔍 Diagnostik Sesi Semasa"
+  warnings:
+    title: "⚠️ Amaran"
+    benchImbalance: "Ketidakseimbangan bangku: jurang {{spread}} (dijangka ~{{expected}} untuk {{rounds}} pusingan)"
+    singlesOverplayed: "{{count}} pemain bermain perseorangan {{threshold}}+ kali (dijangka ~{{expected}} setiap seorang)"
+    pairTeamedUp: "{{count}} pasangan berganding {{threshold}}+ kali (purata ialah {{avg}})"
+    pairFacedEachOther: "{{count}} pasangan bersemuka {{threshold}}+ kali (purata ialah {{avg}})"
+    sittingTooLong: "{{player}} telah berehat selama {{count}} pusingan berturut-turut"
+    unbalancedCourts: "Gelanggang tidak seimbang: {{details}}"
+  cards:
+    totalPlayers: "Jumlah Pemain"
+    roundsPlayed: "Pusingan Dimainkan"
+    repeatedPairs: "Pasangan Berulang"
+    warnings: "Amaran"
+  bench:
+    title: "🪑 Pengagihan Bangku Simpanan"
+    neverBenched: "Tidak pernah di bangku:"
+    benchedOnce: "Di bangku sekali:"
+    benchedMultiple: "Di bangku beberapa kali:"
+    minMax: "Bilangan min/maks di bangku:"
+    fairnessScore: "Skor keadilan:"
+    lowerIsBetter: "(lebih rendah lebih baik)"
+    viewCounts: "Lihat bilangan di bangku setiap pemain ({{count}})"
+  teammates:
+    title: "👥 Gandingan Rakan Sepasukan"
+    viewRepeated: "Lihat pasangan berulang ({{count}})"
+    empty: "✓ Tiada gandingan rakan sepasukan direkodkan lagi"
+  opponents:
+    title: "⚔️ Pertembungan Lawan"
+    viewRepeated: "Lihat pertembungan berulang ({{count}})"
+    empty: "✓ Tiada pertembungan lawan direkodkan lagi"
+  singles:
+    title: "🎯 Perlawanan Perseorangan"
+    playersCount: "{{count}} pemain telah bermain perseorangan"
+    multipleCount: "({{count}} lebih daripada sekali)"
+    viewList: "Lihat senarai perseorangan ({{count}})"
+    empty: "Tiada perlawanan perseorangan direkodkan"
+  level:
+    title: "📈 Perkembangan Tahap"
+  empty:
+    message: "Tiada data sesi lagi. Mula bermain untuk melihat diagnostik!"
+    startCta: "Mula Permainan →"
+  graphs:
+    levelHistory:
+      ariaLabel: "Carta perkembangan tahap"
+      xAxisLabel: "Pusingan"
+    genderLegend:
+      male: "L"
+      female: "P"
+      unknown: "?"
+    counts:
+      once: "1×"
+      twice: "2×"
+      threeTimes: "3×"
+      fourPlus: "4×+"
+  githubAnalysis:
+    heading: "📊 Analisis GitHub"
+    cardTitle: "Terokai Analisis"
+    description: "Baca dokumentasi algoritma, perbandingan enjin dan analisis penjejak tahap di GitHub."
+
+tournament:
+  title: "Kejohanan"
+  setupTitle: "Persediaan Kejohanan"
+  mode: "Mod"
+  banner:
+    setup: "Persediaan Kejohanan"
+    current: "Kejohanan Semasa"
+  actions:
+    startNew: "Mulakan Kejohanan Baharu"
+    start: "Mulakan Kejohanan"
+  resetModal:
+    title: "Mulakan kejohanan baharu?"
+    message: "Ini akan membuang kejohanan semasa dan keputusannya. Adakah anda pasti mahu memulakan yang baharu?"
+    confirm: "Mulakan baharu"
+    cancel: "Batal"
+  setup:
+    format: "Format"
+    players: "Pemain"
+    courts: "Bilangan Gelanggang"
+    sets: "Set setiap Perlawanan"
+    pointsPerSet: "Mata setiap set"
+    singleGame: "Satu perlawanan"
+    bestOf: "Terbaik daripada {{n}}"
+    teams: "Pasukan"
+    teamTitle: "Pasukan {{number}}"
+    dragHint: "Seret pemain ke atas pemain lain untuk menukar mereka — atau ketik dua pemain."
+    formats:
+      singles: "Perseorangan (1 lwn 1)"
+      doubles: "Beregu (2 lwn 2)"
+    warnings:
+      courtWarning: "{{matches}} perlawanan setiap pusingan tetapi hanya {{courts}} gelanggang{{plural}} — sesetengah perlawanan perlu menunggu."
+    groupKnockout:
+      teamsPerGroup: "Pasukan setiap kumpulan"
+      qualifiersPerGroup: "Layak setiap kumpulan"
+  kinds:
+    roundRobin:
+      label: "Round Robin"
+      description: "Setiap pasukan menentang semua pasukan lain."
+    elimination:
+      label: "Penyingkiran"
+      description: "Bagan penyingkiran tunggal dengan sagu hati."
+    groupKnockout:
+      label: "Kumpulan + Kalah Mati"
+      description: "Peringkat kumpulan diikuti penyingkiran kalah mati."
+  standings:
+    title: "Kedudukan"
+    tieBreakTitle: "Terikat pada setiap metrik — tetapkan susunan penamat secara manual"
+    tieBreakAria: "Terikat — memerlukan susunan manual"
+    setTieBreakOrder: "Tetapkan susunan penentu seri"
+    table:
+      rank: "Kedudukan"
+      rankShort: "#"
+      team: "Pasukan"
+      won: "M"
+      lost: "K"
+      points: "Mata"
+      sets: "Set"
+      scoreDiff: "Beza Skor"
+  roundRobin:
+    roundHeader: "Pusingan {{round}}"
+    roundComplete: "✓ Selesai"
+    roundProgress: "{{done}}/{{total}} selesai"
+    courtNumber: "Gelanggang {{court}}"
+  groupKnockout:
+    groupLabel: "Kumpulan {{letter}}"
+    tieBreakAria: "Tetapkan susunan penentu seri"
+    groupTieWarning: "Seri peringkat kumpulan mesti diselesaikan sebelum kalah mati bermula — gunakan butang ⇅ pada baris yang terikat di atas."
+    knockoutStage: "Peringkat Kalah Mati"
+    finalResults: "Keputusan Akhir"
+  elimination:
+    winnersBracket: "Pusingan Pemenang"
+    consolationBracket: "Pusingan Sagu Hati"
+    thirdPlace: "Tempat Ke-3"
+    tbd: "Akan Ditentukan"
+    bye: "BYE"
+    rounds:
+      final: "Perlawanan Akhir"
+      semiFinal: "Separuh Akhir"
+      nthOfFinal: "1/{{n}} Akhir"
+  domain:
+    subtitles:
+      afterRound: "Selepas Pusingan {{done}} / {{total}}"
+      roundZero: "Pusingan 0 / {{total}}"
+      inProgress: "Sedang Berlangsung"
+      finalResults: "Keputusan Akhir"
+    validation:
+      minTeams: "Memerlukan sekurang-kurangnya 2 pasukan untuk bermula"
+      doublesPlayers: "Setiap pasukan beregu mesti mempunyai tepat 2 pemain"
+      tooFewQualifiers: "Terlalu sedikit pasukan yang akan layak ke peringkat kalah mati — tambah pasukan atau kurangkan saiz kumpulan."
+    warnings:
+      everyoneAdvances: "Tiada siapa yang akan tersingkir dalam peringkat kumpulan — setiap pasukan mara. Adakah itu yang anda mahukan?"
+    summary:
+      undersized: "{{count}} pasukan tidak dapat mengisi kumpulan sebanyak {{size}}, jadi mereka akan bermain sebagai {{shape}}."
+      normal: "{{count}} pasukan → {{shape}}."
+      tooFewKnockout: "{{split}} Itu meninggalkan terlalu sedikit untuk memulakan peringkat kalah mati — tambah pasukan atau kurangkan saiz kumpulan."
+      allAdvance: "{{split}} Dengan {{qualifiers}} teratas layak, setiap pasukan mara — tiada siapa tersingkir dalam peringkat kumpulan."
+
+modals:
+  close: "Tutup"
+  confirm:
+    defaultTitle: "Sahkan"
+    confirm: "Sahkan"
+    cancel: "Batal"
+  imageUpload:
+    title: "📸 Import Pemain daripada Imej"
+    instructions: "Ambil gambar atau muat naik imej senarai pemain anda. Seret dan lepas, atau klik untuk memilih."
+    chooseImage: "Pilih Imej"
+    processing: "🔍 Memproses imej dan mengekstrak nama pemain..."
+    foundPlayers: "{{count}} pemain dijumpai"
+    selectAll: "Pilih semua"
+    deselectAll: "Nyahpilih semua"
+    tryAnotherImage: "📸 Cuba imej lain"
+    cancel: "Batal"
+    addPlayers: "Tambah {{count}} Pemain"
+    unsupportedTitle: "Pengecaman Teks Tidak Tersedia"
+    unsupportedDescription: "Maaf, penyemak imbas anda tidak menyokong pengecaman teks."
+    unsupportedInstructions: "Sila masukkan nama pemain secara manual."
+    enterManually: "Masukkan Pemain Secara Manual"
+  importState:
+    title: "Muat Sesi Perkongsian"
+    description: "Sesi perkongsian dijumpai dalam URL. Memuatkannya akan menggantikan sesi semasa anda."
+    sharedSavedAt: "Sesi perkongsian disimpan: {{time}}"
+    currentSavedAt: "Sesi anda disimpan: {{time}}"
+    backupPrompt: "Simpan pautan ini untuk memulihkan sesi semasa anda kemudian:"
+    copy: "Salin"
+    copied: "Disalin!"
+    decline: "Kekalkan sesi saya"
+    accept: "Muat sesi perkongsian"
+  manualOrder:
+    title: "Tetapkan susunan penentu seri"
+    description: "Pasukan ini terikat pada setiap metrik — susun mereka mengikut susunan penamat yang betul:"
+    moveUpAria: "Alih {{name}} ke atas"
+    moveDownAria: "Alih {{name}} ke bawah"
+    cancel: "Batal"
+    save: "Simpan susunan"
+  playerEdit:
+    gender: "Jantina"
+    genderTooltip: "Menetapkan jantina membantu Enjin Pintar mengimbangi beregu campuran — ia mengelakkan semua pemain daripada jantina yang sama dalam satu pasukan."
+    level: "Tahap: {{level}}"
+    levelTooltip: "Tahap (0–100) mewakili kemahiran bermain. Enjin Pintar menggandingkan pemain dengan tahap yang serupa untuk perlawanan yang lebih kompetitif dan menyeronokkan."
+    cancel: "Batal"
+    save: "Simpan"
+    genderOptions:
+      female: "💁‍♀️ P"
+      male: "🙋‍♂️ L"
+      unknown: "Tidak Diketahui"
+  playerRemoval:
+    title: "Keluarkan Pemain"
+    message: "Apakah yang anda mahu lakukan dengan {{name}}?"
+    markAbsent: "Tandakan sebagai Tidak Hadir"
+    removePlayer: "Keluarkan Pemain"
+  scoreInput:
+    titleWinner: "🏆 Pasukan {{winner}} menang!"
+    titleScores: "Masukkan skor set"
+    promptSingle: "Masukkan skor (lalai {{setSize}} – {{defaultOpponent}}):"
+    promptMultiple: "Masukkan skor untuk setiap set (terbaik daripada {{count}}):"
+    vs: "lwn"
+    setLabel: "Set {{number}}"
+    team1ScoreAria: "Skor pasukan 1{{set}}"
+    team2ScoreAria: "Skor pasukan 2{{set}}"
+    confirm: "Sahkan"
+  share:
+    title: "Kongsi Sesi"
+    description: "Kongsi URL ini untuk membolehkan orang lain memuatkan sesi semasa anda:"
+    close: "Tutup"
+    copyUrl: "Salin URL"
+    copied: "Disalin!"
+
+ocr:
+  failed: "Gagal memproses imej. Sila cuba lagi atau masukkan pemain secara manual."
+
+engines:
+  simulatedAnnealing:
+    name: "Simulated Annealing"
+    description: "Simulated Annealing dengan peningkatan berulang. Melaksanakan {{iterations}} lelaran, menerima penyelesaian yang kurang baik secara kebarangkalian untuk melepasi minimum setempat."
+  smartMatching:
+    name: "Pemadanan Pintar v2"
+    description: "Pengumpulan tahap tetingkap gelongsor dengan momentum kemenangan dan keutamaan beregu campuran."
+

@@ -9,10 +9,10 @@ export { i18n };
 
 export type LocaleDictionary = Record<string, any>;
 
-const LOCALE_IMPORTERS: Partial<Record<SupportedLocale, () => Promise<{ default: LocaleDictionary }>>> = {
-  ja: () => import('./locales/ja.yml'),
-  zh: () => import('./locales/zh.yml'),
-};
+const LOCALE_IMPORTERS = import.meta.glob<{ default: LocaleDictionary }>([
+  './locales/*.yml',
+  '!./locales/en.yml',
+]);
 
 const loadedBundles: Partial<Record<SupportedLocale, LocaleDictionary>> = {
   en: enTranslations,
@@ -33,7 +33,7 @@ export async function loadLocale(locale: SupportedLocale): Promise<void> {
     return;
   }
 
-  const importer = LOCALE_IMPORTERS[locale];
+  const importer = LOCALE_IMPORTERS[`./locales/${locale}.yml`];
   const bundle: LocaleDictionary = importer
     ? (await importer()).default
     : enTranslations;

@@ -18,22 +18,40 @@ interface LocaleDictionary {
 const readLocale = (locale: string): LocaleDictionary =>
   yaml.parse(fs.readFileSync(path.resolve(import.meta.dirname, `../../src/i18n/locales/${locale}.yml`), 'utf-8'));
 
+const localesDir = path.resolve(import.meta.dirname, '../../src/i18n/locales');
+const nonEnLocales = fs
+  .readdirSync(localesDir)
+  .filter(f => f.endsWith('.yml'))
+  .map(f => f.replace(/\.yml$/, ''))
+  .filter(code => code !== 'en');
+
 const en = readLocale('en');
 const ja = readLocale('ja');
 const zh = readLocale('zh');
 
-test.describe('i18n', () => {
-  test('ja via locale: ja-JP context renders Japanese title', async ({ browser }) => {
-    const context = await browser.newContext({
-      locale: 'ja-JP',
-    });
-    const page = await context.newPage();
-    await page.goto('/');
+const browserLocaleCases = [
+  { code: 'ja', localeTag: 'ja-JP', label: 'Japanese' },
+  { code: 'fr', localeTag: 'fr-FR', label: 'French' },
+  { code: 'de', localeTag: 'de-DE', label: 'German' },
+  { code: 'hi', localeTag: 'hi-IN', label: 'Hindi' },
+  { code: 'ms', localeTag: 'ms-MY', label: 'Malaysian' },
+];
 
-    await expect(page.locator('h1')).toContainText(ja.app.title);
-    await expect(page.locator('h1')).not.toContainText(en.app.title);
-    await context.close();
-  });
+test.describe('i18n', () => {
+  for (const { code, localeTag, label } of browserLocaleCases) {
+    test(`${code} via locale: ${localeTag} context renders ${label} title`, async ({ browser }) => {
+      const localeDict = readLocale(code);
+      const context = await browser.newContext({
+        locale: localeTag,
+      });
+      const page = await context.newPage();
+      await page.goto('/');
+
+      await expect(page.locator('h1')).toContainText(localeDict.app.title);
+      await expect(page.locator('h1')).not.toContainText(en.app.title);
+      await context.close();
+    });
+  }
 
   test('zh via localStorage badminton-locale renders Chinese title', async ({ browser }) => {
     const context = await browser.newContext();
@@ -67,17 +85,14 @@ test.describe('i18n', () => {
     await expect(page.locator('h1')).toContainText(en.app.title);
   });
 
-  test('initial load for an English user does not request ja or zh chunks', async ({ page }) => {
+  test('initial load for an English user does not request non-English chunks', async ({ page }) => {
     const requestedLocales: string[] = [];
     page.on('request', request => {
       const url = request.url();
-      if (
-        url.includes('/ja.yml') ||
-        url.includes('/zh.yml') ||
-        url.match(/\/ja-[^/]+\.js/) ||
-        url.match(/\/zh-[^/]+\.js/)
-      ) {
-        requestedLocales.push(url);
+      for (const loc of nonEnLocales) {
+        if (url.includes(`/${loc}.yml`) || url.match(new RegExp(`/${loc}-[^/]+\\.js`))) {
+          requestedLocales.push(url);
+        }
       }
     });
 

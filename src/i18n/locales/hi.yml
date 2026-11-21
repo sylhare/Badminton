@@ -1,0 +1,351 @@
+app:
+  title: "बैडमिंटन कोर्ट मैनेजर"
+  managePlayers: "खिलाड़ी प्रबंधित करें"
+  courtAssignments: "कोर्ट आवंटन"
+  bench: "बेंच"
+  settings: "सेटिंग्स"
+  moreInfo: "अधिक जानकारी"
+
+players:
+  entry:
+    placeholder: "खिलाड़ी का नाम दर्ज करें (एक से अधिक जोड़ने के लिए ` या , का उपयोग करें)"
+    importImage: "छवि से खिलाड़ी आयात करें"
+    addSingle: "खिलाड़ी जोड़ें"
+    addMultiple: "{{count}} खिलाड़ी जोड़ें"
+    detectedHint: "💡 {{separator}} द्वारा अलग किए गए {{count}} खिलाड़ी मिले"
+  stats:
+    present: "उपस्थित"
+    absent: "अनुपस्थित"
+    total: "कुल"
+  actions:
+    editGenderLevel: "लिंग/स्तर संपादित करने के लिए क्लिक करें"
+    markAbsent: "अनुपस्थित चिह्नित करें"
+    markPresent: "उपस्थित चिह्नित करें"
+    deletePlayer: "खिलाड़ी को स्थायी रूप से हटाएं"
+    benchCountTitle: "बेंच गिनती: {{count}}"
+    benchNext: "अगली बार बेंच पर रखें"
+    resetAlgorithmTitle: "किसने किसके साथ खेला का इतिहास रीसेट करें (खिलाड़ी बने रहेंगे)"
+    resetAlgorithm: "एल्गोरिदम रीसेट करें"
+    clearAllTitle: "सभी खिलाड़ियों को हटाएं और स्कोर रीसेट करें"
+    clearAll: "सभी खिलाड़ी हटाएं"
+    shareTitle: "URL के माध्यम से सत्र साझा करें"
+    share: "साझा करें"
+  smartEngine:
+    label: "स्मार्ट इंजन"
+    tooltip: "स्मार्ट इंजन लिंग और कौशल स्तर का उपयोग करके मैचों को संतुलित करता है। इसे सक्षम करें और फिर लिंग और स्तर सेट करने के लिए किसी भी खिलाड़ी के नाम पर क्लिक करें।"
+  modals:
+    clearTitle: "सभी खिलाड़ी हटाएं"
+    clearMessage: "क्या आप वाकई सभी खिलाड़ियों को हटाना चाहते हैं? इससे सभी स्कोर और खेल का इतिहास भी रीसेट हो जाएगा। यह क्रिया पूर्ववत नहीं की जा सकती।"
+    clearConfirm: "सभी हटाएं"
+    resetTitle: "एल्गोरिदम रीसेट करें"
+    resetMessage: "क्या आप वाकई एल्गोरिदम की मेमोरी रीसेट करना चाहते हैं? इससे किसने किसके साथ खेला, बेंच की गिनती और जीत/हार का सारा इतिहास मिट जाएगा। खिलाड़ी बने रहेंगे लेकिन मैचिंग प्राथमिकताएं रीसेट हो जाएंगी।"
+    resetConfirm: "एल्गोरिदम रीसेट करें"
+    cancel: "रद्द करें"
+
+leaderboard:
+  title: "🏆 लीडरबोर्ड"
+  rank: "#"
+  player: "खिलाड़ी"
+  level: "स्तर"
+  avgPts: "औसत अंक"
+  wins: "जीत"
+  matches: "मैच"
+
+court:
+  settings:
+    courts: "कोर्ट:"
+    rearrange: "खिलाड़ियों को पुनर्व्यवस्थित करें"
+    rearrangeTooltip: "टीमों, कोर्टों और बेंच के बीच अदला-बदली करने के लिए एक खिलाड़ी को दूसरे पर खींचें — या दो खिलाड़ियों पर टैप करें।"
+  empty:
+    noPlayers: "कोर्ट आवंटन शुरू करने के लिए ऊपर कुछ खिलाड़ी जोड़ें।"
+    howItWorksTitle: "यह कैसे काम करता है:"
+    howItWorksDescription: " खिलाड़ियों को कोर्ट पर यादृच्छिक रूप से सौंपा जाएगा। डबल्स (4 खिलाड़ी) को प्राथमिकता दी जाती है, लेकिन विषम संख्याओं के लिए सिंगल्स (2 खिलाड़ी) का उपयोग किया जाएगा। अतिरिक्त खिलाड़ियों को बेंच पर रखा जाएगा।"
+    generateButton: "🎲 आवंटन जनरेट करें"
+  assignments:
+    editModeBanner: "अदला-बदली करने के लिए एक खिलाड़ी को दूसरे पर खींचें — या दो खिलाड़ियों पर टैप करें।"
+    editModeDone: "पूर्ण"
+    tip: "सुझाव:"
+    winnerInstructions: " किसी टीम को विजेता घोषित करने के लिए उस पर क्लिक करें। विजेता टीम के आगे एक मुकुट 👑 दिखाई देगा। विजेता हटाने के लिए दोबारा क्लिक करें।"
+    regenerateButton: "🎲 दोबारा आवंटन जनरेट करें"
+    lastGenerated: "अंतिम जनरेट किया गया: {{time}}"
+    timeAgo:
+      justNow: "अभी-अभी"
+      seconds: "{{count}} सेकंड पहले"
+      minutes: "{{count}} मिनट पहले"
+      hours: "{{count}} घंटे पहले"
+      days: "{{count}} दिन पहले"
+  card:
+    header: "कोर्ट {{number}}"
+    headerWithMatch: "कोर्ट {{number}} - {{matchType}}"
+    singles: "सिंगल्स"
+    doubles: "डबल्स"
+    rotateTeam: "टीम आवंटन घुमाएँ"
+  match:
+    waiting: "प्रतीक्षारत: {{name}}"
+  display:
+    playersOnCourt: "कोर्ट पर खिलाड़ी:"
+    teamTitle: "टीम {{number}}"
+    vs: "बनाम"
+
+bench:
+  title: "🪑 बेंच ({{count}} खिलाड़ी)"
+  titleSingle: "🪑 बेंच (1 खिलाड़ी)"
+  viewCounts: "बेंच गिनती देखें और प्रबंधित करें"
+
+footer:
+  feedback: "कोई प्रतिक्रिया है? कोई बग मिला या नई सुविधा का सुझाव देना चाहते हैं?"
+  githubLink: "हमें GitHub पर बताएं"
+  viewStats: "सांख्यिकी और विश्लेषण देखें"
+  tryTournament: "टूर्नामेंट मोड आज़माएं"
+  language: "भाषा"
+
+nav:
+  backToApp: "← कोर्ट मैनेजर"
+
+notFound:
+  title: "404"
+  message: "पृष्ठ नहीं मिला"
+  goHome: "कोर्ट मैनेजर पर वापस जाएं"
+
+stats:
+  header: "{{engineName}} डायग्नोस्टिक्स"
+  title: "डायग्नोस्टिक्स"
+  sessionDiagnostics: "🔍 वर्तमान सत्र डायग्नोस्टिक्स"
+  warnings:
+    title: "⚠️ चेतावनियाँ"
+    benchImbalance: "बेंच असंतुलन: {{spread}} का अंतर ({{rounds}} राउंड के लिए अपेक्षित ~{{expected}})"
+    singlesOverplayed: "{{count}} खिलाड़ी ने सिंगल्स {{threshold}}+ बार खेला (प्रत्येक के लिए अपेक्षित ~{{expected}})"
+    pairTeamedUp: "{{count}} जोड़ी ने {{threshold}}+ बार मिलकर खेला (औसत {{avg}} है)"
+    pairFacedEachOther: "{{count}} जोड़ी का {{threshold}}+ बार आमना-सामना हुआ (औसत {{avg}} है)"
+    sittingTooLong: "{{player}} लगातार {{count}} राउंड से बाहर बैठे हैं"
+    unbalancedCourts: "कोर्ट असंतुलित हैं: {{details}}"
+  cards:
+    totalPlayers: "कुल खिलाड़ी"
+    roundsPlayed: "खेले गए राउंड"
+    repeatedPairs: "दोहराई गई जोड़ियाँ"
+    warnings: "चेतावनियाँ"
+  bench:
+    title: "🪑 बेंच वितरण"
+    neverBenched: "कभी बेंच पर नहीं:"
+    benchedOnce: "एक बार बेंच पर:"
+    benchedMultiple: "कई बार बेंच पर:"
+    minMax: "न्यूनतम/अधिकतम बेंच गिनती:"
+    fairnessScore: "निष्पक्षता स्कोर:"
+    lowerIsBetter: "(कम होना बेहतर है)"
+    viewCounts: "प्रति खिलाड़ी बेंच गिनती देखें ({{count}})"
+  teammates:
+    title: "👥 टीम के साथी"
+    viewRepeated: "दोहराई गई जोड़ियाँ देखें ({{count}})"
+    empty: "✓ अभी तक कोई साथी जोड़ी दर्ज नहीं हुई है"
+  opponents:
+    title: "⚔️ प्रतिद्वंद्वी आमने-सामने"
+    viewRepeated: "दोहराए गए मुकाबले देखें ({{count}})"
+    empty: "✓ अभी तक कोई प्रतिद्वंद्वी मुकाबला दर्ज नहीं हुआ है"
+  singles:
+    title: "🎯 सिंगल्स मैच"
+    playersCount: "{{count}} खिलाड़ियों ने सिंगल्स खेला है"
+    multipleCount: "({{count}} कई बार)"
+    viewList: "सिंगल्स सूची देखें ({{count}})"
+    empty: "कोई सिंगल्स मैच दर्ज नहीं है"
+  level:
+    title: "📈 स्तर प्रगति"
+  empty:
+    message: "अभी तक कोई सत्र डेटा नहीं है। डायग्नोस्टिक्स देखने के लिए खेलना शुरू करें!"
+    startCta: "खेल शुरू करें →"
+  graphs:
+    levelHistory:
+      ariaLabel: "स्तर प्रगति चार्ट"
+      xAxisLabel: "राउंड"
+    genderLegend:
+      male: "पु"
+      female: "म"
+      unknown: "?"
+    counts:
+      once: "1×"
+      twice: "2×"
+      threeTimes: "3×"
+      fourPlus: "4×+"
+  githubAnalysis:
+    heading: "📊 GitHub विश्लेषण"
+    cardTitle: "विश्लेषण देखें"
+    description: "GitHub पर एल्गोरिदम दस्तावेज़ीकरण, इंजन तुलना और स्तर ट्रैकर विश्लेषण पढ़ें।"
+
+tournament:
+  title: "टूर्नामेंट"
+  setupTitle: "टूर्नामेंट सेटअप"
+  mode: "मोड"
+  banner:
+    setup: "टूर्नामेंट सेटअप"
+    current: "वर्तमान टूर्नामेंट"
+  actions:
+    startNew: "नया टूर्नामेंट शुरू करें"
+    start: "टूर्नामेंट शुरू करें"
+  resetModal:
+    title: "नया टूर्नामेंट शुरू करें?"
+    message: "यह वर्तमान टूर्नामेंट और इसके परिणामों को खारिज कर देगा। क्या आप वाकई एक नया शुरू करना चाहते हैं?"
+    confirm: "नया शुरू करें"
+    cancel: "रद्द करें"
+  setup:
+    format: "प्रारूप"
+    players: "खिलाड़ी"
+    courts: "कोर्ट की संख्या"
+    sets: "प्रति मैच सेट"
+    pointsPerSet: "प्रति सेट अंक"
+    singleGame: "एकल गेम"
+    bestOf: "बेस्ट ऑफ़ {{n}}"
+    teams: "टीमें"
+    teamTitle: "टीम {{number}}"
+    dragHint: "खिलाड़ियों की अदला-बदली करने के लिए एक को दूसरे पर खींचें — या दो पर टैप करें।"
+    formats:
+      singles: "सिंगल्स (1v1)"
+      doubles: "डबल्स (2v2)"
+    warnings:
+      courtWarning: "प्रति राउंड {{matches}} मैच लेकिन केवल {{courts}} कोर्ट{{plural}} — कुछ मैचों को प्रतीक्षा करनी होगी।"
+    groupKnockout:
+      teamsPerGroup: "प्रति समूह टीमें"
+      qualifiersPerGroup: "प्रति समूह क्वालीफायर"
+  kinds:
+    roundRobin:
+      label: "राउंड रॉबिन"
+      description: "प्रत्येक टीम हर दूसरी टीम के खिलाफ खेलती है।"
+    elimination:
+      label: "एलिमिनेशन"
+      description: "कॉन्सोलेशन के साथ सिंगल एलिमिनेशन ब्रैकेट।"
+    groupKnockout:
+      label: "ग्रुप + नॉकआउट"
+      description: "ग्रुप चरण के बाद सिंगल एलिमिनेशन नॉकआउट।"
+  standings:
+    title: "स्टैंडिंग्स"
+    tieBreakTitle: "हर मानदंड पर बराबरी — अंतिम क्रम मैन्युअल रूप से सेट करें"
+    tieBreakAria: "टाई — मैन्युअल क्रम की आवश्यकता है"
+    setTieBreakOrder: "टाई-ब्रेक क्रम सेट करें"
+    table:
+      rank: "रैंक"
+      rankShort: "#"
+      team: "टीम"
+      won: "जी"
+      lost: "हा"
+      points: "अंक"
+      sets: "सेट"
+      scoreDiff: "स्कोर अंतर"
+  roundRobin:
+    roundHeader: "राउंड {{round}}"
+    roundComplete: "✓ संपन्न"
+    roundProgress: "{{done}}/{{total}} पूर्ण"
+    courtNumber: "कोर्ट {{court}}"
+  groupKnockout:
+    groupLabel: "ग्रुप {{letter}}"
+    tieBreakAria: "टाई-ब्रेक क्रम सेट करें"
+    groupTieWarning: "नॉकआउट शुरू होने से पहले ग्रुप टाई का समाधान होना आवश्यक है — ऊपर दी गई पंक्तियों पर ⇅ बटन का उपयोग करें।"
+    knockoutStage: "नॉकआउट चरण"
+    finalResults: "अंतिम परिणाम"
+  elimination:
+    winnersBracket: "विनर्स ब्रैकेट"
+    consolationBracket: "कॉन्सोलेशन ब्रैकेट"
+    thirdPlace: "तीसरा स्थान"
+    tbd: "तय होना बाकी"
+    bye: "बाय"
+    rounds:
+      final: "फ़ाइनल"
+      semiFinal: "सेमी फ़ाइनल"
+      nthOfFinal: "1/{{n}} फ़ाइनल"
+  domain:
+    subtitles:
+      afterRound: "राउंड {{done}} / {{total}} के बाद"
+      roundZero: "राउंड 0 / {{total}}"
+      inProgress: "प्रगति पर"
+      finalResults: "अंतिम परिणाम"
+    validation:
+      minTeams: "शुरू करने के लिए कम से कम 2 टीमों की आवश्यकता है"
+      doublesPlayers: "प्रत्येक डबल्स टीम में ठीक 2 खिलाड़ी होने चाहिए"
+      tooFewQualifiers: "नॉकआउट के लिए बहुत कम टीमें क्वालीफाई करेंगी — टीमें जोड़ें या समूह का आकार घटाएं।"
+    warnings:
+      everyoneAdvances: "ग्रुप चरण में कोई भी बाहर नहीं होगा — हर टीम आगे बढ़ेगी। क्या आप यही चाहते हैं?"
+    summary:
+      undersized: "{{count}} टीमें {{size}} के समूह नहीं बना सकतीं, इसलिए वे {{shape}} के रूप में खेलेंगी।"
+      normal: "{{count}} टीमें → {{shape}}."
+      tooFewKnockout: "{{split}} इससे नॉकआउट के लिए बहुत कम टीमें बचती हैं — टीमें जोड़ें या समूह का आकार घटाएं।"
+      allAdvance: "{{split}} शीर्ष {{qualifiers}} के क्वालीफाई होने पर, प्रत्येक टीम आगे बढ़ती है — ग्रुप चरण में कोई बाहर नहीं होता।"
+
+modals:
+  close: "बंद करें"
+  confirm:
+    defaultTitle: "पुष्टि करें"
+    confirm: "पुष्टि करें"
+    cancel: "रद्द करें"
+  imageUpload:
+    title: "📸 छवि से खिलाड़ी आयात करें"
+    instructions: "अपनी खिलाड़ी सूची की एक तस्वीर लें या छवि अपलोड करें। ड्रैग और ड्रॉप करें, या चुनने के लिए क्लिक करें।"
+    chooseImage: "छवि चुनें"
+    processing: "🔍 छवि संसाधित की जा रही है और खिलाड़ियों के नाम निकाले जा रहे हैं..."
+    foundPlayers: "{{count}} खिलाड़ी मिले"
+    selectAll: "सभी चुनें"
+    deselectAll: "सभी अचयनित करें"
+    tryAnotherImage: "📸 दूसरी छवि आज़माएं"
+    cancel: "रद्द करें"
+    addPlayers: "{{count}} खिलाड़ी जोड़ें"
+    unsupportedTitle: "टेक्स्ट पहचान उपलब्ध नहीं है"
+    unsupportedDescription: "क्षमा करें, आपका ब्राउज़र टेक्स्ट पहचान का समर्थन नहीं करता है।"
+    unsupportedInstructions: "कृपया खिलाड़ियों के नाम मैन्युअल रूप से दर्ज करें।"
+    enterManually: "खिलाड़ियों को मैन्युअल रूप से दर्ज करें"
+  importState:
+    title: "साझा सत्र लोड करें"
+    description: "URL में एक साझा सत्र मिला। इसे लोड करने से आपका वर्तमान सत्र बदल जाएगा।"
+    sharedSavedAt: "साझा सत्र सहेजा गया: {{time}}"
+    currentSavedAt: "आपका सत्र सहेजा गया: {{time}}"
+    backupPrompt: "अपने वर्तमान सत्र को बाद में पुनर्स्थापित करने के लिए यह लिंक सहेजें:"
+    copy: "कॉपी करें"
+    copied: "कॉपी हो गया!"
+    decline: "मेरा सत्र रखें"
+    accept: "साझा सत्र लोड करें"
+  manualOrder:
+    title: "टाई-ब्रेक क्रम सेट करें"
+    description: "ये टीमें हर मानदंड पर बराबर हैं — इन्हें उस क्रम में रखें जिसमें इन्हें समाप्त होना चाहिए:"
+    moveUpAria: "{{name}} को ऊपर ले जाएं"
+    moveDownAria: "{{name}} को नीचे ले जाएं"
+    cancel: "रद्द करें"
+    save: "क्रम सहेजें"
+  playerEdit:
+    gender: "लिंग"
+    genderTooltip: "लिंग निर्धारित करने से स्मार्ट इंजन को मिक्स्ड डबल्स को संतुलित करने में मदद मिलती है — यह एक ही टीम में एक ही लिंग के सभी खिलाड़ियों को रखने से रोकता है।"
+    level: "स्तर: {{level}}"
+    levelTooltip: "स्तर (0–100) खेल कौशल को दर्शाता है। स्मार्ट इंजन अधिक प्रतिस्पर्धी और मनोरंजक मैचों के लिए समान स्तर के खिलाड़ियों की जोड़ी बनाता है।"
+    cancel: "रद्द करें"
+    save: "सहेजें"
+    genderOptions:
+      female: "💁‍♀️ म"
+      male: "🙋‍♂️ पु"
+      unknown: "अज्ञात"
+  playerRemoval:
+    title: "खिलाड़ी हटाएं"
+    message: "{{name}} के साथ आप क्या करना चाहते हैं?"
+    markAbsent: "अनुपस्थित चिह्नित करें"
+    removePlayer: "खिलाड़ी हटाएं"
+  scoreInput:
+    titleWinner: "🏆 टीम {{winner}} जीती!"
+    titleScores: "सेट स्कोर दर्ज करें"
+    promptSingle: "स्कोर दर्ज करें (डिफ़ॉल्ट {{setSize}} – {{defaultOpponent}}):"
+    promptMultiple: "प्रत्येक सेट के लिए स्कोर दर्ज करें (बेस्ट ऑफ़ {{count}}):"
+    vs: "बनाम"
+    setLabel: "सेट {{number}}"
+    team1ScoreAria: "टीम 1 स्कोर{{set}}"
+    team2ScoreAria: "टीम 2 स्कोर{{set}}"
+    confirm: "पुष्टि करें"
+  share:
+    title: "सत्र साझा करें"
+    description: "दूसरों को अपना वर्तमान सत्र लोड करने देने के लिए यह URL साझा करें:"
+    close: "बंद करें"
+    copyUrl: "URL कॉपी करें"
+    copied: "कॉपी हो गया!"
+
+ocr:
+  failed: "छवि संसाधित करने में विफल। कृपया पुनः प्रयास करें या खिलाड़ियों को मैन्युअल रूप से दर्ज करें।"
+
+engines:
+  simulatedAnnealing:
+    name: "सिम्युलेटेड एनीलिंग"
+    description: "पुनरावृत्ति सुधार के साथ सिम्युलेटेड एनीलिंग। स्थानीय मिनिमा से बचने के लिए संभाव्य रूप से खराब समाधानों को स्वीकार करते हुए {{iterations}} पुनरावृत्तियाँ करता है।"
+  smartMatching:
+    name: "स्मार्ट मैचिंग v2"
+    description: "जीत की लय और मिक्स्ड डबल्स वरीयता के साथ स्लाइडिंग विंडो स्तर समूहीकरण।"
+

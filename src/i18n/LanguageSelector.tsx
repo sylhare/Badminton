@@ -7,6 +7,10 @@ const LANGUAGE_LABELS: Record<SupportedLocale, string> = {
   en: 'English',
   ja: '日本語',
   zh: '简体中文',
+  fr: 'Français',
+  de: 'Deutsch',
+  hi: 'हिन्दी',
+  ms: 'Bahasa Melayu',
 };
 
 export const LanguageSelector: React.FC = () => {

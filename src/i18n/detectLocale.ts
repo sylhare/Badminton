@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ['en', 'ja', 'zh'] as const;
+export const SUPPORTED_LOCALES = ['en', 'ja', 'zh', 'fr', 'de', 'hi', 'ms'] as const;
 export type SupportedLocale = typeof SUPPORTED_LOCALES[number];
 
 export function isSupportedLocale(locale: unknown): locale is SupportedLocale {
@@ -7,16 +7,8 @@ export function isSupportedLocale(locale: unknown): locale is SupportedLocale {
 
 export function matchLocaleTag(tag: string): SupportedLocale | null {
   const normalized = tag.toLowerCase().trim();
-  if (normalized === 'ja' || normalized.startsWith('ja-') || normalized.startsWith('ja_')) {
-    return 'ja';
-  }
-  if (normalized === 'zh' || normalized.startsWith('zh-') || normalized.startsWith('zh_')) {
-    return 'zh';
-  }
-  if (normalized === 'en' || normalized.startsWith('en-') || normalized.startsWith('en_')) {
-    return 'en';
-  }
-  return null;
+  const [subtag] = normalized.split(/[-_]/);
+  return isSupportedLocale(subtag) ? subtag : null;
 }
 
 /**

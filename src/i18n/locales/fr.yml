@@ -1,0 +1,351 @@
+app:
+  title: "Gestionnaire de terrains de badminton"
+  managePlayers: "Gérer les joueurs"
+  courtAssignments: "Attribution des terrains"
+  bench: "Banc"
+  settings: "Paramètres"
+  moreInfo: "Plus d'informations"
+
+players:
+  entry:
+    placeholder: "Entrez le nom du joueur (utilisez ` ou , pour en ajouter plusieurs)"
+    importImage: "Importer des joueurs depuis une image"
+    addSingle: "Ajouter un joueur"
+    addMultiple: "Ajouter {{count}} joueurs"
+    detectedHint: "💡 {{count}} joueurs détectés séparés par {{separator}}"
+  stats:
+    present: "Présents"
+    absent: "Absents"
+    total: "Total"
+  actions:
+    editGenderLevel: "Cliquer pour modifier le genre/niveau"
+    markAbsent: "Marquer comme absent"
+    markPresent: "Marquer comme présent"
+    deletePlayer: "Supprimer définitivement le joueur"
+    benchCountTitle: "Passages sur le banc : {{count}}"
+    benchNext: "Prochain sur le banc"
+    resetAlgorithmTitle: "Réinitialiser l'historique des partenaires/adversaires (conserve les joueurs)"
+    resetAlgorithm: "Réinitialiser l'algorithme"
+    clearAllTitle: "Supprimer tous les joueurs et réinitialiser les scores"
+    clearAll: "Effacer tous les joueurs"
+    shareTitle: "Partager la session via URL"
+    share: "Partager"
+  smartEngine:
+    label: "Moteur intelligent"
+    tooltip: "Le moteur intelligent équilibre les matchs selon le genre et le niveau. Activez-le puis cliquez sur le nom d'un joueur pour définir son genre et son niveau."
+  modals:
+    clearTitle: "Effacer tous les joueurs"
+    clearMessage: "Voulez-vous vraiment supprimer tous les joueurs ? Cela réinitialisera également les scores et l'historique des matchs. Cette action est irréversible."
+    clearConfirm: "Tout effacer"
+    resetTitle: "Réinitialiser l'algorithme"
+    resetMessage: "Voulez-vous vraiment réinitialiser la mémoire de l'algorithme ? Cela effacera tous les enregistrements de qui a joué avec qui, le nombre de passages sur le banc et l'historique victoires/défaites. Les joueurs seront conservés mais les préférences de composition seront réinitialisées."
+    resetConfirm: "Réinitialiser l'algorithme"
+    cancel: "Annuler"
+
+leaderboard:
+  title: "🏆 Classement"
+  rank: "#"
+  player: "Joueur"
+  level: "Niveau"
+  avgPts: "Pts moy."
+  wins: "Victoires"
+  matches: "Matchs"
+
+court:
+  settings:
+    courts: "Terrains :"
+    rearrange: "Réorganiser les joueurs"
+    rearrangeTooltip: "Glissez un joueur sur un autre pour les échanger entre équipes, terrains et banc — ou appuyez sur deux joueurs."
+  empty:
+    noPlayers: "Ajoutez des joueurs ci-dessus pour générer les attributions de terrains."
+    howItWorksTitle: "Fonctionnement :"
+    howItWorksDescription: " Les joueurs seront assignés aléatoirement aux terrains. Les doubles (4 joueurs) sont privilégiés, mais les simples (2 joueurs) seront utilisés pour les nombres impairs. Les joueurs supplémentaires seront sur le banc."
+    generateButton: "🎲 Générer les attributions"
+  assignments:
+    editModeBanner: "Glissez un joueur sur un autre pour les échanger — ou appuyez sur deux joueurs."
+    editModeDone: "Terminé"
+    tip: "Astuce :"
+    winnerInstructions: " Cliquez sur une équipe pour la désigner vainqueur. Une couronne 👑 apparaîtra à côté de l'équipe gagnante. Cliquez à nouveau pour la retirer."
+    regenerateButton: "🎲 Régénérer les attributions"
+    lastGenerated: "Dernière génération : {{time}}"
+    timeAgo:
+      justNow: "à l'instant"
+      seconds: "il y a {{count}}s"
+      minutes: "il y a {{count}}min"
+      hours: "il y a {{count}}h"
+      days: "il y a {{count}}j"
+  card:
+    header: "Terrain {{number}}"
+    headerWithMatch: "Terrain {{number}} - {{matchType}}"
+    singles: "Simple"
+    doubles: "Double"
+    rotateTeam: "Faire pivoter l'attribution des équipes"
+  match:
+    waiting: "En attente : {{name}}"
+  display:
+    playersOnCourt: "Joueurs sur le terrain :"
+    teamTitle: "Équipe {{number}}"
+    vs: "VS"
+
+bench:
+  title: "🪑 Banc ({{count}} joueurs)"
+  titleSingle: "🪑 Banc (1 joueur)"
+  viewCounts: "Voir les passages sur le banc & gérer"
+
+footer:
+  feedback: "Un retour ? Un bug trouvé ou une suggestion de fonctionnalité ?"
+  githubLink: "Faites-le nous savoir sur GitHub"
+  viewStats: "Voir les statistiques & analyses"
+  tryTournament: "Essayer le mode tournoi"
+  language: "Langue"
+
+nav:
+  backToApp: "← Gestionnaire de terrains"
+
+notFound:
+  title: "404"
+  message: "Page non trouvée"
+  goHome: "Retourner au gestionnaire de terrains"
+
+stats:
+  header: "Diagnostics {{engineName}}"
+  title: "Diagnostics"
+  sessionDiagnostics: "🔍 Diagnostics de la session actuelle"
+  warnings:
+    title: "⚠️ Avertissements"
+    benchImbalance: "Déséquilibre sur le banc : écart de {{spread}} (attendu ~{{expected}} pour {{rounds}} tours)"
+    singlesOverplayed: "{{count}} joueur(s) ont joué en simple {{threshold}}+ fois (attendu ~{{expected}} chacun)"
+    pairTeamedUp: "{{count}} paire(s) ont joué ensemble {{threshold}}+ fois (moyenne : {{avg}})"
+    pairFacedEachOther: "{{count}} paire(s) se sont affrontées {{threshold}}+ fois (moyenne : {{avg}})"
+    sittingTooLong: "{{player}} est sur le banc depuis {{count}} tours consécutifs"
+    unbalancedCourts: "Les terrains ne sont pas équilibrés : {{details}}"
+  cards:
+    totalPlayers: "Total des joueurs"
+    roundsPlayed: "Tours joués"
+    repeatedPairs: "Paires répétées"
+    warnings: "Avertissements"
+  bench:
+    title: "🪑 Répartition sur le banc"
+    neverBenched: "Jamais sur le banc :"
+    benchedOnce: "Sur le banc une fois :"
+    benchedMultiple: "Sur le banc plusieurs fois :"
+    minMax: "Passages min/max sur le banc :"
+    fairnessScore: "Score d'équité :"
+    lowerIsBetter: "(le plus bas est le mieux)"
+    viewCounts: "Voir les passages sur le banc par joueur ({{count}})"
+  teammates:
+    title: "👥 Partenaires d'équipe"
+    viewRepeated: "Voir les paires répétées ({{count}})"
+    empty: "✓ Aucune association d'équipe enregistrée pour l'instant"
+  opponents:
+    title: "⚔️ Face-à-face d'adversaires"
+    viewRepeated: "Voir les confrontations répétées ({{count}})"
+    empty: "✓ Aucun affrontement enregistré pour l'instant"
+  singles:
+    title: "🎯 Matchs en simple"
+    playersCount: "{{count}} joueurs ont joué en simple"
+    multipleCount: "({{count}} plusieurs fois)"
+    viewList: "Voir la liste des simples ({{count}})"
+    empty: "Aucun match en simple enregistré"
+  level:
+    title: "📈 Évolution du niveau"
+  empty:
+    message: "Aucune donnée de session pour le moment. Commencez à jouer pour voir les diagnostics !"
+    startCta: "Démarrer une partie →"
+  graphs:
+    levelHistory:
+      ariaLabel: "Graphique d'évolution du niveau"
+      xAxisLabel: "Tour"
+    genderLegend:
+      male: "H"
+      female: "F"
+      unknown: "?"
+    counts:
+      once: "1×"
+      twice: "2×"
+      threeTimes: "3×"
+      fourPlus: "4×+"
+  githubAnalysis:
+    heading: "📊 Analyse GitHub"
+    cardTitle: "Explorer l'analyse"
+    description: "Consultez la documentation de l'algorithme, les comparaisons des moteurs et l'analyse du suivi de niveau sur GitHub."
+
+tournament:
+  title: "Tournoi"
+  setupTitle: "Configuration du tournoi"
+  mode: "Mode"
+  banner:
+    setup: "Configuration du tournoi"
+    current: "Tournoi en cours"
+  actions:
+    startNew: "Commencer un nouveau tournoi"
+    start: "Démarrer le tournoi"
+  resetModal:
+    title: "Commencer un nouveau tournoi ?"
+    message: "Cela annulera le tournoi en cours et ses résultats. Voulez-vous vraiment en commencer un nouveau ?"
+    confirm: "Commencer un nouveau"
+    cancel: "Annuler"
+  setup:
+    format: "Format"
+    players: "Joueurs"
+    courts: "Nombre de terrains"
+    sets: "Manches par match"
+    pointsPerSet: "Points par manche"
+    singleGame: "Partie unique"
+    bestOf: "Au meilleur des {{n}}"
+    teams: "Équipes"
+    teamTitle: "Équipe {{number}}"
+    dragHint: "Glissez un joueur sur un autre pour les échanger — ou appuyez sur deux joueurs."
+    formats:
+      singles: "Simple (1v1)"
+      doubles: "Double (2v2)"
+    warnings:
+      courtWarning: "{{matches}} matchs par tour mais seulement {{courts}} terrain{{plural}} — certains matchs devront attendre."
+    groupKnockout:
+      teamsPerGroup: "Équipes par groupe"
+      qualifiersPerGroup: "Qualifiés par groupe"
+  kinds:
+    roundRobin:
+      label: "Toutes rondes"
+      description: "Chaque équipe affronte toutes les autres équipes."
+    elimination:
+      label: "Élimination directe"
+      description: "Tableau à élimination directe avec consolation."
+    groupKnockout:
+      label: "Groupes + Élimination directe"
+      description: "Phase de poules suivie d'une phase finale à élimination directe."
+  standings:
+    title: "Classement"
+    tieBreakTitle: "Égalité parfaite sur tous les critères — définissez l'ordre final manuellement"
+    tieBreakAria: "Égalité — classement manuel requis"
+    setTieBreakOrder: "Définir l'ordre de départage"
+    table:
+      rank: "Rang"
+      rankShort: "#"
+      team: "Équipe"
+      won: "V"
+      lost: "D"
+      points: "Pts"
+      sets: "Sets"
+      scoreDiff: "Diff. score"
+  roundRobin:
+    roundHeader: "Tour {{round}}"
+    roundComplete: "✓ Terminé"
+    roundProgress: "{{done}}/{{total}} terminés"
+    courtNumber: "Terrain {{court}}"
+  groupKnockout:
+    groupLabel: "Groupe {{letter}}"
+    tieBreakAria: "Définir l'ordre de départage"
+    groupTieWarning: "Une égalité de groupe doit être résolue avant de lancer l'élimination directe — utilisez le bouton ⇅ sur les lignes à égalité ci-dessus."
+    knockoutStage: "Phase finale"
+    finalResults: "Résultats finaux"
+  elimination:
+    winnersBracket: "Tableau principal"
+    consolationBracket: "Tableau de consolation"
+    thirdPlace: "3e place"
+    tbd: "À déterminer"
+    bye: "BYE"
+    rounds:
+      final: "Finale"
+      semiFinal: "Demi-finale"
+      nthOfFinal: "1/{{n}} de finale"
+  domain:
+    subtitles:
+      afterRound: "Après le tour {{done}} / {{total}}"
+      roundZero: "Tour 0 / {{total}}"
+      inProgress: "En cours"
+      finalResults: "Résultats finaux"
+    validation:
+      minTeams: "Il faut au moins 2 équipes pour démarrer"
+      doublesPlayers: "Chaque équipe de double doit comporter exactement 2 joueurs"
+      tooFewQualifiers: "Trop peu d'équipes qualifiées pour une phase finale — ajoutez des équipes ou réduisez la taille des groupes."
+    warnings:
+      everyoneAdvances: "Aucune équipe ne sera éliminée en phase de groupes — toutes les équipes se qualifient. Est-ce bien ce que vous voulez ?"
+    summary:
+      undersized: "{{count}} équipes ne peuvent pas former des groupes de {{size}}, elles joueront sous la forme : {{shape}}."
+      normal: "{{count}} équipes → {{shape}}."
+      tooFewKnockout: "{{split}} Cela laisse trop peu d'équipes pour une phase finale — ajoutez des équipes ou réduisez la taille des groupes."
+      allAdvance: "{{split}} Avec les {{qualifiers}} meilleures équipes qualifiées, toutes les équipes se qualifient — aucune n'est éliminée en phase de groupes."
+
+modals:
+  close: "Fermer"
+  confirm:
+    defaultTitle: "Confirmer"
+    confirm: "Confirmer"
+    cancel: "Annuler"
+  imageUpload:
+    title: "📸 Importer des joueurs depuis une image"
+    instructions: "Prenez une photo ou importez une image de votre liste de joueurs. Glissez-déposez ou cliquez pour sélectionner."
+    chooseImage: "Choisir une image"
+    processing: "🔍 Analyse de l'image et extraction des noms de joueurs..."
+    foundPlayers: "{{count}} joueur(s) trouvé(s)"
+    selectAll: "Tout sélectionner"
+    deselectAll: "Tout désélectionner"
+    tryAnotherImage: "📸 Essayer une autre image"
+    cancel: "Annuler"
+    addPlayers: "Ajouter {{count}} joueur(s)"
+    unsupportedTitle: "Reconnaissance de texte non disponible"
+    unsupportedDescription: "Désolé, votre navigateur ne prend pas en charge la reconnaissance de texte."
+    unsupportedInstructions: "Veuillez saisir les noms des joueurs manuellement."
+    enterManually: "Saisir les joueurs manuellement"
+  importState:
+    title: "Charger une session partagée"
+    description: "Une session partagée a été trouvée dans l'URL. Son chargement remplacera votre session actuelle."
+    sharedSavedAt: "Session partagée enregistrée : {{time}}"
+    currentSavedAt: "Votre session enregistrée : {{time}}"
+    backupPrompt: "Conservez ce lien pour restaurer votre session actuelle plus tard :"
+    copy: "Copier"
+    copied: "Copié !"
+    decline: "Conserver ma session"
+    accept: "Charger la session partagée"
+  manualOrder:
+    title: "Définir l'ordre de départage"
+    description: "Ces équipes sont à égalité sur tous les critères — placez-les dans l'ordre final souhaité :"
+    moveUpAria: "Monter {{name}}"
+    moveDownAria: "Descendre {{name}}"
+    cancel: "Annuler"
+    save: "Enregistrer l'ordre"
+  playerEdit:
+    gender: "Genre"
+    genderTooltip: "Définir le genre aide le moteur intelligent à équilibrer les doubles mixtes — cela évite de placer tous les joueurs du même genre dans une même équipe."
+    level: "Niveau : {{level}}"
+    levelTooltip: "Le niveau (0–100) représente le niveau de jeu. Le moteur intelligent associe des joueurs de niveaux similaires pour des matchs plus compétitifs et agréables."
+    cancel: "Annuler"
+    save: "Enregistrer"
+    genderOptions:
+      female: "💁‍♀️ F"
+      male: "🙋‍♂️ H"
+      unknown: "Inconnu"
+  playerRemoval:
+    title: "Supprimer le joueur"
+    message: "Que souhaitez-vous faire avec {{name}} ?"
+    markAbsent: "Marquer comme absent"
+    removePlayer: "Supprimer le joueur"
+  scoreInput:
+    titleWinner: "🏆 L'équipe {{winner}} gagne !"
+    titleScores: "Saisir les scores des manches"
+    promptSingle: "Saisir le score (par défaut {{setSize}} – {{defaultOpponent}}) :"
+    promptMultiple: "Saisir le score de chaque manche (au meilleur des {{count}}) :"
+    vs: "vs"
+    setLabel: "Manche {{number}}"
+    team1ScoreAria: "Score équipe 1{{set}}"
+    team2ScoreAria: "Score équipe 2{{set}}"
+    confirm: "Confirmer"
+  share:
+    title: "Partager la session"
+    description: "Partagez cette URL pour permettre à d'autres de charger votre session actuelle :"
+    close: "Fermer"
+    copyUrl: "Copier l'URL"
+    copied: "Copié !"
+
+ocr:
+  failed: "Échec du traitement de l'image. Veuillez réessayer ou saisir les joueurs manuellement."
+
+engines:
+  simulatedAnnealing:
+    name: "Recuit simulé"
+    description: "Recuit simulé avec amélioration itérative. Effectue {{iterations}} itérations en acceptant des solutions moins optimales de manière probabiliste pour échapper aux minima locaux."
+  smartMatching:
+    name: "Correspondance intelligente v2"
+    description: "Regroupement par niveau avec fenêtre glissante, dynamique de victoire et préférence pour les doubles mixtes."
+
