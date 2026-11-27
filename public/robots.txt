@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sylhare.github.io/Badminton/sitemap.xml

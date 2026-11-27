@@ -1,3 +1,9 @@
+meta:
+  title: "羽毛球场地管理"
+  description: "轻松管理羽毛球场地分配和球队。创建均衡队伍，跟踪比赛表现，轻松组织锦标赛。"
+  lang: "zh-Hans"
+  ogLocale: "zh_CN"
+
 app:
   title: "羽毛球场地管理器"
   managePlayers: "管理球员"

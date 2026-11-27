@@ -1,3 +1,9 @@
+meta:
+  title: "Badminton Court Manager"
+  description: "Manage badminton court assignments and player teams with ease. Create balanced teams, track performance, and run tournaments."
+  lang: "en"
+  ogLocale: "en_US"
+
 app:
   title: "Badminton Court Manager"
   managePlayers: "Manage Players"

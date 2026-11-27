@@ -4,6 +4,51 @@ import { initReactI18next } from 'react-i18next';
 import { detectLocale, SUPPORTED_LOCALES, type SupportedLocale } from './detectLocale';
 import enTranslations from './locales/en.yml';
 
+function updateDocumentMeta(_locale: SupportedLocale): void {
+  if (typeof document === 'undefined') return;
+
+  document.documentElement.lang = i18n.t('meta.lang');
+
+  const title = i18n.t('meta.title');
+  const description = i18n.t('meta.description');
+
+  document.title = title;
+
+  const setMeta = (selector: string, attr: string, value: string): void => {
+    document.querySelector(selector)?.setAttribute(attr, value);
+  };
+
+  setMeta('meta[name="description"]', 'content', description);
+  setMeta('meta[property="og:title"]', 'content', title);
+  setMeta('meta[property="og:description"]', 'content', description);
+  setMeta('meta[property="og:locale"]', 'content', i18n.t('meta.ogLocale'));
+  setMeta('meta[name="twitter:title"]', 'content', title);
+  setMeta('meta[name="twitter:description"]', 'content', description);
+
+  updateStructuredData(title, description);
+}
+
+function updateStructuredData(title: string, description: string): void {
+  const existing = document.getElementById('ld-json');
+  if (existing) existing.remove();
+
+  const script = document.createElement('script');
+  script.id = 'ld-json';
+  script.type = 'application/ld+json';
+  script.text = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: title,
+    description,
+    url: 'https://sylhare.github.io/Badminton/',
+    applicationCategory: 'SportsApplication',
+    inLanguage: i18n.t('meta.lang'),
+    operatingSystem: 'Web',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  });
+  document.head.appendChild(script);
+}
+
 export { detectLocale, SUPPORTED_LOCALES, type SupportedLocale };
 export { i18n };
 
@@ -55,9 +100,7 @@ export async function setLanguage(locale: SupportedLocale): Promise<void> {
   } catch {
   }
 
-  if (typeof document !== 'undefined') {
-    document.documentElement.lang = locale;
-  }
+  updateDocumentMeta(locale);
 }
 
 const isTest =
@@ -100,9 +143,7 @@ export async function initI18n(initialLocale: SupportedLocale = 'en'): Promise<t
     },
   });
 
-  if (typeof document !== 'undefined') {
-    document.documentElement.lang = initialLocale;
-  }
+  updateDocumentMeta(initialLocale);
 
   return i18n;
 }

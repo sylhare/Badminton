@@ -42,7 +42,7 @@ describe('i18n', () => {
 
     expect(i18n.language).toBe(code);
     expect(i18n.t('app.title')).toBe(dict.app.title);
-    expect(document.documentElement.lang).toBe(code);
+    expect(document.documentElement.lang).toBe(dict.meta.lang);
     expect(localStorage.getItem('badminton-locale')).toBe(code);
   });
 

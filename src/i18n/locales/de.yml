@@ -1,3 +1,9 @@
+meta:
+  title: "Badminton Court Manager"
+  description: "Verwalten Sie Badminton-Platzzuweisungen und Spielerteams ganz einfach. Erstellen Sie ausgewogene Teams, verfolgen Sie die Leistung und veranstalten Sie Turniere."
+  lang: "de"
+  ogLocale: "de_DE"
+
 app:
   title: "Badminton-Court-Manager"
   managePlayers: "Spieler verwalten"

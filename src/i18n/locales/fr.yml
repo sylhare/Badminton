@@ -1,3 +1,9 @@
+meta:
+  title: "Gestionnaire de Terrain de Badminton"
+  description: "Gérez facilement les attributions de terrain de badminton et les équipes de joueurs. Créez des équipes équilibrées, suivez les performances et organisez des tournois."
+  lang: "fr"
+  ogLocale: "fr_FR"
+
 app:
   title: "Gestionnaire de terrains de badminton"
   managePlayers: "Gérer les joueurs"
