@@ -1,3 +1,9 @@
+meta:
+  title: "Pengurus Gelanggang Badminton"
+  description: "Urus tugasan gelanggang badminton dan pasukan pemain dengan mudah. Cipta pasukan yang seimbang, jejak prestasi dan kendalikan pertandingan."
+  lang: "ms"
+  ogLocale: "ms_MY"
+
 app:
   title: "Pengurus Gelanggang Badminton"
   managePlayers: "Urus Pemain"
